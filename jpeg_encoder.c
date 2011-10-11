@@ -25,6 +25,7 @@
  */
  
 #include "jpeg_encoder.h"
+#include "jpeg_preprocessor.h"
 #include "jpeg_util.h"
 
 /** Documented at declaration */
@@ -48,12 +49,33 @@ jpeg_encoder_create(int width, int height, int quality)
     
     // Allocate data buffers
     int data_size = encoder->width * encoder->width * encoder->comp_count;
+    uint8_t* d_image = NULL;
+    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_source, data_size * sizeof(uint8_t)) ) 
+        return NULL;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data, data_size * sizeof(uint8_t)) ) 
         return NULL;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(uint16_t)) ) 
         return NULL;
     
     return encoder;
+}
+
+void
+jpeg_encoder_print(struct jpeg_encoder* encoder, uint8_t* d_data)
+{
+    int data_size = encoder->width * encoder->height;
+    uint8_t* data = NULL;
+    cudaMallocHost((void**)&data, data_size * sizeof(uint8_t)); 
+    cudaMemcpy(data, d_data, data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+    
+    printf("Print Data\n");
+    for ( int y = 0; y < encoder->height; y++ ) {
+        for ( int x = 0; x < encoder->width; x++ ) {
+            printf("%4u ", data[y * encoder->width + x]);
+        }
+        printf("\n");
+    }
+    cudaFreeHost(data);
 }
 
 /** Documented at declaration */
@@ -68,7 +90,9 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         return -1;
         
     for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
-        unsigned char* d_data_comp = &encoder->d_data[comp * encoder->width * encoder->width];
+        uint8_t* d_data_comp = &encoder->d_data[comp * encoder->width * encoder->height];
+        
+        jpeg_encoder_print(encoder, d_data_comp);
     }
     return 0;
 }
@@ -84,6 +108,8 @@ jpeg_encoder_destroy(struct jpeg_encoder* encoder)
     assert(encoder->table[JPEG_TABLE_CHROMINANCE] != NULL);
     jpeg_table_destroy(encoder->table[JPEG_TABLE_CHROMINANCE]);
     
+    assert(encoder->d_data_source != NULL);
+    cudaFree(encoder->d_data_source);
     assert(encoder->d_data != NULL);
     cudaFree(encoder->d_data);
     assert(encoder->d_data_quantized != NULL);
