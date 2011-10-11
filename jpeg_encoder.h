@@ -48,7 +48,7 @@ struct jpeg_encoder
     uint8_t* d_data;
     
     // Data after DCT and quantization in device memory
-    uint16_t* d_data_quantized;
+    int16_t* d_data_quantized;
     
     // Table for luminance [0] and chrominance [1] color component
     struct jpeg_table* table[2];

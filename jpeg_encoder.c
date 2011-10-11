@@ -54,14 +54,14 @@ jpeg_encoder_create(int width, int height, int quality)
         return NULL;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data, data_size * sizeof(uint8_t)) ) 
         return NULL;
-    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(uint16_t)) ) 
+    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
         return NULL;
     
     return encoder;
 }
 
 void
-jpeg_encoder_print(struct jpeg_encoder* encoder, uint8_t* d_data)
+jpeg_encoder_print8(struct jpeg_encoder* encoder, uint8_t* d_data)
 {
     int data_size = encoder->width * encoder->height;
     uint8_t* data = NULL;
@@ -72,6 +72,24 @@ jpeg_encoder_print(struct jpeg_encoder* encoder, uint8_t* d_data)
     for ( int y = 0; y < encoder->height; y++ ) {
         for ( int x = 0; x < encoder->width; x++ ) {
             printf("%4u ", data[y * encoder->width + x]);
+        }
+        printf("\n");
+    }
+    cudaFreeHost(data);
+}
+
+void
+jpeg_encoder_print16(struct jpeg_encoder* encoder, int16_t* d_data)
+{
+    int data_size = encoder->width * encoder->height;
+    int16_t* data = NULL;
+    cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
+    cudaMemcpy(data, d_data, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
+    
+    printf("Print Data\n");
+    for ( int y = 0; y < encoder->height; y++ ) {
+        for ( int x = 0; x < encoder->width; x++ ) {
+            printf("%4d ", data[y * encoder->width + x]);
         }
         printf("\n");
     }
@@ -91,8 +109,48 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         
     for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
         uint8_t* d_data_comp = &encoder->d_data[comp * encoder->width * encoder->height];
+        int16_t* d_data_quantized_comp = &encoder->d_data_quantized[comp * encoder->width * encoder->height];
         
-        jpeg_encoder_print(encoder, d_data_comp);
+        // Determine table type
+        enum jpeg_table_type type = (comp == 0) ? JPEG_TABLE_LUMINANCE : JPEG_TABLE_CHROMINANCE;
+        
+        jpeg_encoder_print8(encoder, d_data_comp);
+        
+        cudaMemset(d_data_quantized_comp, 0, encoder->width * encoder->height * sizeof(int16_t));
+        
+        //Perform forward DCT
+        NppiSize fwd_roi;
+        fwd_roi.width = encoder->width;
+        fwd_roi.height = encoder->height;
+        NppStatus status = nppiDCTQuantFwd8x8LS_JPEG_8u16s_C1R(
+            d_data_comp, 
+            encoder->width * sizeof(uint8_t), 
+            d_data_quantized_comp, 
+            64 * sizeof(int16_t), 
+            encoder->table[type]->d_table_forward, 
+            fwd_roi
+        );
+        
+        jpeg_encoder_print16(encoder, d_data_quantized_comp);
+
+        cudaMemset(d_data_comp, 0, encoder->width * encoder->height * sizeof(int16_t));
+        
+        //Perform inverse DCT
+        NppiSize inv_roi;
+        inv_roi.width = 64;
+        inv_roi.height = 1;
+        nppiDCTQuantInv8x8LS_JPEG_16s8u_C1R(
+            d_data_quantized_comp, 
+            65 * sizeof(int16_t), 
+            d_data_comp, 
+            encoder->width * sizeof(uint8_t), 
+            encoder->table[type]->d_table_inverse, 
+            inv_roi
+        );
+        
+        jpeg_encoder_print8(encoder, d_data_comp);
+        
+        break;
     }
     return 0;
 }
