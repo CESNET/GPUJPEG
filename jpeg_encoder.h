@@ -45,7 +45,7 @@ struct jpeg_encoder
     uint8_t* d_data;
     
     // Data after DCT and quantization in device memory
-    uint16_t* d_data_quant;
+    uint16_t* d_data_quantized;
     
     // Table for luminance [0] and chrominance [1] color component
     struct jpeg_table* table[2];
@@ -65,10 +65,11 @@ jpeg_encoder_create(int width, int height, int quality);
  * Compress image by encoder
  * 
  * @param encoder  Encoder structure
+ * @param image  Source image data
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_encoder_encode(struct jpeg_encoder* encoder);
+jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image);
 
 /**
  * Destory JPEG encoder

@@ -41,6 +41,18 @@ const int convert_zigzag2natural[64] = {
     53, 60, 61, 54, 47, 55, 62, 63 
 };
 
+//Raw Quantization Table
+Npp8u table_raw_default[64] = { 
+    16, 11, 12, 14, 12, 10, 16, 14,
+    13, 14, 18, 17, 16, 19, 24, 40,
+    26, 24, 22, 22, 24, 49, 35, 37,
+    29, 40, 58, 51, 61, 60, 57, 51,
+    56, 55, 64, 72, 92, 78, 64, 68,
+    87, 69, 55, 56, 80, 109, 81, 87,
+    95, 98, 103, 104, 103, 62, 77, 113,
+    121, 112, 100, 120, 92, 101, 103, 99 
+};
+
 /** Documented at declaration */
 struct jpeg_table*
 jpeg_table_create(enum jpeg_table_type type, int quality)
@@ -51,18 +63,28 @@ jpeg_table_create(enum jpeg_table_type type, int quality)
         
     // Setup raw table
     nppiSetDefaultQuantTable(table->table_raw, (int)type);
+    // Other default raw table
+    //for ( int i = 0; i < 64; i++ ) {
+    //    table->table_raw[i] = table_raw_default[i];
+    //}
+    
+    // Init raw table
+    nppiQuantFwdRawTableInit_JPEG_8u(table->table_raw, quality);
     
     // Setup forward table
-    //nppiQuantFwdTableInit_JPEG_8u16u(table->table_raw, table->table_forward);
+    const int scale = (1 << 15);
     for (int i = 0; i < 64; ++i) {
-        table->table_forward[convert_zigzag2natural[i]] = ((1 << 15) / (double) table->table_raw[i]) + 0.5;
+        table->table_forward[convert_zigzag2natural[i]] = (scale / (double) table->table_raw[i]) + 0.5;
     }
+    // Setup forward table by npp (with bug)
+    //nppiQuantFwdTableInit_JPEG_8u16u(table->table_raw, table->table_forward);
     
     // Setup inverse table
-    //nppiQuantInvTableInit_JPEG_8u16u(table->table_raw, table->table_inverse);
     for (int i = 0; i < 64; ++i) {
         table->table_inverse[convert_zigzag2natural[i]] = table->table_raw[i];
     }
+    // Setup inverse table by npp (with bug)
+    //nppiQuantInvTableInit_JPEG_8u16u(table->table_raw, table->table_inverse);
     
     // Allocate device memory for tables
     if ( cudaSuccess != cudaMalloc((void**)&table->d_table_forward, 64 * sizeof(uint16_t)) )
@@ -88,4 +110,33 @@ jpeg_table_destroy(struct jpeg_table* table)
     cudaFree(table->d_table_inverse);
     free(table);
     return 0;
+}
+
+/** Documented at declaration */
+void
+jpeg_table_print(struct jpeg_table* table)
+{
+    puts("Raw Table (with quality):");
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            printf("%4u", table->table_raw[i * 8 + j]);
+        }
+        puts("");
+    }
+    
+    puts("Forward Table:");
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            printf("%6u", table->table_forward[i * 8 + j]);
+        }
+        puts("");
+    }
+    
+    puts("Inverse Table:");
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            printf("%6u", table->table_inverse[i * 8 + j]);
+        }
+        puts("");
+    }
 }

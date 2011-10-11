@@ -27,6 +27,8 @@
 #ifndef JPEG_COMMON_H
 #define JPEG_COMMON_H
 
+#include <stdint.h>
+
 /**
  * Load RGB image from file
  * 
@@ -37,7 +39,7 @@
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_image_load_from_file(const char* filename, int width, int height, unsigned char** image);
+jpeg_image_load_from_file(const char* filename, int width, int height, uint8_t** image);
 
 /**
  * Save RGB image to file
@@ -49,7 +51,7 @@ jpeg_image_load_from_file(const char* filename, int width, int height, unsigned 
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_image_save_to_file(const char* filename, unsigned char* image, int width, int height);
+jpeg_image_save_to_file(const char* filename, uint8_t* image, int width, int height);
 
 /**
  * Destroy DXT image
@@ -58,6 +60,6 @@ jpeg_image_save_to_file(const char* filename, unsigned char* image, int width, i
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_image_destroy(unsigned char* image);
+jpeg_image_destroy(uint8_t* image);
 
 #endif // JPEG_COMMON_H

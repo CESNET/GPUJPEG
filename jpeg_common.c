@@ -29,7 +29,7 @@
 
 /** Documented at declaration */
 int
-jpeg_image_load_from_file(const char* filename, int width, int height, unsigned char** image)
+jpeg_image_load_from_file(const char* filename, int width, int height, uint8_t** image)
 {
     FILE* file;
 	file = fopen(filename, "rb");
@@ -39,8 +39,8 @@ jpeg_image_load_from_file(const char* filename, int width, int height, unsigned 
 	}
 
     int data_size = width * height * 3;
-    unsigned char* data = (unsigned char*)malloc(data_size * sizeof(unsigned char));
-    if ( data_size != fread(data, sizeof(unsigned char), data_size, file) ) {
+    uint8_t* data = (uint8_t*)malloc(data_size * sizeof(uint8_t));
+    if ( data_size != fread(data, sizeof(uint8_t), data_size, file) ) {
         fprintf(stderr, "Failed to load image data [%d bytes] from file %s!\n", data_size, filename);
         return -1;
     }
@@ -53,7 +53,7 @@ jpeg_image_load_from_file(const char* filename, int width, int height, unsigned 
 
 /** Documented at declaration */
 int
-jpeg_image_save_to_file(const char* filename, unsigned char* image, int width, int height)
+jpeg_image_save_to_file(const char* filename, uint8_t* image, int width, int height)
 {
     FILE* file;
 	file = fopen(filename, "wb");
@@ -62,8 +62,8 @@ jpeg_image_save_to_file(const char* filename, unsigned char* image, int width, i
 		return -1;
 	}
     
-    int data_size = width * height * 3 * sizeof(unsigned char);
-    if ( data_size != fwrite(image, sizeof(unsigned char), data_size, file) ) {
+    int data_size = width * height * 3 * sizeof(uint8_t);
+    if ( data_size != fwrite(image, sizeof(uint8_t), data_size, file) ) {
         fprintf(stderr, "Failed to write image data [%d bytes] to file %s!\n", width * height * 3, filename);
         return -1;
     }
@@ -74,7 +74,7 @@ jpeg_image_save_to_file(const char* filename, unsigned char* image, int width, i
 
 /** Documented at declaration */
 int
-jpeg_image_destroy(unsigned char* image)
+jpeg_image_destroy(uint8_t* image)
 {
     free(image);
 }

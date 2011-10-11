@@ -28,6 +28,7 @@
 #include "jpeg_encoder.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
 #include <strings.h>
@@ -90,17 +91,33 @@ main(int argc, char *argv[])
         return -1;
     }
     
+    // Create encoder
     struct jpeg_encoder* encoder = jpeg_encoder_create(width, height, 75);
     if ( encoder == NULL ) {
         fprintf(stderr, "Failed to create encoder!\n");
         return -1;
     }
+    
+    // Encode images
+    for ( int index = 0; index < argc; index++ ) {
+        // Load image
+        uint8_t* image = NULL;
+        if ( jpeg_image_load_from_file(argv[index], width, height, &image) != 0 ) {
+            fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
+            return -1;
+        }
+            
+        // Encode image
+        if ( jpeg_encoder_encode(encoder, image) != 0 ) {
+            fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
+            return -1;
+        }
         
-    if ( jpeg_encoder_encode(encoder) != 0 ) {
-        fprintf(stderr, "Failed to encode image!\n");
-        return -1;
+        // Destroy image
+        jpeg_image_destroy(image);
     }
     
+    // Destroy encoder
     jpeg_encoder_destroy(encoder);
     
 	return 0;

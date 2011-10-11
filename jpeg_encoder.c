@@ -46,8 +46,11 @@ jpeg_encoder_create(int width, int height, int quality)
     if ( encoder->table[JPEG_TABLE_CHROMINANCE] == NULL )
         return NULL;
     
+    // Allocate data buffers
     int data_size = encoder->width * encoder->width * encoder->comp_count;
-    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data, data_size) ) 
+    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data, data_size * sizeof(uint8_t)) ) 
+        return NULL;
+    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(uint16_t)) ) 
         return NULL;
     
     return encoder;
@@ -55,8 +58,15 @@ jpeg_encoder_create(int width, int height, int quality)
 
 /** Documented at declaration */
 int
-jpeg_encoder_encode(struct jpeg_encoder* encoder)
+jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
 {
+    //jpeg_table_print(encoder->table[JPEG_TABLE_LUMINANCE]);
+    //jpeg_table_print(encoder->table[JPEG_TABLE_CHROMINANCE]);
+    
+    // Preprocessing
+    if ( jpeg_preprocessor_process(encoder, image) != 0 )
+        return -1;
+        
     for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
         unsigned char* d_data_comp = &encoder->d_data[comp * encoder->width * encoder->width];
     }
@@ -68,10 +78,18 @@ int
 jpeg_encoder_destroy(struct jpeg_encoder* encoder)
 {
     assert(encoder != NULL);
+    
     assert(encoder->table[JPEG_TABLE_LUMINANCE] != NULL);
-    assert(encoder->table[JPEG_TABLE_CHROMINANCE] != NULL);
     jpeg_table_destroy(encoder->table[JPEG_TABLE_LUMINANCE]);
+    assert(encoder->table[JPEG_TABLE_CHROMINANCE] != NULL);
     jpeg_table_destroy(encoder->table[JPEG_TABLE_CHROMINANCE]);
+    
+    assert(encoder->d_data != NULL);
+    cudaFree(encoder->d_data);
+    assert(encoder->d_data_quantized != NULL);
+    cudaFree(encoder->d_data_quantized);    
+    
     free(encoder);
+    
     return 0;
 }

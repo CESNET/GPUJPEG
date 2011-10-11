@@ -73,4 +73,13 @@ jpeg_table_create(enum jpeg_table_type type, int quality);
 int
 jpeg_table_destroy(struct jpeg_table* table);
 
+/**
+ * Print JPEG table
+ * 
+ * @param table  Table structure
+ * @return void
+ */
+void
+jpeg_table_print(struct jpeg_table* table);
+
 #endif // JPEG_TABLE
