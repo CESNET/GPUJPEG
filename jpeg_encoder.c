@@ -27,6 +27,7 @@
 #include "jpeg_encoder.h"
 #include "jpeg_preprocessor.h"
 #include "jpeg_huffman_coder.h"
+#include "jpeg_writer_type.h"
 #include "jpeg_util.h"
 
 /** Documented at declaration */
@@ -123,6 +124,8 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         
+        //jpeg_encoder_print8(encoder, d_data_comp);
+        
         //Perform forward DCT
         NppiSize fwd_roi;
         fwd_roi.width = encoder->width;
@@ -139,6 +142,9 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         //jpeg_encoder_print16(encoder, d_data_quantized_comp);
     }
     
+    // Write header
+    jpeg_writer_write_header(encoder);
+    
     // Copy quantized data from device memory to cpu memory
     int data_size = encoder->width * encoder->height * encoder->comp_count;
     int16_t* data = NULL;
@@ -153,9 +159,12 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         // Perform huffman coding
         jpeg_huffman_coder_encode(encoder, type, data_comp);
-        
-        break;
     }
+    
+    int output_size = encoder->writer->buffer_current - encoder->writer->buffer;
+    printf("Output Buffer Size: %d bytes\n", output_size);
+    
+    jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_EOI);
     
     return 0;
 }

@@ -122,13 +122,13 @@ jpeg_huffman_coder_emit_left_bits(struct jpeg_huffman_coder* coder)
 int
 jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
 {	
-    printf("Encode Block\n");
+    /*printf("Encode Block\n");
     for ( int y = 0; y < 8; y++ ) {
         for ( int x = 0; x < 8; x++ ) {
             printf("%4d ", data[y * 8 + x]);
         }
         printf("\n");
-    }
+    }*/
     
 	int16_t* block = data;
 
@@ -250,8 +250,6 @@ jpeg_huffman_coder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type
     // Emit left
     if ( coder.put_bits > 0 )
         jpeg_huffman_coder_emit_left_bits(&coder);
-        
-    jpeg_writer_emit_marker(coder.writer, JPEG_MARKER_EOI);
     
     return 0;
 }

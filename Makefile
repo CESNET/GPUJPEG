@@ -17,4 +17,4 @@ jpeg_encoder.c.o: jpeg_encoder.c jpeg_encoder.h
 jpeg_table.c.o: jpeg_table.c jpeg_table.h
 jpeg_preprocessor.cu.o: jpeg_preprocessor.cu jpeg_preprocessor.h
 jpeg_huffman_coder.c.o: jpeg_huffman_coder.c jpeg_huffman_coder.h
-jpeg_writer.c: jpeg_writer.c jpeg_writer.h
+jpeg_writer.c.o: jpeg_writer.c jpeg_writer.h

@@ -50,6 +50,14 @@ struct jpeg_writer*
 jpeg_writer_create(struct jpeg_encoder* encoder);
 
 /**
+ * Destroy JPEG writer
+ * 
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+jpeg_writer_destroy(struct jpeg_writer* writer);
+
+/**
  * Write one byte to file
  * 
  * @return void
@@ -79,13 +87,14 @@ jpeg_writer_create(struct jpeg_encoder* encoder);
     writer->buffer_current++; \
     *writer->buffer_current = (uint8_t)(marker); \
     writer->buffer_current++;
-
+    
 /**
- * Destroy JPEG writer
+ * Write JPEG header (write soi, app0, Y_dqt, CbCr_dqt, sof, 4 * dht, sos blocks)
  * 
- * @return 0 if succeeds, otherwise nonzero
+ * @param encoder  Encoder structure
+ * @return void
  */
-int
-jpeg_writer_destroy(struct jpeg_writer* writer);
+void
+jpeg_writer_write_header(struct jpeg_encoder* encoder);
 
 #endif // JPEG_WRITER

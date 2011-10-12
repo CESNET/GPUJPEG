@@ -115,6 +115,9 @@ jpeg_table_create(enum jpeg_component_type type, int quality)
         return NULL;
     if ( cudaSuccess != cudaMemcpy(table->d_table_inverse, table->table_inverse, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
         return NULL;
+        
+    // Init huffman tables
+    jpeg_table_init_huffman(table, type);
     
     return table;
 }
