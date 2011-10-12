@@ -26,6 +26,7 @@
  
 #include "jpeg_encoder.h"
 #include "jpeg_preprocessor.h"
+#include "jpeg_huffman_coder.h"
 #include "jpeg_util.h"
 
 /** Documented at declaration */
@@ -35,16 +36,22 @@ jpeg_encoder_create(int width, int height, int quality)
     struct jpeg_encoder* encoder = malloc(sizeof(struct jpeg_encoder));
     if ( encoder == NULL )
         return NULL;
+        
+    // Set parameters
     encoder->width = width;
     encoder->height = height;
     encoder->comp_count = 3;
+    encoder->quality = quality;
+    
+    // Create writer
+    encoder->writer = jpeg_writer_create(encoder);
     
     // Create tables
-    encoder->table[JPEG_TABLE_LUMINANCE] = jpeg_table_create(JPEG_TABLE_LUMINANCE, quality);
-    if ( encoder->table[JPEG_TABLE_LUMINANCE] == NULL )
+    encoder->table[JPEG_COMPONENT_LUMINANCE] = jpeg_table_create(JPEG_COMPONENT_LUMINANCE, quality);
+    if ( encoder->table[JPEG_COMPONENT_LUMINANCE] == NULL )
         return NULL;
-    encoder->table[JPEG_TABLE_CHROMINANCE] = jpeg_table_create(JPEG_TABLE_CHROMINANCE, quality);
-    if ( encoder->table[JPEG_TABLE_CHROMINANCE] == NULL )
+    encoder->table[JPEG_COMPONENT_CHROMINANCE] = jpeg_table_create(JPEG_COMPONENT_CHROMINANCE, quality);
+    if ( encoder->table[JPEG_COMPONENT_CHROMINANCE] == NULL )
         return NULL;
     
     // Allocate data buffers
@@ -100,8 +107,8 @@ jpeg_encoder_print16(struct jpeg_encoder* encoder, int16_t* d_data)
 int
 jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
 {
-    //jpeg_table_print(encoder->table[JPEG_TABLE_LUMINANCE]);
-    //jpeg_table_print(encoder->table[JPEG_TABLE_CHROMINANCE]);
+    //jpeg_table_print(encoder->table[JPEG_COMPONENT_LUMINANCE]);
+    //jpeg_table_print(encoder->table[JPEG_COMPONENT_CHROMINANCE]);
     
     // Preprocessing
     if ( jpeg_preprocessor_process(encoder, image) != 0 )
@@ -112,11 +119,11 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         int16_t* d_data_quantized_comp = &encoder->d_data_quantized[comp * encoder->width * encoder->height];
         
         // Determine table type
-        enum jpeg_table_type type = (comp == 0) ? JPEG_TABLE_LUMINANCE : JPEG_TABLE_CHROMINANCE;
+        enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         
-        jpeg_encoder_print8(encoder, d_data_comp);
+        //jpeg_encoder_print8(encoder, d_data_comp);
         
-        cudaMemset(d_data_quantized_comp, 0, encoder->width * encoder->height * sizeof(int16_t));
+        //cudaMemset(d_data_quantized_comp, 0, encoder->width * encoder->height * sizeof(int16_t));
         
         //Perform forward DCT
         NppiSize fwd_roi;
@@ -131,12 +138,12 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
             fwd_roi
         );
         
-        jpeg_encoder_print16(encoder, d_data_quantized_comp);
+        //jpeg_encoder_print16(encoder, d_data_quantized_comp);
 
-        cudaMemset(d_data_comp, 0, encoder->width * encoder->height * sizeof(int16_t));
+        //cudaMemset(d_data_comp, 0, encoder->width * encoder->height * sizeof(int16_t));
         
         //Perform inverse DCT
-        NppiSize inv_roi;
+        /*NppiSize inv_roi;
         inv_roi.width = 64;
         inv_roi.height = 1;
         nppiDCTQuantInv8x8LS_JPEG_16s8u_C1R(
@@ -146,12 +153,31 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
             encoder->width * sizeof(uint8_t), 
             encoder->table[type]->d_table_inverse, 
             inv_roi
-        );
+        );*/
         
-        jpeg_encoder_print8(encoder, d_data_comp);
+        //jpeg_encoder_print8(encoder, d_data_comp);
         
         break;
     }
+    
+    // Copy quantized data from device memory to cpu memory
+    int data_size = encoder->width * encoder->height * encoder->comp_count;
+    int16_t* data = NULL;
+    cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
+    cudaMemcpy(data, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
+    
+    // Perform huffman coding for all components
+    for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
+        // Get data buffer for component
+        int16_t* data_comp = &data[comp * encoder->width * encoder->height];
+        // Determine table type
+        enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+        // Perform huffman coding
+        jpeg_huffman_coder_encode(encoder->writer, type, data_comp);
+        
+        break;
+    }
+    
     return 0;
 }
 
@@ -161,10 +187,10 @@ jpeg_encoder_destroy(struct jpeg_encoder* encoder)
 {
     assert(encoder != NULL);
     
-    assert(encoder->table[JPEG_TABLE_LUMINANCE] != NULL);
-    jpeg_table_destroy(encoder->table[JPEG_TABLE_LUMINANCE]);
-    assert(encoder->table[JPEG_TABLE_CHROMINANCE] != NULL);
-    jpeg_table_destroy(encoder->table[JPEG_TABLE_CHROMINANCE]);
+    assert(encoder->table[JPEG_COMPONENT_LUMINANCE] != NULL);
+    jpeg_table_destroy(encoder->table[JPEG_COMPONENT_LUMINANCE]);
+    assert(encoder->table[JPEG_COMPONENT_CHROMINANCE] != NULL);
+    jpeg_table_destroy(encoder->table[JPEG_COMPONENT_CHROMINANCE]);
     
     assert(encoder->d_data_source != NULL);
     cudaFree(encoder->d_data_source);

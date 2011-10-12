@@ -27,15 +27,7 @@
 #ifndef JPEG_TABLE
 #define JPEG_TABLE
 
-#include <stdint.h>
-
-/**
- * JPEG quantization table type
- */
-enum jpeg_table_type {
-    JPEG_TABLE_LUMINANCE = 0,
-    JPEG_TABLE_CHROMINANCE = 1
-};
+#include "jpeg_type.h"
 
 /**
  * JPEG table structure
@@ -57,12 +49,12 @@ struct jpeg_table
 /**
  * Create JPEG table for quantizatin
  * 
- * @param width  Width of encodable images
- * @param height  Height of encodable images
+ * @param type  Type of component for table
+ * @param quality  Quality (0-100)
  * @return table structure if succeeds, otherwise NULL
  */
 struct jpeg_table*
-jpeg_table_create(enum jpeg_table_type type, int quality);
+jpeg_table_create(enum jpeg_component_type type, int quality);
 
 /**
  * Destory JPEG table

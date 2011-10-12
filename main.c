@@ -26,6 +26,7 @@
 
 #include "jpeg_common.h"
 #include "jpeg_encoder.h"
+#include "jpeg_util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,18 +101,27 @@ main(int argc, char *argv[])
     
     // Encode images
     for ( int index = 0; index < argc; index++ ) {
+        TIMER_INIT();    
+        
+        TIMER_START();
+    
         // Load image
         uint8_t* image = NULL;
         if ( jpeg_image_load_from_file(argv[index], width, height, &image) != 0 ) {
             fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
             return -1;
         }
+        
+        TIMER_STOP_PRINT("Load Image: ");
+        TIMER_START();
             
         // Encode image
         if ( jpeg_encoder_encode(encoder, image) != 0 ) {
             fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
             return -1;
         }
+        
+        TIMER_STOP_PRINT("Encode Image: ");
         
         // Destroy image
         jpeg_image_destroy(image);

@@ -34,4 +34,21 @@
 #include <cuda_runtime.h>
 #include <npp.h>
 
+// Timer
+#define TIMER_INIT() \
+    cudaEvent_t __start, __stop; \
+    cudaEventCreate(&__start); \
+    cudaEventCreate(&__stop); \
+    float __elapsedTime;
+#define TIMER_START() \
+    cudaEventRecord(__start,0)
+#define TIMER_STOP() \
+    cudaEventRecord(__stop,0); \
+    cudaEventSynchronize(__stop); \
+    cudaEventElapsedTime(&__elapsedTime, __start, __stop)
+#define TIMER_DURATION() __elapsedTime
+#define TIMER_STOP_PRINT(text) \
+    TIMER_STOP(); \
+    printf("%s %f ms\n", text, __elapsedTime)
+
 #endif // JPEG_UTIL_H

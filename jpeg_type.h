@@ -24,69 +24,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JPEG_ENCODER
-#define JPEG_ENCODER
+#ifndef JPEG_TYPE
+#define JPEG_TYPE
 
-#include "jpeg_table.h"
-#include "jpeg_writer.h"
+#include <stdint.h>
 
 /**
- * JPEG encoder structure
+ * JPEG component type
  */
-struct jpeg_encoder
-{  
-    // Image width
-    int width;
-    // Image height
-    int height;
-    // Component count
-    int comp_count;
-    // Quality level (0-100)
-    int quality;
-    
-    // Source image data in device memory
-    uint8_t* d_data_source;
-    
-    // Preprocessed data in device memory
-    uint8_t* d_data;
-    
-    // Data after DCT and quantization in device memory
-    int16_t* d_data_quantized;
-    
-    // Table for luminance [0] and chrominance [1] color component
-    struct jpeg_table* table[2];
-    
-    // JPEG writer structure
-    struct jpeg_writer* writer;
+enum jpeg_component_type {
+    JPEG_COMPONENT_LUMINANCE = 0,
+    JPEG_COMPONENT_CHROMINANCE = 1
 };
 
-/**
- * Create JPEG encoder
- * 
- * @param width  Width of encodable images
- * @param height  Height of encodable images
- * @return encoder structure if succeeds, otherwise NULL
- */
-struct jpeg_encoder*
-jpeg_encoder_create(int width, int height, int quality);
-
-/**
- * Compress image by encoder
- * 
- * @param encoder  Encoder structure
- * @param image  Source image data
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image);
-
-/**
- * Destory JPEG encoder
- * 
- * @param encoder  Encoder structure
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-jpeg_encoder_destroy(struct jpeg_encoder* encoder);
-
-#endif // JPEG_ENCODER
+#endif // JPEG_TABLE

@@ -41,7 +41,9 @@ const int convert_zigzag2natural[64] = {
     53, 60, 61, 54, 47, 55, 62, 63 
 };
 
-//Raw Quantization Table
+/**
+ * Raw Quantization Table
+ */
 Npp8u table_raw_default[64] = { 
     16, 11, 12, 14, 12, 10, 16, 14,
     13, 14, 18, 17, 16, 19, 24, 40,
@@ -55,7 +57,7 @@ Npp8u table_raw_default[64] = {
 
 /** Documented at declaration */
 struct jpeg_table*
-jpeg_table_create(enum jpeg_table_type type, int quality)
+jpeg_table_create(enum jpeg_component_type type, int quality)
 {
     struct jpeg_table* table = malloc(sizeof(struct jpeg_table));
     if ( table == NULL )
