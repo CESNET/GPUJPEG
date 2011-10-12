@@ -86,21 +86,21 @@ main(int argc, char *argv[])
 	argv += optind;
     
     // Source image must be presented
-    if ( argc == 0 ) {
-        printf("Please supply source image filename!\n");
+    if ( argc < 2 ) {
+        printf("Please supply source and destination image filename!\n");
         print_help();
         return -1;
     }
     
     // Create encoder
-    struct jpeg_encoder* encoder = jpeg_encoder_create(width, height, 75);
+    struct jpeg_encoder* encoder = jpeg_encoder_create(width, height, quality);
     if ( encoder == NULL ) {
         fprintf(stderr, "Failed to create encoder!\n");
         return -1;
     }
     
     // Encode images
-    for ( int index = 0; index < argc; index++ ) {
+    for ( int index = 0; index < argc; index += 2 ) {
         TIMER_INIT();    
         
         TIMER_START();
@@ -116,12 +116,25 @@ main(int argc, char *argv[])
         TIMER_START();
             
         // Encode image
-        if ( jpeg_encoder_encode(encoder, image) != 0 ) {
+        uint8_t* image_compressed = NULL;
+        int image_compressed_size = 0;
+        if ( jpeg_encoder_encode(encoder, image, &image_compressed, &image_compressed_size) != 0 ) {
             fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
             return -1;
         }
         
         TIMER_STOP_PRINT("Encode Image: ");
+        TIMER_START();
+        
+        // Save image
+        if ( jpeg_image_save_to_file(argv[index + 1], image_compressed, image_compressed_size) != 0 ) {
+            fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
+            return -1;
+        }
+        
+        TIMER_STOP_PRINT("Save Image: ");
+        
+        printf("Compressed Image Size: %d bytes\n", image_compressed_size);
         
         // Destroy image
         jpeg_image_destroy(image);

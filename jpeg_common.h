@@ -46,12 +46,11 @@ jpeg_image_load_from_file(const char* filename, int width, int height, uint8_t**
  * 
  * @param filaname  Image filename
  * @param image   Image data buffer
- * @param width  Image width in pixels
- * @param height  Image height in pixels
+ * @param image_size  Image data buffer size
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_image_save_to_file(const char* filename, uint8_t* image, int width, int height);
+jpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size);
 
 /**
  * Destroy DXT image

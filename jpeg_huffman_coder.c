@@ -236,8 +236,6 @@ jpeg_huffman_coder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type
     coder.put_bits = 0;
     coder.dc = 0;
     coder.writer = encoder->writer;
-    // Initialize output buffer current position
-    coder.writer->buffer_current = coder.writer->buffer;
     
     // Encode all tiles
     for ( int tile_y = 0; tile_y < tile_cy; tile_y++ ) {

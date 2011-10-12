@@ -38,7 +38,9 @@ jpeg_writer_create(struct jpeg_encoder* encoder)
         return NULL;
     
     // Allocate output buffer
-    writer->buffer = malloc(encoder->width * encoder->height * encoder->comp_count * sizeof(uint8_t));
+    int buffer_size = 623;
+    buffer_size += encoder->width * encoder->height * encoder->comp_count;
+    writer->buffer = malloc(buffer_size * sizeof(uint8_t));
     if ( writer->buffer == NULL )
         return NULL;
     
@@ -227,7 +229,7 @@ jpeg_writer_write_dht(struct jpeg_encoder* encoder, enum jpeg_component_type typ
     
     // Varible-length
     for ( int i = 0; i < length; i++ )
-		jpeg_writer_emit_byte(encoder->writer, table->huffval[i]);    
+		jpeg_writer_emit_byte(encoder->writer, table->huffval[i]);  
 }
 
 /**
@@ -268,15 +270,24 @@ jpeg_writer_write_sos(struct jpeg_writer* writer)
 /** Documented at declaration */
 void
 jpeg_writer_write_header(struct jpeg_encoder* encoder)
-{
+{        
+    // 2 + 2 + 16
 	jpeg_writer_write_soi(encoder->writer);
 	jpeg_writer_write_app0(encoder->writer);
-	jpeg_writer_write_dqt(encoder, JPEG_COMPONENT_LUMINANCE);
+    
+    // 2 * (2 + 67)
+	jpeg_writer_write_dqt(encoder, JPEG_COMPONENT_LUMINANCE);      
 	jpeg_writer_write_dqt(encoder, JPEG_COMPONENT_CHROMINANCE);
-	jpeg_writer_write_sof(encoder, JPEG_MARKER_SOF0);
+	
+    // 2 + 17
+    jpeg_writer_write_sof(encoder, JPEG_MARKER_SOF0);              
+    
+    // 4 * (2 + 19 + length)
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, 0);   // DC table for Y component
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, 1);   // AC table for Y component
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_CHROMINANCE, 0); // DC table for Cb or Cr component
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_CHROMINANCE, 1); // AC table for Cb or Cr component
+    
+    // 2 + 12
 	jpeg_writer_write_sos(encoder->writer);
 }

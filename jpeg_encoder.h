@@ -75,10 +75,12 @@ jpeg_encoder_create(int width, int height, int quality);
  * 
  * @param encoder  Encoder structure
  * @param image  Source image data
+ * @param image_compressed  Pointer to variable where compressed image data buffer will be placed
+ * @param image_compressed_size  Pointer to variable where compressed image size will be placed
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image);
+jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** image_compressed, int* image_compressed_size);
 
 /**
  * Destory JPEG encoder

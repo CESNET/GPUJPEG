@@ -108,7 +108,7 @@ jpeg_encoder_print16(struct jpeg_encoder* encoder, int16_t* d_data)
 
 /** Documented at declaration */
 int
-jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
+jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** image_compressed, int* image_compressed_size)
 {
     //jpeg_table_print(encoder->table[JPEG_COMPONENT_LUMINANCE]);
     //jpeg_table_print(encoder->table[JPEG_COMPONENT_CHROMINANCE]);
@@ -142,6 +142,9 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         //jpeg_encoder_print16(encoder, d_data_quantized_comp);
     }
     
+    // Initialize writer output buffer current position
+    encoder->writer->buffer_current = encoder->writer->buffer;
+    
     // Write header
     jpeg_writer_write_header(encoder);
     
@@ -161,10 +164,11 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         jpeg_huffman_coder_encode(encoder, type, data_comp);
     }
     
-    int output_size = encoder->writer->buffer_current - encoder->writer->buffer;
-    printf("Output Buffer Size: %d bytes\n", output_size);
-    
     jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_EOI);
+    
+    // Set compressed image
+    *image_compressed = encoder->writer->buffer;
+    *image_compressed_size = encoder->writer->buffer_current - encoder->writer->buffer;
     
     return 0;
 }

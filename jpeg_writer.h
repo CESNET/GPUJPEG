@@ -62,31 +62,31 @@ jpeg_writer_destroy(struct jpeg_writer* writer);
  * 
  * @return void
  */
-#define jpeg_writer_emit_byte(writer, value) \
+#define jpeg_writer_emit_byte(writer, value) { \
     *writer->buffer_current = (uint8_t)(value); \
-    writer->buffer_current++;
+    writer->buffer_current++; }
     
 /**
  * Write two bytes to file
  * 
  * @return void
  */
-#define jpeg_writer_emit_2byte(writer, value) \
+#define jpeg_writer_emit_2byte(writer, value) { \
     *writer->buffer_current = (uint8_t)(((value) >> 8) & 0xFF); \
     writer->buffer_current++; \
     *writer->buffer_current = (uint8_t)((value) & 0xFF); \
-    writer->buffer_current++;
+    writer->buffer_current++; }
     
 /**
  * Write marker to file
  * 
  * @return void
  */
-#define jpeg_writer_emit_marker(writer, marker) \
+#define jpeg_writer_emit_marker(writer, marker) { \
     *writer->buffer_current = 0xFF;\
     writer->buffer_current++; \
     *writer->buffer_current = (uint8_t)(marker); \
-    writer->buffer_current++;
+    writer->buffer_current++; }
     
 /**
  * Write JPEG header (write soi, app0, Y_dqt, CbCr_dqt, sof, 4 * dht, sos blocks)
