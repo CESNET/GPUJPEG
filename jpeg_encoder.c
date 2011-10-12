@@ -160,6 +160,8 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
         int16_t* data_comp = &data[comp * encoder->width * encoder->height];
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+        // Write scan header
+        jpeg_writer_write_scan_header(encoder, comp, type);
         // Perform huffman coding
         jpeg_huffman_coder_encode(encoder, type, data_comp);
     }

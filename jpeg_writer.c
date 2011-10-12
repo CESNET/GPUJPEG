@@ -166,19 +166,19 @@ jpeg_writer_write_sof(struct jpeg_encoder* encoder, int code)
     // Number of components
 	jpeg_writer_emit_byte(encoder->writer, 3);
 
-	//for Y
+	// Component Y
 	jpeg_writer_emit_byte(encoder->writer, 1);  // component index
-	jpeg_writer_emit_byte(encoder->writer, 34); // (h_samp_factor << 4) + v_samp_factor
+	jpeg_writer_emit_byte(encoder->writer, 17); // (1 << 4) + 1 (sampling h: 1, v: 1)
 	jpeg_writer_emit_byte(encoder->writer, 0);  // quantization table index
 
-	//for Cb
+	// Component Cb
 	jpeg_writer_emit_byte(encoder->writer, 2);  // component index
-	jpeg_writer_emit_byte(encoder->writer, 34); // (h_samp_factor << 4) + v_samp_factor (17 for subsampling)
+	jpeg_writer_emit_byte(encoder->writer, 17); // (1 << 4) + 1 (sampling h: 1, v: 1)
 	jpeg_writer_emit_byte(encoder->writer, 1);  // quantization table index
 
-	//for Cr
+	// Component Cr
 	jpeg_writer_emit_byte(encoder->writer, 3);  // component index
-	jpeg_writer_emit_byte(encoder->writer, 34); // (h_samp_factor << 4) + v_samp_factor (17 for subsampling)
+	jpeg_writer_emit_byte(encoder->writer, 17); // (1 << 4) + 1 (sampling h: 1, v: 1)
 	jpeg_writer_emit_byte(encoder->writer, 1);  // quantization table index
 }
 
@@ -232,62 +232,48 @@ jpeg_writer_write_dht(struct jpeg_encoder* encoder, enum jpeg_component_type typ
 		jpeg_writer_emit_byte(encoder->writer, table->huffval[i]);  
 }
 
-/**
- * Write SOS block
- * 
- * @param writer  Writer structure
- * @return void
- */
-void 
-jpeg_writer_write_sos(struct jpeg_writer* writer)
-{
-	jpeg_writer_emit_marker(writer, JPEG_MARKER_SOS);
-
-    // Length
-	int length = 2 + 1 + 2 * 3 + 3;
-	jpeg_writer_emit_2byte(writer, length);
-
-    // Component count
-	jpeg_writer_emit_byte(writer, 3);
-
-	// Component Y
-	jpeg_writer_emit_byte(writer, 1); // index
-	jpeg_writer_emit_byte(writer, 0); //dc and ac tbl use 0-th tbl
-
-	// Component Cb
-	jpeg_writer_emit_byte(writer, 2);    // index
-	jpeg_writer_emit_byte(writer, 0x11); // dc and ac tbl use 1-th tbl
-
-	// Component Cr
-	jpeg_writer_emit_byte(writer, 3);    // index
-	jpeg_writer_emit_byte(writer, 0x11); // dc and ac tbl use 1-th tbl
-
-	jpeg_writer_emit_byte(writer, 0);    // Ss
-	jpeg_writer_emit_byte(writer, 0x3F); // Se
-	jpeg_writer_emit_byte(writer, 0);    // Ah/Al
-}
-
 /** Documented at declaration */
 void
 jpeg_writer_write_header(struct jpeg_encoder* encoder)
 {        
-    // 2 + 2 + 16
 	jpeg_writer_write_soi(encoder->writer);
 	jpeg_writer_write_app0(encoder->writer);
     
-    // 2 * (2 + 67)
 	jpeg_writer_write_dqt(encoder, JPEG_COMPONENT_LUMINANCE);      
 	jpeg_writer_write_dqt(encoder, JPEG_COMPONENT_CHROMINANCE);
 	
-    // 2 + 17
     jpeg_writer_write_sof(encoder, JPEG_MARKER_SOF0);              
     
-    // 4 * (2 + 19 + length)
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, 0);   // DC table for Y component
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, 1);   // AC table for Y component
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_CHROMINANCE, 0); // DC table for Cb or Cr component
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_CHROMINANCE, 1); // AC table for Cb or Cr component
-    
-    // 2 + 12
-	jpeg_writer_write_sos(encoder->writer);
+}
+
+/** Documented at declaration */
+void
+jpeg_writer_write_scan_header(struct jpeg_encoder* encoder, int index, enum jpeg_component_type type)
+{        
+    jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_SOS);
+
+    // Length
+	int length = 2 + 1 + 2 + 3;
+	jpeg_writer_emit_2byte(encoder->writer, length);
+
+    // Component count
+	jpeg_writer_emit_byte(encoder->writer, 1);
+
+    if ( type == JPEG_COMPONENT_LUMINANCE ) {
+        // Component Y
+        jpeg_writer_emit_byte(encoder->writer, index + 1); // index
+        jpeg_writer_emit_byte(encoder->writer, 0);         // (0 << 4) | 0
+    } else {
+        // Component Cb or Cr
+        jpeg_writer_emit_byte(encoder->writer, index + 1); // index
+        jpeg_writer_emit_byte(encoder->writer, 0x11);      // (1 << 4) | 1
+    }
+
+	jpeg_writer_emit_byte(encoder->writer, 0);    // Ss
+	jpeg_writer_emit_byte(encoder->writer, 0x3F); // Se
+	jpeg_writer_emit_byte(encoder->writer, 0);    // Ah/Al
 }

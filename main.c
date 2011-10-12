@@ -41,6 +41,7 @@ print_help()
         "jpeg_compress [options] img.rgb\n"
         "   -h, --help\t\tprint help\n"
         "   -s, --size\t\timage size in pixels, e.g. 1920x1080\n"
+        "   -q, --quality\t\tquality level 1-100 (default 75)\n"
     );
 }
 
@@ -48,8 +49,9 @@ int
 main(int argc, char *argv[])
 {       
     struct option longopts[] = {
-        {"help", no_argument,       0, 'h'},
-        {"size", required_argument, 0, 's'},
+        {"help",    no_argument,       0, 'h'},
+        {"size",    required_argument, 0, 's'},
+        {"quality", required_argument, 0, 'q'},
     };
 
     // Parameters
@@ -61,7 +63,7 @@ main(int argc, char *argv[])
     char ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "hs:", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "hs:q:", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'h':
             print_help();
@@ -74,6 +76,13 @@ main(int argc, char *argv[])
                 return -1;
             }
             height = atoi(pos + 1);
+            break;
+        case 'q':
+            quality = atoi(optarg);
+            if ( quality <= 0 )
+                quality = 1;
+            if ( quality > 100 )
+                quality = 100;
             break;
         case '?':
             return -1;
@@ -112,7 +121,7 @@ main(int argc, char *argv[])
             return -1;
         }
         
-        TIMER_STOP_PRINT("Load Image: ");
+        TIMER_STOP_PRINT("Load Image:     ");
         TIMER_START();
             
         // Encode image
@@ -123,7 +132,7 @@ main(int argc, char *argv[])
             return -1;
         }
         
-        TIMER_STOP_PRINT("Encode Image: ");
+        TIMER_STOP_PRINT("Encode Image:   ");
         TIMER_START();
         
         // Save image
@@ -132,9 +141,9 @@ main(int argc, char *argv[])
             return -1;
         }
         
-        TIMER_STOP_PRINT("Save Image: ");
+        TIMER_STOP_PRINT("Save Image:     ");
         
-        printf("Compressed Image Size: %d bytes\n", image_compressed_size);
+        printf("Compressed Size: %d bytes\n", image_compressed_size);
         
         // Destroy image
         jpeg_image_destroy(image);

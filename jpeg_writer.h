@@ -97,4 +97,14 @@ jpeg_writer_destroy(struct jpeg_writer* writer);
 void
 jpeg_writer_write_header(struct jpeg_encoder* encoder);
 
+/**
+ * Write scan header
+ * 
+ * @param encoder  Encoder structure
+ * @param type
+ * @return void
+ */
+void
+jpeg_writer_write_scan_header(struct jpeg_encoder* encoder, int index, enum jpeg_component_type type);
+
 #endif // JPEG_WRITER
