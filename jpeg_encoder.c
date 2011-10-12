@@ -45,6 +45,8 @@ jpeg_encoder_create(int width, int height, int quality)
     
     // Create writer
     encoder->writer = jpeg_writer_create(encoder);
+    if ( encoder->writer == NULL )
+        return NULL;
     
     // Create tables
     encoder->table[JPEG_COMPONENT_LUMINANCE] = jpeg_table_create(JPEG_COMPONENT_LUMINANCE, quality);
@@ -121,10 +123,6 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         
-        //jpeg_encoder_print8(encoder, d_data_comp);
-        
-        //cudaMemset(d_data_quantized_comp, 0, encoder->width * encoder->height * sizeof(int16_t));
-        
         //Perform forward DCT
         NppiSize fwd_roi;
         fwd_roi.width = encoder->width;
@@ -139,25 +137,6 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         );
         
         //jpeg_encoder_print16(encoder, d_data_quantized_comp);
-
-        //cudaMemset(d_data_comp, 0, encoder->width * encoder->height * sizeof(int16_t));
-        
-        //Perform inverse DCT
-        /*NppiSize inv_roi;
-        inv_roi.width = 64;
-        inv_roi.height = 1;
-        nppiDCTQuantInv8x8LS_JPEG_16s8u_C1R(
-            d_data_quantized_comp, 
-            65 * sizeof(int16_t), 
-            d_data_comp, 
-            encoder->width * sizeof(uint8_t), 
-            encoder->table[type]->d_table_inverse, 
-            inv_roi
-        );*/
-        
-        //jpeg_encoder_print8(encoder, d_data_comp);
-        
-        break;
     }
     
     // Copy quantized data from device memory to cpu memory
@@ -173,7 +152,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image)
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         // Perform huffman coding
-        jpeg_huffman_coder_encode(encoder->writer, type, data_comp);
+        jpeg_huffman_coder_encode(encoder, type, data_comp);
         
         break;
     }
@@ -191,6 +170,9 @@ jpeg_encoder_destroy(struct jpeg_encoder* encoder)
     jpeg_table_destroy(encoder->table[JPEG_COMPONENT_LUMINANCE]);
     assert(encoder->table[JPEG_COMPONENT_CHROMINANCE] != NULL);
     jpeg_table_destroy(encoder->table[JPEG_COMPONENT_CHROMINANCE]);
+    
+    assert(encoder->writer != NULL);
+    jpeg_writer_destroy(encoder->writer);
     
     assert(encoder->d_data_source != NULL);
     cudaFree(encoder->d_data_source);

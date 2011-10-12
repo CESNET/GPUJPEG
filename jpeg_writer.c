@@ -25,6 +25,7 @@
  */
  
 #include "jpeg_writer.h"
+#include "jpeg_writer_type.h"
 #include "jpeg_encoder.h"
 #include "jpeg_util.h"
 
@@ -35,6 +36,12 @@ jpeg_writer_create(struct jpeg_encoder* encoder)
     struct jpeg_writer* writer = malloc(sizeof(struct jpeg_writer));
     if ( writer == NULL )
         return NULL;
+    
+    // Allocate output buffer
+    writer->buffer = malloc(encoder->width * encoder->height * encoder->comp_count * sizeof(uint8_t));
+    if ( writer->buffer == NULL )
+        return NULL;
+    
     return writer;
 }
 
@@ -42,6 +49,9 @@ jpeg_writer_create(struct jpeg_encoder* encoder)
 int
 jpeg_writer_destroy(struct jpeg_writer* writer)
 {
+    assert(writer != NULL);
+    assert(writer->buffer != NULL);
+    free(writer->buffer);
     free(writer);
     return 0;
 }

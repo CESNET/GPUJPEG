@@ -25,17 +25,24 @@
  */
  
 #include "jpeg_huffman_coder.h"
+#include "jpeg_writer_type.h"
 #include "jpeg_util.h"
 
 /** Huffman coder structure */
 struct jpeg_huffman_coder
 {
+    // Huffman table DC
+    struct jpeg_table_huffman* table_dc;
+    // Huffman table AC
+    struct jpeg_table_huffman* table_ac;
     // The value (in 4 byte buffer) to be written out
     int put_value;
     // The size (in bits) to be written out
     int put_bits;
     // JPEG writer structure
     struct jpeg_writer* writer;
+    // DC differentize for component
+    int dc;
 };
 
 /**
@@ -108,8 +115,8 @@ jpeg_huffman_coder_emit_left_bits(struct jpeg_huffman_coder* coder)
 }
 
 /**
- * 
- * //	0,1,2,3:Y; 4:Cb; 5:Cr;
+ * Encode one 8x8 block
+ *
  * @return 0 if succeeds, otherwise nonzero
  */
 int
@@ -123,109 +130,85 @@ jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
         printf("\n");
     }
     
-	/*int temp, temp2, nbits, k, r, i;
-	int *block = pCoef;
-	int *pLastDc = &gnJPEGEncoderdcY;
-	HUFFMAN_TABLE *dctbl, *actbl;
-
-	if( iBlock < 4 )
-	{
-		dctbl = & m_htblEncYDC;
-		actbl = & m_htblEncYAC;
-//		pLastDc = &gnJPEGEncoderdcY;	
-	}
-	else
-	{
-		dctbl = & m_htblEncCbCrDC;
-		actbl = & m_htblEncCbCrAC;
-
-		if( iBlock == 4 )
-			pLastDc = &gnJPEGEncoderdcCb;
-		else
-			pLastDc = &gnJPEGEncoderdcCr;
-	}
+	int16_t* block = data;
 
 	// Encode the DC coefficient difference per section F.1.2.1
+	int temp = block[0] - coder->dc;
+	coder->dc = block[0];
 
-	temp = temp2 = block[0] - (*pLastDc);
-	*pLastDc = block[0];
-
-	if (temp < 0) {
-		temp = -temp;		// temp is abs value of input
+    int temp2 = temp;
+	if ( temp < 0 ) {
+        // Temp is abs value of input
+		temp = -temp;
 		// For a negative input, want temp2 = bitwise complement of abs(input)
 		// This code assumes we are on a two's complement machine
-		temp2 --;
+		temp2--;
 	}
 
 	// Find the number of bits needed for the magnitude of the coefficient
-	nbits = 0;
-	while (temp) {
-		nbits ++;
+	int nbits = 0;
+	while ( temp ) {
+		nbits++;
 		temp >>= 1;
 	}
 
 	//	Write category number
-	if (! EmitBits( dctbl->code[nbits], dctbl->size[nbits] ))
+	if ( jpeg_huffman_coder_emit_bits(coder, coder->table_dc->code[nbits], coder->table_dc->size[nbits]) != 0 )
 		return -1;
 
-	//	Write category offset
-	if (nbits)			// EmitBits rejects calls with size 0
-	{
-		if (! EmitBits( (unsigned int) temp2, nbits ))
+	//	Write category offset (EmitBits rejects calls with size 0)
+	if ( nbits ) {
+		if ( jpeg_huffman_coder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
 			return -1;
 	}
 
-	////////////////////////////////////////////////////////////////////////////
-	// Encode the AC coefficients per section F.1.2.2
-
-	r = 0;			// r = run length of zeros
-
-	for (k = 1; k < 64; k++) 
+	// Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
+	int r = 0;
+	for ( int k = 1; k < 64; k++ ) 
 	{
-		if ((temp = block[jpeg_natural_order[k]]) == 0) 
-		{
+		if ( (temp = block[/*jpeg_natural_order[*/k/*]*/]) == 0 ) {
 			r++;
 		} 
-		else 
-		{
-			// if run length > 15, must emit special run-length-16 codes (0xF0)
+		else {
+			// If run length > 15, must emit special run-length-16 codes (0xF0)
 			while (r > 15) {
-				if (! EmitBits( actbl->code[0xF0], actbl->size[0xF0] ))
+				if ( jpeg_huffman_coder_emit_bits(coder, coder->table_ac->code[0xF0], coder->table_ac->size[0xF0]) != 0 )
 					return -1;
 				r -= 16;
 			}
 
 			temp2 = temp;
-			if (temp < 0) {
-				temp = -temp;		// temp is abs value of input
+			if ( temp < 0 ) {
+                // temp is abs value of input
+				temp = -temp;		
 				// This code assumes we are on a two's complement machine
 				temp2--;
 			}
 
 			// Find the number of bits needed for the magnitude of the coefficient
-			nbits = 1;		// there must be at least one 1 bit
-			while ((temp >>= 1))
+            // there must be at least one 1 bit
+			nbits = 1;
+			while ( (temp >>= 1) )
 				nbits++;
 
 			// Emit Huffman symbol for run length / number of bits
-			i = (r << 4) + nbits;
-			if (! EmitBits( actbl->code[i], actbl->size[i] ))
+			int i = (r << 4) + nbits;
+			if ( jpeg_huffman_coder_emit_bits(coder, coder->table_ac->code[i], coder->table_ac->size[i]) != 0 )
 				return -1;
 
-			//	Write Category offset
-			if (! EmitBits( (unsigned int) temp2, nbits ))
+			// Write Category offset
+			if ( jpeg_huffman_coder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
 				return -1;
 
 			r = 0;
 		}
 	}
 
-	//If all the left coefs were zero, emit an end-of-block code
-	if (r > 0)
-	{
-		if (! EmitBits( actbl->code[0], actbl->size[0] ))
+	// If all the left coefs were zero, emit an end-of-block code
+	if ( r > 0 ) {
+		if ( jpeg_huffman_coder_emit_bits(coder, coder->table_ac->code[0], coder->table_ac->size[0]) != 0 )
 			return -1;
-	}	*/	
+	}
 
 	return 0;
 }
@@ -247,9 +230,14 @@ jpeg_huffman_coder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type
     
     // Initialize huffman coder
     struct jpeg_huffman_coder coder;
+    coder.table_dc = &encoder->table[type]->table_huffman_dc;
+    coder.table_ac = &encoder->table[type]->table_huffman_ac;
     coder.put_value = 0;
     coder.put_bits = 0;
+    coder.dc = 0;
     coder.writer = encoder->writer;
+    // Initialize output buffer current position
+    coder.writer->buffer_current = coder.writer->buffer;
     
     // Encode all tiles
     for ( int tile_y = 0; tile_y < tile_cy; tile_y++ ) {
@@ -258,6 +246,12 @@ jpeg_huffman_coder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type
             jpeg_huffman_coder_encode_tile(&coder, &data[data_index]);
         }
     }
+    
+    // Emit left
+    if ( coder.put_bits > 0 )
+        jpeg_huffman_coder_emit_left_bits(&coder);
+        
+    jpeg_writer_emit_marker(coder.writer, JPEG_MARKER_EOI);
     
     return 0;
 }

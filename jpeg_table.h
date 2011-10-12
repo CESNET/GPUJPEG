@@ -29,9 +29,26 @@
 
 #include "jpeg_type.h"
 
-/**
- * JPEG table structure
- */
+/** JPEG table for huffman coding */
+struct jpeg_table_huffman {
+    // Code for each symbol 
+    unsigned int code[256];	
+    // Length of code for each symbol 
+	char size[256];
+    // If no code has been allocated for a symbol S, size[S] is 0 
+
+	// These two fields directly represent the contents of a JPEG DHT marker
+    // bits[k] = # of symbols with codes of length k bits; bits[0] is unused
+    unsigned char bits[17];
+    // The symbols, in order of incr code length
+    // This field is used only during compression.  It's initialized false when
+	// the table is created, and set true when it's been output to the file.
+	// You could suppress output of a table by setting this to true.
+	// (See jpeg_suppress_tables for an example.)
+    unsigned char huffval[256];		
+};
+
+/** JPEG table structure for one component type (luminance/chrominance) */
 struct jpeg_table
 {
     // Quantization raw table
@@ -44,6 +61,10 @@ struct jpeg_table
     uint16_t* d_table_forward;
     // Quantization inverse table in device memory
     uint16_t* d_table_inverse;
+    // Huffman table DC
+    struct jpeg_table_huffman table_huffman_dc;
+    // Huffman table AC
+    struct jpeg_table_huffman table_huffman_ac;
 };
 
 /**

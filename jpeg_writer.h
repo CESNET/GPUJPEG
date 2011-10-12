@@ -35,7 +35,10 @@ struct jpeg_encoder;
 /** JPEG writer structure */
 struct jpeg_writer 
 {
+    // Output buffer
     uint8_t* buffer;
+    // Output buffer current position
+    uint8_t* buffer_current;
 };
 
 /**
@@ -52,8 +55,8 @@ jpeg_writer_create(struct jpeg_encoder* encoder);
  * @return void
  */
 #define jpeg_writer_emit_byte(writer, value) \
-    *writer->buffer = (uint8_t)(value); \
-    writer->buffer++;
+    *writer->buffer_current = (uint8_t)(value); \
+    writer->buffer_current++;
     
 /**
  * Write two bytes to file
@@ -61,10 +64,10 @@ jpeg_writer_create(struct jpeg_encoder* encoder);
  * @return void
  */
 #define jpeg_writer_emit_2byte(writer, value) \
-    *writer->buffer = (uint8_t)(((value) >> 8) & 0xFF); \
-    writer->buffer++; \
-    *writer->buffer = (uint8_t)((value) & 0xFF); \
-    writer->buffer++;
+    *writer->buffer_current = (uint8_t)(((value) >> 8) & 0xFF); \
+    writer->buffer_current++; \
+    *writer->buffer_current = (uint8_t)((value) & 0xFF); \
+    writer->buffer_current++;
     
 /**
  * Write marker to file
@@ -72,10 +75,10 @@ jpeg_writer_create(struct jpeg_encoder* encoder);
  * @return void
  */
 #define jpeg_writer_emit_marker(writer, marker) \
-    *writer->buffer = 0xFF;\
-    writer->buffer++; \
-    *writer->buffer = (uint8_t)(marker); \
-    writer->buffer++;
+    *writer->buffer_current = 0xFF;\
+    writer->buffer_current++; \
+    *writer->buffer_current = (uint8_t)(marker); \
+    writer->buffer_current++;
 
 /**
  * Destroy JPEG writer
