@@ -47,18 +47,6 @@ jpeg_table_init_huffman(struct jpeg_table* table, enum jpeg_component_type type)
 void
 jpeg_table_compute_huffman(unsigned char* bits, unsigned char* values, struct jpeg_table_huffman* table);
 
-/** Table used to convert zigzad order to the natural-order */
-const int convert_zigzag2natural[64] = { 
-     0,  1,  8, 16,  9,  2,  3, 10,
-    17, 24, 32, 25, 18, 11,  4,  5,
-    12, 19, 26, 33, 40, 48, 41, 34,
-    27, 20, 13,  6,  7, 14, 21, 28,
-    35, 42, 49, 56, 57, 50, 43, 36,
-    29, 22, 15, 23, 30, 37, 44, 51,
-    58, 59, 52, 45, 38, 31, 39, 46,
-    53, 60, 61, 54, 47, 55, 62, 63 
-};
-
 /** Raw Quantization Table */
 Npp8u table_raw_default[64] = { 
     16, 11, 12, 14, 12, 10, 16, 14,
@@ -92,14 +80,14 @@ jpeg_table_create(enum jpeg_component_type type, int quality)
     // Setup forward table
     const int scale = (1 << 15);
     for (int i = 0; i < 64; ++i) {
-        table->table_forward[convert_zigzag2natural[i]] = (scale / (double) table->table_raw[i]) + 0.5;
+        table->table_forward[jpeg_order_natural[i]] = (scale / (double) table->table_raw[i]) + 0.5;
     }
     // Setup forward table by npp (with bug)
     //nppiQuantFwdTableInit_JPEG_8u16u(table->table_raw, table->table_forward);
     
     // Setup inverse table
     for (int i = 0; i < 64; ++i) {
-        table->table_inverse[convert_zigzag2natural[i]] = table->table_raw[i];
+        table->table_inverse[jpeg_order_natural[i]] = table->table_raw[i];
     }
     // Setup inverse table by npp (with bug)
     //nppiQuantInvTableInit_JPEG_8u16u(table->table_raw, table->table_inverse);

@@ -114,19 +114,6 @@ jpeg_huffman_coder_emit_left_bits(struct jpeg_huffman_coder* coder)
 	coder->put_bits = 0;
 }
 
-static int jpeg_natural_order[64+16] = {
-    0,  1,  8, 16,  9,  2,  3, 10,
-	17, 24, 32, 25, 18, 11,  4,  5,
-	12, 19, 26, 33, 40, 48, 41, 34,
-	27, 20, 13,  6,  7, 14, 21, 28,
-    35, 42, 49, 56, 57, 50, 43, 36,
-	29, 22, 15, 23, 30, 37, 44, 51,
-	58, 59, 52, 45, 38, 31, 39, 46,
-	53, 60, 61, 54, 47, 55, 62, 63,
-	63, 63, 63, 63, 63, 63, 63, 63, //extra entries for safety
-	63, 63, 63, 63, 63, 63, 63, 63
-};
-
 /**
  * Encode one 8x8 block
  *
@@ -168,8 +155,10 @@ jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
 	}
 
 	//	Write category number
-	if ( jpeg_huffman_coder_emit_bits(coder, coder->table_dc->code[nbits], coder->table_dc->size[nbits]) != 0 )
+	if ( jpeg_huffman_coder_emit_bits(coder, coder->table_dc->code[nbits], coder->table_dc->size[nbits]) != 0 ) {
+        fprintf(stderr, "Fail emit bits %d [code: %d, size: %d]!\n", nbits, coder->table_dc->code[nbits], coder->table_dc->size[nbits]);
 		return -1;
+    }
 
 	//	Write category offset (EmitBits rejects calls with size 0)
 	if ( nbits ) {
@@ -181,7 +170,7 @@ jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
 	int r = 0;
 	for ( int k = 1; k < 64; k++ ) 
 	{
-		if ( (temp = block[/*jpeg_natural_order[k]*/k]) == 0 ) {
+		if ( (temp = block[jpeg_order_natural[k]]) == 0 ) {
 			r++;
 		} 
 		else {
@@ -228,13 +217,6 @@ jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
 	return 0;
 }
 
-int
-jpeg_huffman_coder_encode_tile(struct jpeg_huffman_coder* coder, int16_t* data)
-{    
-    // Tile has only one block for now
-    return jpeg_huffman_coder_encode_block(coder, data);
-}
-
 /** Documented at declaration */
 int
 jpeg_huffman_coder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type type, int16_t* data)
@@ -256,8 +238,10 @@ jpeg_huffman_coder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type
     for ( int tile_y = 0; tile_y < tile_cy; tile_y++ ) {
         for ( int tile_x = 0; tile_x < tile_cx; tile_x++ ) {
             int data_index = (tile_y * tile_cx + tile_x) * tile_size * tile_size;
-            if ( jpeg_huffman_coder_encode_tile(&coder, &data[data_index]) != 0 )
+            if ( jpeg_huffman_coder_encode_block(&coder, &data[data_index]) != 0 ) {
+                fprintf(stderr, "Huffman coder failed at block [%d, %d]!\n", tile_y, tile_x);
                 return -1;
+            }
         }
     }
     

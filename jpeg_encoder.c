@@ -163,7 +163,10 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
         // Write scan header
         jpeg_writer_write_scan_header(encoder, comp, type);
         // Perform huffman coding
-        jpeg_huffman_coder_encode(encoder, type, data_comp);
+        if ( jpeg_huffman_coder_encode(encoder, type, data_comp) != 0 ) {
+            fprintf(stderr, "Huffman coder failed for component at index %d!\n", comp);
+            return -1;
+        }
     }
     
     jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_EOI);

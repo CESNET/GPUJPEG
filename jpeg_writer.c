@@ -133,12 +133,12 @@ jpeg_writer_write_dqt(struct jpeg_encoder* encoder, enum jpeg_component_type typ
 	jpeg_writer_emit_byte(encoder->writer, (int)type); 
 
     // Table changed from default with quality
-	uint16_t* dqt = encoder->table[type]->table_forward;
+	uint8_t* dqt = encoder->table[type]->table_raw;
     
     // Emit table
 	unsigned char qval;
 	for ( int i = 0; i < 64; i++ )  {
-        unsigned char qval = (unsigned char)((char)(dqt[i]));
+        unsigned char qval = (unsigned char)((char)(dqt[jpeg_order_natural[i]]));
 		jpeg_writer_emit_byte(encoder->writer, qval);
     }
 }
