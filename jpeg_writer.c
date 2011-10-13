@@ -199,18 +199,18 @@ jpeg_writer_write_dht(struct jpeg_encoder* encoder, enum jpeg_component_type typ
 	if ( type == JPEG_COMPONENT_LUMINANCE ) {
 		if ( is_ac == 1 ) {
 			table = &encoder->table[JPEG_COMPONENT_LUMINANCE]->table_huffman_ac;
-			index = 17;
+			index = 16;
 		} else {
 			table = &encoder->table[JPEG_COMPONENT_LUMINANCE]->table_huffman_dc;
-			index = 1;
+			index = 0;
 		}
 	} else {
 		if ( is_ac == 1 ) {
 			table = &encoder->table[JPEG_COMPONENT_CHROMINANCE]->table_huffman_ac;
-			index = 16;
+			index = 17;
 		} else {
 			table = &encoder->table[JPEG_COMPONENT_CHROMINANCE]->table_huffman_dc;
-			index = 0;
+			index = 1;
 		}
 	}
 
