@@ -81,7 +81,7 @@ jpeg_encoder_print8(struct jpeg_encoder* encoder, uint8_t* d_data)
     printf("Print Data\n");
     for ( int y = 0; y < encoder->height; y++ ) {
         for ( int x = 0; x < encoder->width; x++ ) {
-            printf("%4u ", data[y * encoder->width + x]);
+            printf("%3u ", data[y * encoder->width + x]);
         }
         printf("\n");
     }
@@ -99,7 +99,7 @@ jpeg_encoder_print16(struct jpeg_encoder* encoder, int16_t* d_data)
     printf("Print Data\n");
     for ( int y = 0; y < encoder->height; y++ ) {
         for ( int x = 0; x < encoder->width; x++ ) {
-            printf("%4d ", data[y * encoder->width + x]);
+            printf("%3d ", data[y * encoder->width + x]);
         }
         printf("\n");
     }
@@ -134,10 +134,14 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             d_data_comp, 
             encoder->width * sizeof(uint8_t), 
             d_data_quantized_comp, 
-            64 * sizeof(int16_t), 
+            encoder->width * 8 * sizeof(int16_t), 
             encoder->table[type]->d_table_forward, 
             fwd_roi
         );
+        if ( status != 0 ) {
+            fprintf(stderr, "Forward DCT failed for component at index %d!\n", comp);
+            return -1;
+        }
         
         //jpeg_encoder_print16(encoder, d_data_quantized_comp);
     }
