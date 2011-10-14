@@ -28,20 +28,31 @@
 #define JPEG_PREPROCESSOR
 
 #include "jpeg_encoder.h"
+#include "jpeg_decoder.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * Preprocessing
+ * Preprocessor encode
  * 
  * @param encoder  Encoder structure
  * @param image  Image source data
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_preprocessor_process(struct jpeg_encoder* encoder, uint8_t* image);
+jpeg_preprocessor_encode(struct jpeg_encoder* encoder);
+
+/**
+ * Preprocessor decode
+ * 
+ * @param encoder  Encoder structure
+ * @param image  Image source data
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+jpeg_preprocessor_decode(struct jpeg_decoder* decoder);
 
 #ifdef __cplusplus
 }

@@ -125,11 +125,17 @@ jpeg_encoder_print16(struct jpeg_encoder* encoder, int16_t* d_data)
 int
 jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** image_compressed, int* image_compressed_size)
 {
+    int data_size = encoder->width * encoder->height * encoder->comp_count;
+    
+    // Copy image to device memory
+    if ( cudaSuccess != cudaMemcpy(encoder->d_data_source, image, data_size * sizeof(uint8_t), cudaMemcpyHostToDevice) )
+        return -1;
+    
     //jpeg_table_print(encoder->table[JPEG_COMPONENT_LUMINANCE]);
     //jpeg_table_print(encoder->table[JPEG_COMPONENT_CHROMINANCE]);
     
     // Preprocessing
-    if ( jpeg_preprocessor_process(encoder, image) != 0 )
+    if ( jpeg_preprocessor_encode(encoder) != 0 )
         return -1;
         
     // Perform DCT and quantization
@@ -169,7 +175,6 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     jpeg_writer_write_header(encoder);
     
     // Copy quantized data from device memory to cpu memory
-    int data_size = encoder->width * encoder->height * encoder->comp_count;
     cudaMemcpy(encoder->data_quantized, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
     
     // Perform huffman coding for all components

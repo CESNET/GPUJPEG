@@ -66,16 +66,41 @@ __global__ void d_rgb_to_comp(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const
     }
 }
 
+/**
+ * Kernel - Copy three separated component buffers into target image data
+ *
+ * @param d_c1  First component buffer
+ * @param d_c2  Second component buffer
+ * @param d_c3  Third component buffer
+ * @param d_target  Image target data
+ * @param pixel_count  Number of pixels to copy
+ * @return void
+ */
+__global__ void d_comp_to_rgb(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int pixel_count)
+{
+    int x  = threadIdx.x;
+    int gX = blockDim.x * blockIdx.x;
+    
+    int globalInputPosition = gX + x;
+    if ( globalInputPosition >= pixel_count )
+        return;
+        
+    float r1 = (float)(d_c1[globalInputPosition] - 16);
+    float r2 = (float)(d_c2[globalInputPosition] - 128);
+    float r3 = (float)(d_c3[globalInputPosition] - 128);
+
+    int globalOutputPosition = (gX + x) * 3;
+    d_target[globalOutputPosition + 0] = (uint8_t)(1.0 * r1 + 0.0 * r2 + 1.402 * r3);
+    d_target[globalOutputPosition + 1] = (uint8_t)(1.0 * r1 - 0.344136 * r2 - 0.714136 * r3);
+    d_target[globalOutputPosition + 2] = (uint8_t)(1.0 * r1 + 1.772 * r2 + 0.0 * r3);
+}
+
 /** Documented at declaration */
 int
-jpeg_preprocessor_process(struct jpeg_encoder* encoder, uint8_t* image)
+jpeg_preprocessor_encode(struct jpeg_encoder* encoder)
 {
     int pixel_count = encoder->width * encoder->height;
     int alignedSize = (pixel_count / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
-    
-    // Copy image to device memory
-    if ( cudaSuccess != cudaMemcpy(encoder->d_data_source, image, pixel_count * 3 * sizeof(uint8_t), cudaMemcpyHostToDevice) )
-        return NULL;
         
     // Kernel
     dim3 threads (RGB_8BIT_THREADS);
@@ -89,7 +114,33 @@ jpeg_preprocessor_process(struct jpeg_encoder* encoder, uint8_t* image)
     
     cudaError cuerr = cudaThreadSynchronize();
     if ( cuerr != cudaSuccess ) {
-        fprintf(stderr, "Preprocessing failed: %s!\n", cudaGetErrorString(cuerr));
+        fprintf(stderr, "Preprocessor encoding failed: %s!\n", cudaGetErrorString(cuerr));
+        return -1;
+    }
+    
+    return 0;
+}
+
+/** Documented at declaration */
+int
+jpeg_preprocessor_decode(struct jpeg_decoder* decoder)
+{
+    int pixel_count = decoder->width * decoder->height;
+    int alignedSize = (pixel_count / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
+        
+    // Kernel
+    dim3 threads (RGB_8BIT_THREADS);
+    dim3 grid (alignedSize / (RGB_8BIT_THREADS * 3));
+    assert(alignedSize % (RGB_8BIT_THREADS * 3) == 0);
+
+    uint8_t* d_c1 = &decoder->d_data[0 * pixel_count];
+    uint8_t* d_c2 = &decoder->d_data[1 * pixel_count];
+    uint8_t* d_c3 = &decoder->d_data[2 * pixel_count];
+    d_comp_to_rgb<<<grid, threads>>>(d_c1, d_c2, d_c3, decoder->d_data_target, pixel_count);
+    
+    cudaError cuerr = cudaThreadSynchronize();
+    if ( cuerr != cudaSuccess ) {
+        fprintf(stderr, "Preprocessing decoding failed: %s!\n", cudaGetErrorString(cuerr));
         return -1;
     }
     

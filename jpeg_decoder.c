@@ -26,6 +26,7 @@
  
 #include "jpeg_decoder.h"
 #include "jpeg_huffman_decoder.h"
+#include "jpeg_preprocessor.h"
 #include "jpeg_util.h"
 
 /** Documented at declaration */
@@ -42,8 +43,9 @@ jpeg_decoder_create(int width, int height, int comp_count)
     decoder->comp_count = 0;
     decoder->data_quantized = NULL;
     decoder->d_data_quantized = NULL;
-    decoder->data = NULL;
     decoder->d_data = NULL;
+    decoder->data_target = NULL;
+    decoder->d_data_target = NULL;
     for ( int comp = 0; comp < JPEG_MAX_COMPONENT_COUNT; comp++ )
         decoder->scan[comp].data = NULL;
     
@@ -102,9 +104,11 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
         return -1;
     if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
         return -1;
-    if ( cudaSuccess != cudaMallocHost((void**)&decoder->data, data_size * sizeof(uint8_t)) ) 
-        return -1;
     if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data, data_size * sizeof(uint8_t)) ) 
+        return -1;
+    if ( cudaSuccess != cudaMallocHost((void**)&decoder->data_target, data_size * sizeof(uint8_t)) ) 
+        return -1;
+    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_target, data_size * sizeof(uint8_t)) ) 
         return -1;
     
     return 0;
@@ -150,6 +154,8 @@ jpeg_decoder_print16(struct jpeg_decoder* decoder, int16_t* d_data)
 int
 jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size)
 {
+    int data_size = decoder->width * decoder->height * decoder->comp_count;
+    
     // Read JPEG image data
     if ( jpeg_reader_read_image(decoder, image, image_size) != 0 ) {
         fprintf(stderr, "Decoder failed when decoding image data!\n");
@@ -170,8 +176,7 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         }
     }
     
-    // Copy quantized data to device memory from cpu memory
-    int data_size = decoder->width * decoder->height * decoder->comp_count;
+    // Copy quantized data to device memory from cpu memory    
     cudaMemcpy(decoder->d_data_quantized, decoder->data_quantized, data_size * sizeof(int16_t), cudaMemcpyHostToDevice);
     
     // Perform IDCT and dequantization
@@ -192,7 +197,7 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         inv_roi.height = decoder->height / 8;
         NppStatus status = nppiDCTQuantInv8x8LS_JPEG_16s8u_C1R(
             d_data_quantized_comp, 
-            decoder->width * 8, 
+            decoder->width * 8 * sizeof(int16_t), 
             d_data_comp, 
             decoder->width * sizeof(uint8_t), 
             decoder->table_quantization[type].d_table, 
@@ -205,13 +210,15 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
     }
     
     // Preprocessing
-    /*if ( jpeg_preprocessor_process(encoder, image) != 0 )
+    if ( jpeg_preprocessor_decode(decoder) != 0 )
         return -1;
     
-    // Set compressed image
-    *image_compressed = encoder->writer->buffer;
-    *image_compressed_size = encoder->writer->buffer_current - encoder->writer->buffer;
-    */
+    cudaMemcpy(decoder->data_target, decoder->d_data_target, data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+    
+    // Set decompressed image
+    *image_decompressed = decoder->data_target;
+    *image_decompressed_size = data_size * sizeof(uint8_t);
+    
     return 0;
 }
 
@@ -236,10 +243,12 @@ jpeg_decoder_destroy(struct jpeg_decoder* decoder)
         cudaFreeHost(decoder->data_quantized);
     if ( decoder->d_data_quantized != NULL )
         cudaFree(decoder->d_data_quantized);
-    if ( decoder->data != NULL )
-        cudaFreeHost(decoder->data);
     if ( decoder->d_data != NULL )
         cudaFree(decoder->d_data);
+    if ( decoder->data_target != NULL )
+        cudaFreeHost(decoder->data_target);
+    if ( decoder->d_data_target != NULL )
+        cudaFree(decoder->d_data_target);
     
     free(decoder);
     
