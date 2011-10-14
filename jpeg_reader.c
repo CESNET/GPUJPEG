@@ -231,7 +231,14 @@ jpeg_reader_read_sof0(struct jpeg_decoder* decoder, uint8_t** image)
             fprintf(stderr, "Error: SOF0 marker component Cb or Cr should have quantization table index 1 but %d was presented!\n", table_index);
             return -1;
         }
+        length -= 3;
 	}
+    
+    // Check length
+    if ( length > 0 ) {
+        fprintf(stderr, "Warning: SOF0 marker contains %d more bytes than needed!\n", length);
+        *image += length;
+    }
     
     return 0;
 }
@@ -251,7 +258,7 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
     
     int index = jpeg_reader_read_byte(*image);
     struct jpeg_table_huffman* table;
-    switch(index){
+    switch(index) {
     case 0:
         table = &decoder->table[JPEG_COMPONENT_LUMINANCE]->table_huffman_dc;
         break;
@@ -314,7 +321,41 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
 int
 jpeg_reader_read_sos(uint8_t** image, uint8_t* image_end)
 {    
-    uint8_t buffer[1920 * 1080];
+    int length = (int)jpeg_reader_read_2byte(*image);
+    length -= 2;
+    
+	int comp_count = (int)jpeg_reader_read_byte(*image);
+    if ( comp_count != 1 ) {
+        fprintf(stderr, "Error: SOS marker component count %d is not supported!\n", comp_count);
+        return -1;
+    }
+    
+	// Collect the component-spec parameters
+	for ( int comp = 0; comp < comp_count; comp++ ) 
+	{
+        int index = (int)jpeg_reader_read_byte(*image);
+        int table = (int)jpeg_reader_read_byte(*image);
+        int table_dc = (table >> 4) & 15;
+		int table_ac = table & 15;
+        
+        if ( index == 1 && (table_ac != 0 || table_dc != 0) ) {
+            fprintf(stderr, "Error: SOS marker for Y should have huffman tables 0,0 but %d,%d was presented!\n", table_dc, table_ac);
+            return -1;
+        }
+        if ( (index == 2 || index == 3) && (table_ac != 1 || table_dc != 1) ) {
+            fprintf(stderr, "Error: SOS marker for Cb or Cr should have huffman tables 1,1 but %d,%d was presented!\n", table_dc, table_ac);
+            return -1;
+        }
+	}
+
+	// Collect the additional scan parameters Ss, Se, Ah/Al.
+	int Ss = (int)jpeg_reader_read_byte(*image);
+	int Se = (int)jpeg_reader_read_byte(*image);
+	int Ax = (int)jpeg_reader_read_byte(*image);
+    int Ah = (Ax >> 4) & 15;
+    int Al = (Ax) & 15;
+    
+    // Read scan data
     uint8_t byte = 0;
     uint8_t byte_previous = 0;
     int byte_count = 0;
@@ -323,9 +364,11 @@ jpeg_reader_read_sos(uint8_t** image, uint8_t* image_end)
         byte = jpeg_reader_read_byte(*image);
         byte_count++;
         
+        // Check scan end
         if ( byte_previous == 0xFF && (byte == JPEG_MARKER_EOI || byte == JPEG_MARKER_SOS) ) {
-            fprintf(stderr, "Todo: Save SOS marker data %d bytes!\n", byte_count);
             *image -= 2;
+            byte_count -= 2;
+            fprintf(stderr, "Todo: Save SOS marker data %d bytes!\n", byte_count);
             return 0;
         }
     } while( *image < image_end );
