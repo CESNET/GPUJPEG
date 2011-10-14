@@ -58,7 +58,7 @@ jpeg_reader_destroy(struct jpeg_reader* reader)
 int
 jpeg_reader_read_marker(uint8_t** image)
 {
-	if( jpeg_reader_read_byte(*image) != 255 )
+	if( jpeg_reader_read_byte(*image) != 0xFF )
 		return -1;
 	int marker = jpeg_reader_read_byte(*image);
 	return marker;
@@ -108,11 +108,61 @@ jpeg_reader_read_app0(uint8_t** image)
     return 0;
 }
 
+int
+jpeg_reader_read_dqt(uint8_t** image)
+{
+    fprintf(stderr, "Todo: Read DQT marker!\n");
+    jpeg_reader_skip_marker_content(image);
+    return 0;
+}
+
+int
+jpeg_reader_read_sof0(uint8_t** image)
+{
+    fprintf(stderr, "Todo: Read SOF0 marker!\n");
+    jpeg_reader_skip_marker_content(image);
+    return 0;
+}
+
+int
+jpeg_reader_read_dht(uint8_t** image)
+{
+    fprintf(stderr, "Todo: Read DHT marker!\n");
+    jpeg_reader_skip_marker_content(image);
+    return 0;
+}
+
+int
+jpeg_reader_read_sos(uint8_t** image, uint8_t* image_end)
+{    
+    uint8_t buffer[1920 * 1080];
+    uint8_t byte = 0;
+    uint8_t byte_previous = 0;
+    int byte_count = 0;
+    do {
+        byte_previous = byte;
+        byte = jpeg_reader_read_byte(*image);
+        byte_count++;
+        
+        if ( byte_previous == 0xFF && (byte == JPEG_MARKER_EOI || byte == JPEG_MARKER_SOS) ) {
+            fprintf(stderr, "Todo: Save SOS marker data %d bytes!\n", byte_count);
+            *image -= 2;
+            return 0;
+        }
+    } while( *image < image_end );
+    
+    fprintf(stderr, "JPEG data unexpected ended while reading SOS marker!\n");
+    
+    return -1;
+}
 
 /** Documented at declaration */
 int
 jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_size)
 {
+    // Get image end
+    uint8_t* image_end = image + image_size;
+    
     // Check first SOI marker
     int marker_soi = jpeg_reader_read_marker(&image);
     if ( marker_soi != JPEG_MARKER_SOI ) {
@@ -120,9 +170,8 @@ jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_s
         return -1;
     }
         
-    // Step 1:
-    int retval = -1;
-    while ( 1 ) {
+    int eoi_presented = 0;
+    while ( eoi_presented == 0 ) {
         // Read marker
         int marker = jpeg_reader_read_marker(&image);
 
@@ -152,112 +201,91 @@ jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_s
             fprintf(stderr, "Warning: JPEG data contains not supported %s marker\n", jpeg_marker_name(marker));
             jpeg_reader_skip_marker_content(&image);
             break;
-
-        /*case JPEG_MARKER_DQT:// maybe twice, one for Y, another for Cb/Cr
-            GetDqt();
+            
+        case JPEG_MARKER_DQT:
+            if ( jpeg_reader_read_dqt(&image) != 0 )
+                return -1;
             break;
 
-        case JPEG_MARKER_SOF0:        //* Baseline
-        case JPEG_MARKER_SOF1:        //* Extended sequential, Huffman 
-            get_sof(false, false);
+        case JPEG_MARKER_SOF0: 
+            // Baseline
+            if ( jpeg_reader_read_sof0(&image) != 0 )
+                return -1;
             break;
-
-        case JPEG_MARKER_SOF2:        //* Progressive, Huffman 
-            //get_sof(true, false);    
-            rgpuTrace("Prog + Huff is not supported");
+        case JPEG_MARKER_SOF1:
+            // Extended sequential with Huffman coder
+            fprintf(stderr, "Warning: Reading SOF1 as it was SOF0 marker (should work but verify it)!\n", jpeg_marker_name(marker));
+            if ( jpeg_reader_read_sof0(&image) != 0 )
+                return -1;
+            break;
+        case JPEG_MARKER_SOF2:
+            fprintf(stderr, "Error: Marker SOF2 (Progressive with Huffman coding) is not supported!");
             return -1;
-
-        case JPEG_MARKER_SOF9:        //* Extended sequential, arithmetic 
-            //get_sof(false, true);
-            rgpuTrace("sequential + Arith is not supported");
+        case JPEG_MARKER_SOF3:
+            fprintf(stderr, "Error: Marker SOF3 (Lossless with Huffman coding) is not supported!");
             return -1;
-
-        case JPEG_MARKER_SOF10:        //* Progressive, arithmetic 
-            //get_sof(true, true);
-            rgpuTrace("Prog + Arith is not supported");
+        case JPEG_MARKER_SOF5:
+            fprintf(stderr, "Error: Marker SOF5 (Differential sequential with Huffman coding) is not supported!");
             return -1;
-
+        case JPEG_MARKER_SOF6:
+            fprintf(stderr, "Error: Marker SOF6 (Differential progressive with Huffman coding) is not supported!");
+            return -1;
+        case JPEG_MARKER_SOF7:
+            fprintf(stderr, "Error: Marker SOF7 (Extended lossless with Arithmetic coding) is not supported!");
+            return -1;
+        case JPEG_MARKER_JPG:
+            fprintf(stderr, "Error: Marker JPG (Reserved for JPEG extensions ) is not supported!");
+            return -1;
+        case JPEG_MARKER_SOF10:
+            fprintf(stderr, "Error: Marker SOF10 (Progressive with Arithmetic coding) is not supported!");
+            return -1;
+        case JPEG_MARKER_SOF11:
+            fprintf(stderr, "Error: Marker SOF11 (Lossless with Arithmetic coding) is not supported!");
+            return -1;
+        case JPEG_MARKER_SOF13:
+            fprintf(stderr, "Error: Marker SOF13 (Differential sequential with Arithmetic coding) is not supported!");
+            return -1;
+        case JPEG_MARKER_SOF14:
+            fprintf(stderr, "Error: Marker SOF14 (Differential progressive with Arithmetic coding) is not supported!");
+            return -1;
+        case JPEG_MARKER_SOF15:
+            fprintf(stderr, "Error: Marker SOF15 (Differential lossless with Arithmetic coding) is not supported!");
+            return -1;
+            
         case JPEG_MARKER_DHT:
-            get_dht();//4 tables: dc/ac * Y/CbCr
+            if ( jpeg_reader_read_dht(&image) != 0 )
+                return -1;
             break;
 
-        case JPEG_MARKER_SOS://Start of Scan
-            get_sos();
-            retval = 0;//JPEG_REACHED_SOS;
-
-            nWidth = gnJPEGDecoderWidth;
-            nHeight = gnJPEGDecoderHeight;
-            nHeadSize = m_pData - pInBuf;
-            return retval;
-
-        //the following marker are not needed for jpg made by ms paint
-        case JPEG_MARKER_COM:
-            SkipMarker();
-            break;
-
-        case JPEG_MARKER_DRI:
-            get_dri();
-            break;*/
-
-
-/*            
-        Currently unsupported SOFn types 
-        case JPEG_MARKER_SOF3:         Lossless, Huffman
-        case JPEG_MARKER_SOF5:         Differential sequential, Huffman 
-        case JPEG_MARKER_SOF6:         Differential progressive, Huffman 
-        case JPEG_MARKER_SOF7:         Differential lossless, Huffman 
-        case JPEG_MARKER_JPG:             Reserved for JPEG extensions 
-        case JPEG_MARKER_SOF11:         Lossless, arithmetic 
-        case JPEG_MARKER_SOF13:         Differential sequential, arithmetic 
-        case JPEG_MARKER_SOF14:         Differential progressive, arithmetic
-        case JPEG_MARKER_SOF15:         Differential lossless, arithmetic 
-            return -1;//ERREXIT1(cinfo, JERR_SOF_UNSUPPORTED, cinfo->unread_marker);
+        case JPEG_MARKER_SOS:
+            if ( jpeg_reader_read_sos(&image, image_end) != 0 )
+                return -1;
             break;
             
         case JPEG_MARKER_EOI:
-            TRACEMS(cinfo, 1, JTRC_EOI);
-            cinfo->unread_marker = 0;    
-            return 1;//JPEG_REACHED_EOI;
-            
-        case JPEG_MARKER_DAC:
-            if (! get_dac(cinfo))
-                return -1;//JPEG_SUSPENDED;
+            eoi_presented = 1;
             break;
 
-        case JPEG_MARKER_RST0:        
-        case JPEG_MARKER_RST1:
-        case JPEG_MARKER_RST2:
-        case JPEG_MARKER_RST3:
-        case JPEG_MARKER_RST4:
-        case JPEG_MARKER_RST5:
-        case JPEG_MARKER_RST6:
-        case JPEG_MARKER_RST7:
-        case JPEG_MARKER_TEM:
+        case JPEG_MARKER_COM:
+        case JPEG_MARKER_DRI:
+        case JPEG_MARKER_DAC:
+        case JPEG_MARKER_DNL:
+            fprintf(stderr, "Warning: JPEG data contains not supported %s marker\n", jpeg_marker_name(marker));
+            jpeg_reader_skip_marker_content(&image);
             break;
             
-        case JPEG_MARKER_DNL:            
-        if (! skip_variable(cinfo))
-                return -1;//JPEG_SUSPENDED;
-            break;
-*/            
         default:   
             fprintf(stderr, "Error: JPEG data contains not supported %s marker!\n", jpeg_marker_name(marker));
             jpeg_reader_skip_marker_content(&image);
-            /* must be DHP, EXP, JPGn, or RESn */
-            /* For now, we treat the reserved markers as fatal errors since they are
-            * likely to be used to signal incompatible JPEG Part 3 extensions.
-            * Once the JPEG 3 version-number marker is well defined, this code
-            * ought to change!
-            */
             return -1;
         }
-        /* Successfully processed marker, so reset state variable */
-        //unread_marker = 0;
     }
     
-    /*if(( gnJPEGDecoderWidth <= 0 )||( gnJPEGDecoderHeight <= 0 ))
-        return false;
-    m_nDataBytesLeft = cbInBuf - nHeadSize;*/
+    // Check EOI marker
+    if ( eoi_presented == 0 ) {
+        fprintf(stderr, "Error: JPEG data should end with EOI marker!\n");
+        return -1;
+    }
     
-    return -1;
+    return 0;
 }

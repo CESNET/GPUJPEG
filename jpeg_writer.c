@@ -151,9 +151,9 @@ jpeg_writer_write_dqt(struct jpeg_encoder* encoder, enum jpeg_component_type typ
  * @return void
  */
 void
-jpeg_writer_write_sof(struct jpeg_encoder* encoder, int code)
+jpeg_writer_write_sof0(struct jpeg_encoder* encoder)
 {
-	jpeg_writer_emit_marker(encoder->writer, code);
+	jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_SOF0);
     
     // Length
 	jpeg_writer_emit_2byte(encoder->writer, 17);
@@ -242,7 +242,7 @@ jpeg_writer_write_header(struct jpeg_encoder* encoder)
 	jpeg_writer_write_dqt(encoder, JPEG_COMPONENT_LUMINANCE);      
 	jpeg_writer_write_dqt(encoder, JPEG_COMPONENT_CHROMINANCE);
 	
-    jpeg_writer_write_sof(encoder, JPEG_MARKER_SOF0);              
+    jpeg_writer_write_sof0(encoder);
     
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, 0);   // DC table for Y component
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, 1);   // AC table for Y component
