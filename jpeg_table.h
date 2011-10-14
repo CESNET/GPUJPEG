@@ -65,14 +65,10 @@ struct jpeg_table
 {
     // Quantization raw table
     uint8_t table_raw[64];
-    // Quantization forward table
-    uint16_t table_forward[64];
-    // Quantization inverse table
-    uint16_t table_inverse[64];
-    // Quantization forward table in device memory
-    uint16_t* d_table_forward;
-    // Quantization inverse table in device memory
-    uint16_t* d_table_inverse;
+    // Quantization forward/inverse table
+    uint16_t table[64];
+    // Quantization forward/inverse table in device memory
+    uint16_t* d_table;
     // Huffman table DC
     struct jpeg_table_huffman table_huffman_dc;
     // Huffman table AC

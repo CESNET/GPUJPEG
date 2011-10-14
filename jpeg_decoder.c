@@ -44,6 +44,12 @@ jpeg_decoder_create(int width, int height)
     decoder->reader = jpeg_reader_create();
     if ( decoder->reader == NULL )
         return NULL;
+        
+    // Create tables
+    decoder->table[JPEG_COMPONENT_LUMINANCE] = jpeg_table_create();
+    decoder->table[JPEG_COMPONENT_CHROMINANCE] = jpeg_table_create();
+    if ( decoder->table[JPEG_COMPONENT_LUMINANCE] == NULL || decoder->table[JPEG_COMPONENT_CHROMINANCE] == NULL )
+        return NULL;
     
     return decoder;
 }

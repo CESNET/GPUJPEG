@@ -51,7 +51,7 @@ jpeg_encoder_create(int width, int height, int quality)
     
     // Create tables
     encoder->table[JPEG_COMPONENT_LUMINANCE] = jpeg_table_create();
-    encoder->table[JPEG_COMPONENT_CHROMINANCE] = jpeg_table_create(JPEG_COMPONENT_CHROMINANCE, quality);
+    encoder->table[JPEG_COMPONENT_CHROMINANCE] = jpeg_table_create();
     if ( encoder->table[JPEG_COMPONENT_LUMINANCE] == NULL || encoder->table[JPEG_COMPONENT_CHROMINANCE] == NULL )
         return NULL;
     // Init tables for encoder
@@ -138,7 +138,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             encoder->width * sizeof(uint8_t), 
             d_data_quantized_comp, 
             encoder->width * 8 * sizeof(int16_t), 
-            encoder->table[type]->d_table_forward, 
+            encoder->table[type]->d_table, 
             fwd_roi
         );
         if ( status != 0 ) {

@@ -25,6 +25,7 @@
  */
  
 #include "jpeg_reader.h"
+#include "jpeg_decoder.h"
 #include "jpeg_format_type.h"
 #include "jpeg_util.h"
 
@@ -48,30 +49,60 @@ jpeg_reader_destroy(struct jpeg_reader* reader)
     return 0;
 }
 
+/**
+ * Read byte from image data
+ * 
+ * @param image
+ * @return byte
+ */
 #define jpeg_reader_read_byte(image) \
     (uint8_t)(*(image)++)
-    
+
+/**
+ * Read two-bytes from image data
+ * 
+ * @param image
+ * @return 2 bytes
+ */    
 #define jpeg_reader_read_2byte(image) \
     (uint16_t)(((*(image)) << 8) + (*((image) + 1))); \
     image += 2;
 
+/**
+ * Read marker from image data
+ * 
+ * @param image
+ * @return marker code
+ */
 int
 jpeg_reader_read_marker(uint8_t** image)
 {
-	if( jpeg_reader_read_byte(*image) != 0xFF )
-		return -1;
-	int marker = jpeg_reader_read_byte(*image);
-	return marker;
+    if( jpeg_reader_read_byte(*image) != 0xFF )
+        return -1;
+    int marker = jpeg_reader_read_byte(*image);
+    return marker;
 }
 
+/**
+ * Skip marker content (read length and that much bytes - 2)
+ * 
+ * @param image
+ * @return void
+ */
 void
 jpeg_reader_skip_marker_content(uint8_t** image)
 {
     int length = (int)jpeg_reader_read_2byte(*image);
 
-	*image += length - 2;
+    *image += length - 2;
 }
 
+/**
+ * Read application ifno block from image
+ * 
+ * @param image
+ * @return 0 if succeeds, otherwise nonzero
+ */
 int
 jpeg_reader_read_app0(uint8_t** image)
 {
@@ -108,14 +139,48 @@ jpeg_reader_read_app0(uint8_t** image)
     return 0;
 }
 
+/**
+ * Read quantization table definition block from image
+ * 
+ * @param decoder
+ * @param image
+ * @return 0 if succeeds, otherwise nonzero
+ */
 int
-jpeg_reader_read_dqt(uint8_t** image)
-{
-    fprintf(stderr, "Todo: Read DQT marker!\n");
-    jpeg_reader_skip_marker_content(image);
+jpeg_reader_read_dqt(struct jpeg_decoder* decoder, uint8_t** image)
+{    
+    int length = (int)jpeg_reader_read_2byte(*image);
+    length -= 2;
+    
+    if ( length != 65 ) {
+        fprintf(stderr, "DQT marker length should be 65 but %d was presented!\n", length);
+        return -1;
+    }
+    
+    int index = jpeg_reader_read_byte(*image);
+    uint16_t* table;
+    if( index == 0 ) {
+        table = decoder->table[JPEG_COMPONENT_LUMINANCE]->table;
+    } else if ( index == 1 ) {
+        table = decoder->table[JPEG_COMPONENT_CHROMINANCE]->table;
+    } else {
+        fprintf(stderr, "DQT marker index should be 0 or 1 but %d was presented!\n", index);
+        return -1;
+    }
+
+    for ( int i = 0; i < 64; i++ ) {
+        table[jpeg_order_natural[i]] = jpeg_reader_read_byte(*image);
+    }
+    
     return 0;
 }
 
+/**
+ * Read start of frame block from image
+ * 
+ * @param image
+ * @return 0 if succeeds, otherwise nonzero
+ */
 int
 jpeg_reader_read_sof0(uint8_t** image)
 {
@@ -124,14 +189,62 @@ jpeg_reader_read_sof0(uint8_t** image)
     return 0;
 }
 
+/**
+ * Read huffman table definition block from image
+ * 
+ * @param decoder
+ * @param image
+ * @return 0 if succeeds, otherwise nonzero
+ */
 int
-jpeg_reader_read_dht(uint8_t** image)
-{
-    fprintf(stderr, "Todo: Read DHT marker!\n");
-    jpeg_reader_skip_marker_content(image);
+jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
+{    
+    int length = (int)jpeg_reader_read_2byte(*image);
+    length -= 2;
+    
+    int index = jpeg_reader_read_byte(*image);
+    struct jpeg_table_huffman* table;
+    switch(index){
+    case 0:
+        table = &decoder->table[JPEG_COMPONENT_LUMINANCE]->table_huffman_dc;
+        break;
+    case 16:
+        table = &decoder->table[JPEG_COMPONENT_LUMINANCE]->table_huffman_ac;
+        break;
+    case 1:
+        table = &decoder->table[JPEG_COMPONENT_CHROMINANCE]->table_huffman_dc;
+        break;
+    case 17:
+        table = &decoder->table[JPEG_COMPONENT_CHROMINANCE]->table_huffman_ac;
+        break;
+    default:
+        fprintf(stderr, "DHT marker index should be 0, 1, 16 or 17 but %d was presented!\n", index);
+        return -1;
+    }
+    
+    // Read in bits[]
+    table->bits[0] = 0;
+    int count = 0;
+    for ( int i = 1; i <= 16; i++ ) {
+        table->bits[i] = jpeg_reader_read_byte(*image);
+        count += table->bits[i];
+    }   
+
+    // Read in huffval
+    for ( int i = 0; i < count; i++ ){
+        table->huffval[i] = jpeg_reader_read_byte(*image);
+    }
+    
     return 0;
 }
 
+/**
+ * Read start of scan block from image
+ * 
+ * @param image
+ * @param image_end
+ * @return 0 if succeeds, otherwise nonzero
+ */
 int
 jpeg_reader_read_sos(uint8_t** image, uint8_t* image_end)
 {    
@@ -203,7 +316,7 @@ jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_s
             break;
             
         case JPEG_MARKER_DQT:
-            if ( jpeg_reader_read_dqt(&image) != 0 )
+            if ( jpeg_reader_read_dqt(decoder, &image) != 0 )
                 return -1;
             break;
 
@@ -253,7 +366,7 @@ jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_s
             return -1;
             
         case JPEG_MARKER_DHT:
-            if ( jpeg_reader_read_dht(&image) != 0 )
+            if ( jpeg_reader_read_dht(decoder, &image) != 0 )
                 return -1;
             break;
 
