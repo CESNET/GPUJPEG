@@ -32,7 +32,7 @@
 /** JPEG decoder structure predeclaration */
 struct jpeg_decoder;
 
-/** JPEG writer structure */
+/** JPEG reader structure */
 struct jpeg_reader
 {
 };

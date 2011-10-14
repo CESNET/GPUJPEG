@@ -62,6 +62,7 @@ main(int argc, char *argv[])
     // Parameters
     int width = 0;
     int height = 0;
+    int comp_count = 3;
     int quality = 75;
     int encode = 0;
     int decode = 0;
@@ -131,7 +132,7 @@ main(int argc, char *argv[])
     
     if ( encode == 1 ) {    
         // Create encoder
-        struct jpeg_encoder* encoder = jpeg_encoder_create(width, height, quality);
+        struct jpeg_encoder* encoder = jpeg_encoder_create(width, height, comp_count, quality);
         if ( encoder == NULL ) {
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
@@ -199,7 +200,7 @@ main(int argc, char *argv[])
     
     if ( decode == 1 ) {    
         // Create decoder
-        struct jpeg_decoder* decoder = jpeg_decoder_create(width, height);
+        struct jpeg_decoder* decoder = jpeg_decoder_create(width, height, comp_count);
         if ( decoder == NULL ) {
             fprintf(stderr, "Failed to create decoder!\n");
             return -1;

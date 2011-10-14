@@ -30,6 +30,15 @@
 #include "jpeg_table.h"
 #include "jpeg_reader.h"
 
+#define JPEG_MAX_COMPONENT_COUNT 3
+
+/** JPEG reader scan structure */
+struct jpeg_decoder_scan
+{
+    uint8_t* data;
+    int data_size;
+};
+
 /**
  * JPEG decoder structure
  */
@@ -47,17 +56,36 @@ struct jpeg_decoder
     
     // JPEG reader structure
     struct jpeg_reader* reader;
+    
+    // Scan count
+    int scan_count;
+    
+    // Scan definitions
+    struct jpeg_decoder_scan scan[JPEG_MAX_COMPONENT_COUNT];
 };
 
 /**
  * Create JPEG decoder
  * 
- * @param width  Width of encodable images
- * @param height  Height of encodable images
+ * @param width  Width of decodable images
+ * @param height  Height of decodable images
+ * @param comp_count  Component count
  * @return encoder structure if succeeds, otherwise NULL
  */
 struct jpeg_decoder*
-jpeg_decoder_create(int width, int height);
+jpeg_decoder_create(int width, int height, int comp_count);
+
+/**
+ * Init JPEG decoder for specific image size
+ * 
+ * @param decoder  Decoder structure
+ * @param width  Width of decodable images
+ * @param height  Height of decodable images
+ * @param comp_count  Component count
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_count);
 
 /**
  * Decompress image by decoder

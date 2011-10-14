@@ -29,16 +29,16 @@
 
 /** Documented at declaration */
 struct jpeg_decoder*
-jpeg_decoder_create(int width, int height)
+jpeg_decoder_create(int width, int height, int comp_count)
 {
     struct jpeg_decoder* decoder = malloc(sizeof(struct jpeg_decoder));
     if ( decoder == NULL )
         return NULL;
         
     // Set parameters
-    decoder->width = width;
-    decoder->height = height;
-    decoder->comp_count = 3;
+    decoder->width = 0;
+    decoder->height = 0;
+    decoder->comp_count = 0;
     
     // Create reader
     decoder->reader = jpeg_reader_create();
@@ -50,8 +50,44 @@ jpeg_decoder_create(int width, int height)
     decoder->table[JPEG_COMPONENT_CHROMINANCE] = jpeg_table_create();
     if ( decoder->table[JPEG_COMPONENT_LUMINANCE] == NULL || decoder->table[JPEG_COMPONENT_CHROMINANCE] == NULL )
         return NULL;
+        
+    if ( width != 0 && height != 0 ) {
+        if ( jpeg_decoder_init(decoder, width, height, comp_count) != 0 )
+            return NULL;
+    }
     
     return decoder;
+}
+
+/** Documented at declaration */
+int
+jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_count)
+{
+    assert(comp_count == 3);
+    
+    // No reinialization needed
+    if ( decoder->width == width && decoder->height == height && decoder->comp_count == comp_count ) {
+        return 0;
+    }
+    
+    // For now we can't reinitialize decoder, we can only do first initialization
+    if ( decoder->width != 0 || decoder->height != 0 || decoder->comp_count != 0 ) {
+        fprintf(stderr, "Can't reinitialize decoder, implement if needed!\n");
+        return -1;
+    }
+    
+    decoder->width = width;
+    decoder->height = height;
+    decoder->comp_count = comp_count;
+    
+    int data_comp_size = decoder->width * decoder->height;
+    for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
+        decoder->scan[comp].data = malloc(data_comp_size * sizeof(uint8_t));
+        if ( decoder->scan[comp].data == NULL )
+            return -1;
+    }
+    
+    return 0;
 }
 
 /** Documented at declaration */
@@ -63,7 +99,14 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         fprintf(stderr, "Decoder failed when decoding image data!\n");
         return -1;
     }
+    
+    for ( int index = 0; index < decoder->scan_count; index++ ) {
+        struct jpeg_decoder_scan* scan = &decoder->scan[index];
         
+        // TODO: Decode
+        fprintf(stderr, "Todo: Decode scan data %d bytes!\n", scan->data_size);
+    }
+    
     // Preprocessing
     /*if ( jpeg_preprocessor_process(encoder, image) != 0 )
         return -1;
@@ -163,6 +206,9 @@ jpeg_decoder_destroy(struct jpeg_decoder* decoder)
     
     assert(decoder->reader != NULL);
     jpeg_reader_destroy(decoder->reader);
+    
+    for ( int comp = 0; comp < decoder->comp_count; comp++ )
+        free(decoder->scan[comp].data);
     
     free(decoder);
     

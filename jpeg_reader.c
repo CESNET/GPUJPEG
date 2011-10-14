@@ -198,11 +198,12 @@ jpeg_reader_read_sof0(struct jpeg_decoder* decoder, uint8_t** image)
     }
 	int height = (int)jpeg_reader_read_2byte(*image);
 	int width = (int)jpeg_reader_read_2byte(*image);
+    int comp_count = (int)jpeg_reader_read_byte(*image);
+    jpeg_decoder_init(decoder, width, height, comp_count);
     if ( width != decoder->width || height != decoder->height ) {
         fprintf(stderr, "Error: SOF0 marker image size should be %dx%d but %dx%d was presented!\n", decoder->width, decoder->height, width, height);
         return -1;
     }
-    int comp_count = (int)jpeg_reader_read_byte(*image);
     if ( comp_count != decoder->comp_count ) {
         fprintf(stderr, "Error: SOF0 marker component count should be %d but %d was presented!\n", decoder->comp_count, comp_count);
         return -1;
@@ -319,7 +320,7 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_reader_read_sos(uint8_t** image, uint8_t* image_end)
+jpeg_reader_read_sos(struct jpeg_decoder* decoder, uint8_t** image, uint8_t* image_end)
 {    
     int length = (int)jpeg_reader_read_2byte(*image);
     length -= 2;
@@ -355,20 +356,29 @@ jpeg_reader_read_sos(uint8_t** image, uint8_t* image_end)
     int Ah = (Ax >> 4) & 15;
     int Al = (Ax) & 15;
     
+    // Check maximum scan count
+    if ( decoder->scan_count >= 3 ) {
+        fprintf(stderr, "Error: SOS marker reached maximum number of scans (3)!\n");
+        return -1;
+    }
+    // Get scan structure
+    struct jpeg_decoder_scan* scan = &decoder->scan[decoder->scan_count];
+    decoder->scan_count++;
+    
     // Read scan data
     uint8_t byte = 0;
     uint8_t byte_previous = 0;
-    int byte_count = 0;
+    scan->data_size = 0;
     do {
         byte_previous = byte;
         byte = jpeg_reader_read_byte(*image);
-        byte_count++;
+        scan->data[scan->data_size] = byte;
+        scan->data_size++;
         
         // Check scan end
         if ( byte_previous == 0xFF && (byte == JPEG_MARKER_EOI || byte == JPEG_MARKER_SOS) ) {
             *image -= 2;
-            byte_count -= 2;
-            fprintf(stderr, "Todo: Save SOS marker data %d bytes!\n", byte_count);
+            scan->data_size -= 2;
             return 0;
         }
     } while( *image < image_end );
@@ -382,6 +392,9 @@ jpeg_reader_read_sos(uint8_t** image, uint8_t* image_end)
 int
 jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_size)
 {
+    // Setup decoder
+    decoder->scan_count = 0;
+    
     // Get image end
     uint8_t* image_end = image + image_size;
     
@@ -480,7 +493,7 @@ jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_s
             break;
 
         case JPEG_MARKER_SOS:
-            if ( jpeg_reader_read_sos(&image, image_end) != 0 )
+            if ( jpeg_reader_read_sos(decoder, &image, image_end) != 0 )
                 return -1;
             break;
             

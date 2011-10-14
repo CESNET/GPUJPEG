@@ -32,8 +32,10 @@
 
 /** Documented at declaration */
 struct jpeg_encoder*
-jpeg_encoder_create(int width, int height, int quality)
+jpeg_encoder_create(int width, int height, int comp_count, int quality)
 {
+    assert(comp_count == 3);
+    
     struct jpeg_encoder* encoder = malloc(sizeof(struct jpeg_encoder));
     if ( encoder == NULL )
         return NULL;
@@ -41,7 +43,7 @@ jpeg_encoder_create(int width, int height, int quality)
     // Set parameters
     encoder->width = width;
     encoder->height = height;
-    encoder->comp_count = 3;
+    encoder->comp_count = comp_count;
     encoder->quality = quality;
     
     // Create writer
