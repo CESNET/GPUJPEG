@@ -65,6 +65,9 @@ struct jpeg_decoder
     
     // Scan definitions
     struct jpeg_decoder_scan scan[JPEG_MAX_COMPONENT_COUNT];
+    
+    // Data quantized
+    int16_t* data_quantized;
 };
 
 /**

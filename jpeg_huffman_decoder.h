@@ -35,6 +35,6 @@
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_huffman_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_type type, int16_t* data, int data_size);
+jpeg_huffman_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_type type, int8_t* data, int data_size, int16_t* data_decompressed);
 
 #endif // JPEG_HUFFMAN_DECODER

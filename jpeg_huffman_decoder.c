@@ -250,7 +250,7 @@ jpeg_huffman_decoder_decode_block(struct jpeg_huffman_encoder* coder, int16_t* d
 
 /** Documented at declaration */
 int
-jpeg_huffman_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_type type, int16_t* data)
+jpeg_huffman_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_type type, int8_t* data, int data_size, int16_t* data_decompressed)
 {    
     int block_size = 8;
     int block_cx = (decoder->width + block_size - 1) / block_size;
@@ -260,16 +260,17 @@ jpeg_huffman_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_ty
     struct jpeg_huffman_decoder coder;
     coder.table_dc = &decoder->table_huffman[type][JPEG_HUFFMAN_DC];
     coder.table_ac = &decoder->table_huffman[type][JPEG_HUFFMAN_AC];
-    coder.put_value = 0;
-    coder.put_bits = 0;
+    coder.data = data;
+    coder.data_size = data_size;
+    coder.get_buff = 0;
+    coder.get_bits = 0;
     coder.dc = 0;
-    coder.writer = encoder->writer;
     
     // Decode all blocks
     for ( int block_y = 0; block_y < block_cy; block_y++ ) {
         for ( int block_x = 0; block_x < block_cx; block_x++ ) {
             int data_index = (block_y * block_cx + block_x) * block_size * block_size;
-            if ( jpeg_huffman_decoder_decode_block(&coder, &data[data_index]) != 0 ) {
+            if ( jpeg_huffman_decoder_decode_block(&coder, &data_decompressed[data_index]) != 0 ) {
                 fprintf(stderr, "Huffman decoder failed at block [%d, %d]!\n", block_y, block_x);
                 return -1;
             }

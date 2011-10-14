@@ -25,6 +25,7 @@
  */
  
 #include "jpeg_decoder.h"
+#include "jpeg_huffman_decoder.h"
 #include "jpeg_util.h"
 
 /** Documented at declaration */
@@ -39,6 +40,9 @@ jpeg_decoder_create(int width, int height, int comp_count)
     decoder->width = 0;
     decoder->height = 0;
     decoder->comp_count = 0;
+    decoder->data_quantized = NULL;
+    for ( int comp = 0; comp < JPEG_MAX_COMPONENT_COUNT; comp++ )
+        decoder->scan[comp].data = NULL;
     
     // Create reader
     decoder->reader = jpeg_reader_create();
@@ -81,12 +85,18 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
     decoder->height = height;
     decoder->comp_count = comp_count;
     
+    // Allocate scans
     int data_comp_size = decoder->width * decoder->height;
     for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
         decoder->scan[comp].data = malloc(data_comp_size * sizeof(uint8_t));
         if ( decoder->scan[comp].data == NULL )
             return -1;
     }
+    
+    // Allocate buffers
+    int data_size = decoder->width * decoder->width * decoder->comp_count;
+    if ( cudaSuccess != cudaMallocHost((void**)&decoder->data_quantized, data_size * sizeof(int16_t)) ) 
+        return -1;
     
     return 0;
 }
@@ -102,10 +112,16 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
     }
     
     for ( int index = 0; index < decoder->scan_count; index++ ) {
+        // Get scan and data buffer
         struct jpeg_decoder_scan* scan = &decoder->scan[index];
-        
-        // TODO: Decode
-        fprintf(stderr, "Todo: Decode scan data %d bytes!\n", scan->data_size);
+        int16_t* data_quantized_comp = &decoder->data_quantized[index * decoder->width * decoder->height];
+        // Determine table type
+        enum jpeg_component_type type = (index == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+        // Huffman decode
+        if ( jpeg_huffman_decoder_decode(decoder, type, scan->data, scan->data_size, data_quantized_comp) != 0 ) {
+            fprintf(stderr, "Huffman decoder failed for scan at index %d!\n", index);
+            return -1;
+        }
     }
     
     // Preprocessing
@@ -215,6 +231,9 @@ jpeg_decoder_destroy(struct jpeg_decoder* decoder)
     
     for ( int comp = 0; comp < decoder->comp_count; comp++ )
         free(decoder->scan[comp].data);
+        
+    if ( decoder->data_quantized != NULL )
+        cudaFreeHost(decoder->data_quantized);
     
     free(decoder);
     

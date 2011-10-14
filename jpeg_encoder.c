@@ -53,7 +53,6 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
     
     // Allocate data buffers
     int data_size = encoder->width * encoder->width * encoder->comp_count;
-    uint8_t* d_image = NULL;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_source, data_size * sizeof(uint8_t)) ) 
         return NULL;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data, data_size * sizeof(uint8_t)) ) 
