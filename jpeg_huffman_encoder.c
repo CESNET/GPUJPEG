@@ -27,7 +27,7 @@
 #include "jpeg_huffman_encoder.h"
 #include "jpeg_util.h"
 
-/** Huffman coder structure */
+/** Huffman encoder structure */
 struct jpeg_huffman_encoder
 {
     // Huffman table DC
@@ -220,9 +220,9 @@ jpeg_huffman_encoder_encode_block(struct jpeg_huffman_encoder* coder, int16_t* d
 int
 jpeg_huffman_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type type, int16_t* data)
 {    
-    int tile_size = 8;
-    int tile_cx = (encoder->width + tile_size - 1) / tile_size;
-    int tile_cy = (encoder->height + tile_size - 1) / tile_size;
+    int block_size = 8;
+    int block_cx = (encoder->width + block_size - 1) / block_size;
+    int block_cy = (encoder->height + block_size - 1) / block_size;
     
     // Initialize huffman coder
     struct jpeg_huffman_encoder coder;
@@ -233,12 +233,12 @@ jpeg_huffman_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_component_ty
     coder.dc = 0;
     coder.writer = encoder->writer;
     
-    // Encode all tiles
-    for ( int tile_y = 0; tile_y < tile_cy; tile_y++ ) {
-        for ( int tile_x = 0; tile_x < tile_cx; tile_x++ ) {
-            int data_index = (tile_y * tile_cx + tile_x) * tile_size * tile_size;
+    // Encode all blocks
+    for ( int block_y = 0; block_y < block_cy; block_y++ ) {
+        for ( int block_x = 0; block_x < block_cx; block_x++ ) {
+            int data_index = (block_y * block_cx + block_x) * block_size * block_size;
             if ( jpeg_huffman_encoder_encode_block(&coder, &data[data_index]) != 0 ) {
-                fprintf(stderr, "Huffman coder failed at block [%d, %d]!\n", tile_y, tile_x);
+                fprintf(stderr, "Huffman encoder failed at block [%d, %d]!\n", block_y, block_x);
                 return -1;
             }
         }

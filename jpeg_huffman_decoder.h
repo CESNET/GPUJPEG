@@ -24,20 +24,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JPEG_HUFFMAN_ENCODER
-#define JPEG_HUFFMAN_ENCODER
+#ifndef JPEG_HUFFMAN_DECODER
+#define JPEG_HUFFMAN_DECODER
 
-#include "jpeg_encoder.h"
+#include "jpeg_decoder.h"
 
 /**
- * Perform huffman encoding
+ * Perform huffman decoding
  * 
- * @param encoder  Encoder structure
- * @param type  Component type
- * @param data  Data buffer
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_huffman_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type type, int16_t* data);
+jpeg_huffman_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_type type, int16_t* data, int data_size);
 
-#endif // JPEG_HUFFMAN_ENCODER
+#endif // JPEG_HUFFMAN_DECODER
