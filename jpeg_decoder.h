@@ -68,6 +68,15 @@ struct jpeg_decoder
     
     // Data quantized
     int16_t* data_quantized;
+    
+    // Data quantized in device memory
+    int16_t* d_data_quantized;
+    
+    // Data
+    uint8_t* data;
+    
+    // Datain device memory
+    uint8_t* d_data;
 };
 
 /**

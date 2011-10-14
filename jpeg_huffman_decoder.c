@@ -46,6 +46,12 @@ struct jpeg_huffman_decoder
     int data_size;
 };
 
+/**
+ * Fill more bit to current get buffer
+ * 
+ * @param coder
+ * @return void
+ */
 void
 jpeg_huffman_decoder_decode_fill_bit_buffer(struct jpeg_huffman_decoder* coder)
 {
@@ -84,6 +90,13 @@ jpeg_huffman_decoder_decode_fill_bit_buffer(struct jpeg_huffman_decoder* coder)
     }
 }
 
+/**
+ * Get bits
+ * 
+ * @param coder  Decoder structure
+ * @param nbits  Number of bits to get
+ * @return bits
+ */
 inline int
 jpeg_huffman_decoder_get_bits(struct jpeg_huffman_decoder* coder, int nbits) 
 {

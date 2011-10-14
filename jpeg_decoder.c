@@ -41,6 +41,9 @@ jpeg_decoder_create(int width, int height, int comp_count)
     decoder->height = 0;
     decoder->comp_count = 0;
     decoder->data_quantized = NULL;
+    decoder->d_data_quantized = NULL;
+    decoder->data = NULL;
+    decoder->d_data = NULL;
     for ( int comp = 0; comp < JPEG_MAX_COMPONENT_COUNT; comp++ )
         decoder->scan[comp].data = NULL;
     
@@ -97,8 +100,50 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
     int data_size = decoder->width * decoder->width * decoder->comp_count;
     if ( cudaSuccess != cudaMallocHost((void**)&decoder->data_quantized, data_size * sizeof(int16_t)) ) 
         return -1;
+    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
+        return -1;
+    if ( cudaSuccess != cudaMallocHost((void**)&decoder->data, data_size * sizeof(uint8_t)) ) 
+        return -1;
+    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data, data_size * sizeof(uint8_t)) ) 
+        return -1;
     
     return 0;
+}
+
+void
+jpeg_decoder_print8(struct jpeg_decoder* decoder, uint8_t* d_data)
+{
+    int data_size = decoder->width * decoder->height;
+    uint8_t* data = NULL;
+    cudaMallocHost((void**)&data, data_size * sizeof(uint8_t)); 
+    cudaMemcpy(data, d_data, data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+    
+    printf("Print Data\n");
+    for ( int y = 0; y < decoder->height; y++ ) {
+        for ( int x = 0; x < decoder->width; x++ ) {
+            printf("%3u ", data[y * decoder->width + x]);
+        }
+        printf("\n");
+    }
+    cudaFreeHost(data);
+}
+
+void
+jpeg_decoder_print16(struct jpeg_decoder* decoder, int16_t* d_data)
+{
+    int data_size = decoder->width * decoder->height;
+    int16_t* data = NULL;
+    cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
+    cudaMemcpy(data, d_data, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
+    
+    printf("Print Data\n");
+    for ( int y = 0; y < decoder->height; y++ ) {
+        for ( int x = 0; x < decoder->width; x++ ) {
+            printf("%3d ", data[y * decoder->width + x]);
+        }
+        printf("\n");
+    }
+    cudaFreeHost(data);
 }
 
 /** Documented at declaration */
@@ -111,6 +156,7 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         return -1;
     }
     
+    // Perform huffman decoding for all components
     for ( int index = 0; index < decoder->scan_count; index++ ) {
         // Get scan and data buffer
         struct jpeg_decoder_scan* scan = &decoder->scan[index];
@@ -124,89 +170,43 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         }
     }
     
-    // Preprocessing
-    /*if ( jpeg_preprocessor_process(encoder, image) != 0 )
-        return -1;
-        
-    for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
-        uint8_t* d_data_comp = &encoder->d_data[comp * encoder->width * encoder->height];
-        int16_t* d_data_quantized_comp = &encoder->d_data_quantized[comp * encoder->width * encoder->height];
+    // Copy quantized data to device memory from cpu memory
+    int data_size = decoder->width * decoder->height * decoder->comp_count;
+    cudaMemcpy(decoder->d_data_quantized, decoder->data_quantized, data_size * sizeof(int16_t), cudaMemcpyHostToDevice);
+    
+    // Perform IDCT and dequantization
+    for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
+        uint8_t* d_data_comp = &decoder->d_data[comp * decoder->width * decoder->height];
+        int16_t* d_data_quantized_comp = &decoder->d_data_quantized[comp * decoder->width * decoder->height];
         
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         
-        //jpeg_encoder_print8(encoder, d_data_comp);
+        //jpeg_decoder_print16(decoder, d_data_quantized_comp);
         
-        cudaMemset(d_data_quantized_comp, 0, encoder->width * encoder->height * sizeof(int16_t));
-        
-        //Perform forward DCT
-        NppiSize fwd_roi;
-        fwd_roi.width = encoder->width;
-        fwd_roi.height = encoder->height;
-        NppStatus status = nppiDCTQuantFwd8x8LS_JPEG_8u16s_C1R(
-            d_data_comp, 
-            encoder->width * sizeof(uint8_t), 
-            d_data_quantized_comp, 
-            encoder->width * 8 * sizeof(int16_t), 
-            encoder->table[type]->d_table_forward, 
-            fwd_roi
-        );
-        if ( status != 0 )
-            printf("Error %d\n", status);
-            
-        
-        //jpeg_encoder_print16(encoder, d_data_quantized_comp);
-        
-        cudaMemset(d_data_comp, 0, encoder->width * encoder->height * sizeof(int16_t));
+        cudaMemset(d_data_comp, 0, decoder->width * decoder->height * sizeof(int16_t));
         
         //Perform inverse DCT
         NppiSize inv_roi;
-        inv_roi.width = 64;
-        inv_roi.height = 3;
-        status = nppiDCTQuantInv8x8LS_JPEG_16s8u_C1R(
+        inv_roi.width = 64 * decoder->width / 8;
+        inv_roi.height = decoder->height / 8;
+        NppStatus status = nppiDCTQuantInv8x8LS_JPEG_16s8u_C1R(
             d_data_quantized_comp, 
-            4, 
+            decoder->width * 8, 
             d_data_comp, 
-            32 * sizeof(uint8_t), 
-            encoder->table[type]->d_table_inverse, 
+            decoder->width * sizeof(uint8_t), 
+            decoder->table_quantization[type].d_table, 
             inv_roi
         );
         if ( status != 0 )
             printf("Error %d\n", status);
         
-        jpeg_encoder_print8(encoder, d_data_comp);
-        
-        //exit(0);
+        //jpeg_decoder_print8(decoder, d_data_comp);
     }
     
-    // Initialize writer output buffer current position
-    encoder->writer->buffer_current = encoder->writer->buffer;
-    
-    // Write header
-    jpeg_writer_write_header(encoder);
-    
-    // Copy quantized data from device memory to cpu memory
-    int data_size = encoder->width * encoder->height * encoder->comp_count;
-    int16_t* data = NULL;
-    cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
-    cudaMemcpy(data, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
-    
-    // Perform huffman coding for all components
-    for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
-        // Get data buffer for component
-        int16_t* data_comp = &data[comp * encoder->width * encoder->height];
-        // Determine table type
-        enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
-        // Write scan header
-        jpeg_writer_write_scan_header(encoder, comp, type);
-        // Perform huffman coding
-        if ( jpeg_huffman_coder_encode(encoder, type, data_comp) != 0 ) {
-            fprintf(stderr, "Huffman coder failed for component at index %d!\n", comp);
-            return -1;
-        }
-    }
-    
-    jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_EOI);
+    // Preprocessing
+    /*if ( jpeg_preprocessor_process(encoder, image) != 0 )
+        return -1;
     
     // Set compressed image
     *image_compressed = encoder->writer->buffer;
@@ -234,6 +234,12 @@ jpeg_decoder_destroy(struct jpeg_decoder* decoder)
         
     if ( decoder->data_quantized != NULL )
         cudaFreeHost(decoder->data_quantized);
+    if ( decoder->d_data_quantized != NULL )
+        cudaFree(decoder->d_data_quantized);
+    if ( decoder->data != NULL )
+        cudaFreeHost(decoder->data);
+    if ( decoder->d_data != NULL )
+        cudaFree(decoder->d_data);
     
     free(decoder);
     

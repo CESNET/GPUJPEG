@@ -174,7 +174,7 @@ jpeg_huffman_encoder_encode_block(struct jpeg_huffman_encoder* coder, int16_t* d
 		} 
 		else {
 			// If run length > 15, must emit special run-length-16 codes (0xF0)
-			while (r > 15) {
+			while ( r > 15 ) {
 				if ( jpeg_huffman_encoder_emit_bits(coder, coder->table_ac->code[0xF0], coder->table_ac->size[0xF0]) != 0 )
 					return -1;
 				r -= 16;

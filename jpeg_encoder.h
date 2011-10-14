@@ -50,6 +50,9 @@ struct jpeg_encoder
     // Preprocessed data in device memory
     uint8_t* d_data;
     
+    // Data after DCT and quantization
+    int16_t* data_quantized;
+    
     // Data after DCT and quantization in device memory
     int16_t* d_data_quantized;
     

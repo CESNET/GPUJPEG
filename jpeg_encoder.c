@@ -57,6 +57,8 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
         return NULL;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data, data_size * sizeof(uint8_t)) ) 
         return NULL;
+    if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_quantized, data_size * sizeof(int16_t)) ) 
+        return NULL;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
         return NULL;
      
@@ -130,6 +132,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     if ( jpeg_preprocessor_process(encoder, image) != 0 )
         return -1;
         
+    // Perform DCT and quantization
     for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
         uint8_t* d_data_comp = &encoder->d_data[comp * encoder->width * encoder->height];
         int16_t* d_data_quantized_comp = &encoder->d_data_quantized[comp * encoder->width * encoder->height];
@@ -167,14 +170,12 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     
     // Copy quantized data from device memory to cpu memory
     int data_size = encoder->width * encoder->height * encoder->comp_count;
-    int16_t* data = NULL;
-    cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
-    cudaMemcpy(data, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(encoder->data_quantized, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
     
     // Perform huffman coding for all components
     for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
         // Get data buffer for component
-        int16_t* data_comp = &data[comp * encoder->width * encoder->height];
+        int16_t* data_comp = &encoder->data_quantized[comp * encoder->width * encoder->height];
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         // Write scan header
@@ -213,6 +214,8 @@ jpeg_encoder_destroy(struct jpeg_encoder* encoder)
     cudaFree(encoder->d_data_source);
     assert(encoder->d_data != NULL);
     cudaFree(encoder->d_data);
+    assert(encoder->data_quantized != NULL);
+    cudaFreeHost(encoder->data_quantized);    
     assert(encoder->d_data_quantized != NULL);
     cudaFree(encoder->d_data_quantized);    
     
