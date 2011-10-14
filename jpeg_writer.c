@@ -25,7 +25,7 @@
  */
  
 #include "jpeg_writer.h"
-#include "jpeg_writer_type.h"
+#include "jpeg_format_type.h"
 #include "jpeg_encoder.h"
 #include "jpeg_util.h"
 

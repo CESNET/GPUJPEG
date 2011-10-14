@@ -80,14 +80,25 @@ struct jpeg_table
 };
 
 /**
- * Create JPEG table for quantizatin
+ * Create JPEG tables
  * 
  * @param type  Type of component for table
  * @param quality  Quality (0-100)
  * @return table structure if succeeds, otherwise NULL
  */
 struct jpeg_table*
-jpeg_table_create(enum jpeg_component_type type, int quality);
+jpeg_table_create();
+
+/**
+ * Init JPEG tables for encoder
+ * 
+ * @param table  Table structure
+ * @param type  Type of component for table
+ * @param quality  Quality (0-100)
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+jpeg_table_encoder_init(struct jpeg_table* table, enum jpeg_component_type type, int quality);
 
 /**
  * Destory JPEG table

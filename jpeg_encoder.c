@@ -27,7 +27,7 @@
 #include "jpeg_encoder.h"
 #include "jpeg_preprocessor.h"
 #include "jpeg_huffman_coder.h"
-#include "jpeg_writer_type.h"
+#include "jpeg_format_type.h"
 #include "jpeg_util.h"
 
 /** Documented at declaration */
@@ -50,11 +50,14 @@ jpeg_encoder_create(int width, int height, int quality)
         return NULL;
     
     // Create tables
-    encoder->table[JPEG_COMPONENT_LUMINANCE] = jpeg_table_create(JPEG_COMPONENT_LUMINANCE, quality);
-    if ( encoder->table[JPEG_COMPONENT_LUMINANCE] == NULL )
-        return NULL;
+    encoder->table[JPEG_COMPONENT_LUMINANCE] = jpeg_table_create();
     encoder->table[JPEG_COMPONENT_CHROMINANCE] = jpeg_table_create(JPEG_COMPONENT_CHROMINANCE, quality);
-    if ( encoder->table[JPEG_COMPONENT_CHROMINANCE] == NULL )
+    if ( encoder->table[JPEG_COMPONENT_LUMINANCE] == NULL || encoder->table[JPEG_COMPONENT_CHROMINANCE] == NULL )
+        return NULL;
+    // Init tables for encoder
+    if ( jpeg_table_encoder_init(encoder->table[JPEG_COMPONENT_LUMINANCE], JPEG_COMPONENT_LUMINANCE, quality) != 0 )
+        return NULL;
+    if ( jpeg_table_encoder_init(encoder->table[JPEG_COMPONENT_CHROMINANCE], JPEG_COMPONENT_CHROMINANCE, quality) != 0 )
         return NULL;
     
     // Allocate data buffers

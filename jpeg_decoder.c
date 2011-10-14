@@ -52,6 +52,12 @@ jpeg_decoder_create(int width, int height)
 int
 jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size)
 {
+    // Read JPEG image data
+    if ( jpeg_reader_read_image(decoder, image, image_size) != 0 ) {
+        fprintf(stderr, "Decoder failed when decoding image data!\n");
+        return -1;
+    }
+        
     // Preprocessing
     /*if ( jpeg_preprocessor_process(encoder, image) != 0 )
         return -1;

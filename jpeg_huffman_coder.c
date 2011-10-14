@@ -25,7 +25,6 @@
  */
  
 #include "jpeg_huffman_coder.h"
-#include "jpeg_writer_type.h"
 #include "jpeg_util.h"
 
 /** Huffman coder structure */

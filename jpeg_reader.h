@@ -29,6 +29,9 @@
 
 #include <stdint.h>
 
+/** JPEG decoder structure predeclaration */
+struct jpeg_decoder;
+
 /** JPEG writer structure */
 struct jpeg_reader
 {
@@ -59,6 +62,6 @@ jpeg_reader_destroy(struct jpeg_reader* reader);
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_reader_read(uint8_t* image, int image_size);
+jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_size);
 
 #endif // JPEG_WRITER

@@ -55,6 +55,19 @@ jpeg_table_create(enum jpeg_component_type type, int quality)
     if ( table == NULL )
         return NULL;
         
+    // Allocate device memory for tables
+    if ( cudaSuccess != cudaMalloc((void**)&table->d_table_forward, 64 * sizeof(uint16_t)) )
+        return NULL;
+    if ( cudaSuccess != cudaMalloc((void**)&table->d_table_inverse, 64 * sizeof(uint16_t)) )
+        return NULL;
+    
+    return table;
+}
+
+/** Documented at declaration */
+int
+jpeg_table_encoder_init(struct jpeg_table* table, enum jpeg_component_type type, int quality)
+{
     // Setup raw table
     nppiSetDefaultQuantTable(table->table_raw, (int)type);
     
@@ -67,22 +80,16 @@ jpeg_table_create(enum jpeg_component_type type, int quality)
     // Setup inverse table by npp
     nppiQuantInvTableInit_JPEG_8u16u(table->table_raw, table->table_inverse);
     
-    // Allocate device memory for tables
-    if ( cudaSuccess != cudaMalloc((void**)&table->d_table_forward, 64 * sizeof(uint16_t)) )
-        return NULL;
-    if ( cudaSuccess != cudaMalloc((void**)&table->d_table_inverse, 64 * sizeof(uint16_t)) )
-        return NULL;
-    
     // Copy tables to device memory
     if ( cudaSuccess != cudaMemcpy(table->d_table_forward, table->table_forward, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
-        return NULL;
+        return -1;
     if ( cudaSuccess != cudaMemcpy(table->d_table_inverse, table->table_inverse, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
-        return NULL;
+        return -1;
         
     // Init huffman tables
     jpeg_table_init_huffman(table, type);
     
-    return table;
+    return 0;
 }
 
 /** Documented at declaration */
