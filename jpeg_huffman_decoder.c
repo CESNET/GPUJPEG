@@ -36,59 +36,62 @@ struct jpeg_huffman_decoder
     struct jpeg_table_huffman_decoder* table_ac;
     // DC differentize for component
     int dc;
-    // Get
+    // Get bits
     int get_bits;
+    // Get buffer
     int get_buff;
-    int data;
+    // Compressed data
+    uint8_t* data;
+    // Compressed data size
     int data_size;
 };
 
 void
-jpeg_huffman_decoder_decode_fill_bit_buffer()
+jpeg_huffman_decoder_decode_fill_bit_buffer(struct jpeg_huffman_decoder* coder)
 {
-	unsigned char uc;
-	while ( m_nGetBits < 25 ) {
+    unsigned char uc;
+    while ( coder->get_bits < 25 ) {
         //Are there some data?
-		if( m_nDataBytesLeft > 0 ) { 
-			// Attempt to read a byte
-			uc = *m_pData++;
-			m_nDataBytesLeft --;			
+        if( coder->data_size > 0 ) { 
+            // Attempt to read a byte
+            uc = *coder->data++;
+            coder->data_size--;            
 
-			// If it's 0xFF, check and discard stuffed zero byte
-			if ( uc == 0xFF ) {
-				do {
-					uc = *m_pData++;
-					m_nDataBytesLeft --;
-				} while ( uc == 0xFF );
+            // If it's 0xFF, check and discard stuffed zero byte
+            if ( uc == 0xFF ) {
+                do {
+                    uc = *coder->data++;
+                    coder->data_size--;
+                } while ( uc == 0xFF );
 
-				if ( uc == 0 ) {
-					// Found FF/00, which represents an FF data byte
-					uc = 0xFF;
-				} else {				
-					// There should be enough bits still left in the data segment;
-					// if so, just break out of the outer while loop.
-					//if (m_nGetBits >= nbits)
-					if (m_nGetBits >= 0)
-						break;
-				}
-			}
+                if ( uc == 0 ) {
+                    // Found FF/00, which represents an FF data byte
+                    uc = 0xFF;
+                } else {                
+                    // There should be enough bits still left in the data segment;
+                    // if so, just break out of the outer while loop.
+                    //if (m_nGetBits >= nbits)
+                    if ( coder->get_bits >= 0)
+                        break;
+                }
+            }
 
-			m_nGetBuff = (m_nGetBuff << 8) | ((int) uc);
-			m_nGetBits += 8;			
-		}
-		else
-			break;
-	}
+            coder->get_buff = (coder->get_buff << 8) | ((int) uc);
+            coder->get_bits += 8;            
+        }
+        else
+            break;
+    }
 }
 
 inline int
-jpeg_huffman_decoder_get_bits(int nbits) 
+jpeg_huffman_decoder_get_bits(struct jpeg_huffman_decoder* coder, int nbits) 
 {
     //we should read nbits bits to get next data
-	if( m_nGetBits < nbits )
-		jpeg_huffman_decoder_decode_fill_bit_buffer();
-	m_nGetBits -= nbits;
-	return (int)(m_nGetBuff >> m_nGetBits) & ((1 << nbits) - 1);
+    if( coder->get_bits < nbits )
+        jpeg_huffman_decoder_decode_fill_bit_buffer(coder);
+    coder->get_bits -= nbits;
+    return (int)(coder->get_buff >> coder->get_bits) & ((1 << nbits) - 1);
 }
 
 
@@ -100,28 +103,28 @@ jpeg_huffman_decoder_get_bits(int nbits)
  * @return int
  */
 int
-jpeg_huffman_decoder_decode_special_decode(struct jpeg_table_huffman_decoder* table, int min_bits)
+jpeg_huffman_decoder_decode_special_decode(struct jpeg_huffman_decoder* coder, struct jpeg_table_huffman_decoder* table, int min_bits)
 {
-	// HUFF_DECODE has determined that the code is at least min_bits
-	// bits long, so fetch that many bits in one swoop.
-	int code = jpeg_huffman_decoder_get_bits(min_bits);
+    // HUFF_DECODE has determined that the code is at least min_bits
+    // bits long, so fetch that many bits in one swoop.
+    int code = jpeg_huffman_decoder_get_bits(coder, min_bits);
 
-	// Collect the rest of the Huffman code one bit at a time.
-	// This is per Figure F.16 in the JPEG spec.
+    // Collect the rest of the Huffman code one bit at a time.
+    // This is per Figure F.16 in the JPEG spec.
     int l = min_bits;
-	while ( code > table->maxcode[l] ) {
-		code <<= 1;
-		code |= jpeg_huffman_decoder_get_bits(1);
-		l++;
-	}
+    while ( code > table->maxcode[l] ) {
+        code <<= 1;
+        code |= jpeg_huffman_decoder_get_bits(coder, 1);
+        l++;
+    }
 
-	// With garbage input we may reach the sentinel value l = 17.
-	if ( l > 16 ) {
+    // With garbage input we may reach the sentinel value l = 17.
+    if ( l > 16 ) {
         // Fake a zero as the safest result
-		return 0;
-	}
+        return 0;
+    }
     
-	return table->huffval[table->valptr[l] + (int)(code - table->mincode[l])];
+    return table->huffval[table->valptr[l] + (int)(code - table->mincode[l])];
 }
 
 /**
@@ -132,35 +135,35 @@ jpeg_huffman_decoder_decode_special_decode(struct jpeg_table_huffman_decoder* ta
 inline int
 jpeg_huffman_decoder_value_from_category(int category, int offset)
 {
-	// Method 1: 
-	// On some machines, a shift and add will be faster than a table lookup.
-	// #define HUFF_EXTEND(x,s) \
-	// ((x)< (1<<((s)-1)) ? (x) + (((-1)<<(s)) + 1) : (x)) 
+    // Method 1: 
+    // On some machines, a shift and add will be faster than a table lookup.
+    // #define HUFF_EXTEND(x,s) \
+    // ((x)< (1<<((s)-1)) ? (x) + (((-1)<<(s)) + 1) : (x)) 
 
-	// Method 2: Table lookup
-	// If (offset < half[category]), then value is below zero
-	// Otherwise, value is above zero, and just the offset 
+    // Method 2: Table lookup
+    // If (offset < half[category]), then value is below zero
+    // Otherwise, value is above zero, and just the offset 
     // entry n is 2**(n-1)
-	static const int half[16] =	{ 
+    static const int half[16] =    { 
         0x0000, 0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0020, 0x0040, 
         0x0080, 0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000
     };
 
-	//start[i] is the starting value in this category; surely it is below zero
+    //start[i] is the starting value in this category; surely it is below zero
     // entry n is (-1 << n) + 1
-	static const int start[16] = { 
+    static const int start[16] = { 
         0, ((-1)<<1) + 1, ((-1)<<2) + 1, ((-1)<<3) + 1, ((-1)<<4) + 1,
         ((-1)<<5) + 1, ((-1)<<6) + 1, ((-1)<<7) + 1, ((-1)<<8) + 1,
         ((-1)<<9) + 1, ((-1)<<10) + 1, ((-1)<<11) + 1, ((-1)<<12) + 1,
         ((-1)<<13) + 1, ((-1)<<14) + 1, ((-1)<<15) + 1 
-    };	
+    };    
 
-	return (offset < half[category]) ? (offset + start[category]) : offset;	
+    return (offset < half[category]) ? (offset + start[category]) : offset;    
 }
 
 /**
  * Get category number for dc, or (0 run length, ac category) for ac.
- * The max length for Huffman codes is 15 bits; so we use 32 bits buffer	
+ * The max length for Huffman codes is 15 bits; so we use 32 bits buffer    
  * m_nGetBuff, with the validated length is m_nGetBits.
  * Usually, more than 95% of the Huffman codes will be 8 or fewer bits long
  * To speed up, we should pay more attention on the codes whose length <= 8
@@ -168,26 +171,26 @@ jpeg_huffman_decoder_value_from_category(int category, int offset)
  * @return int
  */
 inline int
-jpeg_huffman_decoder_get_category(struct jpeg_table_huffman_decoder* table)
+jpeg_huffman_decoder_get_category(struct jpeg_huffman_decoder* coder, struct jpeg_table_huffman_decoder* table)
 {
-	// If left bits < 8, we should get more data
-	if ( m_nGetBits < 8 )
-		jpeg_huffman_decoder_decode_fill_bit_buffer( );
+    // If left bits < 8, we should get more data
+    if ( coder->get_bits < 8 )
+        jpeg_huffman_decoder_decode_fill_bit_buffer(coder);
 
-	// Call special process if data finished; min bits is 1
-	if( m_nGetBits < 8 )
-		return jpeg_huffman_decoder_decode_special_decode(table, 1);
+    // Call special process if data finished; min bits is 1
+    if( coder->get_bits < 8 )
+        return jpeg_huffman_decoder_decode_special_decode(coder, table, 1);
 
-	// Peek the first valid byte	
-	int look = ((m_nGetBuff>>(m_nGetBits - 8))& 0xFF);
-	int nb = table->look_nbits[look];
+    // Peek the first valid byte    
+    int look = ((coder->get_buff >> (coder->get_bits - 8)) & 0xFF);
+    int nb = table->look_nbits[look];
 
-	if ( nb ) { 
-		m_nGetBits -= nb;
-		return table->look_sym[look]; 
-	} else {
+    if ( nb ) { 
+        coder->get_bits -= nb;
+        return table->look_sym[look]; 
+    } else {
         //Decode long codes with length >= 9
-		return jpeg_huffman_decoder_decode_special_decode(table, 9);
+        return jpeg_huffman_decoder_decode_special_decode(coder, table, 9);
     }
 }
 
@@ -197,19 +200,19 @@ jpeg_huffman_decoder_get_category(struct jpeg_table_huffman_decoder* table)
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_huffman_decoder_decode_block(struct jpeg_huffman_encoder* coder, int16_t* data)
-{	
+jpeg_huffman_decoder_decode_block(struct jpeg_huffman_decoder* coder, int16_t* data)
+{    
     // Zero block output
-	memset(data, 0, sizeof(int) * 64);
+    memset(data, 0, sizeof(int) * 64);
 
     // Section F.2.2.1: decode the DC coefficient difference
     // get dc category number, s
-	int s = jpeg_huffman_decoder_get_category(coder->table_dc);
-	if ( s ) {
+    int s = jpeg_huffman_decoder_get_category(coder, coder->table_dc);
+    if ( s ) {
         // Get offset in this dc category
-		int r = jpeg_huffman_decoder_get_bits(s);
+        int r = jpeg_huffman_decoder_get_bits(coder, s);
         // Get dc difference value
-		s = jpeg_huffman_decoder_value_from_category(s, r);
+        s = jpeg_huffman_decoder_value_from_category(s, r);
     }
 
     // Convert DC difference to actual value, update last_dc_val
@@ -219,33 +222,42 @@ jpeg_huffman_decoder_decode_block(struct jpeg_huffman_encoder* coder, int16_t* d
     // Output the DC coefficient (assumes jpeg_natural_order[0] = 0)
     data[0] = s;
     
-	// Section F.2.2.2: decode the AC coefficients
-	// Since zeroes are skipped, output area must be cleared beforehand
-	for ( int k = 1; k < 64; k++ ) {
+    // Section F.2.2.2: decode the AC coefficients
+    // Since zeroes are skipped, output area must be cleared beforehand
+    for ( int k = 1; k < 64; k++ ) {
         // s: (run, category)
-		s = jpeg_huffman_decoder_get_category(coder->table_ac);
+        s = jpeg_huffman_decoder_get_category(coder, coder->table_ac);
         // r: run length for ac zero, 0 <= r < 16
-		r = s >> 4;
+        int r = s >> 4;
         // s: category for this non-zero ac
-		s &= 15;
-		if ( s ) {
-            //	k: position for next non-zero ac
-			k += r;
-            //	r: offset in this ac category
-			r = jpeg_huffman_decoder_get_bits(s);
-            //	s: ac value
-			s = jpeg_huffman_decoder_value_from_category(s, r);
+        s &= 15;
+        if ( s ) {
+            //    k: position for next non-zero ac
+            k += r;
+            //    r: offset in this ac category
+            r = jpeg_huffman_decoder_get_bits(coder, s);
+            //    s: ac value
+            s = jpeg_huffman_decoder_value_from_category(s, r);
 
-			data[jpeg_order_natural[k]] = s;
-		} else {
+            data[jpeg_order_natural[k]] = s;
+        } else {
             // s = 0, means ac value is 0 ? Only if r = 15.  
             //means all the left ac are zero
-			if ( r != 15 )
-				break;
-			k += 15;
-		}
-	}		
-	return 0;
+            if ( r != 15 )
+                break;
+            k += 15;
+        }
+    }
+    
+    /*printf("Decode Block\n");
+    for ( int y = 0; y < 8; y++ ) {
+        for ( int x = 0; x < 8; x++ ) {
+            printf("%4d ", data[y * 8 + x]);
+        }
+        printf("\n");
+    }*/
+    
+    return 0;
 }
 
 /** Documented at declaration */
