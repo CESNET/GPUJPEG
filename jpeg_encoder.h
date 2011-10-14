@@ -53,8 +53,11 @@ struct jpeg_encoder
     // Data after DCT and quantization in device memory
     int16_t* d_data_quantized;
     
-    // Table for luminance [0] and chrominance [1] color component
-    struct jpeg_table* table[2];
+    // Quantization tables
+    struct jpeg_table_quantization table_quantization[JPEG_COMPONENT_TYPE_COUNT];
+    
+    // Huffman coder tables
+    struct jpeg_table_huffman_encoder table_huffman[JPEG_COMPONENT_TYPE_COUNT][JPEG_HUFFMAN_TYPE_COUNT];
     
     // JPEG writer structure
     struct jpeg_writer* writer;

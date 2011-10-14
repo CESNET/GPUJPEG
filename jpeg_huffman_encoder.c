@@ -24,16 +24,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "jpeg_huffman_coder.h"
+#include "jpeg_huffman_encoder.h"
 #include "jpeg_util.h"
 
 /** Huffman coder structure */
-struct jpeg_huffman_coder
+struct jpeg_huffman_encoder
 {
     // Huffman table DC
-    struct jpeg_table_huffman* table_dc;
+    struct jpeg_table_huffman_encoder* table_dc;
     // Huffman table AC
-    struct jpeg_table_huffman* table_ac;
+    struct jpeg_table_huffman_encoder* table_ac;
     // The value (in 4 byte buffer) to be written out
     int put_value;
     // The size (in bits) to be written out
@@ -56,7 +56,7 @@ struct jpeg_huffman_coder
  * @return void
  */
 inline int
-jpeg_huffman_coder_emit_bits(struct jpeg_huffman_coder* coder, unsigned int code, int size)
+jpeg_huffman_encoder_emit_bits(struct jpeg_huffman_encoder* coder, unsigned int code, int size)
 {
 	// This routine is heavily used, so it's worth coding tightly
 	int put_buffer = (int)code;
@@ -99,10 +99,10 @@ jpeg_huffman_coder_emit_bits(struct jpeg_huffman_coder* coder, unsigned int code
  * @return void
  */
 inline void
-jpeg_huffman_coder_emit_left_bits(struct jpeg_huffman_coder* coder)
+jpeg_huffman_encoder_emit_left_bits(struct jpeg_huffman_encoder* coder)
 {
     // Fill 7 bits with ones
-	if ( jpeg_huffman_coder_emit_bits(coder, 0x7F, 7) != 0 )
+	if ( jpeg_huffman_encoder_emit_bits(coder, 0x7F, 7) != 0 )
 		return;
 	
 	//unsigned char uc = (unsigned char) ((coder->put_value >> 16) & 0xFF);
@@ -119,7 +119,7 @@ jpeg_huffman_coder_emit_left_bits(struct jpeg_huffman_coder* coder)
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
+jpeg_huffman_encoder_encode_block(struct jpeg_huffman_encoder* coder, int16_t* data)
 {	
     /*printf("Encode Block\n");
     for ( int y = 0; y < 8; y++ ) {
@@ -154,14 +154,14 @@ jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
 	}
 
 	//	Write category number
-	if ( jpeg_huffman_coder_emit_bits(coder, coder->table_dc->code[nbits], coder->table_dc->size[nbits]) != 0 ) {
+	if ( jpeg_huffman_encoder_emit_bits(coder, coder->table_dc->code[nbits], coder->table_dc->size[nbits]) != 0 ) {
         fprintf(stderr, "Fail emit bits %d [code: %d, size: %d]!\n", nbits, coder->table_dc->code[nbits], coder->table_dc->size[nbits]);
 		return -1;
     }
 
 	//	Write category offset (EmitBits rejects calls with size 0)
 	if ( nbits ) {
-		if ( jpeg_huffman_coder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
+		if ( jpeg_huffman_encoder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
 			return -1;
 	}
     
@@ -175,7 +175,7 @@ jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
 		else {
 			// If run length > 15, must emit special run-length-16 codes (0xF0)
 			while (r > 15) {
-				if ( jpeg_huffman_coder_emit_bits(coder, coder->table_ac->code[0xF0], coder->table_ac->size[0xF0]) != 0 )
+				if ( jpeg_huffman_encoder_emit_bits(coder, coder->table_ac->code[0xF0], coder->table_ac->size[0xF0]) != 0 )
 					return -1;
 				r -= 16;
 			}
@@ -196,11 +196,11 @@ jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
 
 			// Emit Huffman symbol for run length / number of bits
 			int i = (r << 4) + nbits;
-			if ( jpeg_huffman_coder_emit_bits(coder, coder->table_ac->code[i], coder->table_ac->size[i]) != 0 )
+			if ( jpeg_huffman_encoder_emit_bits(coder, coder->table_ac->code[i], coder->table_ac->size[i]) != 0 )
 				return -1;
 
 			// Write Category offset
-			if ( jpeg_huffman_coder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
+			if ( jpeg_huffman_encoder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
 				return -1;
 
 			r = 0;
@@ -209,7 +209,7 @@ jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
 
 	// If all the left coefs were zero, emit an end-of-block code
 	if ( r > 0 ) {
-		if ( jpeg_huffman_coder_emit_bits(coder, coder->table_ac->code[0], coder->table_ac->size[0]) != 0 )
+		if ( jpeg_huffman_encoder_emit_bits(coder, coder->table_ac->code[0], coder->table_ac->size[0]) != 0 )
 			return -1;
 	}
 
@@ -218,16 +218,16 @@ jpeg_huffman_coder_encode_block(struct jpeg_huffman_coder* coder, int16_t* data)
 
 /** Documented at declaration */
 int
-jpeg_huffman_coder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type type, int16_t* data)
+jpeg_huffman_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type type, int16_t* data)
 {    
     int tile_size = 8;
     int tile_cx = (encoder->width + tile_size - 1) / tile_size;
     int tile_cy = (encoder->height + tile_size - 1) / tile_size;
     
     // Initialize huffman coder
-    struct jpeg_huffman_coder coder;
-    coder.table_dc = &encoder->table[type]->table_huffman_dc;
-    coder.table_ac = &encoder->table[type]->table_huffman_ac;
+    struct jpeg_huffman_encoder coder;
+    coder.table_dc = &encoder->table_huffman[type][JPEG_HUFFMAN_DC];
+    coder.table_ac = &encoder->table_huffman[type][JPEG_HUFFMAN_AC];
     coder.put_value = 0;
     coder.put_bits = 0;
     coder.dc = 0;
@@ -237,7 +237,7 @@ jpeg_huffman_coder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type
     for ( int tile_y = 0; tile_y < tile_cy; tile_y++ ) {
         for ( int tile_x = 0; tile_x < tile_cx; tile_x++ ) {
             int data_index = (tile_y * tile_cx + tile_x) * tile_size * tile_size;
-            if ( jpeg_huffman_coder_encode_block(&coder, &data[data_index]) != 0 ) {
+            if ( jpeg_huffman_encoder_encode_block(&coder, &data[data_index]) != 0 ) {
                 fprintf(stderr, "Huffman coder failed at block [%d, %d]!\n", tile_y, tile_x);
                 return -1;
             }
@@ -246,7 +246,7 @@ jpeg_huffman_coder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type
     
     // Emit left
     if ( coder.put_bits > 0 )
-        jpeg_huffman_coder_emit_left_bits(&coder);
+        jpeg_huffman_encoder_emit_left_bits(&coder);
     
     return 0;
 }

@@ -26,7 +26,7 @@
  
 #include "jpeg_encoder.h"
 #include "jpeg_preprocessor.h"
-#include "jpeg_huffman_coder.h"
+#include "jpeg_huffman_encoder.h"
 #include "jpeg_format_type.h"
 #include "jpeg_util.h"
 
@@ -51,17 +51,6 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
     if ( encoder->writer == NULL )
         return NULL;
     
-    // Create tables
-    encoder->table[JPEG_COMPONENT_LUMINANCE] = jpeg_table_create();
-    encoder->table[JPEG_COMPONENT_CHROMINANCE] = jpeg_table_create();
-    if ( encoder->table[JPEG_COMPONENT_LUMINANCE] == NULL || encoder->table[JPEG_COMPONENT_CHROMINANCE] == NULL )
-        return NULL;
-    // Init tables for encoder
-    if ( jpeg_table_encoder_init(encoder->table[JPEG_COMPONENT_LUMINANCE], JPEG_COMPONENT_LUMINANCE, quality) != 0 )
-        return NULL;
-    if ( jpeg_table_encoder_init(encoder->table[JPEG_COMPONENT_CHROMINANCE], JPEG_COMPONENT_CHROMINANCE, quality) != 0 )
-        return NULL;
-    
     // Allocate data buffers
     int data_size = encoder->width * encoder->width * encoder->comp_count;
     uint8_t* d_image = NULL;
@@ -71,6 +60,26 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
         return NULL;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
         return NULL;
+     
+    // Allocate quantization tables in device memory
+    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        if ( cudaSuccess != cudaMalloc((void**)&encoder->table_quantization[comp_type].d_table, 64 * sizeof(uint16_t)) ) 
+            return NULL;
+    }
+    
+    // Init quantization tables for encoder
+    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        if ( jpeg_table_quantization_encoder_init(&encoder->table_quantization[comp_type], comp_type, quality) != 0 )
+            return NULL;
+    }
+    
+    // Init huffman tables for encoder
+    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
+            if ( jpeg_table_huffman_encoder_init(&encoder->table_huffman[comp_type][huff_type], comp_type, huff_type) != 0 )
+                return NULL;
+        }
+    }
     
     return encoder;
 }
@@ -140,7 +149,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             encoder->width * sizeof(uint8_t), 
             d_data_quantized_comp, 
             encoder->width * 8 * sizeof(int16_t), 
-            encoder->table[type]->d_table, 
+            encoder->table_quantization[type].d_table, 
             fwd_roi
         );
         if ( status != 0 ) {
@@ -172,7 +181,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
         // Write scan header
         jpeg_writer_write_scan_header(encoder, comp, type);
         // Perform huffman coding
-        if ( jpeg_huffman_coder_encode(encoder, type, data_comp) != 0 ) {
+        if ( jpeg_huffman_encoder_encode(encoder, type, data_comp) != 0 ) {
             fprintf(stderr, "Huffman coder failed for component at index %d!\n", comp);
             return -1;
         }
@@ -193,10 +202,10 @@ jpeg_encoder_destroy(struct jpeg_encoder* encoder)
 {
     assert(encoder != NULL);
     
-    assert(encoder->table[JPEG_COMPONENT_LUMINANCE] != NULL);
-    jpeg_table_destroy(encoder->table[JPEG_COMPONENT_LUMINANCE]);
-    assert(encoder->table[JPEG_COMPONENT_CHROMINANCE] != NULL);
-    jpeg_table_destroy(encoder->table[JPEG_COMPONENT_CHROMINANCE]);
+    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        if ( encoder->table_quantization[comp_type].d_table != NULL )
+            cudaFree(encoder->table_quantization[comp_type].d_table);
+    }
     
     assert(encoder->writer != NULL);
     jpeg_writer_destroy(encoder->writer);

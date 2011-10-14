@@ -160,9 +160,9 @@ jpeg_reader_read_dqt(struct jpeg_decoder* decoder, uint8_t** image)
     int index = jpeg_reader_read_byte(*image);
     uint16_t* table;
     if( index == 0 ) {
-        table = decoder->table[JPEG_COMPONENT_LUMINANCE]->table;
+        table = decoder->table_quantization[JPEG_COMPONENT_LUMINANCE].table;
     } else if ( index == 1 ) {
-        table = decoder->table[JPEG_COMPONENT_CHROMINANCE]->table;
+        table = decoder->table_quantization[JPEG_COMPONENT_CHROMINANCE].table;
     } else {
         fprintf(stderr, "Error: DQT marker index should be 0 or 1 but %d was presented!\n", index);
         return -1;
@@ -258,19 +258,19 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
     length -= 2;
     
     int index = jpeg_reader_read_byte(*image);
-    struct jpeg_table_huffman* table;
+    struct jpeg_table_huffman_decoder* table;
     switch(index) {
     case 0:
-        table = &decoder->table[JPEG_COMPONENT_LUMINANCE]->table_huffman_dc;
+        table = &decoder->table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_DC];
         break;
     case 16:
-        table = &decoder->table[JPEG_COMPONENT_LUMINANCE]->table_huffman_ac;
+        table = &decoder->table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_AC];
         break;
     case 1:
-        table = &decoder->table[JPEG_COMPONENT_CHROMINANCE]->table_huffman_dc;
+        table = &decoder->table_huffman[JPEG_COMPONENT_CHROMINANCE][JPEG_HUFFMAN_DC];
         break;
     case 17:
-        table = &decoder->table[JPEG_COMPONENT_CHROMINANCE]->table_huffman_ac;
+        table = &decoder->table_huffman[JPEG_COMPONENT_CHROMINANCE][JPEG_HUFFMAN_AC];
         break;
     default:
         fprintf(stderr, "Error: DHT marker index should be 0, 1, 16 or 17 but %d was presented!\n", index);

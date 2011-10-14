@@ -44,13 +44,14 @@ jpeg_decoder_create(int width, int height, int comp_count)
     decoder->reader = jpeg_reader_create();
     if ( decoder->reader == NULL )
         return NULL;
-        
-    // Create tables
-    decoder->table[JPEG_COMPONENT_LUMINANCE] = jpeg_table_create();
-    decoder->table[JPEG_COMPONENT_CHROMINANCE] = jpeg_table_create();
-    if ( decoder->table[JPEG_COMPONENT_LUMINANCE] == NULL || decoder->table[JPEG_COMPONENT_CHROMINANCE] == NULL )
-        return NULL;
-        
+    
+    // Allocate quantization tables in device memory
+    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        if ( cudaSuccess != cudaMalloc((void**)&decoder->table_quantization[comp_type].d_table, 64 * sizeof(uint16_t)) ) 
+            return NULL;
+    }
+    
+    // Init decoder
     if ( width != 0 && height != 0 ) {
         if ( jpeg_decoder_init(decoder, width, height, comp_count) != 0 )
             return NULL;
@@ -203,6 +204,11 @@ int
 jpeg_decoder_destroy(struct jpeg_decoder* decoder)
 {
     assert(decoder != NULL);
+    
+    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        if ( decoder->table_quantization[comp_type].d_table != NULL )
+            cudaFree(decoder->table_quantization[comp_type].d_table);
+    }
     
     assert(decoder->reader != NULL);
     jpeg_reader_destroy(decoder->reader);

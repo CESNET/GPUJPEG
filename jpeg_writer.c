@@ -133,7 +133,7 @@ jpeg_writer_write_dqt(struct jpeg_encoder* encoder, enum jpeg_component_type typ
 	jpeg_writer_emit_byte(encoder->writer, (int)type); 
 
     // Table changed from default with quality
-	uint8_t* dqt = encoder->table[type]->table_raw;
+	uint8_t* dqt = encoder->table_quantization[type].table_raw;
     
     // Emit table
 	unsigned char qval;
@@ -191,25 +191,25 @@ jpeg_writer_write_sof0(struct jpeg_encoder* encoder)
  * @return void
  */
 void
-jpeg_writer_write_dht(struct jpeg_encoder* encoder, enum jpeg_component_type type, int is_ac)
+jpeg_writer_write_dht(struct jpeg_encoder* encoder, enum jpeg_component_type comp_type, enum jpeg_huffman_type huff_type)
 {
     // Get proper table and its index
-    struct jpeg_table_huffman* table = NULL;
+    struct jpeg_table_huffman_encoder* table = NULL;
 	int index;
-	if ( type == JPEG_COMPONENT_LUMINANCE ) {
-		if ( is_ac == 1 ) {
-			table = &encoder->table[JPEG_COMPONENT_LUMINANCE]->table_huffman_ac;
+	if ( comp_type == JPEG_COMPONENT_LUMINANCE ) {
+		if ( huff_type == JPEG_HUFFMAN_AC ) {
+			table = &encoder->table_huffman[comp_type][huff_type];
 			index = 16;
 		} else {
-			table = &encoder->table[JPEG_COMPONENT_LUMINANCE]->table_huffman_dc;
+			table = &encoder->table_huffman[comp_type][huff_type];
 			index = 0;
 		}
 	} else {
-		if ( is_ac == 1 ) {
-			table = &encoder->table[JPEG_COMPONENT_CHROMINANCE]->table_huffman_ac;
+		if ( huff_type == JPEG_HUFFMAN_AC ) {
+			table = &encoder->table_huffman[comp_type][huff_type];
 			index = 17;
 		} else {
-			table = &encoder->table[JPEG_COMPONENT_CHROMINANCE]->table_huffman_dc;
+			table = &encoder->table_huffman[comp_type][huff_type];
 			index = 1;
 		}
 	}
@@ -244,10 +244,10 @@ jpeg_writer_write_header(struct jpeg_encoder* encoder)
 	
     jpeg_writer_write_sof0(encoder);
     
-	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, 0);   // DC table for Y component
-	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, 1);   // AC table for Y component
-	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_CHROMINANCE, 0); // DC table for Cb or Cr component
-	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_CHROMINANCE, 1); // AC table for Cb or Cr component
+	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, JPEG_HUFFMAN_DC);   // DC table for Y component
+	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, JPEG_HUFFMAN_AC);   // AC table for Y component
+	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_CHROMINANCE, JPEG_HUFFMAN_DC); // DC table for Cb or Cr component
+	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_CHROMINANCE, JPEG_HUFFMAN_AC); // AC table for Cb or Cr component
 }
 
 /** Documented at declaration */

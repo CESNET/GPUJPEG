@@ -34,7 +34,17 @@
  */
 enum jpeg_component_type {
     JPEG_COMPONENT_LUMINANCE = 0,
-    JPEG_COMPONENT_CHROMINANCE = 1
+    JPEG_COMPONENT_CHROMINANCE = 1,
+    JPEG_COMPONENT_TYPE_COUNT = 2
+};
+
+/** 
+ * JPEG huffman type 
+ */
+enum jpeg_huffman_type {
+    JPEG_HUFFMAN_DC = 0,
+    JPEG_HUFFMAN_AC = 1,
+    JPEG_HUFFMAN_TYPE_COUNT = 2
 };
 
 #endif // JPEG_TABLE

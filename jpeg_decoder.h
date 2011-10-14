@@ -51,8 +51,11 @@ struct jpeg_decoder
     // Component count
     int comp_count;
     
-    // Table for luminance [0] and chrominance [1] color component
-    struct jpeg_table* table[2];
+    // Quantization tables
+    struct jpeg_table_quantization table_quantization[JPEG_COMPONENT_TYPE_COUNT];
+    
+    // Huffman coder tables
+    struct jpeg_table_huffman_decoder table_huffman[JPEG_COMPONENT_TYPE_COUNT][JPEG_HUFFMAN_TYPE_COUNT];
     
     // JPEG reader structure
     struct jpeg_reader* reader;
