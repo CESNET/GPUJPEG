@@ -108,7 +108,7 @@ jpeg_reader_read_app0(uint8_t** image)
 {
     int length = (int)jpeg_reader_read_2byte(*image);
     if ( length != 16 ) {
-        fprintf(stderr, "APP0 marker length should be 16 but %d was presented!\n", length);
+        fprintf(stderr, "Error: APP0 marker length should be 16 but %d was presented!\n", length);
         return -1;
     }
 
@@ -119,14 +119,14 @@ jpeg_reader_read_app0(uint8_t** image)
     jfif[3] = jpeg_reader_read_byte(*image);
     jfif[4] = jpeg_reader_read_byte(*image);
     if ( strcmp(jfif, "JFIF") != 0 ) {
-        fprintf(stderr, "APP0 marker identifier should be 'JFIF' but '%s' was presented!\n", jfif);
+        fprintf(stderr, "Error: APP0 marker identifier should be 'JFIF' but '%s' was presented!\n", jfif);
         return -1;
     }
 
     int version_major = jpeg_reader_read_byte(*image);
     int version_minor = jpeg_reader_read_byte(*image);
     if ( version_major != 1 || version_minor != 1 ) {
-        fprintf(stderr, "APP0 marker version should be 1.1 but %d.%d was presented!\n", version_major, version_minor);
+        fprintf(stderr, "Error: APP0 marker version should be 1.1 but %d.%d was presented!\n", version_major, version_minor);
         return -1;
     }
     
@@ -153,7 +153,7 @@ jpeg_reader_read_dqt(struct jpeg_decoder* decoder, uint8_t** image)
     length -= 2;
     
     if ( length != 65 ) {
-        fprintf(stderr, "DQT marker length should be 65 but %d was presented!\n", length);
+        fprintf(stderr, "Error: DQT marker length should be 65 but %d was presented!\n", length);
         return -1;
     }
     
@@ -164,7 +164,7 @@ jpeg_reader_read_dqt(struct jpeg_decoder* decoder, uint8_t** image)
     } else if ( index == 1 ) {
         table = decoder->table[JPEG_COMPONENT_CHROMINANCE]->table;
     } else {
-        fprintf(stderr, "DQT marker index should be 0 or 1 but %d was presented!\n", index);
+        fprintf(stderr, "Error: DQT marker index should be 0 or 1 but %d was presented!\n", index);
         return -1;
     }
 
@@ -182,10 +182,57 @@ jpeg_reader_read_dqt(struct jpeg_decoder* decoder, uint8_t** image)
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_reader_read_sof0(uint8_t** image)
-{
-    fprintf(stderr, "Todo: Read SOF0 marker!\n");
-    jpeg_reader_skip_marker_content(image);
+jpeg_reader_read_sof0(struct jpeg_decoder* decoder, uint8_t** image)
+{    
+    int length = (int)jpeg_reader_read_2byte(*image);
+    if ( length < 6 ) {
+        fprintf(stderr, "Error: SOF0 marker length should be greater than 6 but %d was presented!\n", length);
+        return -1;
+    }
+    length -= 2;
+
+	int precision = (int)jpeg_reader_read_byte(*image);
+    if ( precision != 8 ) {
+        fprintf(stderr, "Error: SOF0 marker precision should be 8 but %d was presented!\n", precision);
+        return -1;
+    }
+	int height = (int)jpeg_reader_read_2byte(*image);
+	int width = (int)jpeg_reader_read_2byte(*image);
+    if ( width != decoder->width || height != decoder->height ) {
+        fprintf(stderr, "Error: SOF0 marker image size should be %dx%d but %dx%d was presented!\n", decoder->width, decoder->height, width, height);
+        return -1;
+    }
+    int comp_count = (int)jpeg_reader_read_byte(*image);
+    if ( comp_count != decoder->comp_count ) {
+        fprintf(stderr, "Error: SOF0 marker component count should be %d but %d was presented!\n", decoder->comp_count, comp_count);
+        return -1;
+    }
+	length -= 6;
+
+	for ( int comp = 0; comp < comp_count; comp++ ) {
+		int index = (int)jpeg_reader_read_byte(*image);
+        if ( index != (comp + 1) ) {
+            fprintf(stderr, "Error: SOF0 marker component %d id should be %d but %d was presented!\n", comp, comp + 1, index);
+            return -1;
+        }
+		int sampling = (int)jpeg_reader_read_byte(*image);
+		int sampling_h = (sampling >> 4) & 15;
+		int sampling_v = sampling & 15;
+        if ( sampling_h != 1 || sampling_v != 1 ) {
+            fprintf(stderr, "Error: SOF0 marker component %d sampling factor %dx%d is not supported!\n", comp, sampling_h, sampling_v);
+            return -1;
+        }
+		int table_index = (int)jpeg_reader_read_byte(*image);
+        if ( comp == 0 && table_index != 0 ) {
+            fprintf(stderr, "Error: SOF0 marker component Y should have quantization table index 0 but %d was presented!\n", table_index);
+            return -1;
+        }
+        if ( (comp == 1 || comp == 2) && table_index != 1 ) {
+            fprintf(stderr, "Error: SOF0 marker component Cb or Cr should have quantization table index 1 but %d was presented!\n", table_index);
+            return -1;
+        }
+	}
+    
     return 0;
 }
 
@@ -218,9 +265,10 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
         table = &decoder->table[JPEG_COMPONENT_CHROMINANCE]->table_huffman_ac;
         break;
     default:
-        fprintf(stderr, "DHT marker index should be 0, 1, 16 or 17 but %d was presented!\n", index);
+        fprintf(stderr, "Error: DHT marker index should be 0, 1, 16 or 17 but %d was presented!\n", index);
         return -1;
     }
+    length -= 1;
     
     // Read in bits[]
     table->bits[0] = 0;
@@ -228,11 +276,29 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
     for ( int i = 1; i <= 16; i++ ) {
         table->bits[i] = jpeg_reader_read_byte(*image);
         count += table->bits[i];
+        if ( length > 0 ) {
+            length--;
+        } else {
+            fprintf(stderr, "Error: DHT marker unexpected end when reading bit counts!\n", index);
+            return -1;
+        }
     }   
 
     // Read in huffval
     for ( int i = 0; i < count; i++ ){
         table->huffval[i] = jpeg_reader_read_byte(*image);
+        if ( length > 0 ) {
+            length--;
+        } else {
+            fprintf(stderr, "Error: DHT marker unexpected end when reading huffman values!\n", index);
+            return -1;
+        }
+    }
+    
+    // Check length
+    if ( length > 0 ) {
+        fprintf(stderr, "Warning: DHT marker contains %d more bytes than needed!\n", length);
+        *image += length;
     }
     
     return 0;
@@ -264,7 +330,7 @@ jpeg_reader_read_sos(uint8_t** image, uint8_t* image_end)
         }
     } while( *image < image_end );
     
-    fprintf(stderr, "JPEG data unexpected ended while reading SOS marker!\n");
+    fprintf(stderr, "Error: JPEG data unexpected ended while reading SOS marker!\n");
     
     return -1;
 }
@@ -322,13 +388,13 @@ jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_s
 
         case JPEG_MARKER_SOF0: 
             // Baseline
-            if ( jpeg_reader_read_sof0(&image) != 0 )
+            if ( jpeg_reader_read_sof0(decoder, &image) != 0 )
                 return -1;
             break;
         case JPEG_MARKER_SOF1:
             // Extended sequential with Huffman coder
             fprintf(stderr, "Warning: Reading SOF1 as it was SOF0 marker (should work but verify it)!\n", jpeg_marker_name(marker));
-            if ( jpeg_reader_read_sof0(&image) != 0 )
+            if ( jpeg_reader_read_sof0(decoder, &image) != 0 )
                 return -1;
             break;
         case JPEG_MARKER_SOF2:
