@@ -158,19 +158,22 @@ jpeg_reader_read_dqt(struct jpeg_decoder* decoder, uint8_t** image)
     }
     
     int index = jpeg_reader_read_byte(*image);
-    uint16_t* table;
+    struct jpeg_table_quantization* table;
     if( index == 0 ) {
-        table = decoder->table_quantization[JPEG_COMPONENT_LUMINANCE].table;
+        table = &decoder->table_quantization[JPEG_COMPONENT_LUMINANCE];
     } else if ( index == 1 ) {
-        table = decoder->table_quantization[JPEG_COMPONENT_CHROMINANCE].table;
+        table = &decoder->table_quantization[JPEG_COMPONENT_CHROMINANCE];
     } else {
         fprintf(stderr, "Error: DQT marker index should be 0 or 1 but %d was presented!\n", index);
         return -1;
     }
 
     for ( int i = 0; i < 64; i++ ) {
-        table[jpeg_order_natural[i]] = jpeg_reader_read_byte(*image);
+        table->table_raw[jpeg_order_natural[i]] = jpeg_reader_read_byte(*image);
     }
+    
+    // Prepare quantization table for read raw table
+    jpeg_table_quantization_decoder_compute(table);
     
     return 0;
 }
@@ -308,6 +311,9 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
         fprintf(stderr, "Warning: DHT marker contains %d more bytes than needed!\n", length);
         *image += length;
     }
+    
+    // Compute huffman table for read values
+    jpeg_table_huffman_decoder_compute(table);
     
     return 0;
 }

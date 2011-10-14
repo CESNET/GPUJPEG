@@ -67,6 +67,19 @@ jpeg_table_quantization_decoder_init(struct jpeg_table_quantization* table, enum
     return 0;
 }
 
+int
+jpeg_table_quantization_decoder_compute(struct jpeg_table_quantization* table)
+{
+    // Setup inverse table by npp
+    nppiQuantInvTableInit_JPEG_8u16u(table->table_raw, table->table);
+    
+    // Copy tables to device memory
+    if ( cudaSuccess != cudaMemcpy(table->d_table, table->table, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
+        return -1;
+        
+    return 0;
+}
+
 /** Documented at declaration */
 void
 jpeg_table_quantization_print(struct jpeg_table_quantization* table)
@@ -158,27 +171,22 @@ static unsigned char jpeg_table_huffman_cbcr_ac_value[] = {
 };
 
 /** 
- * Compute huffman table from bits and values arrays
+ * Compute encoder huffman table from bits and values arrays (that are already set in table)
  * 
- * @param bits
- * @param values
+ * @param table  Table structure
  * @return void
  */
 void
-jpeg_table_huffman_encoder_compute(unsigned char* bits, unsigned char* values, struct jpeg_table_huffman_encoder* table)
+jpeg_table_huffman_encoder_compute(struct jpeg_table_huffman_encoder* table)
 {
 	char huffsize[257];
 	unsigned int huffcode[257];
-
-	// First we copy bits and huffval
-	memcpy(table->bits, bits, sizeof(table->bits));
-	memcpy(table->huffval, values, sizeof(table->huffval));
 
 	// Figure C.1: make table of Huffman code length for each symbol
 	// Note that this is in code-length order
 	int p = 0;
 	for ( int l = 1; l <= 16; l++ ) {
-		for ( int i = 1; i <= (int) bits[l]; i++ )
+		for ( int i = 1; i <= (int) table->bits[l]; i++ )
 			huffsize[p++] = (char) l;
 	}
 	huffsize[p] = 0;
@@ -186,7 +194,6 @@ jpeg_table_huffman_encoder_compute(unsigned char* bits, unsigned char* values, s
 
 	// Figure C.2: generate the codes themselves
 	// Note that this is in code-length order
-
 	unsigned int code = 0;
 	int si = huffsize[0];
 	p = 0;
@@ -207,8 +214,8 @@ jpeg_table_huffman_encoder_compute(unsigned char* bits, unsigned char* values, s
 	memset(table->size, 0, sizeof(table->size));
 
 	for (p = 0; p < lastp; p++) {
-		table->code[values[p]] = huffcode[p];
-		table->size[values[p]] = huffsize[p];
+		table->code[table->huffval[p]] = huffcode[p];
+		table->size[table->huffval[p]] = huffsize[p];
 	}
 }
 
@@ -218,37 +225,119 @@ jpeg_table_huffman_encoder_init(struct jpeg_table_huffman_encoder* table, enum j
 {
     assert(comp_type == JPEG_COMPONENT_LUMINANCE || comp_type == JPEG_COMPONENT_CHROMINANCE);
     assert(huff_type == JPEG_HUFFMAN_DC || huff_type == JPEG_HUFFMAN_AC);
-    
     if ( comp_type == JPEG_COMPONENT_LUMINANCE ) {
         if ( huff_type == JPEG_HUFFMAN_DC ) {
-            jpeg_table_huffman_encoder_compute(
-                jpeg_table_huffman_y_dc_bits, 
-                jpeg_table_huffman_y_dc_value, 
-                table
-            );
+            memcpy(table->bits, jpeg_table_huffman_y_dc_bits, sizeof(table->bits));
+            memcpy(table->huffval, jpeg_table_huffman_y_dc_value, sizeof(table->huffval));
         } else {
-            jpeg_table_huffman_encoder_compute(
-                jpeg_table_huffman_y_ac_bits, 
-                jpeg_table_huffman_y_ac_value, 
-                table
-            );
+            memcpy(table->bits, jpeg_table_huffman_y_ac_bits, sizeof(table->bits));
+            memcpy(table->huffval, jpeg_table_huffman_y_ac_value, sizeof(table->huffval));
         }        
     } else if ( comp_type == JPEG_COMPONENT_CHROMINANCE ) {
         if ( huff_type == JPEG_HUFFMAN_DC ) {
-            jpeg_table_huffman_encoder_compute(
-                jpeg_table_huffman_cbcr_dc_bits, 
-                jpeg_table_huffman_cbcr_dc_value, 
-                table
-            );
+            memcpy(table->bits, jpeg_table_huffman_cbcr_dc_bits, sizeof(table->bits));
+            memcpy(table->huffval, jpeg_table_huffman_cbcr_dc_value, sizeof(table->huffval));
         } else {
-            jpeg_table_huffman_encoder_compute(
-                jpeg_table_huffman_cbcr_ac_bits, 
-                jpeg_table_huffman_cbcr_ac_value, 
-                table
-            );
+            memcpy(table->bits, jpeg_table_huffman_cbcr_ac_bits, sizeof(table->bits));
+            memcpy(table->huffval, jpeg_table_huffman_cbcr_ac_value, sizeof(table->huffval));
         }
     }
+    jpeg_table_huffman_encoder_compute(table);
     return 0;
 }
 
+/** Documented at declaration */
+int
+jpeg_table_huffman_decoder_init(struct jpeg_table_huffman_decoder* table, enum jpeg_component_type comp_type, enum jpeg_huffman_type huff_type)
+{
+    assert(comp_type == JPEG_COMPONENT_LUMINANCE || comp_type == JPEG_COMPONENT_CHROMINANCE);
+    assert(huff_type == JPEG_HUFFMAN_DC || huff_type == JPEG_HUFFMAN_AC);
+    if ( comp_type == JPEG_COMPONENT_LUMINANCE ) {
+        if ( huff_type == JPEG_HUFFMAN_DC ) {
+            memcpy(table->bits, jpeg_table_huffman_y_dc_bits, sizeof(table->bits));
+            memcpy(table->huffval, jpeg_table_huffman_y_dc_value, sizeof(table->huffval));
+        } else {
+            memcpy(table->bits, jpeg_table_huffman_y_ac_bits, sizeof(table->bits));
+            memcpy(table->huffval, jpeg_table_huffman_y_ac_value, sizeof(table->huffval));
+        }        
+    } else if ( comp_type == JPEG_COMPONENT_CHROMINANCE ) {
+        if ( huff_type == JPEG_HUFFMAN_DC ) {
+            memcpy(table->bits, jpeg_table_huffman_cbcr_dc_bits, sizeof(table->bits));
+            memcpy(table->huffval, jpeg_table_huffman_cbcr_dc_value, sizeof(table->huffval));
+        } else {
+            memcpy(table->bits, jpeg_table_huffman_cbcr_ac_bits, sizeof(table->bits));
+            memcpy(table->huffval, jpeg_table_huffman_cbcr_ac_value, sizeof(table->huffval));
+        }
+    }
+    jpeg_table_huffman_decoder_compute(table);
+    return 0;
+}
 
+/** Documented at declaration */
+void
+jpeg_table_huffman_decoder_compute(struct jpeg_table_huffman_decoder* table)
+{
+	// Figure C.1: make table of Huffman code length for each symbol
+	// Note that this is in code-length order.
+    char huffsize[257];
+	int p = 0;
+	for ( int l = 1; l <= 16; l++ ) {
+		for ( int i = 1; i <= (int) table->bits[l]; i++ )
+			huffsize[p++] = (char) l;
+	}
+	huffsize[p] = 0;
+
+	// Figure C.2: generate the codes themselves
+	// Note that this is in code-length order.
+    unsigned int huffcode[257];
+	unsigned int code = 0;
+	int si = huffsize[0];
+	p = 0;
+	while ( huffsize[p] ) {
+		while ( ((int) huffsize[p]) == si ) {
+			huffcode[p++] = code;
+			code++;
+		}
+		code <<= 1;
+		si++;
+	}
+
+	// Figure F.15: generate decoding tables for bit-sequential decoding
+	p = 0;
+	for ( int l = 1; l <= 16; l++ ) {
+		if ( table->bits[l] ) {
+			table->valptr[l] = p; // huffval[] index of 1st symbol of code length l
+			table->mincode[l] = huffcode[p]; // minimum code of length l
+			p += table->bits[l];
+			table->maxcode[l] = huffcode[p-1]; // maximum code of length l
+		} else {
+			table->maxcode[l] = -1;	// -1 if no codes of this length
+		}
+	}
+    // Ensures jpeg_huff_decode terminates
+	table->maxcode[17] = 0xFFFFFL;
+
+	// Compute lookahead tables to speed up decoding.
+    //First we set all the table entries to 0, indicating "too long";
+    //then we iterate through the Huffman codes that are short enough and
+    //fill in all the entries that correspond to bit sequences starting
+    //with that code.
+	memset(table->look_nbits, 0, sizeof(int) * 256);
+
+	int HUFF_LOOKAHEAD = 8;
+	p = 0;
+	for ( int l = 1; l <= HUFF_LOOKAHEAD; l++ ) {
+		for ( int i = 1; i <= (int) table->bits[l]; i++, p++ ) {
+			// l = current code's length, 
+			// p = its index in huffcode[] & huffval[]. Generate left-justified
+			// code followed by all possible bit sequences
+			int lookbits = huffcode[p] << (HUFF_LOOKAHEAD - l);
+			for ( int ctr = 1 << (HUFF_LOOKAHEAD - l); ctr > 0; ctr-- ) 
+			{
+				table->look_nbits[lookbits] = l;
+				table->look_sym[lookbits] = table->huffval[p];
+				lookbits++;
+			}
+		}
+	}
+}

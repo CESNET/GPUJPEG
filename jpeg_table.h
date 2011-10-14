@@ -110,6 +110,15 @@ int
 jpeg_table_quantization_decoder_init(struct jpeg_table_quantization* table, enum jpeg_component_type type, int quality);
 
 /**
+ * Compute JPEG quantization table for decoder
+ * 
+ * @param table  Table structure
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+jpeg_table_quantization_decoder_compute(struct jpeg_table_quantization* table);
+
+/**
  * Print JPEG quantization table
  * 
  * @param table  Table structure
@@ -119,13 +128,34 @@ void
 jpeg_table_quantization_print(struct jpeg_table_quantization* table);
 
 /**
- * Initialize huffman DC and AC table for component type
+ * Initialize encoder huffman DC and AC table for component type
  * 
- * @param table  Table structure that contains all tables for component type
- * @param type  Component type (luminance/chrominance)
+ * @param table  Table structure
+ * @param comp_type  Component type (luminance/chrominance)
+ * @param huff_type  Huffman type (DC/AC)
  * @return void
  */
 int
 jpeg_table_huffman_encoder_init(struct jpeg_table_huffman_encoder* table, enum jpeg_component_type comp_type, enum jpeg_huffman_type huff_type);
+
+/**
+ * Initialize decoder huffman DC and AC table for component type. It copies bit and values arrays to table and call compute routine.
+ * 
+ * @param table  Table structure
+ * @param comp_type  Component type (luminance/chrominance)
+ * @param huff_type  Huffman type (DC/AC)
+ * @return void
+ */
+int
+jpeg_table_huffman_decoder_init(struct jpeg_table_huffman_decoder* table, enum jpeg_component_type comp_type, enum jpeg_huffman_type huff_type);
+
+/** 
+ * Compute decoder huffman table from bits and values arrays (that are already set in table)
+ * 
+ * @param table
+ * @return void
+ */
+void
+jpeg_table_huffman_decoder_compute(struct jpeg_table_huffman_decoder* table);
 
 #endif // JPEG_TABLE
