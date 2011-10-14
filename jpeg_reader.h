@@ -23,60 +23,42 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
- 
-#ifndef JPEG_COMMON_H
-#define JPEG_COMMON_H
+
+#ifndef JPEG_READER
+#define JPEG_READER
 
 #include <stdint.h>
 
-/** Image file formats */
-enum jpeg_image_file_format {
-    // Unknown image file format
-    IMAGE_FILE_UNKNOWN,
-    // RGB file format, simple data format without header [R G B] [R G B] [R G B] ...
-    IMAGE_FILE_RGB,
-    // JPEG file format
-    IMAGE_FILE_JPEG
+/** JPEG writer structure */
+struct jpeg_reader
+{
 };
 
 /**
- * Get image file format from filename
- *
- * @param filename Filename of image file
- * @return image_file_format or IMAGE_FILE_UNKNOWN if type cannot be determined
+ * Create JPEG reader
+ * 
+ * @return reader structure if succeeds, otherwise NULL
  */
-enum jpeg_image_file_format
-jpeg_image_get_file_format(const char* filename);
+struct jpeg_reader*
+jpeg_reader_create();
 
 /**
- * Load RGB image from file
+ * Destroy JPEG reader
  * 
- * @param filaname  Image filename
- * @param image  Image data buffer
- * @param image_size  Image data buffer size (can be specified for verification or 0 for retrieval)
+ * @param reader  Reader structure
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size);
+jpeg_reader_destroy(struct jpeg_reader* reader);
 
 /**
- * Save RGB image to file
+ * Read JPEG image from data buffer
  * 
- * @param filaname  Image filename
- * @param image   Image data buffer
- * @param image_size  Image data buffer size
+ * @param image  Image data
+ * @param image_size  Image data size
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size);
+jpeg_reader_read(uint8_t* image, int image_size);
 
-/**
- * Destroy DXT image
- * 
- * @param image  Image data buffer
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-jpeg_image_destroy(uint8_t* image);
-
-#endif // JPEG_COMMON_H
+#endif // JPEG_WRITER

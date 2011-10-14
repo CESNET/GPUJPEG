@@ -24,16 +24,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JPEG_ENCODER
-#define JPEG_ENCODER
+#ifndef JPEG_DECODER
+#define JPEG_DECODER
 
 #include "jpeg_table.h"
-#include "jpeg_writer.h"
+#include "jpeg_reader.h"
 
 /**
- * JPEG encoder structure
+ * JPEG decoder structure
  */
-struct jpeg_encoder
+struct jpeg_decoder
 {  
     // Image width
     int width;
@@ -41,55 +41,44 @@ struct jpeg_encoder
     int height;
     // Component count
     int comp_count;
-    // Quality level (0-100)
-    int quality;
-    
-    // Source image data in device memory
-    uint8_t* d_data_source;
-    
-    // Preprocessed data in device memory
-    uint8_t* d_data;
-    
-    // Data after DCT and quantization in device memory
-    int16_t* d_data_quantized;
     
     // Table for luminance [0] and chrominance [1] color component
     struct jpeg_table* table[2];
     
-    // JPEG writer structure
-    struct jpeg_writer* writer;
+    // JPEG reader structure
+    struct jpeg_reader* reader;
 };
 
 /**
- * Create JPEG encoder
+ * Create JPEG decoder
  * 
  * @param width  Width of encodable images
  * @param height  Height of encodable images
- * @param quality  Quality
  * @return encoder structure if succeeds, otherwise NULL
  */
-struct jpeg_encoder*
-jpeg_encoder_create(int width, int height, int quality);
+struct jpeg_decoder*
+jpeg_decoder_create(int width, int height);
 
 /**
- * Compress image by encoder
+ * Decompress image by decoder
  * 
- * @param encoder  Encoder structure
+ * @param decoder  Decoder structure
  * @param image  Source image data
- * @param image_compressed  Pointer to variable where compressed image data buffer will be placed
- * @param image_compressed_size  Pointer to variable where compressed image size will be placed
+ * @param image_size  Source image data size
+ * @param image_decompressed  Pointer to variable where decompressed image data buffer will be placed
+ * @param image_decompressed_size  Pointer to variable where decompressed image size will be placed
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** image_compressed, int* image_compressed_size);
+jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size);
 
 /**
- * Destory JPEG encoder
+ * Destory JPEG decoder
  * 
- * @param encoder  Encoder structure
+ * @param decoder  Decoder structure
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_encoder_destroy(struct jpeg_encoder* encoder);
+jpeg_decoder_destroy(struct jpeg_decoder* decoder);
 
 #endif // JPEG_ENCODER

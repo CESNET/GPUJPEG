@@ -24,59 +24,25 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#ifndef JPEG_COMMON_H
-#define JPEG_COMMON_H
+#include "jpeg_reader.h"
+#include "jpeg_util.h"
 
-#include <stdint.h>
+/** Documented at declaration */
+struct jpeg_reader*
+jpeg_reader_create()
+{
+    struct jpeg_reader* reader = malloc(sizeof(struct jpeg_reader));
+    if ( reader == NULL )
+        return NULL;
+    
+    return reader;
+}
 
-/** Image file formats */
-enum jpeg_image_file_format {
-    // Unknown image file format
-    IMAGE_FILE_UNKNOWN,
-    // RGB file format, simple data format without header [R G B] [R G B] [R G B] ...
-    IMAGE_FILE_RGB,
-    // JPEG file format
-    IMAGE_FILE_JPEG
-};
-
-/**
- * Get image file format from filename
- *
- * @param filename Filename of image file
- * @return image_file_format or IMAGE_FILE_UNKNOWN if type cannot be determined
- */
-enum jpeg_image_file_format
-jpeg_image_get_file_format(const char* filename);
-
-/**
- * Load RGB image from file
- * 
- * @param filaname  Image filename
- * @param image  Image data buffer
- * @param image_size  Image data buffer size (can be specified for verification or 0 for retrieval)
- * @return 0 if succeeds, otherwise nonzero
- */
+/** Documented at declaration */
 int
-jpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size);
-
-/**
- * Save RGB image to file
- * 
- * @param filaname  Image filename
- * @param image   Image data buffer
- * @param image_size  Image data buffer size
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-jpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size);
-
-/**
- * Destroy DXT image
- * 
- * @param image  Image data buffer
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-jpeg_image_destroy(uint8_t* image);
-
-#endif // JPEG_COMMON_H
+jpeg_reader_destroy(struct jpeg_reader* reader)
+{
+    assert(reader != NULL);
+    free(reader);
+    return 0;
+}

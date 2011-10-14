@@ -44,7 +44,7 @@ struct jpeg_writer
 /**
  * Create JPEG writer
  * 
- * @return encoder structure if succeeds, otherwise NULL
+ * @return writer structure if succeeds, otherwise NULL
  */
 struct jpeg_writer*
 jpeg_writer_create(struct jpeg_encoder* encoder);
@@ -52,6 +52,7 @@ jpeg_writer_create(struct jpeg_encoder* encoder);
 /**
  * Destroy JPEG writer
  * 
+ * @param writer  Writer structure
  * @return 0 if succeeds, otherwise nonzero
  */
 int
@@ -60,6 +61,8 @@ jpeg_writer_destroy(struct jpeg_writer* writer);
 /**
  * Write one byte to file
  * 
+ * @param writer  Writer structure
+ * @param value  Byte value to write
  * @return void
  */
 #define jpeg_writer_emit_byte(writer, value) { \
@@ -69,6 +72,8 @@ jpeg_writer_destroy(struct jpeg_writer* writer);
 /**
  * Write two bytes to file
  * 
+ * @param writer  Writer structure
+ * @param value  Two-byte value to write
  * @return void
  */
 #define jpeg_writer_emit_2byte(writer, value) { \
@@ -80,6 +85,8 @@ jpeg_writer_destroy(struct jpeg_writer* writer);
 /**
  * Write marker to file
  * 
+ * @param writer  Writer structure
+ * @oaran marker  Marker to write (JPEG_MARKER_...)
  * @return void
  */
 #define jpeg_writer_emit_marker(writer, marker) { \
@@ -89,7 +96,7 @@ jpeg_writer_destroy(struct jpeg_writer* writer);
     writer->buffer_current++; }
     
 /**
- * Write JPEG header (write soi, app0, Y_dqt, CbCr_dqt, sof, 4 * dht, sos blocks)
+ * Write JPEG header (write soi, app0, Y_dqt, CbCr_dqt, sof, 4 * dht blocks)
  * 
  * @param encoder  Encoder structure
  * @return void
@@ -98,10 +105,10 @@ void
 jpeg_writer_write_header(struct jpeg_encoder* encoder);
 
 /**
- * Write scan header
+ * Write scan header for one component
  * 
  * @param encoder  Encoder structure
- * @param type
+ * @param type  Component scan type
  * @return void
  */
 void

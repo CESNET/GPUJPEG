@@ -28,8 +28,27 @@
 #include "jpeg_util.h"
 
 /** Documented at declaration */
+enum jpeg_image_file_format
+jpeg_image_get_file_format(const char* filename)
+{
+    static const char *extension[] = { "rgb", "jpg" };
+    static const enum jpeg_image_file_format format[] = { IMAGE_FILE_RGB, IMAGE_FILE_JPEG };
+        
+    char * ext = strrchr(filename, '.');
+    if ( ext == NULL )
+        return -1;
+    ext++;
+    for ( int i = 0; i < sizeof(format) / sizeof(*format); i++ ) {
+        if ( strncasecmp(ext, extension[i], 3) == 0 ) {
+            return format[i];
+        }
+    }
+    return IMAGE_FILE_UNKNOWN;
+}
+
+/** Documented at declaration */
 int
-jpeg_image_load_from_file(const char* filename, int width, int height, uint8_t** image)
+jpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size)
 {
     FILE* file;
 	file = fopen(filename, "rb");
@@ -38,10 +57,15 @@ jpeg_image_load_from_file(const char* filename, int width, int height, uint8_t**
 		return -1;
 	}
 
-    int data_size = width * height * 3;
-    uint8_t* data = (uint8_t*)malloc(data_size * sizeof(uint8_t));
-    if ( data_size != fread(data, sizeof(uint8_t), data_size, file) ) {
-        fprintf(stderr, "Failed to load image data [%d bytes] from file %s!\n", data_size, filename);
+    if ( *image_size == 0 ) {
+        fseek(file, 0, SEEK_END);
+        *image_size = ftell(file);
+        rewind(file);
+    }
+    
+    uint8_t* data = (uint8_t*)malloc(*image_size * sizeof(uint8_t));
+    if ( *image_size != fread(data, sizeof(uint8_t), *image_size, file) ) {
+        fprintf(stderr, "Failed to load image data [%d bytes] from file %s!\n", *image_size, filename);
         return -1;
     }
     fclose(file);
