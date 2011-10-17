@@ -44,6 +44,9 @@ struct jpeg_encoder
     // Quality level (0-100)
     int quality;
     
+    // Restart interval
+    int restart_interval;
+    
     // Source image data in device memory
     uint8_t* d_data_source;
     

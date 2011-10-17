@@ -319,6 +319,33 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
 }
 
 /**
+ * Read restart interval block from image
+ * 
+ * @param decoder
+ * @param image
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+jpeg_reader_read_dri(struct jpeg_decoder* decoder, uint8_t** image)
+{
+	int length = (int)jpeg_reader_read_2byte(*image);
+    if ( length != 4 ) {
+        fprintf(stderr, "Error: DRI marker length should be 4 but %d was presented!\n", length);
+        return -1;
+    }
+    
+    if ( decoder->restart_interval != 0 ) {
+        fprintf(stderr, "Error: DRI marker can't redefine restart interval!");
+        fprintf(stderr, "This may be caused when more DRI markers are presented which is not supported!\n");
+        return -1;
+    }
+    
+	decoder->restart_interval = jpeg_reader_read_2byte(*image);
+    
+    return 0;
+}
+
+/**
  * Read start of scan block from image
  * 
  * @param image
@@ -400,6 +427,7 @@ jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_s
 {
     // Setup decoder
     decoder->scan_count = 0;
+    decoder->restart_interval = 0;
     
     // Get image end
     uint8_t* image_end = image + image_size;
@@ -497,6 +525,11 @@ jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_s
             if ( jpeg_reader_read_dht(decoder, &image) != 0 )
                 return -1;
             break;
+            
+        case JPEG_MARKER_DRI:
+            if ( jpeg_reader_read_dri(decoder, &image) != 0 )
+                return -1;
+            break;
 
         case JPEG_MARKER_SOS:
             if ( jpeg_reader_read_sos(decoder, &image, image_end) != 0 )
@@ -508,7 +541,6 @@ jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_s
             break;
 
         case JPEG_MARKER_COM:
-        case JPEG_MARKER_DRI:
         case JPEG_MARKER_DAC:
         case JPEG_MARKER_DNL:
             fprintf(stderr, "Warning: JPEG data contains not supported %s marker\n", jpeg_marker_name(marker));

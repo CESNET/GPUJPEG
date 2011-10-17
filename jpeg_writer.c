@@ -146,8 +146,7 @@ jpeg_writer_write_dqt(struct jpeg_encoder* encoder, enum jpeg_component_type typ
 /**
  * Currently support JPEG_MARKER_SOF0 baseline implementation
  * 
- * @param encoder  Encoder structure
- * @param code
+ * @param encoder  Encoder structure 
  * @return void
  */
 void
@@ -232,6 +231,24 @@ jpeg_writer_write_dht(struct jpeg_encoder* encoder, enum jpeg_component_type com
 		jpeg_writer_emit_byte(encoder->writer, table->huffval[i]);  
 }
 
+/**
+ * Write restart interval
+ * 
+ * @param encoder  Encoder structure
+ * @return void
+ */
+void
+jpeg_writer_write_dri(struct jpeg_encoder* encoder)
+{
+	jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_DRI);
+    
+    // Length
+	jpeg_writer_emit_2byte(encoder->writer, 4);
+
+    // Restart interval
+    jpeg_writer_emit_2byte(encoder->writer, encoder->restart_interval);
+}
+
 /** Documented at declaration */
 void
 jpeg_writer_write_header(struct jpeg_encoder* encoder)
@@ -248,6 +265,8 @@ jpeg_writer_write_header(struct jpeg_encoder* encoder)
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_LUMINANCE, JPEG_HUFFMAN_AC);   // AC table for Y component
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_CHROMINANCE, JPEG_HUFFMAN_DC); // DC table for Cb or Cr component
 	jpeg_writer_write_dht(encoder, JPEG_COMPONENT_CHROMINANCE, JPEG_HUFFMAN_AC); // AC table for Cb or Cr component
+    
+    jpeg_writer_write_dri(encoder);
 }
 
 /** Documented at declaration */

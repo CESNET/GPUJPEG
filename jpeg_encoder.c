@@ -26,7 +26,8 @@
  
 #include "jpeg_encoder.h"
 #include "jpeg_preprocessor.h"
-#include "jpeg_huffman_encoder.h"
+#include "jpeg_huffman_cpu_encoder.h"
+#include "jpeg_huffman_gpu_encoder.h"
 #include "jpeg_format_type.h"
 #include "jpeg_util.h"
 
@@ -45,6 +46,7 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
     encoder->height = height;
     encoder->comp_count = comp_count;
     encoder->quality = quality;
+    encoder->restart_interval = 3;
     
     int result = 1;
     
@@ -188,15 +190,17 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
         // Get data buffer for component
         int16_t* data_comp = &encoder->data_quantized[comp * encoder->width * encoder->height];
+        int16_t* d_data_comp = &encoder->d_data_quantized[comp * encoder->width * encoder->height];
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         // Write scan header
         jpeg_writer_write_scan_header(encoder, comp, type);
         // Perform huffman coding
-        if ( jpeg_huffman_encoder_encode(encoder, type, data_comp) != 0 ) {
+        if ( jpeg_huffman_cpu_encoder_encode(encoder, type, data_comp) != 0 ) {
             fprintf(stderr, "Huffman coder failed for component at index %d!\n", comp);
             return -1;
         }
+        jpeg_huffman_gpu_encoder_encode(encoder, type, d_data_comp);
     }
     
     jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_EOI);

@@ -39,7 +39,8 @@
  * @param pixel_count  Number of pixels to copy
  * @return void
  */
-__global__ void d_rgb_to_comp(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int pixel_count)
+__global__ void
+d_rgb_to_comp(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int pixel_count)
 {
     int x  = threadIdx.x;
     int gX = blockDim.x * blockIdx.x;
@@ -76,7 +77,8 @@ __global__ void d_rgb_to_comp(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const
  * @param pixel_count  Number of pixels to copy
  * @return void
  */
-__global__ void d_comp_to_rgb(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int pixel_count)
+__global__ void
+d_comp_to_rgb(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int pixel_count)
 {
     int x  = threadIdx.x;
     int gX = blockDim.x * blockIdx.x;

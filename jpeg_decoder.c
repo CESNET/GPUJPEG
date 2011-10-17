@@ -41,6 +41,7 @@ jpeg_decoder_create(int width, int height, int comp_count)
     decoder->width = 0;
     decoder->height = 0;
     decoder->comp_count = 0;
+    decoder->restart_interval = 0;
     decoder->data_quantized = NULL;
     decoder->d_data_quantized = NULL;
     decoder->d_data = NULL;
