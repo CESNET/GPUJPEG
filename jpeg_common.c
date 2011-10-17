@@ -28,6 +28,39 @@
 #include "jpeg_util.h"
 
 /** Documented at declaration */
+int
+jpeg_init_device(int device_id)
+{
+    int dev_count;
+
+    cudaGetDeviceCount(&dev_count);
+
+    if ( dev_count == 0 ) {
+        printf("No CUDA enabled device\n");
+        return -1;
+    }
+
+    if ( device_id < 0 || device_id >= dev_count ) {
+        printf("Selected device %d is out of bound. Devices on your system are in range %d - %d\n",
+               device_id, 0, dev_count - 1);
+        return -1;
+    }
+
+    struct cudaDeviceProp devProp;
+    cudaGetDeviceProperties(&devProp, device_id);
+
+    if ( devProp.major < 1 ) {
+        printf("Device %d does not support CUDA\n", device_id);
+        return -1;
+    }
+
+    printf("Setting device %d: %s\n", device_id, devProp.name);
+    cudaSetDevice(device_id);
+
+    return 0;
+}
+
+/** Documented at declaration */
 enum jpeg_image_file_format
 jpeg_image_get_file_format(const char* filename)
 {

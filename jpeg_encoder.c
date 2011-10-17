@@ -46,40 +46,47 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
     encoder->comp_count = comp_count;
     encoder->quality = quality;
     
+    int result = 1;
+    
     // Create writer
     encoder->writer = jpeg_writer_create(encoder);
     if ( encoder->writer == NULL )
-        return NULL;
+        result = 0;
     
     // Allocate data buffers
     int data_size = encoder->width * encoder->width * encoder->comp_count;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_source, data_size * sizeof(uint8_t)) ) 
-        return NULL;
+        result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data, data_size * sizeof(uint8_t)) ) 
-        return NULL;
+        result = 0;
     if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_quantized, data_size * sizeof(int16_t)) ) 
-        return NULL;
+        result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
-        return NULL;
+        result = 0;
      
     // Allocate quantization tables in device memory
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         if ( cudaSuccess != cudaMalloc((void**)&encoder->table_quantization[comp_type].d_table, 64 * sizeof(uint16_t)) ) 
-            return NULL;
+            result = 0;
     }
     
     // Init quantization tables for encoder
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         if ( jpeg_table_quantization_encoder_init(&encoder->table_quantization[comp_type], comp_type, quality) != 0 )
-            return NULL;
+            result = 0;
     }
     
     // Init huffman tables for encoder
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
             if ( jpeg_table_huffman_encoder_init(&encoder->table_huffman[comp_type][huff_type], comp_type, huff_type) != 0 )
-                return NULL;
+                result = 0;
         }
+    }
+    
+    if ( result == 0 ) {
+        jpeg_encoder_destroy(encoder);
+        return NULL;
     }
     
     return encoder;
@@ -212,17 +219,17 @@ jpeg_encoder_destroy(struct jpeg_encoder* encoder)
             cudaFree(encoder->table_quantization[comp_type].d_table);
     }
     
-    assert(encoder->writer != NULL);
-    jpeg_writer_destroy(encoder->writer);
+    if ( encoder->writer != NULL )
+        jpeg_writer_destroy(encoder->writer);
     
-    assert(encoder->d_data_source != NULL);
-    cudaFree(encoder->d_data_source);
-    assert(encoder->d_data != NULL);
-    cudaFree(encoder->d_data);
-    assert(encoder->data_quantized != NULL);
-    cudaFreeHost(encoder->data_quantized);    
-    assert(encoder->d_data_quantized != NULL);
-    cudaFree(encoder->d_data_quantized);    
+    if ( encoder->d_data_source != NULL )
+        cudaFree(encoder->d_data_source);
+    if ( encoder->d_data != NULL )
+        cudaFree(encoder->d_data);
+    if ( encoder->data_quantized != NULL )
+        cudaFreeHost(encoder->data_quantized);    
+    if ( encoder->d_data_quantized != NULL )
+        cudaFree(encoder->d_data_quantized);    
     
     free(encoder);
     

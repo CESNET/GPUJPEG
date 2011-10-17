@@ -130,6 +130,9 @@ main(int argc, char *argv[])
         }
     }
     
+    // Init device
+    jpeg_init_device(0);
+    
     if ( encode == 1 ) {    
         // Create encoder
         struct jpeg_encoder* encoder = jpeg_encoder_create(width, height, comp_count, quality);

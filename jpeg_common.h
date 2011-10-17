@@ -40,6 +40,15 @@ enum jpeg_image_file_format {
 };
 
 /**
+ * Init CUDA device
+ * 
+ * @param device_id
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+jpeg_init_device(int device_id);
+
+/**
  * Get image file format from filename
  *
  * @param filename Filename of image file
