@@ -196,7 +196,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     jpeg_writer_write_header(encoder);
     
     // Perform huffman coding on CPU (when restart interval is not set)
-    if ( encoder->restart_interval == 0 ) {
+    /*if ( encoder->restart_interval == 0 )*/ {
         // Copy quantized data from device memory to cpu memory
         cudaMemcpy(encoder->data_quantized, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
         
@@ -217,7 +217,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
         }
     }
     // Perform huffman coding on GPU (when restart interval is set)
-    else {
+    /*else*/ {
         // Perform huffman coding
         if ( jpeg_huffman_gpu_encoder_encode(encoder) != 0 ) {
             fprintf(stderr, "Huffman coder on GPU failed!\n");

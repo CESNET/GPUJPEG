@@ -256,7 +256,7 @@ jpeg_huffman_encoder_encode_kernel(
     int comp_index = blockIdx.y;
     if ( segment_index >= segment_count )
         return;
-    
+        
     struct jpeg_segment* segment = &d_segments[segment_index];
     
     // Get huffman tables
@@ -286,7 +286,7 @@ jpeg_huffman_encoder_encode_kernel(
         if ( block_index >= block_count )
             break;
         // Encode block
-        int data_index = block_index * 64;
+        int data_index = (block_count * comp_index + block_index) * 64;
         jpeg_huffman_gpu_encoder_encode_block(
             put_value, 
             put_bits, 
@@ -378,8 +378,8 @@ jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder)
         encoder->d_data_quantized, 
         d_data_compressed, 
         encoder->d_table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_DC],
-        encoder->d_table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_DC],
-        encoder->d_table_huffman[JPEG_COMPONENT_CHROMINANCE][JPEG_HUFFMAN_AC],
+        encoder->d_table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_AC],
+        encoder->d_table_huffman[JPEG_COMPONENT_CHROMINANCE][JPEG_HUFFMAN_DC],
         encoder->d_table_huffman[JPEG_COMPONENT_CHROMINANCE][JPEG_HUFFMAN_AC]
     );
     cudaError cuerr = cudaThreadSynchronize();

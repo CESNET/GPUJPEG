@@ -125,15 +125,7 @@ jpeg_huffman_cpu_encoder_emit_left_bits(struct jpeg_huffman_cpu_encoder* coder)
  */
 int
 jpeg_huffman_cpu_encoder_encode_block(struct jpeg_huffman_cpu_encoder* coder, int16_t* data)
-{	
-    /*printf("Encode Block\n");
-    for ( int y = 0; y < 8; y++ ) {
-        for ( int x = 0; x < 8; x++ ) {
-            printf("%4d ", data[y * 8 + x]);
-        }
-        printf("\n");
-    }*/
-    
+{	    
 	int16_t* block = data;
 
 	// Encode the DC coefficient difference per section F.1.2.1
@@ -238,6 +230,8 @@ jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_componen
     coder.restart_interval = encoder->restart_interval;
     coder.block_count = 0;
     
+    //uint8_t* buffer = encoder->writer->buffer_current;
+    
     // Encode all blocks
     for ( int block_y = 0; block_y < block_cy; block_y++ ) {
         for ( int block_x = 0; block_x < block_cx; block_x++ ) {
@@ -254,6 +248,9 @@ jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_componen
                     // Output restart marker
                     int restart_marker = JPEG_MARKER_RST0 + (((coder.block_count - coder.restart_interval) / coder.restart_interval) & 0x7);
                     jpeg_writer_emit_marker(encoder->writer, restart_marker);
+                    
+                    //printf("byte count %d\n", (int)encoder->writer->buffer_current - (int)buffer);
+                    //buffer = encoder->writer->buffer_current;
                 }
             }
             uint8_t* buffer = encoder->writer->buffer_current;
@@ -271,6 +268,8 @@ jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_componen
     // Emit left
     if ( coder.put_bits > 0 )
         jpeg_huffman_cpu_encoder_emit_left_bits(&coder);
+        
+    //printf("byte count %d\n", (int)encoder->writer->buffer_current - (int)buffer);
     
     return 0;
 }
