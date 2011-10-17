@@ -66,10 +66,6 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
         result = 0;
-    if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_compressed, data_size * sizeof(uint8_t)) ) 
-        result = 0;   
-    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, data_size * sizeof(uint8_t)) ) 
-        result = 0;   
 
     // Calculate segments count
     int block_count = ((encoder->width + 7) / 8) * ((encoder->height + 7) / 8);
@@ -86,13 +82,19 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
     if ( result == 1 ) {
         // Prepare segments for encoding
         for ( int index = 0; index < encoder->segment_count; index++ ) {
-            encoder->segments[index].data_compressed_index = index * 64;
+            encoder->segments[index].data_compressed_index = index * 64 * encoder->restart_interval;
             encoder->segments[index].data_compressed_size = 0;
         }
         // Copy segments to device memory
         if ( cudaSuccess != cudaMemcpy(encoder->d_segments, encoder->segments, encoder->segment_count * sizeof(struct jpeg_encoder_segment), cudaMemcpyHostToDevice) )
             result = 0;
     } 
+    
+    // Allocate compressed data
+    if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_compressed, encoder->segment_count * encoder->restart_interval * 64 * sizeof(uint8_t)) ) 
+        result = 0;   
+    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->restart_interval * 64 * sizeof(uint8_t)) ) 
+        result = 0;   
      
     // Allocate quantization tables in device memory
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -252,7 +254,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
         }
         
         // Copy compressed data from device memory to cpu memory
-        if ( cudaSuccess != cudaMemcpy(encoder->data_compressed, encoder->d_data_compressed, data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
+        if ( cudaSuccess != cudaMemcpy(encoder->data_compressed, encoder->d_data_compressed, encoder->segment_count * encoder->restart_interval * 64 * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
             return -1;
         // Copy segments to device memory
         if ( cudaSuccess != cudaMemcpy(encoder->segments, encoder->d_segments, encoder->segment_count * sizeof(struct jpeg_encoder_segment), cudaMemcpyDeviceToHost) )
@@ -264,9 +266,11 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
             // Write scan header
             jpeg_writer_write_scan_header(encoder, comp, type);
+            // Write scan data
             for ( int index = 0; index < encoder->segment_count_per_comp; index++ ) {
                 int segment_index = (comp * encoder->segment_count_per_comp + index);
                 struct jpeg_encoder_segment* segment = &encoder->segments[segment_index];
+                
                 // Copy compressed data to writer
                 memcpy(
                     encoder->writer->buffer_current, 
@@ -276,7 +280,6 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
                 encoder->writer->buffer_current += segment->data_compressed_size;
                 //printf("Compressed data %d bytes\n", segment->data_compressed_size);
             }
-            // TODO: write scan data
         }
     }
     

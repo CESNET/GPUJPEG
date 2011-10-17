@@ -230,7 +230,7 @@ jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_componen
     coder.restart_interval = encoder->restart_interval;
     coder.block_count = 0;
     
-    //uint8_t* buffer = encoder->writer->buffer_current;
+    uint8_t* buffer = encoder->writer->buffer_current;
     
     // Encode all blocks
     for ( int block_y = 0; block_y < block_cy; block_y++ ) {
@@ -248,7 +248,7 @@ jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_componen
                     // Output restart marker
                     int restart_marker = JPEG_MARKER_RST0 + (((coder.block_count - coder.restart_interval) / coder.restart_interval) & 0x7);
                     jpeg_writer_emit_marker(encoder->writer, restart_marker);
-                    
+                
                     //printf("byte count %d\n", (int)encoder->writer->buffer_current - (int)buffer);
                     //buffer = encoder->writer->buffer_current;
                 }
@@ -269,7 +269,11 @@ jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_componen
     if ( coder.put_bits > 0 )
         jpeg_huffman_cpu_encoder_emit_left_bits(&coder);
         
-    //printf("byte count %d\n", (int)encoder->writer->buffer_current - (int)buffer);
+    for ( int i = 0; i < ((int)encoder->writer->buffer_current - (int)buffer); i++)
+        printf("0x%X ", buffer[i]);
+    printf("\n");
+                    
+    printf("byte count %d\n", (int)encoder->writer->buffer_current - (int)buffer);
     
     return 0;
 }

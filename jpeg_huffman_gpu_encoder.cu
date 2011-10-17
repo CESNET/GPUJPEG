@@ -251,7 +251,7 @@ jpeg_huffman_encoder_encode_kernel(
     if ( segment_index >= segment_count )
         return;
         
-    struct jpeg_encoder_segment* segment = &d_segments[segment_index];
+    struct jpeg_encoder_segment* segment = &d_segments[comp_index * segment_count + segment_index];
     
     // Get huffman tables
     struct jpeg_table_huffman_encoder* d_table_dc = NULL;
@@ -303,10 +303,10 @@ jpeg_huffman_encoder_encode_kernel(
         //printf("%d,%d: marker 0x%X\n", comp_index, segment_index, restart_marker);
         jpeg_huffman_gpu_encoder_marker(data_compressed, restart_marker);
     }
-    
+                
     // Set compressed size
     segment->data_compressed_size = data_compressed - data_compressed_start;
-    //printf("%d,%d: byte count %d\n", comp_index, segment_index, segment->data_compressed_size);
+    //printf("%d,%d: byte count %d (%d)\n", comp_index, segment_index, segment->data_compressed_size, segment->data_compressed_index);
 }
 
 /** Documented at declaration */
