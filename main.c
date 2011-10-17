@@ -43,6 +43,7 @@ print_help()
         "   -h, --help\t\tprint help\n"
         "   -s, --size\t\timage size in pixels, e.g. 1920x1080\n"
         "   -q, --quality\t\tquality level 1-100 (default 75)\n"
+        "   -r, --restart\t\tset restart interval (default 8)\n"
         "   -e, --encode\t\tencode images\n"
         "   -d, --decode\t\tdecode images\n"
     );
@@ -55,6 +56,7 @@ main(int argc, char *argv[])
         {"help",    no_argument,       0, 'h'},
         {"size",    required_argument, 0, 's'},
         {"quality", required_argument, 0, 'q'},
+        {"restart", required_argument, 0, 'r'},
         {"encode",  no_argument,       0, 'e'},
         {"decode",  no_argument,       0, 'd'},
     };
@@ -64,6 +66,7 @@ main(int argc, char *argv[])
     int height = 0;
     int comp_count = 3;
     int quality = 75;
+    int restart_interval = 8;
     int encode = 0;
     int decode = 0;
     
@@ -71,7 +74,7 @@ main(int argc, char *argv[])
     char ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "hs:q:", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "hs:q:r:ed", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'h':
             print_help();
@@ -91,6 +94,11 @@ main(int argc, char *argv[])
                 quality = 1;
             if ( quality > 100 )
                 quality = 100;
+            break;
+        case 'r':
+            restart_interval = atoi(optarg);
+            if ( restart_interval < 0 )
+                restart_interval = 0;
             break;
         case 'e':
             encode = 1;
@@ -135,7 +143,7 @@ main(int argc, char *argv[])
     
     if ( encode == 1 ) {    
         // Create encoder
-        struct jpeg_encoder* encoder = jpeg_encoder_create(width, height, comp_count, quality);
+        struct jpeg_encoder* encoder = jpeg_encoder_create(width, height, comp_count, quality, restart_interval);
         if ( encoder == NULL ) {
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
@@ -169,7 +177,7 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Load Image:     ");
+            TIMER_STOP_PRINT("Load Image:        ");
             TIMER_START();
                 
             // Encode image
@@ -180,7 +188,7 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Encode Image:   ");
+            TIMER_STOP_PRINT("Encode Image:      ");
             TIMER_START();
             
             // Save image
@@ -189,7 +197,7 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Save Image:     ");
+            TIMER_STOP_PRINT("Save Image:        ");
             
             printf("Compressed Size: %d bytes\n", image_compressed_size);
             

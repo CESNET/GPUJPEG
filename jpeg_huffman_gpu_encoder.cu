@@ -335,9 +335,6 @@ jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder)
     int block_cy = (encoder->height + block_height - 1) / block_height;
     int block_count = block_cx * block_cy;
     int segment_count = (block_count / encoder->restart_interval + 1);
-    
-    TIMER_INIT();
-    TIMER_START();
             
     // Run kernel
     dim3 thread(32);
@@ -359,7 +356,6 @@ jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder)
         fprintf(stderr, "Preprocessing decoding failed: %s!\n", cudaGetErrorString(cuerr));
         return -1;
     }
-    TIMER_STOP_PRINT("Huffman Coder:  ");
     
     return 0;
 }

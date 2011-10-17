@@ -102,10 +102,11 @@ struct jpeg_encoder
  * @param height  Height of encodable images
  * @param comp_count  Component count
  * @param quality  Quality
+ * @param restart_interval  Restart interval
  * @return encoder structure if succeeds, otherwise NULL
  */
 struct jpeg_encoder*
-jpeg_encoder_create(int width, int height, int comp_count, int quality);
+jpeg_encoder_create(int width, int height, int comp_count, int quality, int restart_interval);
 
 /**
  * Compress image by encoder
