@@ -66,6 +66,32 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
         result = 0;
+    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, data_size * sizeof(uint8_t)) ) 
+        result = 0;   
+
+    // Calculate segments count
+    int block_count = ((encoder->width + 7) / 8) * ((encoder->height + 7) / 8);
+    int segment_count = (block_count / encoder->restart_interval + 1);
+    
+    // Allocate segments
+    struct jpeg_encoder_segment* segments = (struct jpeg_encoder_segment*)malloc(encoder->comp_count * segment_count * sizeof(struct jpeg_encoder_segment));
+    if ( segments == NULL )
+        result = 0;
+    if ( result == 1 ) {
+        // Allocate segments in device memory
+        if ( cudaSuccess != cudaMalloc((void**)&encoder->d_segments, encoder->comp_count * segment_count * sizeof(struct jpeg_encoder_segment)) )
+            result = 0;
+    }    
+    if ( result == 1 ) {
+        // Prepare segments for encoding
+        for ( int index = 0; index < (encoder->comp_count * segment_count); index++ ) {
+            segments[index].data_compressed_index = index * 64;
+            segments[index].data_compressed_size = 0;
+        }
+        cudaMemcpy(encoder->d_segments, segments, encoder->comp_count * segment_count * sizeof(struct jpeg_encoder_segment), cudaMemcpyHostToDevice);
+    } 
+    if ( segments != NULL )
+        free(segments);
      
     // Allocate quantization tables in device memory
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -196,7 +222,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     jpeg_writer_write_header(encoder);
     
     // Perform huffman coding on CPU (when restart interval is not set)
-    /*if ( encoder->restart_interval == 0 )*/ {
+    if ( encoder->restart_interval == 0 ) {
         // Copy quantized data from device memory to cpu memory
         cudaMemcpy(encoder->data_quantized, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
         
@@ -217,7 +243,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
         }
     }
     // Perform huffman coding on GPU (when restart interval is set)
-    /*else*/ {
+    else {
         // Perform huffman coding
         if ( jpeg_huffman_gpu_encoder_encode(encoder) != 0 ) {
             fprintf(stderr, "Huffman coder on GPU failed!\n");
@@ -275,6 +301,8 @@ jpeg_encoder_destroy(struct jpeg_encoder* encoder)
         cudaFreeHost(encoder->data_quantized);    
     if ( encoder->d_data_quantized != NULL )
         cudaFree(encoder->d_data_quantized);    
+    if ( encoder->d_data_compressed != NULL )
+        cudaFree(encoder->d_data_compressed);    
     
     free(encoder);
     

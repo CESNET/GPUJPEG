@@ -30,6 +30,14 @@
 #include "jpeg_table.h"
 #include "jpeg_writer.h"
 
+/** JPEG segment */
+struct jpeg_encoder_segment {
+    // Data compressed index
+    int data_compressed_index;
+    // Data compressed size
+    int data_compressed_size;
+};
+
 /**
  * JPEG encoder structure
  */
@@ -58,6 +66,12 @@ struct jpeg_encoder
     
     // Data after DCT and quantization in device memory
     int16_t* d_data_quantized;
+    
+    // Data after huffman coder
+    uint8_t* d_data_compressed;
+    
+    // Segments
+    struct jpeg_encoder_segment* d_segments;
     
     // Quantization tables
     struct jpeg_table_quantization table_quantization[JPEG_COMPONENT_TYPE_COUNT];

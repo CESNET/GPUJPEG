@@ -28,12 +28,6 @@
 #include "jpeg_format_type.h"
 #include "jpeg_util.h"
 
-/** JPEG segment */
-struct jpeg_segment {
-    int data_compressed_index;
-    int data_compressed_size;
-};
-
 /** Natural order in constant memory */
 __constant__ int jpeg_huffman_gpu_encoder_order_natural[64];
 
@@ -242,7 +236,7 @@ __global__ void
 jpeg_huffman_encoder_encode_kernel(
     int restart_interval,
     int block_count,
-    struct jpeg_segment* d_segments,
+    struct jpeg_encoder_segment* d_segments,
     int segment_count,    
     int16_t* d_data,
     uint8_t* d_data_compressed,
@@ -257,7 +251,7 @@ jpeg_huffman_encoder_encode_kernel(
     if ( segment_index >= segment_count )
         return;
         
-    struct jpeg_segment* segment = &d_segments[segment_index];
+    struct jpeg_encoder_segment* segment = &d_segments[segment_index];
     
     // Get huffman tables
     struct jpeg_table_huffman_encoder* d_table_dc = NULL;
@@ -341,28 +335,6 @@ jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder)
     int block_cy = (encoder->height + block_height - 1) / block_height;
     int block_count = block_cx * block_cy;
     int segment_count = (block_count / encoder->restart_interval + 1);
-    int segment_size = block_width * block_height * encoder->restart_interval;
-    
-    // Allocate compressed data
-    uint8_t* d_data_compressed = NULL;
-    cudaMalloc((void**)&d_data_compressed, encoder->comp_count * encoder->width * encoder->height * sizeof(uint8_t));
-    assert(d_data_compressed != NULL);
-    
-    // Allocate segments
-    struct jpeg_segment* segments = (struct jpeg_segment*)malloc(encoder->comp_count * segment_count * sizeof(struct jpeg_segment));
-    assert(segments != NULL);
-    
-    // Allocate segments in device memory
-    struct jpeg_segment* d_segments = NULL;
-    cudaMalloc((void**)&d_segments, encoder->comp_count * segment_count * sizeof(struct jpeg_segment));
-    assert(d_segments != NULL);
-    
-    // Prepare segments for encoding
-    for ( int index = 0; index < (encoder->comp_count * segment_count); index++ ) {
-        segments[index].data_compressed_index = index * segment_size;
-        segments[index].data_compressed_size = 0;
-    }
-    cudaMemcpy(d_segments, segments, encoder->comp_count * segment_count * sizeof(struct jpeg_segment), cudaMemcpyHostToDevice);
     
     TIMER_INIT();
     TIMER_START();
@@ -373,10 +345,10 @@ jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder)
     jpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
         encoder->restart_interval,
         block_count, 
-        d_segments, 
+        encoder->d_segments, 
         segment_count,        
         encoder->d_data_quantized, 
-        d_data_compressed, 
+        encoder->d_data_compressed, 
         encoder->d_table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_DC],
         encoder->d_table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_AC],
         encoder->d_table_huffman[JPEG_COMPONENT_CHROMINANCE][JPEG_HUFFMAN_DC],
