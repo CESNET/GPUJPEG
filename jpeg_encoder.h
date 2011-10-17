@@ -68,10 +68,19 @@ struct jpeg_encoder
     int16_t* d_data_quantized;
     
     // Data after huffman coder
+    uint8_t* data_compressed;
+    
+    // Data after huffman coder
     uint8_t* d_data_compressed;
     
     // Segments
+    struct jpeg_encoder_segment* segments;
+    // Segments in device memory
     struct jpeg_encoder_segment* d_segments;
+    // Segment count per component
+    int segment_count_per_comp;
+    // Segment count
+    int segment_count;
     
     // Quantization tables
     struct jpeg_table_quantization table_quantization[JPEG_COMPONENT_TYPE_COUNT];

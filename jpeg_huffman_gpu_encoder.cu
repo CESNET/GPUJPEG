@@ -359,7 +359,7 @@ jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder)
         fprintf(stderr, "Preprocessing decoding failed: %s!\n", cudaGetErrorString(cuerr));
         return -1;
     }
-    TIMER_STOP_PRINT("Huffman Coder: ");
+    TIMER_STOP_PRINT("Huffman Coder:  ");
     
     return 0;
 }
