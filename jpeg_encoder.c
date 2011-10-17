@@ -42,11 +42,12 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
         return NULL;
         
     // Set parameters
+    memset(encoder, 0, sizeof(struct jpeg_encoder));
     encoder->width = width;
     encoder->height = height;
     encoder->comp_count = comp_count;
     encoder->quality = quality;
-    encoder->restart_interval = 3;
+    encoder->restart_interval = 8;
     
     int result = 1;
     
@@ -71,6 +72,13 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
         if ( cudaSuccess != cudaMalloc((void**)&encoder->table_quantization[comp_type].d_table, 64 * sizeof(uint16_t)) ) 
             result = 0;
     }
+    // Allocate huffman tables in device memory
+    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
+            if ( cudaSuccess != cudaMalloc((void**)&encoder->d_table_huffman[comp_type][huff_type], sizeof(struct jpeg_table_huffman_encoder)) )
+                result = 0;
+        }
+    }
     
     // Init quantization tables for encoder
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -81,10 +89,14 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality)
     // Init huffman tables for encoder
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
-            if ( jpeg_table_huffman_encoder_init(&encoder->table_huffman[comp_type][huff_type], comp_type, huff_type) != 0 )
+            if ( jpeg_table_huffman_encoder_init(&encoder->table_huffman[comp_type][huff_type], encoder->d_table_huffman[comp_type][huff_type], comp_type, huff_type) != 0 )
                 result = 0;
         }
     }
+    
+    // Init huffman encoder
+    if ( jpeg_huffman_gpu_encoder_init() != 0 )
+        result = 0;
     
     if ( result == 0 ) {
         jpeg_encoder_destroy(encoder);
@@ -183,24 +195,47 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     // Write header
     jpeg_writer_write_header(encoder);
     
-    // Copy quantized data from device memory to cpu memory
-    cudaMemcpy(encoder->data_quantized, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
-    
-    // Perform huffman coding for all components
-    for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
-        // Get data buffer for component
-        int16_t* data_comp = &encoder->data_quantized[comp * encoder->width * encoder->height];
-        int16_t* d_data_comp = &encoder->d_data_quantized[comp * encoder->width * encoder->height];
-        // Determine table type
-        enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
-        // Write scan header
-        jpeg_writer_write_scan_header(encoder, comp, type);
+    // Perform huffman coding on CPU (when restart interval is not set)
+    if ( encoder->restart_interval == 0 ) {
+        // Copy quantized data from device memory to cpu memory
+        cudaMemcpy(encoder->data_quantized, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
+        
+        // Perform huffman coding for all components
+        for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
+            // Get data buffer for component
+            int16_t* data_comp = &encoder->data_quantized[comp * encoder->width * encoder->height];
+            int16_t* d_data_comp = &encoder->d_data_quantized[comp * encoder->width * encoder->height];
+            // Determine table type
+            enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+            // Write scan header
+            jpeg_writer_write_scan_header(encoder, comp, type);
+            // Perform huffman coding
+            if ( jpeg_huffman_cpu_encoder_encode(encoder, type, data_comp) != 0 ) {
+                fprintf(stderr, "Huffman coder on CPU failed for component at index %d!\n", comp);
+                return -1;
+            }
+        }
+    }
+    // Perform huffman coding on GPU (when restart interval is set)
+    else {
         // Perform huffman coding
-        if ( jpeg_huffman_cpu_encoder_encode(encoder, type, data_comp) != 0 ) {
-            fprintf(stderr, "Huffman coder failed for component at index %d!\n", comp);
+        if ( jpeg_huffman_gpu_encoder_encode(encoder) != 0 ) {
+            fprintf(stderr, "Huffman coder on GPU failed!\n");
             return -1;
         }
-        jpeg_huffman_gpu_encoder_encode(encoder, type, d_data_comp);
+        
+        // Write huffman coder results
+        for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
+            // Determine table type
+            enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+            // Write scan header
+            jpeg_writer_write_scan_header(encoder, comp, type);
+            
+            // TODO: write scan data
+        }
+
+        // Copy quantized data from device memory to cpu memory
+        //cudaMemcpy(encoder->data_quantized, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
     }
     
     jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_EOI);
@@ -221,6 +256,12 @@ jpeg_encoder_destroy(struct jpeg_encoder* encoder)
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         if ( encoder->table_quantization[comp_type].d_table != NULL )
             cudaFree(encoder->table_quantization[comp_type].d_table);
+    }
+    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
+            if ( encoder->d_table_huffman[comp_type][huff_type] != NULL )
+                cudaFree(encoder->d_table_huffman[comp_type][huff_type]);
+        }
     }
     
     if ( encoder->writer != NULL )

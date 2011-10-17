@@ -65,6 +65,9 @@ struct jpeg_encoder
     // Huffman coder tables
     struct jpeg_table_huffman_encoder table_huffman[JPEG_COMPONENT_TYPE_COUNT][JPEG_HUFFMAN_TYPE_COUNT];
     
+    // Huffman coder tables in device memory
+    struct jpeg_table_huffman_encoder* d_table_huffman[JPEG_COMPONENT_TYPE_COUNT][JPEG_HUFFMAN_TYPE_COUNT];
+    
     // JPEG writer structure
     struct jpeg_writer* writer;
 };

@@ -34,15 +34,21 @@ extern "C" {
 #endif
 
 /**
- * Perform huffman encoding
+ * Init huffman encoder
  * 
- * @param encoder  Encoder structure
- * @param type  Component type
- * @param data  Data buffer
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type type, int16_t* data);
+jpeg_huffman_gpu_encoder_init();
+
+/**
+ * Perform huffman encoding
+ * 
+ * @param encoder  Encoder structure
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder);
 
 #ifdef __cplusplus
 }

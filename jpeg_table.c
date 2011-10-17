@@ -221,7 +221,7 @@ jpeg_table_huffman_encoder_compute(struct jpeg_table_huffman_encoder* table)
 
 /** Documented at declaration */
 int
-jpeg_table_huffman_encoder_init(struct jpeg_table_huffman_encoder* table, enum jpeg_component_type comp_type, enum jpeg_huffman_type huff_type)
+jpeg_table_huffman_encoder_init(struct jpeg_table_huffman_encoder* table, struct jpeg_table_huffman_encoder* d_table, enum jpeg_component_type comp_type, enum jpeg_huffman_type huff_type)
 {
     assert(comp_type == JPEG_COMPONENT_LUMINANCE || comp_type == JPEG_COMPONENT_CHROMINANCE);
     assert(huff_type == JPEG_HUFFMAN_DC || huff_type == JPEG_HUFFMAN_AC);
@@ -243,6 +243,11 @@ jpeg_table_huffman_encoder_init(struct jpeg_table_huffman_encoder* table, enum j
         }
     }
     jpeg_table_huffman_encoder_compute(table);
+    
+    // Copy table to device memory
+    if ( cudaSuccess != cudaMemcpy(d_table, table, sizeof(struct jpeg_table_huffman_encoder), cudaMemcpyHostToDevice) )
+        return -1;
+        
     return 0;
 }
 
