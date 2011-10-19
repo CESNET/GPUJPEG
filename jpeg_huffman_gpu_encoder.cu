@@ -315,12 +315,13 @@ jpeg_huffman_gpu_encoder_init()
 {
      // Copy natural order to constant device memory
     cudaMemcpyToSymbol(
-        "jpeg_huffman_gpu_encoder_order_natural",
-        jpeg_order_natural, 
-        64 * sizeof(int), 
-        0, 
-        cudaMemcpyHostToDevice
+		"jpeg_huffman_gpu_encoder_order_natural",
+		jpeg_order_natural, 
+		64 * sizeof(int),
+		0,
+		cudaMemcpyHostToDevice
     );
+	cudaCheckError("Huffman encoder init");
     
     return 0;
 }

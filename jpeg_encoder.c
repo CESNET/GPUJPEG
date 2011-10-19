@@ -66,6 +66,8 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
         result = 0;
+		
+	cudaCheckError("Data allocation");
 
     // Calculate segments count
     if ( encoder->restart_interval != 0 ) {
@@ -97,6 +99,8 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->restart_interval * 64 * sizeof(uint8_t)) ) 
             result = 0;   
     }
+	
+	cudaCheckError("Segment allocation");
      
     // Allocate quantization tables in device memory
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -110,6 +114,8 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
                 result = 0;
         }
     }
+	
+	cudaCheckError("Table allocation");
     
     // Init quantization tables for encoder
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -124,6 +130,8 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
                 result = 0;
         }
     }
+	
+	cudaCheckError("Table init");
     
     // Init huffman encoder
     if ( jpeg_huffman_gpu_encoder_init() != 0 )
@@ -219,7 +227,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             fwd_roi
         );
         if ( status != 0 ) {
-            fprintf(stderr, "Forward DCT failed for component at index %d!\n", comp);
+            fprintf(stderr, "Forward DCT failed for component at index %d [error %d]!\n", comp, status);		
             return -1;
         }
         

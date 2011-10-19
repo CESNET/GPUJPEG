@@ -54,7 +54,7 @@ jpeg_init_device(int device_id)
         return -1;
     }
 
-    printf("Setting device %d: %s\n", device_id, devProp.name);
+    printf("Setting device %d: %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
     cudaSetDevice(device_id);
 
     return 0;

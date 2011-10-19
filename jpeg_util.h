@@ -52,5 +52,16 @@
 #define TIMER_STOP_PRINT(text) \
     TIMER_STOP(); \
     printf("%s %f ms\n", text, __elapsedTime)
+	
+// CUDA check error
+#define cudaCheckError(msg) \
+    { \
+        cudaError_t err = cudaGetLastError(); \
+        if( cudaSuccess != err) { \
+            fprintf(stderr, "%s (line %i): %s: %s.\n", \
+                __FILE__, __LINE__, msg, cudaGetErrorString( err) ); \
+            exit(-1); \
+        } \
+    } \
 
 #endif // JPEG_UTIL_H
