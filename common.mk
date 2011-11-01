@@ -31,7 +31,7 @@ INCLUDES := -I. -I$(CUDA_INSTALL_PATH)/include
 COMMONFLAGS += $(INCLUDES) 
 CFLAGS += $(COMMONFLAGS) -std=c99 
 CXXFLAGS += $(COMMONFLAGS)
-NVCCFLAGS += $(COMMONFLAGS) -gencode arch=compute_20,code=sm_20 -gencode arch=compute_11,code=sm_11
+NVCCFLAGS += $(COMMONFLAGS) -gencode arch=compute_20,code=sm_20
 #NVCCFLAGS += --ptxas-options="-v" -keep --opencc-options -LIST:source=on
 #NVCCFLAGS += --maxrregcount 16
 LDFLAGS += 
