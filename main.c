@@ -251,7 +251,7 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Load Image:         ");
+            TIMER_STOP_PRINT("Load Image:        ");
             TIMER_START();
                 
             // Encode image
@@ -262,7 +262,7 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Decode Image:       ");
+            TIMER_STOP_PRINT("Decode Image:      ");
             TIMER_START();
             
             // Save image
@@ -271,7 +271,7 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Save Image:         ");
+            TIMER_STOP_PRINT("Save Image:        ");
             
             printf("Decompressed Size:  %d bytes\n", image_decompressed_size);
             
@@ -282,6 +282,8 @@ main(int argc, char *argv[])
         // Destroy decoder
         jpeg_decoder_destroy(decoder);
     }
+    
+    printf("TODO: Correct decoding color transformation!\n");
     
 	return 0;
 }

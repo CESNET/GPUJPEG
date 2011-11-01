@@ -200,7 +200,7 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         
-        jpeg_decoder_print16(decoder, d_data_quantized_comp);
+        //jpeg_decoder_print16(decoder, d_data_quantized_comp);
         
         cudaMemset(d_data_comp, 0, decoder->width * decoder->height * sizeof(int8_t));
         

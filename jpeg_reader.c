@@ -429,9 +429,6 @@ jpeg_reader_read_sos(struct jpeg_decoder* decoder, uint8_t** image, uint8_t* ima
                 // Add last segment record (total data size)
                 scan->data_index[scan->segment_count] = scan->data_size;
                 scan->segment_count++;
-                
-                for ( int i = 0; i < scan->segment_count; i++)
-                    printf("segment %d: %d\n", i, scan->data_index[i]);
         
                 return 0;
             }
