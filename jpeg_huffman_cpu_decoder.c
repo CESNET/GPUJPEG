@@ -230,7 +230,9 @@ jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, in
         coder->dc = 0;
         coder->restart_position = coder->restart_interval;
         coder->segment_index++;
+        coder->data = &coder->scan->data[coder->scan->data_index[coder->segment_index]];
         coder->data_size = coder->scan->data_index[coder->segment_index + 1];
+        printf("restart %d: %d\n", coder->segment_index, coder->data_size);
     }
     
     // Zero block output
@@ -312,8 +314,10 @@ jpeg_huffman_cpu_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_componen
     coder.restart_interval = decoder->restart_interval;
     coder.restart_position = decoder->restart_interval;
     coder.segment_index = 0;
-    coder.data = scan->data;
-    coder.data_size = scan->data_index[coder.segment_index + 1];
+    coder.data = &coder.scan->data[coder.scan->data_index[coder.segment_index]];
+    coder.data_size = coder.scan->data_index[coder.segment_index + 1];
+    
+    printf("start %d: %d\n", coder.segment_index, coder.data_size);
     
     // Decode all blocks
     for ( int block_y = 0; block_y < block_cy; block_y++ ) {

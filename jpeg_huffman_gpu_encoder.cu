@@ -306,7 +306,7 @@ jpeg_huffman_encoder_encode_kernel(
                 
     // Set compressed size
     segment->data_compressed_size = data_compressed - data_compressed_start;
-    //printf("%d,%d: byte count %d (%d)\n", comp_index, segment_index, segment->data_compressed_size, segment->data_compressed_index);
+    printf("%d,%d: byte count %d (%d)\n", comp_index, segment_index, segment->data_compressed_size, segment->data_compressed_index);
 }
 
 /** Documented at declaration */

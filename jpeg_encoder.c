@@ -76,16 +76,17 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         encoder->segment_count = encoder->comp_count * encoder->segment_count_per_comp;
         
         // Allocate segments
-        encoder->segments = (struct jpeg_encoder_segment*)malloc(encoder->segment_count * sizeof(struct jpeg_encoder_segment));
+        cudaMallocHost((void**)&encoder->segments, encoder->segment_count * sizeof(struct jpeg_encoder_segment));
         if ( encoder->segments == NULL )
             result = 0;
         // Allocate segments in device memory
         if ( cudaSuccess != cudaMalloc((void**)&encoder->d_segments, encoder->segment_count * sizeof(struct jpeg_encoder_segment)) )
             result = 0;
+        const int segment_size = encoder->restart_interval * 64;
         if ( result == 1 ) {
             // Prepare segments for encoding
             for ( int index = 0; index < encoder->segment_count; index++ ) {
-                encoder->segments[index].data_compressed_index = index * 64 * encoder->restart_interval;
+                encoder->segments[index].data_compressed_index = index * segment_size;
                 encoder->segments[index].data_compressed_size = 0;
             }
             // Copy segments to device memory
@@ -94,9 +95,9 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         } 
         
         // Allocate compressed data
-        if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_compressed, encoder->segment_count * encoder->restart_interval * 64 * sizeof(uint8_t)) ) 
+        if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_compressed, encoder->segment_count * segment_size * sizeof(uint8_t)) ) 
             result = 0;   
-        if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->restart_interval * 64 * sizeof(uint8_t)) ) 
+        if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * segment_size * sizeof(uint8_t)) ) 
             result = 0;   
     }
 	
@@ -345,7 +346,7 @@ jpeg_encoder_destroy(struct jpeg_encoder* encoder)
     if ( encoder->d_data_compressed != NULL )
         cudaFree(encoder->d_data_compressed);    
     if ( encoder->segments != NULL )
-        cudaFreeHost(encoder->segments);    
+        cudaFreeHost(encoder->segments);  
     if ( encoder->d_segments != NULL )
         cudaFree(encoder->d_segments);    
     

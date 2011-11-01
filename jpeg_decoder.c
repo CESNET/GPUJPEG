@@ -99,7 +99,7 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
     decoder->comp_count = comp_count;
     
     // Allocate scans
-    int comp_data_size = decoder->width * decoder->height;
+    int comp_data_size = decoder->width * decoder->height * 2;
     int comp_max_segment_count = 1 + ((decoder->width + 8 - 1) / 8) * ((decoder->height + 8 - 1) / 8);
     for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
         decoder->scan[comp].data = malloc(comp_data_size * sizeof(uint8_t));
@@ -150,13 +150,8 @@ jpeg_decoder_print16(struct jpeg_decoder* decoder, int16_t* d_data)
 {
     int data_size = decoder->width * decoder->height;
     int16_t* data = NULL;
-    printf("ok %d, %d\n", decoder->width, decoder->height);
-    //cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
-    data = (int16_t*)malloc(data_size * sizeof(int16_t));
-    printf("ok %d, %d\n", decoder->width, decoder->height);
+    cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
     cudaMemcpy(data, d_data, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
-    
-    cudaCheckError("cpy");
     
     printf("Print Data\n");
     for ( int y = 0; y < decoder->height; y++ ) {
@@ -207,11 +202,7 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         
         jpeg_decoder_print16(decoder, d_data_quantized_comp);
         
-        printf("ok\n");
-        
         cudaMemset(d_data_comp, 0, decoder->width * decoder->height * sizeof(int8_t));
-        
-        printf("ok\n");
         
         //Perform inverse DCT
         NppiSize inv_roi;
@@ -246,7 +237,7 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
 /** Documented at declaration */
 int
 jpeg_decoder_destroy(struct jpeg_decoder* decoder)
-{
+{    
     assert(decoder != NULL);
     
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {

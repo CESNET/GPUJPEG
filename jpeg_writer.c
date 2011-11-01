@@ -39,7 +39,7 @@ jpeg_writer_create(struct jpeg_encoder* encoder)
     
     // Allocate output buffer
     int buffer_size = 1000;
-    buffer_size += encoder->width * encoder->height * encoder->comp_count;
+    buffer_size += encoder->width * encoder->height * encoder->comp_count * 2;
     writer->buffer = malloc(buffer_size * sizeof(uint8_t));
     if ( writer->buffer == NULL )
         return NULL;
