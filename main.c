@@ -42,8 +42,8 @@ print_help()
         "jpeg_compress [options] img.rgb\n"
         "   -h, --help\t\tprint help\n"
         "   -s, --size\t\timage size in pixels, e.g. 1920x1080\n"
-        "   -q, --quality\t\tquality level 1-100 (default 75)\n"
-        "   -r, --restart\t\tset restart interval (default 8)\n"
+        "   -q, --quality\tquality level 1-100 (default 75)\n"
+        "   -r, --restart\tset restart interval (default 8)\n"
         "   -e, --encode\t\tencode images\n"
         "   -d, --decode\t\tdecode images\n"
     );

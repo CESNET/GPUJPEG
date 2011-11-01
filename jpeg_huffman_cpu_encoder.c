@@ -63,38 +63,38 @@ struct jpeg_huffman_cpu_encoder
 inline int
 jpeg_huffman_cpu_encoder_emit_bits(struct jpeg_huffman_cpu_encoder* coder, unsigned int code, int size)
 {
-	// This routine is heavily used, so it's worth coding tightly
-	int put_buffer = (int)code;
-	int put_bits = coder->put_bits;
-	// If size is 0, caller used an invalid Huffman table entry
-	if ( size == 0 )
-		return -1;
+    // This routine is heavily used, so it's worth coding tightly
+    int put_buffer = (int)code;
+    int put_bits = coder->put_bits;
+    // If size is 0, caller used an invalid Huffman table entry
+    if ( size == 0 )
+        return -1;
     // Mask off any extra bits in code
-	put_buffer &= (((int)1) << size) - 1; 
+    put_buffer &= (((int)1) << size) - 1; 
     // New number of bits in buffer
-	put_bits += size;					
+    put_bits += size;                    
     // Align incoming bits
-	put_buffer <<= 24 - put_bits;		
+    put_buffer <<= 24 - put_bits;        
     // And merge with old buffer contents
-	put_buffer |= coder->put_value;    
-	// If there are more than 8 bits, write it out
-	unsigned char uc;
-	while ( put_bits >= 8 ) {
-		// Write one byte out
-		uc = (unsigned char) ((put_buffer >> 16) & 0xFF);
-		jpeg_writer_emit_byte(coder->writer, uc);
+    put_buffer |= coder->put_value;    
+    // If there are more than 8 bits, write it out
+    unsigned char uc;
+    while ( put_bits >= 8 ) {
+        // Write one byte out
+        uc = (unsigned char) ((put_buffer >> 16) & 0xFF);
+        jpeg_writer_emit_byte(coder->writer, uc);
         // If need to stuff a zero byte
-		if ( uc == 0xFF ) {  
+        if ( uc == 0xFF ) {  
             // Write zero byte out
-			jpeg_writer_emit_byte(coder->writer, 0);
-		}
-		put_buffer <<= 8;
-		put_bits -= 8;
-	}
+            jpeg_writer_emit_byte(coder->writer, 0);
+        }
+        put_buffer <<= 8;
+        put_bits -= 8;
+    }
     // update state variables
-	coder->put_value = put_buffer; 
-	coder->put_bits = put_bits;
-	return 0;
+    coder->put_value = put_buffer; 
+    coder->put_bits = put_bits;
+    return 0;
 }
 
 /**
@@ -107,15 +107,15 @@ inline void
 jpeg_huffman_cpu_encoder_emit_left_bits(struct jpeg_huffman_cpu_encoder* coder)
 {
     // Fill 7 bits with ones
-	if ( jpeg_huffman_cpu_encoder_emit_bits(coder, 0x7F, 7) != 0 )
-		return;
-	
-	//unsigned char uc = (unsigned char) ((coder->put_value >> 16) & 0xFF);
-    // Write one byte out
-	//jpeg_writer_emit_byte(coder->writer, uc);
+    if ( jpeg_huffman_cpu_encoder_emit_bits(coder, 0x7F, 7) != 0 )
+        return;
     
-	coder->put_value = 0; 
-	coder->put_bits = 0;
+    //unsigned char uc = (unsigned char) ((coder->put_value >> 16) & 0xFF);
+    // Write one byte out
+    //jpeg_writer_emit_byte(coder->writer, uc);
+    
+    coder->put_value = 0; 
+    coder->put_bits = 0;
 }
 
 /**
@@ -125,90 +125,98 @@ jpeg_huffman_cpu_encoder_emit_left_bits(struct jpeg_huffman_cpu_encoder* coder)
  */
 int
 jpeg_huffman_cpu_encoder_encode_block(struct jpeg_huffman_cpu_encoder* coder, int16_t* data)
-{	    
-	int16_t* block = data;
+{        
+    int16_t* block = data;
+    
+    /*printf("Encode block\n");
+    for ( int y = 0; y < 8; y++) {
+        for ( int x = 0; x < 8; x++ ) {
+            printf("%4d ", block[y * 8 + x]);
+        }
+        printf("\n");
+    }*/
 
-	// Encode the DC coefficient difference per section F.1.2.1
-	int temp = block[0] - coder->dc;
-	coder->dc = block[0];
+    // Encode the DC coefficient difference per section F.1.2.1
+    int temp = block[0] - coder->dc;
+    coder->dc = block[0];
 
     int temp2 = temp;
-	if ( temp < 0 ) {
+    if ( temp < 0 ) {
         // Temp is abs value of input
-		temp = -temp;
-		// For a negative input, want temp2 = bitwise complement of abs(input)
-		// This code assumes we are on a two's complement machine
-		temp2--;
-	}
-
-	// Find the number of bits needed for the magnitude of the coefficient
-	int nbits = 0;
-	while ( temp ) {
-		nbits++;
-		temp >>= 1;
-	}
-
-	//	Write category number
-	if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_dc->code[nbits], coder->table_dc->size[nbits]) != 0 ) {
-        fprintf(stderr, "Fail emit bits %d [code: %d, size: %d]!\n", nbits, coder->table_dc->code[nbits], coder->table_dc->size[nbits]);
-		return -1;
+        temp = -temp;
+        // For a negative input, want temp2 = bitwise complement of abs(input)
+        // This code assumes we are on a two's complement machine
+        temp2--;
     }
 
-	//	Write category offset (EmitBits rejects calls with size 0)
-	if ( nbits ) {
-		if ( jpeg_huffman_cpu_encoder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
-			return -1;
-	}
+    // Find the number of bits needed for the magnitude of the coefficient
+    int nbits = 0;
+    while ( temp ) {
+        nbits++;
+        temp >>= 1;
+    }
+
+    //    Write category number
+    if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_dc->code[nbits], coder->table_dc->size[nbits]) != 0 ) {
+        fprintf(stderr, "Fail emit bits %d [code: %d, size: %d]!\n", nbits, coder->table_dc->code[nbits], coder->table_dc->size[nbits]);
+        return -1;
+    }
+
+    //    Write category offset (EmitBits rejects calls with size 0)
+    if ( nbits ) {
+        if ( jpeg_huffman_cpu_encoder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
+            return -1;
+    }
     
-	// Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
-	int r = 0;
-	for ( int k = 1; k < 64; k++ ) 
-	{
-		if ( (temp = block[jpeg_order_natural[k]]) == 0 ) {
-			r++;
-		} 
-		else {
-			// If run length > 15, must emit special run-length-16 codes (0xF0)
-			while ( r > 15 ) {
-				if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[0xF0], coder->table_ac->size[0xF0]) != 0 )
-					return -1;
-				r -= 16;
-			}
+    // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
+    int r = 0;
+    for ( int k = 1; k < 64; k++ ) 
+    {
+        if ( (temp = block[jpeg_order_natural[k]]) == 0 ) {
+            r++;
+        } 
+        else {
+            // If run length > 15, must emit special run-length-16 codes (0xF0)
+            while ( r > 15 ) {
+                if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[0xF0], coder->table_ac->size[0xF0]) != 0 )
+                    return -1;
+                r -= 16;
+            }
 
-			temp2 = temp;
-			if ( temp < 0 ) {
+            temp2 = temp;
+            if ( temp < 0 ) {
                 // temp is abs value of input
-				temp = -temp;		
-				// This code assumes we are on a two's complement machine
-				temp2--;
-			}
+                temp = -temp;        
+                // This code assumes we are on a two's complement machine
+                temp2--;
+            }
 
-			// Find the number of bits needed for the magnitude of the coefficient
+            // Find the number of bits needed for the magnitude of the coefficient
             // there must be at least one 1 bit
-			nbits = 1;
-			while ( (temp >>= 1) )
-				nbits++;
+            nbits = 1;
+            while ( (temp >>= 1) )
+                nbits++;
 
-			// Emit Huffman symbol for run length / number of bits
-			int i = (r << 4) + nbits;
-			if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[i], coder->table_ac->size[i]) != 0 )
-				return -1;
+            // Emit Huffman symbol for run length / number of bits
+            int i = (r << 4) + nbits;
+            if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[i], coder->table_ac->size[i]) != 0 )
+                return -1;
 
-			// Write Category offset
-			if ( jpeg_huffman_cpu_encoder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
-				return -1;
+            // Write Category offset
+            if ( jpeg_huffman_cpu_encoder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
+                return -1;
 
-			r = 0;
-		}
-	}
+            r = 0;
+        }
+    }
 
-	// If all the left coefs were zero, emit an end-of-block code
-	if ( r > 0 ) {
-		if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[0], coder->table_ac->size[0]) != 0 )
-			return -1;
-	}
+    // If all the left coefs were zero, emit an end-of-block code
+    if ( r > 0 ) {
+        if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[0], coder->table_ac->size[0]) != 0 )
+            return -1;
+    }
 
-	return 0;
+    return 0;
 }
 
 /** Documented at declaration */

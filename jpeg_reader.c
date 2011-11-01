@@ -194,13 +194,13 @@ jpeg_reader_read_sof0(struct jpeg_decoder* decoder, uint8_t** image)
     }
     length -= 2;
 
-	int precision = (int)jpeg_reader_read_byte(*image);
+    int precision = (int)jpeg_reader_read_byte(*image);
     if ( precision != 8 ) {
         fprintf(stderr, "Error: SOF0 marker precision should be 8 but %d was presented!\n", precision);
         return -1;
     }
-	int height = (int)jpeg_reader_read_2byte(*image);
-	int width = (int)jpeg_reader_read_2byte(*image);
+    int height = (int)jpeg_reader_read_2byte(*image);
+    int width = (int)jpeg_reader_read_2byte(*image);
     int comp_count = (int)jpeg_reader_read_byte(*image);
     jpeg_decoder_init(decoder, width, height, comp_count);
     if ( width != decoder->width || height != decoder->height ) {
@@ -211,22 +211,22 @@ jpeg_reader_read_sof0(struct jpeg_decoder* decoder, uint8_t** image)
         fprintf(stderr, "Error: SOF0 marker component count should be %d but %d was presented!\n", decoder->comp_count, comp_count);
         return -1;
     }
-	length -= 6;
+    length -= 6;
 
-	for ( int comp = 0; comp < comp_count; comp++ ) {
-		int index = (int)jpeg_reader_read_byte(*image);
+    for ( int comp = 0; comp < comp_count; comp++ ) {
+        int index = (int)jpeg_reader_read_byte(*image);
         if ( index != (comp + 1) ) {
             fprintf(stderr, "Error: SOF0 marker component %d id should be %d but %d was presented!\n", comp, comp + 1, index);
             return -1;
         }
-		int sampling = (int)jpeg_reader_read_byte(*image);
-		int sampling_h = (sampling >> 4) & 15;
-		int sampling_v = sampling & 15;
+        int sampling = (int)jpeg_reader_read_byte(*image);
+        int sampling_h = (sampling >> 4) & 15;
+        int sampling_v = sampling & 15;
         if ( sampling_h != 1 || sampling_v != 1 ) {
             fprintf(stderr, "Error: SOF0 marker component %d sampling factor %dx%d is not supported!\n", comp, sampling_h, sampling_v);
             return -1;
         }
-		int table_index = (int)jpeg_reader_read_byte(*image);
+        int table_index = (int)jpeg_reader_read_byte(*image);
         if ( comp == 0 && table_index != 0 ) {
             fprintf(stderr, "Error: SOF0 marker component Y should have quantization table index 0 but %d was presented!\n", table_index);
             return -1;
@@ -236,7 +236,7 @@ jpeg_reader_read_sof0(struct jpeg_decoder* decoder, uint8_t** image)
             return -1;
         }
         length -= 3;
-	}
+    }
     
     // Check length
     if ( length > 0 ) {
@@ -328,7 +328,7 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
 int
 jpeg_reader_read_dri(struct jpeg_decoder* decoder, uint8_t** image)
 {
-	int length = (int)jpeg_reader_read_2byte(*image);
+    int length = (int)jpeg_reader_read_2byte(*image);
     if ( length != 4 ) {
         fprintf(stderr, "Error: DRI marker length should be 4 but %d was presented!\n", length);
         return -1;
@@ -340,7 +340,7 @@ jpeg_reader_read_dri(struct jpeg_decoder* decoder, uint8_t** image)
         return -1;
     }
     
-	decoder->restart_interval = jpeg_reader_read_2byte(*image);
+    decoder->restart_interval = jpeg_reader_read_2byte(*image);
     
     return 0;
 }
@@ -358,19 +358,19 @@ jpeg_reader_read_sos(struct jpeg_decoder* decoder, uint8_t** image, uint8_t* ima
     int length = (int)jpeg_reader_read_2byte(*image);
     length -= 2;
     
-	int comp_count = (int)jpeg_reader_read_byte(*image);
+    int comp_count = (int)jpeg_reader_read_byte(*image);
     if ( comp_count != 1 ) {
         fprintf(stderr, "Error: SOS marker component count %d is not supported!\n", comp_count);
         return -1;
     }
     
-	// Collect the component-spec parameters
-	for ( int comp = 0; comp < comp_count; comp++ ) 
-	{
+    // Collect the component-spec parameters
+    for ( int comp = 0; comp < comp_count; comp++ ) 
+    {
         int index = (int)jpeg_reader_read_byte(*image);
         int table = (int)jpeg_reader_read_byte(*image);
         int table_dc = (table >> 4) & 15;
-		int table_ac = table & 15;
+        int table_ac = table & 15;
         
         if ( index == 1 && (table_ac != 0 || table_dc != 0) ) {
             fprintf(stderr, "Error: SOS marker for Y should have huffman tables 0,0 but %d,%d was presented!\n", table_dc, table_ac);
@@ -380,12 +380,12 @@ jpeg_reader_read_sos(struct jpeg_decoder* decoder, uint8_t** image, uint8_t* ima
             fprintf(stderr, "Error: SOS marker for Cb or Cr should have huffman tables 1,1 but %d,%d was presented!\n", table_dc, table_ac);
             return -1;
         }
-	}
+    }
 
-	// Collect the additional scan parameters Ss, Se, Ah/Al.
-	int Ss = (int)jpeg_reader_read_byte(*image);
-	int Se = (int)jpeg_reader_read_byte(*image);
-	int Ax = (int)jpeg_reader_read_byte(*image);
+    // Collect the additional scan parameters Ss, Se, Ah/Al.
+    int Ss = (int)jpeg_reader_read_byte(*image);
+    int Se = (int)jpeg_reader_read_byte(*image);
+    int Ax = (int)jpeg_reader_read_byte(*image);
     int Ah = (Ax >> 4) & 15;
     int Al = (Ax) & 15;
     
@@ -398,21 +398,40 @@ jpeg_reader_read_sos(struct jpeg_decoder* decoder, uint8_t** image, uint8_t* ima
     struct jpeg_decoder_scan* scan = &decoder->scan[decoder->scan_count];
     decoder->scan_count++;
     
+    // Reset scan and setup first block
+    scan->data_size = 0;
+    scan->segment_count = 0;
+    scan->data_index[scan->segment_count] = scan->data_size;
+    scan->segment_count++;
     // Read scan data
     uint8_t byte = 0;
     uint8_t byte_previous = 0;
-    scan->data_size = 0;
     do {
         byte_previous = byte;
         byte = jpeg_reader_read_byte(*image);
         scan->data[scan->data_size] = byte;
         scan->data_size++;
         
-        // Check scan end
-        if ( byte_previous == 0xFF && (byte == JPEG_MARKER_EOI || byte == JPEG_MARKER_SOS) ) {
-            *image -= 2;
-            scan->data_size -= 2;
-            return 0;
+        // Check markers
+        if ( byte_previous == 0xFF ) {
+            // Check restart marker
+            if ( byte >= JPEG_MARKER_RST0 && byte <= JPEG_MARKER_RST7 ) {
+                scan->data_size -= 2;
+                // Setup next scan block
+                scan->data_index[scan->segment_count] = scan->data_size;
+                scan->segment_count++;
+            }
+            // Check scan end
+            else if ( byte == JPEG_MARKER_EOI || byte == JPEG_MARKER_SOS ) {
+                *image -= 2;
+                scan->data_size -= 2;
+                
+                // Add last segment record (total data size)
+                scan->data_index[scan->segment_count] = scan->data_size;
+                scan->segment_count++;
+        
+                return 0;
+            }
         }
     } while( *image < image_end );
     

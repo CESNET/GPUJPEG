@@ -79,7 +79,7 @@ struct jpeg_encoder
     struct jpeg_encoder_segment* d_segments;
     // Segment count per component
     int segment_count_per_comp;
-    // Segment count
+    // Segment total count
     int segment_count;
     
     // Quantization tables

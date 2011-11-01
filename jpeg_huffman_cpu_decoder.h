@@ -24,8 +24,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JPEG_HUFFMAN_DECODER
-#define JPEG_HUFFMAN_DECODER
+#ifndef JPEG_HUFFMAN_CPU_DECODER
+#define JPEG_HUFFMAN_CPU_DECODER
 
 #include "jpeg_decoder.h"
 
@@ -35,6 +35,6 @@
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_huffman_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_type type, int8_t* data, int data_size, int16_t* data_decompressed);
+jpeg_huffman_cpu_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_type type, struct jpeg_decoder_scan* scan, int16_t* data_decompressed);
 
-#endif // JPEG_HUFFMAN_DECODER
+#endif // JPEG_HUFFMAN_CPU_DECODER

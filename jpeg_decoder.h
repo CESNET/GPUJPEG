@@ -35,8 +35,14 @@
 /** JPEG reader scan structure */
 struct jpeg_decoder_scan
 {
+    // Scan data buffer
     uint8_t* data;
+    // Scan data buffer size
     int data_size;
+    // Indexes into scan data buffer for segments
+    int* data_index;
+    // Segment count
+    int segment_count;
 };
 
 /**

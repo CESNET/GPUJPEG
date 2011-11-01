@@ -61,9 +61,9 @@ d_rgb_to_comp(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_sour
     int globalOutputPosition = gX + x;
     if ( globalOutputPosition < pixel_count ) {
                 
-        d_c1[globalOutputPosition] = (uint8_t)(0.299 * r1 + 0.587 * r2 + 0.114 * r3);
-        d_c2[globalOutputPosition] = (uint8_t)(-0.1687 * r1 - 0.3313 * r2 + 0.5 * r3 + 128);
-        d_c3[globalOutputPosition] = (uint8_t)(0.5 * r1 - 0.4187 * r2 - 0.0813 * r3 + 128);
+        d_c1[globalOutputPosition] = (uint8_t)(0.299f * r1 + 0.587f * r2 + 0.114f * r3);
+        d_c2[globalOutputPosition] = (uint8_t)(-0.1687f * r1 - 0.3313f * r2 + 0.5f * r3 + 128.0f);
+        d_c3[globalOutputPosition] = (uint8_t)(0.5f * r1 - 0.4187f * r2 - 0.0813f * r3 + 128.0f);
     }
 }
 
@@ -92,9 +92,9 @@ d_comp_to_rgb(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uin
     float r3 = (float)(d_c3[globalInputPosition] - 128);
 
     int globalOutputPosition = (gX + x) * 3;
-    d_target[globalOutputPosition + 0] = (uint8_t)(1.0 * r1 + 0.0 * r2 + 1.402 * r3);
-    d_target[globalOutputPosition + 1] = (uint8_t)(1.0 * r1 - 0.344136 * r2 - 0.714136 * r3);
-    d_target[globalOutputPosition + 2] = (uint8_t)(1.0 * r1 + 1.772 * r2 + 0.0 * r3);
+    d_target[globalOutputPosition + 0] = (uint8_t)(1.0f * r1 + 0.0f * r2 + 1.402f * r3);
+    d_target[globalOutputPosition + 1] = (uint8_t)(1.0f * r1 - 0.344136f * r2 - 0.714136f * r3);
+    d_target[globalOutputPosition + 2] = (uint8_t)(1.0f * r1 + 1.772f * r2 + 0.0f * r3);
 }
 
 /** Documented at declaration */

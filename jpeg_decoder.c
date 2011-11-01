@@ -25,7 +25,7 @@
  */
  
 #include "jpeg_decoder.h"
-#include "jpeg_huffman_decoder.h"
+#include "jpeg_huffman_cpu_decoder.h"
 #include "jpeg_preprocessor.h"
 #include "jpeg_util.h"
 
@@ -99,10 +99,15 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
     decoder->comp_count = comp_count;
     
     // Allocate scans
-    int data_comp_size = decoder->width * decoder->height;
+    int comp_data_size = decoder->width * decoder->height;
+    int comp_max_segment_count = 1 + ((decoder->width + 8 - 1) / 8) * ((decoder->height + 8 - 1) / 8);
     for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
-        decoder->scan[comp].data = malloc(data_comp_size * sizeof(uint8_t));
+        decoder->scan[comp].data = malloc(comp_data_size * sizeof(uint8_t));
         if ( decoder->scan[comp].data == NULL )
+            return -1;
+        decoder->scan[comp].data_size = 0;
+        decoder->scan[comp].data_index = malloc(comp_max_segment_count * sizeof(int));
+        if ( decoder->scan[comp].data_index == NULL )
             return -1;
     }
     
@@ -145,8 +150,13 @@ jpeg_decoder_print16(struct jpeg_decoder* decoder, int16_t* d_data)
 {
     int data_size = decoder->width * decoder->height;
     int16_t* data = NULL;
-    cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
+    printf("ok %d, %d\n", decoder->width, decoder->height);
+    //cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
+    data = (int16_t*)malloc(data_size * sizeof(int16_t));
+    printf("ok %d, %d\n", decoder->width, decoder->height);
     cudaMemcpy(data, d_data, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
+    
+    cudaCheckError("cpy");
     
     printf("Print Data\n");
     for ( int y = 0; y < decoder->height; y++ ) {
@@ -178,7 +188,7 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         // Determine table type
         enum jpeg_component_type type = (index == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         // Huffman decode
-        if ( jpeg_huffman_decoder_decode(decoder, type, scan->data, scan->data_size, data_quantized_comp) != 0 ) {
+        if ( jpeg_huffman_cpu_decoder_decode(decoder, type, scan, data_quantized_comp) != 0 ) {
             fprintf(stderr, "Huffman decoder failed for scan at index %d!\n", index);
             return -1;
         }
@@ -195,9 +205,13 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         
-        //jpeg_decoder_print16(decoder, d_data_quantized_comp);
+        jpeg_decoder_print16(decoder, d_data_quantized_comp);
         
-        cudaMemset(d_data_comp, 0, decoder->width * decoder->height * sizeof(int16_t));
+        printf("ok\n");
+        
+        cudaMemset(d_data_comp, 0, decoder->width * decoder->height * sizeof(int8_t));
+        
+        printf("ok\n");
         
         //Perform inverse DCT
         NppiSize inv_roi;
@@ -213,7 +227,6 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         );
         if ( status != 0 )
             printf("Error %d\n", status);
-        
         //jpeg_decoder_print8(decoder, d_data_comp);
     }
     
@@ -247,6 +260,8 @@ jpeg_decoder_destroy(struct jpeg_decoder* decoder)
     for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
         if ( decoder->scan[comp].data != NULL )
             free(decoder->scan[comp].data);
+        if ( decoder->scan[comp].data_index != NULL )
+            free(decoder->scan[comp].data_index);
     }
         
     if ( decoder->data_quantized != NULL )
