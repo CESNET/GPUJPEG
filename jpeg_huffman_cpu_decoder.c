@@ -27,11 +27,23 @@
 #include "jpeg_huffman_cpu_decoder.h"
 #include "jpeg_util.h"
 
+#ifdef _DEBUG
+#define inline
+#endif
+
 /** Huffman encoder structure */
 struct jpeg_huffman_cpu_decoder
 {
     // Decoder Scan
     struct jpeg_decoder_scan* scan;
+    // Scan data for all scans
+    uint8_t* data_scan;
+    // Size for data for all scans
+    int data_scan_size;
+    // Indexes into scan data buffer for all segments
+    int* data_scan_index;
+    // Total segment count for all scans
+    int segment_count;
     // Huffman table DC
     struct jpeg_table_huffman_decoder* table_dc;
     // Huffman table AC
@@ -63,17 +75,18 @@ struct jpeg_huffman_cpu_decoder
 void
 jpeg_huffman_cpu_decoder_decode_fill_bit_buffer(struct jpeg_huffman_cpu_decoder* coder)
 {
-    unsigned char uc;
     while ( coder->get_bits < 25 ) {
         //Are there some data?
         if( coder->data_size > 0 ) { 
             // Attempt to read a byte
-            uc = *coder->data++;
+            //printf("read byte %d\n", coder->data);
+            unsigned char uc = *coder->data++;
             coder->data_size--;            
 
             // If it's 0xFF, check and discard stuffed zero byte
             if ( uc == 0xFF ) {
                 do {
+                    //printf("read byte %d\n", coder->data);
                     uc = *coder->data++;
                     coder->data_size--;
                 } while ( uc == 0xFF );
@@ -85,7 +98,7 @@ jpeg_huffman_cpu_decoder_decode_fill_bit_buffer(struct jpeg_huffman_cpu_decoder*
                     // There should be enough bits still left in the data segment;
                     // if so, just break out of the outer while loop.
                     //if (m_nGetBits >= nbits)
-                    if ( coder->get_bits >= 0)
+                    if ( coder->get_bits >= 0 )
                         break;
                 }
             }
@@ -230,8 +243,14 @@ jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, in
         coder->dc = 0;
         coder->restart_position = coder->restart_interval;
         coder->segment_index++;
-        coder->data = &coder->scan->data[coder->scan->data_index[coder->segment_index]];
-        coder->data_size = coder->scan->data_index[coder->segment_index + 1];
+        
+        // Set coder data for next segment
+        int data_index = coder->data_scan_index[coder->segment_index];
+        coder->data = &coder->data_scan[data_index];
+        if ( (coder->segment_index + 1) >= coder->segment_count )
+            coder->data_size = coder->data_scan_size - data_index;
+        else
+            coder->data_size = coder->data_scan_index[coder->segment_index + 1] - data_index;
     }
     
     // Zero block output
@@ -258,7 +277,7 @@ jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, in
     // Since zeroes are skipped, output area must be cleared beforehand
     for ( int k = 1; k < 64; k++ ) {
         // s: (run, category)
-        s = jpeg_huffman_cpu_decoder_get_category(coder, coder->table_ac);
+        int s = jpeg_huffman_cpu_decoder_get_category(coder, coder->table_ac);
         // r: run length for ac zero, 0 <= r < 16
         int r = s >> 4;
         // s: category for this non-zero ac
@@ -305,6 +324,10 @@ jpeg_huffman_cpu_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_componen
     // Initialize huffman coder
     struct jpeg_huffman_cpu_decoder coder;
     coder.scan = scan;
+    coder.data_scan = decoder->data_scan;
+    coder.data_scan_size = decoder->data_scan_size;
+    coder.data_scan_index = decoder->data_scan_index;
+    coder.segment_count = decoder->segment_count;
     coder.table_dc = &decoder->table_huffman[type][JPEG_HUFFMAN_DC];
     coder.table_ac = &decoder->table_huffman[type][JPEG_HUFFMAN_AC];
     coder.get_buff = 0;
@@ -312,9 +335,17 @@ jpeg_huffman_cpu_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_componen
     coder.dc = 0;
     coder.restart_interval = decoder->restart_interval;
     coder.restart_position = decoder->restart_interval;
-    coder.segment_index = 0;
-    coder.data = &coder.scan->data[coder.scan->data_index[coder.segment_index]];
-    coder.data_size = coder.scan->data_index[coder.segment_index + 1];
+    coder.segment_index = coder.scan->segment_index;
+    
+    // Set coder data
+    int data_index = coder.data_scan_index[coder.segment_index];
+    coder.data = &coder.data_scan[data_index];
+    if ( (coder.segment_index + 1) >= coder.segment_count )
+        coder.data_size = coder.data_scan_size - data_index;
+    else
+        coder.data_size = coder.data_scan_index[coder.segment_index + 1] - data_index;
+        
+    //printf("start %d, size %d\n", coder.data, coder.data_size);
     
     // Decode all blocks
     for ( int block_y = 0; block_y < block_cy; block_y++ ) {

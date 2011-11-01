@@ -55,31 +55,31 @@ struct jpeg_encoder
     // Restart interval
     int restart_interval;
     
-    // Source image data in device memory
+    // Source image data in device memory (loaded from file)
     uint8_t* d_data_source;
     
-    // Preprocessed data in device memory
+    // Preprocessed data in device memory (output from preprocessor)
     uint8_t* d_data;
     
-    // Data after DCT and quantization
+    // Data after DCT and quantization (output from DCT and quantization)
     int16_t* data_quantized;
     
-    // Data after DCT and quantization in device memory
+    // Data after DCT and quantization in device memory (output from DCT and quantization)
     int16_t* d_data_quantized;
     
-    // Data after huffman coder
+    // Data after huffman coder (output from huffman coder)
     uint8_t* data_compressed;
     
-    // Data after huffman coder
+    // Data after huffman coder (output from huffman coder)
     uint8_t* d_data_compressed;
     
-    // Segments
+    // Segments for all components
     struct jpeg_encoder_segment* segments;
-    // Segments in device memory
+    // Segments in device memory for all components
     struct jpeg_encoder_segment* d_segments;
     // Segment count per component
     int segment_count_per_comp;
-    // Segment total count
+    // Segment total count for all components
     int segment_count;
     
     // Quantization tables

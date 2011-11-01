@@ -25,8 +25,9 @@
  */
  
 #include "jpeg_decoder.h"
-#include "jpeg_huffman_cpu_decoder.h"
 #include "jpeg_preprocessor.h"
+#include "jpeg_huffman_cpu_decoder.h"
+#include "jpeg_huffman_gpu_decoder.h"
 #include "jpeg_util.h"
 
 /** Documented at declaration */
@@ -47,8 +48,6 @@ jpeg_decoder_create(int width, int height, int comp_count)
     decoder->d_data = NULL;
     decoder->data_target = NULL;
     decoder->d_data_target = NULL;
-    for ( int comp = 0; comp < JPEG_MAX_COMPONENT_COUNT; comp++ )
-        decoder->scan[comp].data = NULL;
     
     int result = 1;
     
@@ -68,6 +67,10 @@ jpeg_decoder_create(int width, int height, int comp_count)
         if ( jpeg_decoder_init(decoder, width, height, comp_count) != 0 )
             result = 0;
     }
+    
+    // Init huffman encoder
+    if ( jpeg_huffman_gpu_decoder_init() != 0 )
+        result = 0;
     
     if ( result == 0 ) {
         jpeg_decoder_destroy(decoder);
@@ -98,18 +101,16 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
     decoder->height = height;
     decoder->comp_count = comp_count;
     
-    // Allocate scans
-    int comp_data_size = decoder->width * decoder->height * 2;
-    int comp_max_segment_count = 1 + ((decoder->width + 8 - 1) / 8) * ((decoder->height + 8 - 1) / 8);
-    for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
-        decoder->scan[comp].data = malloc(comp_data_size * sizeof(uint8_t));
-        if ( decoder->scan[comp].data == NULL )
-            return -1;
-        decoder->scan[comp].data_size = 0;
-        decoder->scan[comp].data_index = malloc(comp_max_segment_count * sizeof(int));
-        if ( decoder->scan[comp].data_index == NULL )
-            return -1;
-    }
+    // Allocate scan data (we need more data ie twice, restart_interval could be 1 so a lot of data)
+    // and indexes to data for each segment
+    int data_scan_size = decoder->comp_count * decoder->width * decoder->height * 2;
+    int max_segment_count = 1 + decoder->comp_count * ((decoder->width + 8 - 1) / 8) * ((decoder->height + 8 - 1) / 8);
+    decoder->data_scan = malloc(data_scan_size * sizeof(uint8_t));
+    if ( decoder->data_scan == NULL )
+        return -1;
+    decoder->data_scan_index = malloc(max_segment_count * sizeof(int));
+    if ( decoder->data_scan_index == NULL )
+        return -1;
     
     // Allocate buffers
     int data_size = decoder->width * decoder->width * decoder->comp_count;
@@ -175,22 +176,33 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         return -1;
     }
     
-    // Perform huffman decoding for all components
-    for ( int index = 0; index < decoder->scan_count; index++ ) {
-        // Get scan and data buffer
-        struct jpeg_decoder_scan* scan = &decoder->scan[index];
-        int16_t* data_quantized_comp = &decoder->data_quantized[index * decoder->width * decoder->height];
-        // Determine table type
-        enum jpeg_component_type type = (index == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
-        // Huffman decode
-        if ( jpeg_huffman_cpu_decoder_decode(decoder, type, scan, data_quantized_comp) != 0 ) {
-            fprintf(stderr, "Huffman decoder failed for scan at index %d!\n", index);
+    // Perform huffman decoding on CPU (when restart interval is not set)
+    /*if ( decoder->restart_interval == 0 )*/ {
+        // Perform huffman decoding for all components
+        for ( int index = 0; index < decoder->scan_count; index++ ) {
+            // Get scan and data buffer
+            struct jpeg_decoder_scan* scan = &decoder->scan[index];
+            int16_t* data_quantized_comp = &decoder->data_quantized[index * decoder->width * decoder->height];
+            // Determine table type
+            enum jpeg_component_type type = (index == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+            // Huffman decode
+            if ( jpeg_huffman_cpu_decoder_decode(decoder, type, scan, data_quantized_comp) != 0 ) {
+                fprintf(stderr, "Huffman decoder failed for scan at index %d!\n", index);
+                return -1;
+            }
+        }
+        
+        // Copy quantized data to device memory from cpu memory    
+        cudaMemcpy(decoder->d_data_quantized, decoder->data_quantized, data_size * sizeof(int16_t), cudaMemcpyHostToDevice);
+    }
+    // Perform huffman decoding on GPU (when restart interval is set)
+    /*else {
+        // Perform huffman decoding
+        if ( jpeg_huffman_gpu_decoder_decode(decoder) != 0 ) {
+            fprintf(stderr, "Huffman decoder on GPU failed!\n");
             return -1;
         }
-    }
-    
-    // Copy quantized data to device memory from cpu memory    
-    cudaMemcpy(decoder->d_data_quantized, decoder->data_quantized, data_size * sizeof(int16_t), cudaMemcpyHostToDevice);
+    }*/
     
     // Perform IDCT and dequantization
     for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
@@ -248,13 +260,10 @@ jpeg_decoder_destroy(struct jpeg_decoder* decoder)
     if ( decoder->reader != NULL )
         jpeg_reader_destroy(decoder->reader);
     
-    for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
-        if ( decoder->scan[comp].data != NULL )
-            free(decoder->scan[comp].data);
-        if ( decoder->scan[comp].data_index != NULL )
-            free(decoder->scan[comp].data_index);
-    }
-        
+    if ( decoder->data_scan != NULL )
+        free(decoder->data_scan);
+    if ( decoder->data_scan_index != NULL )
+        free(decoder->data_scan_index);
     if ( decoder->data_quantized != NULL )
         cudaFreeHost(decoder->data_quantized);
     if ( decoder->d_data_quantized != NULL )

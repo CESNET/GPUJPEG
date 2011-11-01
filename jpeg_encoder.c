@@ -68,7 +68,6 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
         result = 0;
-		
 	cudaCheckError("Data allocation");
 
     // Calculate segments count
@@ -101,7 +100,6 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
             result = 0;   
     }
-	
 	cudaCheckError("Segment allocation");
      
     // Allocate quantization tables in device memory
@@ -116,7 +114,6 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
                 result = 0;
         }
     }
-	
 	cudaCheckError("Table allocation");
     
     // Init quantization tables for encoder
@@ -124,7 +121,6 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         if ( jpeg_table_quantization_encoder_init(&encoder->table_quantization[comp_type], comp_type, quality) != 0 )
             result = 0;
     }
-    
     // Init huffman tables for encoder
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
@@ -132,7 +128,6 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
                 result = 0;
         }
     }
-	
 	cudaCheckError("Table init");
     
     // Init huffman encoder
@@ -261,7 +256,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             jpeg_writer_write_scan_header(encoder, comp, type);
             // Perform huffman coding
             if ( jpeg_huffman_cpu_encoder_encode(encoder, type, data_comp) != 0 ) {
-                fprintf(stderr, "Huffman coder on CPU failed for component at index %d!\n", comp);
+                fprintf(stderr, "Huffman encoder on CPU failed for component at index %d!\n", comp);
                 return -1;
             }
         }
@@ -270,7 +265,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     else {
         // Perform huffman coding
         if ( jpeg_huffman_gpu_encoder_encode(encoder) != 0 ) {
-            fprintf(stderr, "Huffman coder on GPU failed!\n");
+            fprintf(stderr, "Huffman encoder on GPU failed!\n");
             return -1;
         }
         

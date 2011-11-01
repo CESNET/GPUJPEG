@@ -35,12 +35,8 @@
 /** JPEG reader scan structure */
 struct jpeg_decoder_scan
 {
-    // Scan data buffer
-    uint8_t* data;
-    // Scan data buffer size
-    int data_size;
-    // Indexes into scan data buffer for segments
-    int* data_index;
+    // Index into array of segment indexes [decoder->data_scan_index] for the first byte of scan
+    int segment_index;
     // Segment count
     int segment_count;
 };
@@ -66,28 +62,41 @@ struct jpeg_decoder
     // JPEG reader structure
     struct jpeg_reader* reader;
     
-    // Scan count
-    int scan_count;
-    
     // Scan definitions
     struct jpeg_decoder_scan scan[JPEG_MAX_COMPONENT_COUNT];
     
-    // Scan restart interval
+    // Number of used scans in current decoding image
+    int scan_count;
+    
+    // Restart interval for all scans (number of MCU that can be coded independatly, 
+    // 0 means seqeuential coding, 1 means every MCU can be coded independantly)
     int restart_interval;
     
-    // Data quantized
+    // Data buffer for all scans
+    int8_t* data_scan;
+    
+    // Size for data buffer for all scans
+    int data_scan_size;
+    
+    // Indexes into scan data buffer for all segments (index point to segment data start in buffer)
+    int* data_scan_index;
+    
+    // Total segment count for all scans
+    int segment_count;
+    
+    // Data quantized (output from huffman coder)
     int16_t* data_quantized;
     
-    // Data quantized in device memory
+    // Data quantized in device memory (output from huffman coder)
     int16_t* d_data_quantized;
     
-    // Datain device memory
+    // Data in device memory (output from inverse DCT and quantization)
     uint8_t* d_data;
     
-    // Data target
+    // Data target (output from preprocessing)
     uint8_t* data_target;
     
-    // Data target in device memory
+    // Data target in device memory (output from preprocessing)
     uint8_t* d_data_target;
 };
 

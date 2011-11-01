@@ -28,8 +28,8 @@ endif
 INCLUDES := -I. -I$(CUDA_INSTALL_PATH)/include
 
 # Common flags
-COMMONFLAGS += $(INCLUDES) 
-CFLAGS += $(COMMONFLAGS) -std=c99 
+COMMONFLAGS += $(INCLUDES)
+CFLAGS += $(COMMONFLAGS) -std=c99
 CXXFLAGS += $(COMMONFLAGS)
 NVCCFLAGS += $(COMMONFLAGS) -gencode arch=compute_20,code=sm_20 -gencode arch=compute_11,code=sm_11
 #NVCCFLAGS += --ptxas-options="-v" -keep --opencc-options -LIST:source=on

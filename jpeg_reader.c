@@ -398,10 +398,11 @@ jpeg_reader_read_sos(struct jpeg_decoder* decoder, uint8_t** image, uint8_t* ima
     struct jpeg_decoder_scan* scan = &decoder->scan[decoder->scan_count];
     decoder->scan_count++;
     
-    // Reset scan and setup first block
-    scan->data_size = 0;
+    // Scan segments begin at the end of previous scan segments or from zero index
+    scan->segment_index = decoder->segment_count;
+    // Every scan has first segment
     scan->segment_count = 0;
-    scan->data_index[scan->segment_count] = scan->data_size;
+    decoder->data_scan_index[scan->segment_index + scan->segment_count] = decoder->data_scan_size;
     scan->segment_count++;
     // Read scan data
     uint8_t byte = 0;
@@ -409,27 +410,30 @@ jpeg_reader_read_sos(struct jpeg_decoder* decoder, uint8_t** image, uint8_t* ima
     do {
         byte_previous = byte;
         byte = jpeg_reader_read_byte(*image);
-        scan->data[scan->data_size] = byte;
-        scan->data_size++;
+        decoder->data_scan[decoder->data_scan_size] = byte;
+        //printf("set byte %d = 0x%X\n", &decoder->data_scan[decoder->data_scan_size], (unsigned char)byte);
+        decoder->data_scan_size++;
         
         // Check markers
         if ( byte_previous == 0xFF ) {
             // Check restart marker
             if ( byte >= JPEG_MARKER_RST0 && byte <= JPEG_MARKER_RST7 ) {
-                scan->data_size -= 2;
-                // Setup next scan block
-                scan->data_index[scan->segment_count] = scan->data_size;
+                decoder->data_scan_size -= 2;
+                
+                // Set data start index for next scan segment
+                decoder->data_scan_index[scan->segment_index + scan->segment_count] = decoder->data_scan_size;
                 scan->segment_count++;
+                //printf("restart marker 0x%X (revert to %d)\n", (unsigned char)byte, &decoder->data_scan[decoder->data_scan_size]);
             }
             // Check scan end
             else if ( byte == JPEG_MARKER_EOI || byte == JPEG_MARKER_SOS ) {
                 *image -= 2;
-                scan->data_size -= 2;
+                decoder->data_scan_size -= 2;
                 
-                // Add last segment record (total data size)
-                scan->data_index[scan->segment_count] = scan->data_size;
-                scan->segment_count++;
-        
+                // Add scan segment count to decoder segment count
+                decoder->segment_count += scan->segment_count;
+                
+                //printf("end marker 0x%X (revert to %d)\n", (unsigned char)byte, &decoder->data_scan[decoder->data_scan_size]);
                 return 0;
             }
         }
@@ -446,6 +450,8 @@ jpeg_reader_read_image(struct jpeg_decoder* decoder, uint8_t* image, int image_s
 {
     // Setup decoder
     decoder->scan_count = 0;
+    decoder->data_scan_size = 0;
+    decoder->segment_count = 0; // Total segment count for all scans
     decoder->restart_interval = 0;
     
     // Get image end

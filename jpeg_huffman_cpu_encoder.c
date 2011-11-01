@@ -28,6 +28,10 @@
 #include "jpeg_format_type.h"
 #include "jpeg_util.h"
 
+#ifdef _DEBUG
+#define inline
+#endif
+
 /** Huffman encoder structure */
 struct jpeg_huffman_cpu_encoder
 {

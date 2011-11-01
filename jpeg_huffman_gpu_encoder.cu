@@ -313,15 +313,15 @@ jpeg_huffman_encoder_encode_kernel(
 int
 jpeg_huffman_gpu_encoder_init()
 {
-     // Copy natural order to constant device memory
+    // Copy natural order to constant device memory
     cudaMemcpyToSymbol(
-		"jpeg_huffman_gpu_encoder_order_natural",
-		jpeg_order_natural, 
-		64 * sizeof(int),
-		0,
-		cudaMemcpyHostToDevice
+        "jpeg_huffman_gpu_encoder_order_natural",
+        jpeg_order_natural, 
+        64 * sizeof(int),
+        0,
+        cudaMemcpyHostToDevice
     );
-	cudaCheckError("Huffman encoder init");
+    cudaCheckError("Huffman encoder init");
     
     return 0;
 }
@@ -354,7 +354,7 @@ jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder)
     );
     cudaError cuerr = cudaThreadSynchronize();
     if ( cuerr != cudaSuccess ) {
-        fprintf(stderr, "Preprocessing decoding failed: %s!\n", cudaGetErrorString(cuerr));
+        fprintf(stderr, "Huffman encoding failed: %s!\n", cudaGetErrorString(cuerr));
         return -1;
     }
     
