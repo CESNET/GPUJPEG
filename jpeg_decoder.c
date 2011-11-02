@@ -104,7 +104,7 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
     // Allocate scan data (we need more data ie twice, restart_interval could be 1 so a lot of data)
     // and indexes to data for each segment
     int data_scan_size = decoder->comp_count * decoder->width * decoder->height * 2;
-    int max_segment_count = 1 + decoder->comp_count * ((decoder->width + 8 - 1) / 8) * ((decoder->height + 8 - 1) / 8);
+    int max_segment_count = decoder->comp_count * ((decoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE) * ((decoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE);
     decoder->data_scan = malloc(data_scan_size * sizeof(uint8_t));
     if ( decoder->data_scan == NULL )
         return -1;
@@ -218,11 +218,12 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         
         //Perform inverse DCT
         NppiSize inv_roi;
-        inv_roi.width = 64 * decoder->width / 8;
-        inv_roi.height = decoder->height / 8;
+        inv_roi.width = decoder->width * JPEG_BLOCK_SIZE;
+        inv_roi.height = decoder->height / JPEG_BLOCK_SIZE;
+        assert(JPEG_BLOCK_SIZE == 8);
         NppStatus status = nppiDCTQuantInv8x8LS_JPEG_16s8u_C1R(
             d_data_quantized_comp, 
-            decoder->width * 8 * sizeof(int16_t), 
+            decoder->width * JPEG_BLOCK_SIZE * sizeof(int16_t), 
             d_data_comp, 
             decoder->width * sizeof(uint8_t), 
             decoder->table_quantization[type].d_table, 

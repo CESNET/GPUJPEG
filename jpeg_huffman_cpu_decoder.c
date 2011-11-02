@@ -34,8 +34,6 @@
 /** Huffman encoder structure */
 struct jpeg_huffman_cpu_decoder
 {
-    // Decoder Scan
-    struct jpeg_decoder_scan* scan;
     // Scan data for all scans
     uint8_t* data_scan;
     // Size for data for all scans
@@ -317,13 +315,11 @@ jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, in
 int
 jpeg_huffman_cpu_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_type type, struct jpeg_decoder_scan* scan, int16_t* data_decompressed)
 {    
-    int block_size = 8;
-    int block_cx = (decoder->width + block_size - 1) / block_size;
-    int block_cy = (decoder->height + block_size - 1) / block_size;
+    int block_cx = (decoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int block_cy = (decoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
     
     // Initialize huffman coder
     struct jpeg_huffman_cpu_decoder coder;
-    coder.scan = scan;
     coder.data_scan = decoder->data_scan;
     coder.data_scan_size = decoder->data_scan_size;
     coder.data_scan_index = decoder->data_scan_index;
@@ -335,7 +331,7 @@ jpeg_huffman_cpu_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_componen
     coder.dc = 0;
     coder.restart_interval = decoder->restart_interval;
     coder.restart_position = decoder->restart_interval;
-    coder.segment_index = coder.scan->segment_index;
+    coder.segment_index = scan->segment_index;
     
     // Set coder data
     int data_index = coder.data_scan_index[coder.segment_index];
@@ -350,7 +346,7 @@ jpeg_huffman_cpu_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_componen
     // Decode all blocks
     for ( int block_y = 0; block_y < block_cy; block_y++ ) {
         for ( int block_x = 0; block_x < block_cx; block_x++ ) {
-            int data_index = (block_y * block_cx + block_x) * block_size * block_size;
+            int data_index = (block_y * block_cx + block_x) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE;
             if ( jpeg_huffman_cpu_decoder_decode_block(&coder, &data_decompressed[data_index]) != 0 ) {
                 fprintf(stderr, "Huffman decoder failed at block [%d, %d]!\n", block_y, block_x);
                 return -1;

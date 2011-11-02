@@ -280,7 +280,7 @@ jpeg_huffman_encoder_encode_kernel(
         if ( block_index >= block_count )
             break;
         // Encode block
-        int data_index = (block_count * comp_index + block_index) * 64;
+        int data_index = (block_count * comp_index + block_index) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE;
         jpeg_huffman_gpu_encoder_encode_block(
             put_value, 
             put_bits, 
@@ -330,10 +330,10 @@ jpeg_huffman_gpu_encoder_init()
 int
 jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder)
 {    
-    int block_width = 8;
-    int block_height = 8;
-    int block_cx = (encoder->width + block_width - 1) / block_width;
-    int block_cy = (encoder->height + block_height - 1) / block_height;
+    assert(encoder->restart_interval > 0);
+    
+    int block_cx = (encoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int block_cy = (encoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
     int block_count = block_cx * block_cy;
     int segment_count = (block_count / encoder->restart_interval + 1);
             

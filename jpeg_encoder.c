@@ -31,7 +31,7 @@
 #include "jpeg_format_type.h"
 #include "jpeg_util.h"
 
-#define JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE (64 * 2)
+#define JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE (JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE * 2)
 
 /** Documented at declaration */
 struct jpeg_encoder*
@@ -72,7 +72,7 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
 
     // Calculate segments count
     if ( encoder->restart_interval != 0 ) {
-        int block_count = ((encoder->width + 7) / 8) * ((encoder->height + 7) / 8);
+        int block_count = ((encoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE) * ((encoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE);
         encoder->segment_count_per_comp = (block_count / encoder->restart_interval + 1);
         encoder->segment_count = encoder->comp_count * encoder->segment_count_per_comp;
         
@@ -219,7 +219,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             d_data_comp, 
             encoder->width * sizeof(uint8_t), 
             d_data_quantized_comp, 
-            encoder->width * 8 * sizeof(int16_t), 
+            encoder->width * JPEG_BLOCK_SIZE * sizeof(int16_t), 
             encoder->table_quantization[type].d_table, 
             fwd_roi
         );

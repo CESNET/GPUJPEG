@@ -29,6 +29,8 @@
 
 #include <stdint.h>
 
+static const int JPEG_BLOCK_SIZE = 8;
+
 /**
  * JPEG component type
  */
