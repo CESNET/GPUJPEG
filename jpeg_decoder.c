@@ -177,7 +177,7 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
     }
     
     // Perform huffman decoding on CPU (when restart interval is not set)
-    /*if ( decoder->restart_interval == 0 )*/ {
+    if ( decoder->restart_interval == 0 ) {
         // Perform huffman decoding for all components
         for ( int index = 0; index < decoder->scan_count; index++ ) {
             // Get scan and data buffer
@@ -196,13 +196,13 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         cudaMemcpy(decoder->d_data_quantized, decoder->data_quantized, data_size * sizeof(int16_t), cudaMemcpyHostToDevice);
     }
     // Perform huffman decoding on GPU (when restart interval is set)
-    /*else {
+    else {
         // Perform huffman decoding
         if ( jpeg_huffman_gpu_decoder_decode(decoder) != 0 ) {
             fprintf(stderr, "Huffman decoder on GPU failed!\n");
             return -1;
         }
-    }*/
+    }
     
     // Perform IDCT and dequantization
     for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
