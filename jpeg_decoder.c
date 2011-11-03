@@ -61,6 +61,14 @@ jpeg_decoder_create(int width, int height, int comp_count)
         if ( cudaSuccess != cudaMalloc((void**)&decoder->table_quantization[comp_type].d_table, 64 * sizeof(uint16_t)) ) 
             result = 0;
     }
+    // Allocate huffman tables in device memory
+    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
+            if ( cudaSuccess != cudaMalloc((void**)&decoder->d_table_huffman[comp_type][huff_type], sizeof(struct jpeg_table_huffman_decoder)) )
+                result = 0;
+        }
+    }
+    cudaCheckError("Decoder table allocation");
     
     // Init decoder
     if ( width != 0 && height != 0 ) {
@@ -105,12 +113,15 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
     // and indexes to data for each segment
     int data_scan_size = decoder->comp_count * decoder->width * decoder->height * 2;
     int max_segment_count = decoder->comp_count * ((decoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE) * ((decoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE);
-    decoder->data_scan = malloc(data_scan_size * sizeof(uint8_t));
-    if ( decoder->data_scan == NULL )
+    if ( cudaSuccess != cudaMallocHost((void**)&decoder->data_scan, data_scan_size * sizeof(uint8_t)) ) 
         return -1;
-    decoder->data_scan_index = malloc(max_segment_count * sizeof(int));
-    if ( decoder->data_scan_index == NULL )
+    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_scan, data_scan_size * sizeof(uint8_t)) ) 
         return -1;
+    if ( cudaSuccess != cudaMallocHost((void**)&decoder->data_scan_index, max_segment_count * sizeof(int)) ) 
+        return -1;
+    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_scan_index, max_segment_count * sizeof(int)) ) 
+        return -1;
+    cudaCheckError("Decoder scan allocation");
     
     // Allocate buffers
     int data_size = decoder->width * decoder->width * decoder->comp_count;
@@ -124,6 +135,7 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
         return -1;
     if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_target, data_size * sizeof(uint8_t)) ) 
         return -1;
+    cudaCheckError("Decoder data allocation");
     
     return 0;
 }
@@ -197,6 +209,15 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
     }
     // Perform huffman decoding on GPU (when restart interval is set)
     else {
+        cudaMemset(decoder->d_data_quantized, 0, decoder->comp_count * decoder->width * decoder->height * sizeof(int16_t));
+        
+        // Copy scan data to device memory
+        cudaMemcpy(decoder->d_data_scan, decoder->data_scan, decoder->data_scan_size * sizeof(uint8_t), cudaMemcpyHostToDevice);
+        cudaCheckError("Decoder copy scan data");
+        // Copy scan data to device memory
+        cudaMemcpy(decoder->d_data_scan_index, decoder->data_scan_index, decoder->segment_count * sizeof(int), cudaMemcpyHostToDevice);
+        cudaCheckError("Decoder copy scan data index");
+        
         // Perform huffman decoding
         if ( jpeg_huffman_gpu_decoder_decode(decoder) != 0 ) {
             fprintf(stderr, "Huffman decoder on GPU failed!\n");
@@ -214,7 +235,7 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         
         //jpeg_decoder_print16(decoder, d_data_quantized_comp);
         
-        cudaMemset(d_data_comp, 0, decoder->width * decoder->height * sizeof(int8_t));
+        cudaMemset(d_data_comp, 0, decoder->width * decoder->height * sizeof(uint8_t));
         
         //Perform inverse DCT
         NppiSize inv_roi;
@@ -262,9 +283,13 @@ jpeg_decoder_destroy(struct jpeg_decoder* decoder)
         jpeg_reader_destroy(decoder->reader);
     
     if ( decoder->data_scan != NULL )
-        free(decoder->data_scan);
+        cudaFreeHost(decoder->data_scan);
+    if ( decoder->data_scan != NULL )
+        cudaFree(decoder->d_data_scan);
     if ( decoder->data_scan_index != NULL )
-        free(decoder->data_scan_index);
+        cudaFreeHost(decoder->data_scan_index);
+    if ( decoder->data_scan_index != NULL )
+        cudaFree(decoder->d_data_scan_index);
     if ( decoder->data_quantized != NULL )
         cudaFreeHost(decoder->data_quantized);
     if ( decoder->d_data_quantized != NULL )

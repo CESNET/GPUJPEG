@@ -68,7 +68,7 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, data_size * sizeof(int16_t)) ) 
         result = 0;
-	cudaCheckError("Data allocation");
+	cudaCheckError("Encoder data allocation");
 
     // Calculate segments count
     if ( encoder->restart_interval != 0 ) {
@@ -100,7 +100,7 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
             result = 0;   
     }
-	cudaCheckError("Segment allocation");
+	cudaCheckError("Encoder segment allocation");
      
     // Allocate quantization tables in device memory
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -114,7 +114,7 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
                 result = 0;
         }
     }
-	cudaCheckError("Table allocation");
+	cudaCheckError("Encoder table allocation");
     
     // Init quantization tables for encoder
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -128,7 +128,7 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
                 result = 0;
         }
     }
-	cudaCheckError("Table init");
+	cudaCheckError("Encoder table init");
     
     // Init huffman encoder
     if ( jpeg_huffman_gpu_encoder_init() != 0 )

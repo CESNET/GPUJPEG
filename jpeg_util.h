@@ -63,5 +63,9 @@
             exit(-1); \
         } \
     } \
+    
+// Divide and round up
+#define divAndRoundUp(value, div) \
+    (((value % div) != 0) ? (value / div + 1) : (value / div))
 
 #endif // JPEG_UTIL_H

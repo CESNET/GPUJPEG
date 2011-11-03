@@ -47,13 +47,14 @@ jpeg_huffman_gpu_decoder_decode_fill_bit_buffer(int & get_bits, int & get_buff, 
         //Are there some data?
         if( data_size > 0 ) { 
             // Attempt to read a byte
+            //printf("read byte %X 0x%X\n", (int)data, (unsigned char)*data);
             unsigned char uc = *data++;
             data_size--;            
 
             // If it's 0xFF, check and discard stuffed zero byte
             if ( uc == 0xFF ) {
                 do {
-                    //printf("read byte %d\n", coder->data);
+                    //printf("read byte %X 0x%X\n", (int)data, (unsigned char)*data);
                     uc = *data++;
                     data_size--;
                 } while ( uc == 0xFF );
@@ -221,7 +222,7 @@ jpeg_huffman_gpu_decoder_decode_block(int & dc, int & get_bits, int & get_buff, 
                                       struct jpeg_table_huffman_decoder* table_dc, struct jpeg_table_huffman_decoder* table_ac)
 {        
     // Zero block output
-    memset(data_output, 0, sizeof(int) * 64);
+    memset(data_output, 0, sizeof(int16_t) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE);
 
     // Section F.2.2.1: decode the DC coefficient difference
     // get dc category number, s
@@ -257,7 +258,7 @@ jpeg_huffman_gpu_decoder_decode_block(int & dc, int & get_bits, int & get_buff, 
             //    s: ac value
             s = jpeg_huffman_gpu_decoder_value_from_category(s, r);
 
-            data_output[jpeg_huffman_gpu_decoder_order_natural[k]] = s;
+            data_output[jpeg_huffman_gpu_decoder_order_natural[k]] = s;            
         } else {
             // s = 0, means ac value is 0 ? Only if r = 15.  
             //means all the left ac are zero
@@ -267,10 +268,10 @@ jpeg_huffman_gpu_decoder_decode_block(int & dc, int & get_bits, int & get_buff, 
         }
     }
     
-    /*printf("Decode Block\n");
+    /*printf("GPU Decode Block\n");
     for ( int y = 0; y < 8; y++ ) {
         for ( int x = 0; x < 8; x++ ) {
-            printf("%4d ", data[y * 8 + x]);
+            printf("%4d ", data_output[y * 8 + x]);
         }
         printf("\n");
     }*/
@@ -287,6 +288,7 @@ __global__ void
 jpeg_huffman_decoder_decode_kernel(
     int restart_interval,
     int comp_block_count,
+    int comp_segment_count,
     int segment_count,    
     uint8_t* d_data_scan,
     int data_scan_size,
@@ -297,10 +299,12 @@ jpeg_huffman_decoder_decode_kernel(
     struct jpeg_table_huffman_decoder* d_table_cbcr_dc,
     struct jpeg_table_huffman_decoder* d_table_cbcr_ac
 )
-{	
+{
     int comp_index = blockIdx.y;
     int comp_segment_index = blockIdx.x * blockDim.x + threadIdx.x;
-    int segment_index = blockIdx.y * gridDim.x * blockDim.x + blockIdx.x * blockDim.x + threadIdx.x;
+    if ( comp_segment_index >= comp_segment_count )
+        return;
+    int segment_index = comp_index * comp_segment_count + comp_segment_index;
     if ( segment_index >= segment_count )
         return;
     
@@ -335,8 +339,8 @@ jpeg_huffman_decoder_decode_kernel(
         // Skip blocks out of memory
         if ( comp_block_index >= comp_block_count )
             break;
-        // Encode block
-        int data_index = (comp_block_count * comp_index + comp_block_index) * 64;
+        // Decode block
+        int data_index = (comp_block_count * comp_index + comp_block_index) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE;
         jpeg_huffman_gpu_decoder_decode_block(
             dc,
             get_bits,
@@ -374,16 +378,18 @@ jpeg_huffman_gpu_decoder_decode(struct jpeg_decoder* decoder)
 {    
     assert(decoder->restart_interval > 0);
     
-    /*int comp_block_cx = (decoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int comp_block_cx = (decoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
     int comp_block_cy = (decoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
     int comp_block_count = comp_block_cx * comp_block_cy;
-            
+    int comp_segment_count = divAndRoundUp(comp_block_count, decoder->restart_interval);
+    
     // Run kernel
     dim3 thread(32);
-    dim3 grid(decoder->segment_count / thread.x + 1, decoder->comp_count);
+    dim3 grid(divAndRoundUp(comp_segment_count, thread.x), decoder->comp_count);
     jpeg_huffman_decoder_decode_kernel<<<grid, thread>>>(
         decoder->restart_interval,
         comp_block_count, 
+        comp_segment_count,
         decoder->segment_count,
         decoder->d_data_scan,
         decoder->data_scan_size,
@@ -398,7 +404,7 @@ jpeg_huffman_gpu_decoder_decode(struct jpeg_decoder* decoder)
     if ( cuerr != cudaSuccess ) {
         fprintf(stderr, "Huffman decoding failed: %s!\n", cudaGetErrorString(cuerr));
         return -1;
-    }*/
+    }
     
     return 0;
 }

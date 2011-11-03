@@ -77,14 +77,14 @@ jpeg_huffman_cpu_decoder_decode_fill_bit_buffer(struct jpeg_huffman_cpu_decoder*
         //Are there some data?
         if( coder->data_size > 0 ) { 
             // Attempt to read a byte
-            //printf("read byte %d\n", coder->data);
+            //printf("read byte %X 0x%X\n", (int)coder->data, (unsigned char)*coder->data);
             unsigned char uc = *coder->data++;
             coder->data_size--;            
 
             // If it's 0xFF, check and discard stuffed zero byte
             if ( uc == 0xFF ) {
                 do {
-                    //printf("read byte %d\n", coder->data);
+                    //printf("read byte %X 0x%X\n", (int)coder->data, (unsigned char)*coder->data);
                     uc = *coder->data++;
                     coder->data_size--;
                 } while ( uc == 0xFF );
@@ -252,7 +252,7 @@ jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, in
     }
     
     // Zero block output
-    memset(data, 0, sizeof(int) * 64);
+    memset(data, 0, sizeof(int16_t) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE);
 
     // Section F.2.2.1: decode the DC coefficient difference
     // get dc category number, s
@@ -300,7 +300,7 @@ jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, in
     
     coder->restart_position--;
     
-    /*printf("Decode Block\n");
+    /*printf("CPU Decode Block\n");
     for ( int y = 0; y < 8; y++ ) {
         for ( int x = 0; x < 8; x++ ) {
             printf("%4d ", data[y * 8 + x]);

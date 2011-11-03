@@ -63,13 +63,11 @@ struct jpeg_encoder
     
     // Data after DCT and quantization (output from DCT and quantization)
     int16_t* data_quantized;
-    
     // Data after DCT and quantization in device memory (output from DCT and quantization)
     int16_t* d_data_quantized;
     
     // Data after huffman coder (output from huffman coder)
     uint8_t* data_compressed;
-    
     // Data after huffman coder (output from huffman coder)
     uint8_t* d_data_compressed;
     
@@ -87,7 +85,6 @@ struct jpeg_encoder
     
     // Huffman coder tables
     struct jpeg_table_huffman_encoder table_huffman[JPEG_COMPONENT_TYPE_COUNT][JPEG_HUFFMAN_TYPE_COUNT];
-    
     // Huffman coder tables in device memory
     struct jpeg_table_huffman_encoder* d_table_huffman[JPEG_COMPONENT_TYPE_COUNT][JPEG_HUFFMAN_TYPE_COUNT];
     

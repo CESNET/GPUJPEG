@@ -253,7 +253,7 @@ jpeg_table_huffman_encoder_init(struct jpeg_table_huffman_encoder* table, struct
 
 /** Documented at declaration */
 int
-jpeg_table_huffman_decoder_init(struct jpeg_table_huffman_decoder* table, enum jpeg_component_type comp_type, enum jpeg_huffman_type huff_type)
+jpeg_table_huffman_decoder_init(struct jpeg_table_huffman_decoder* table, struct jpeg_table_huffman_decoder* d_table, enum jpeg_component_type comp_type, enum jpeg_huffman_type huff_type)
 {
     assert(comp_type == JPEG_COMPONENT_LUMINANCE || comp_type == JPEG_COMPONENT_CHROMINANCE);
     assert(huff_type == JPEG_HUFFMAN_DC || huff_type == JPEG_HUFFMAN_AC);
@@ -274,13 +274,14 @@ jpeg_table_huffman_decoder_init(struct jpeg_table_huffman_decoder* table, enum j
             memcpy(table->huffval, jpeg_table_huffman_cbcr_ac_value, sizeof(table->huffval));
         }
     }
-    jpeg_table_huffman_decoder_compute(table);
+    jpeg_table_huffman_decoder_compute(table, d_table);
+        
     return 0;
 }
 
 /** Documented at declaration */
 void
-jpeg_table_huffman_decoder_compute(struct jpeg_table_huffman_decoder* table)
+jpeg_table_huffman_decoder_compute(struct jpeg_table_huffman_decoder* table, struct jpeg_table_huffman_decoder* d_table)
 {
 	// Figure C.1: make table of Huffman code length for each symbol
 	// Note that this is in code-length order.
@@ -345,4 +346,8 @@ jpeg_table_huffman_decoder_compute(struct jpeg_table_huffman_decoder* table)
 			}
 		}
 	}
+    
+    // Copy table to device memory
+    if ( cudaSuccess != cudaMemcpy(d_table, table, sizeof(struct jpeg_table_huffman_decoder), cudaMemcpyHostToDevice) )
+        return -1;
 }

@@ -261,19 +261,24 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
     length -= 2;
     
     int index = jpeg_reader_read_byte(*image);
-    struct jpeg_table_huffman_decoder* table;
+    struct jpeg_table_huffman_decoder* table = NULL;
+    struct jpeg_table_huffman_decoder* d_table = NULL;
     switch(index) {
     case 0:
         table = &decoder->table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_DC];
+        d_table = decoder->d_table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_DC];
         break;
     case 16:
         table = &decoder->table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_AC];
+        d_table = decoder->d_table_huffman[JPEG_COMPONENT_LUMINANCE][JPEG_HUFFMAN_AC];
         break;
     case 1:
         table = &decoder->table_huffman[JPEG_COMPONENT_CHROMINANCE][JPEG_HUFFMAN_DC];
+        d_table = decoder->d_table_huffman[JPEG_COMPONENT_CHROMINANCE][JPEG_HUFFMAN_DC];
         break;
     case 17:
         table = &decoder->table_huffman[JPEG_COMPONENT_CHROMINANCE][JPEG_HUFFMAN_AC];
+        d_table = decoder->d_table_huffman[JPEG_COMPONENT_CHROMINANCE][JPEG_HUFFMAN_AC];
         break;
     default:
         fprintf(stderr, "Error: DHT marker index should be 0, 1, 16 or 17 but %d was presented!\n", index);
@@ -313,7 +318,7 @@ jpeg_reader_read_dht(struct jpeg_decoder* decoder, uint8_t** image)
     }
     
     // Compute huffman table for read values
-    jpeg_table_huffman_decoder_compute(table);
+    jpeg_table_huffman_decoder_compute(table, d_table);
     
     return 0;
 }

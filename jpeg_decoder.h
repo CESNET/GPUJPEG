@@ -58,6 +58,8 @@ struct jpeg_decoder
     
     // Huffman coder tables
     struct jpeg_table_huffman_decoder table_huffman[JPEG_COMPONENT_TYPE_COUNT][JPEG_HUFFMAN_TYPE_COUNT];
+    // Huffman coder tables in device memory
+    struct jpeg_table_huffman_decoder* d_table_huffman[JPEG_COMPONENT_TYPE_COUNT][JPEG_HUFFMAN_TYPE_COUNT];
     
     // JPEG reader structure
     struct jpeg_reader* reader;
@@ -73,20 +75,23 @@ struct jpeg_decoder
     int restart_interval;
     
     // Data buffer for all scans
-    int8_t* data_scan;
+    uint8_t* data_scan;
+    // Data buffer for all scans in device memory
+    uint8_t* d_data_scan;
     
     // Size for data buffer for all scans
     int data_scan_size;
     
     // Indexes into scan data buffer for all segments (index point to segment data start in buffer)
     int* data_scan_index;
+    // Indexes into scan data buffer for all segments in device memory (index point to segment data start in buffer)
+    int* d_data_scan_index;
     
     // Total segment count for all scans
     int segment_count;
     
     // Data quantized (output from huffman coder)
     int16_t* data_quantized;
-    
     // Data quantized in device memory (output from huffman coder)
     int16_t* d_data_quantized;
     
@@ -95,7 +100,6 @@ struct jpeg_decoder
     
     // Data target (output from preprocessing)
     uint8_t* data_target;
-    
     // Data target in device memory (output from preprocessing)
     uint8_t* d_data_target;
 };
