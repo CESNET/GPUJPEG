@@ -348,6 +348,5 @@ jpeg_table_huffman_decoder_compute(struct jpeg_table_huffman_decoder* table, str
 	}
     
     // Copy table to device memory
-    if ( cudaSuccess != cudaMemcpy(d_table, table, sizeof(struct jpeg_table_huffman_decoder), cudaMemcpyHostToDevice) )
-        return -1;
+    cudaMemcpy(d_table, table, sizeof(struct jpeg_table_huffman_decoder), cudaMemcpyHostToDevice);
 }

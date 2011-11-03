@@ -218,6 +218,9 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         cudaMemcpy(decoder->d_data_scan_index, decoder->data_scan_index, decoder->segment_count * sizeof(int), cudaMemcpyHostToDevice);
         cudaCheckError("Decoder copy scan data index");
         
+        // Zero output memory
+        cudaMemset(decoder->d_data_quantized, 0, decoder->comp_count * decoder->width * decoder->height * sizeof(int16_t));
+        
         // Perform huffman decoding
         if ( jpeg_huffman_gpu_decoder_decode(decoder) != 0 ) {
             fprintf(stderr, "Huffman decoder on GPU failed!\n");

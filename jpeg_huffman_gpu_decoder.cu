@@ -220,10 +220,7 @@ jpeg_huffman_gpu_decoder_get_category(int & get_bits, int & get_buff, uint8_t* &
 __device__ inline int
 jpeg_huffman_gpu_decoder_decode_block(int & dc, int & get_bits, int & get_buff, uint8_t* & data, int & data_size, int16_t* data_output, 
                                       struct jpeg_table_huffman_decoder* table_dc, struct jpeg_table_huffman_decoder* table_ac)
-{        
-    // Zero block output
-    memset(data_output, 0, sizeof(int16_t) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE);
-
+{
     // Section F.2.2.1: decode the DC coefficient difference
     // get dc category number, s
     int s = jpeg_huffman_gpu_decoder_get_category(get_bits, get_buff, data, data_size, table_dc);
