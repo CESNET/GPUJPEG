@@ -182,11 +182,17 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
 {
     int data_size = decoder->width * decoder->height * decoder->comp_count;
     
+    TIMER_INIT();
+    TIMER_START();
+    
     // Read JPEG image data
     if ( jpeg_reader_read_image(decoder, image, image_size) != 0 ) {
         fprintf(stderr, "Decoder failed when decoding image data!\n");
         return -1;
     }
+    
+    TIMER_STOP_PRINT("-Stream Reader:     ");
+    TIMER_START();
     
     // Perform huffman decoding on CPU (when restart interval is not set)
     if ( decoder->restart_interval == 0 ) {
@@ -228,6 +234,9 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         }
     }
     
+    TIMER_STOP_PRINT("-Huffman Decoder:   ");
+    TIMER_START();
+    
     // Perform IDCT and dequantization
     for ( int comp = 0; comp < decoder->comp_count; comp++ ) {
         uint8_t* d_data_comp = &decoder->d_data[comp * decoder->width * decoder->height];
@@ -258,9 +267,14 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         //jpeg_decoder_print8(decoder, d_data_comp);
     }
     
+    TIMER_STOP_PRINT("-DCT & Quantization:");
+    TIMER_START();
+    
     // Preprocessing
     if ( jpeg_preprocessor_decode(decoder) != 0 )
         return -1;
+        
+    TIMER_STOP_PRINT("-Postprocessing:    ");
     
     cudaMemcpy(decoder->data_target, decoder->d_data_target, data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
     

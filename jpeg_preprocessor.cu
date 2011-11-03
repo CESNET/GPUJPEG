@@ -60,7 +60,7 @@ d_rgb_to_comp(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_sour
     float r3 = (float)(s_data[offset + 2]);
     int globalOutputPosition = gX + x;
     if ( globalOutputPosition < pixel_count ) {
-                
+        // Perfomr RGB -> YCbCr conversion
         d_c1[globalOutputPosition] = (uint8_t)(0.299f * r1 + 0.587f * r2 + 0.114f * r3);
         d_c2[globalOutputPosition] = (uint8_t)(-0.1687f * r1 - 0.3313f * r2 + 0.5f * r3 + 128.0f);
         d_c3[globalOutputPosition] = (uint8_t)(0.5f * r1 - 0.4187f * r2 - 0.0813f * r3 + 128.0f);
@@ -82,19 +82,31 @@ d_comp_to_rgb(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uin
 {
     int x  = threadIdx.x;
     int gX = blockDim.x * blockIdx.x;
-    
     int globalInputPosition = gX + x;
     if ( globalInputPosition >= pixel_count )
         return;
-        
-    float r1 = (float)(d_c1[globalInputPosition] - 16);
-    float r2 = (float)(d_c2[globalInputPosition] - 128);
-    float r3 = (float)(d_c3[globalInputPosition] - 128);
-
     int globalOutputPosition = (gX + x) * 3;
-    d_target[globalOutputPosition + 0] = (uint8_t)(1.0f * r1 + 0.0f * r2 + 1.402f * r3);
-    d_target[globalOutputPosition + 1] = (uint8_t)(1.0f * r1 - 0.344136f * r2 - 0.714136f * r3);
-    d_target[globalOutputPosition + 2] = (uint8_t)(1.0f * r1 + 1.772f * r2 + 0.0f * r3);
+    
+    float r1 = (float)(d_c1[globalInputPosition]) - 0.0f;
+    float r2 = (float)(d_c2[globalInputPosition]) - 128.0f;
+    float r3 = (float)(d_c3[globalInputPosition]) - 128.0f;
+    
+    // Perfomr YCbCr -> RGB conversion
+    float r = (1.0f * r1 + 0.0f * r2 + 1.402f * r3);
+    float g = (1.0f * r1 - 0.344136f * r2 - 0.714136f * r3);
+    float b = (1.0f * r1 + 1.772f * r2 + 0.0f * r3);
+    // Check minimum value 0
+    r = (r >= 0.0f) ? r : 0.0f;
+    g = (g >= 0.0f) ? g : 0.0f;
+    b = (b >= 0.0f) ? b : 0.0f;
+    // Check maximum value 255
+    r = (r <= 255.0) ? r : 255.0f;
+    g = (g <= 255.0) ? g : 255.0f;
+    b = (b <= 255.0) ? b : 255.0f;
+    // Store values
+    d_target[globalOutputPosition + 0] = (uint8_t)r;
+    d_target[globalOutputPosition + 1] = (uint8_t)g;
+    d_target[globalOutputPosition + 2] = (uint8_t)b;
 }
 
 /** Documented at declaration */

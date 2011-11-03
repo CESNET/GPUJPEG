@@ -198,7 +198,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     if ( jpeg_preprocessor_encode(encoder) != 0 )
         return -1;
         
-    TIMER_STOP_PRINT("Preprocessing:     ");
+    TIMER_STOP_PRINT("-Preprocessing:     ");
     TIMER_START();
         
     // Perform DCT and quantization
@@ -237,7 +237,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     // Write header
     jpeg_writer_write_header(encoder);
     
-    TIMER_STOP_PRINT("DCT & Quantization:");
+    TIMER_STOP_PRINT("-DCT & Quantization:");
     TIMER_START();
     
     // Perform huffman coding on CPU (when restart interval is not set)
@@ -300,7 +300,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     }
     jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_EOI);
     
-    TIMER_STOP_PRINT("Huffman Coder:     ");
+    TIMER_STOP_PRINT("-Huffman Encoder:   ");
     
     // Set compressed image
     *image_compressed = encoder->writer->buffer;
