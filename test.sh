@@ -83,7 +83,7 @@ function compute_statistic() {
     done
     # Choose median
     MEDIAN=${ARRAY[$((COUNT/2))]}
-    echo "median: ${MEDIAN} avg: ${AVG} min: ${MIN} max: ${MAX}"
+    echo "${MEDIAN} ${AVG} ${MIN} ${MAX}"
 }
 
 # Encode image
@@ -153,7 +153,7 @@ function test() {
     DECODE_PNSR=$(compare -metric psnr -size ${IMAGE_SIZE} __decompressed.bmp __original.bmp __diff.bmp 2>&1)
     rm __original.bmp __decompressed.bmp __diff.bmp
     
-    echo "[${NAME}] ${QUALITY} ENCODE ${ENCODE_RESULT} pnsr: ${ENCODE_PNSR} DECODE ${DECODE_RESULT} pnsr: ${DECODE_PNSR}"
+    echo "[${NAME}] ${QUALITY} ENCODE ${ENCODE_RESULT} ${ENCODE_PNSR} DECODE ${DECODE_RESULT} ${DECODE_PNSR}"
 }
 
 # Parse input parameters
@@ -181,6 +181,7 @@ then
     exit;
 fi
 
+echo "[${NAME}] quality ENCODE median avg min max pnsr DECODE median avg min max pnsr"
 for (( QUALITY = 100; QUALITY > 0; QUALITY-=5 ))
 do
     test ${NAME} ${IMAGE_SIZE} ${IMAGE} ${IMAGE_COUNT} ${QUALITY}
