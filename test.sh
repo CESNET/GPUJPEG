@@ -101,7 +101,8 @@ function test_encode() {
     
     RESULT=$(./jpeg_compress --encode ${PARAMETERS} ${IMAGES} | grep "Encode Image:" | sed "s/Encode Image: *//" | sed "s/ ms//")
     STAT=$(compute_statistic "${RESULT}")
-    echo "${STAT}"
+    SIZE=$(./jpeg_compress --encode ${PARAMETERS} ${IMAGE_INPUT} ${IMAGE_OUTPUT} | grep "Compressed Size:" | sed "s/Compressed Size: *//" | sed "s/ bytes.*//")
+    echo "${STAT} $((SIZE / 1024))"
 }
 
 # Decode image
@@ -119,16 +120,16 @@ function test_decode() {
     
     RESULT=$(./jpeg_compress --decode ${PARAMETERS} ${IMAGES} | grep "Decode Image:" | sed "s/Decode Image: *//" | sed "s/ ms//")
     STAT=$(compute_statistic "${RESULT}")
-    echo "${STAT}"
+    SIZE=$(./jpeg_compress --decode ${PARAMETERS} ${IMAGE_INPUT} ${IMAGE_OUTPUT} | grep "Decompressed Size:" | sed "s/Decompressed Size: *//" | sed "s/ bytes.*//")
+    echo "${STAT} $((SIZE / 1024))"
 }
 
 # Test encoding and decoding for specified quality
 function test() {
-    local NAME=${1}
-    local IMAGE_SIZE=${2}
-    local IMAGE=${3}
-    local IMAGE_COUNT=${4}
-    local QUALITY=${5}
+    local IMAGE_SIZE=${1}
+    local IMAGE=${2}
+    local IMAGE_COUNT=${3}
+    local QUALITY=${4}
     
     # Test Encode
     ENCODE_IMAGE_INPUT=${IMAGE}
@@ -145,7 +146,6 @@ function test() {
     DECODE_IMAGE_INPUT=${ENCODE_IMAGE_OUTPUT}
     DECODE_IMAGE_OUTPUT=$(echo "${IMAGE}_decoded.rgb" | sed "s/.rgb//")
     DECODE_PARAMETERS="--size=${IMAGE_SIZE}"
-    DECODE_NAME="[${NAME}] [${QUALITY}] [decode]"
     DECODE_RESULT=$(test_decode "${DECODE_IMAGE_INPUT}" "${DECODE_IMAGE_OUTPUT}" "${DECODE_PARAMETERS}" ${IMAGE_COUNT})
     # Compute Decode PNSR
     convert -depth 8 -size ${IMAGE_SIZE} rgb:${ENCODE_IMAGE_INPUT} __original.bmp
@@ -153,22 +153,17 @@ function test() {
     DECODE_PNSR=$(compare -metric psnr -size ${IMAGE_SIZE} __decompressed.bmp __original.bmp __diff.bmp 2>&1)
     rm __original.bmp __decompressed.bmp __diff.bmp
     
-    echo "[${NAME}] ${QUALITY} ${ENCODE_RESULT} ${ENCODE_PNSR} ${DECODE_RESULT} ${DECODE_PNSR}"
+    echo "${QUALITY} ${ENCODE_RESULT} ${ENCODE_PNSR} ${DECODE_RESULT} ${DECODE_PNSR}"
 }
 
 # Parse input parameters
-NAME=${1}
-IMAGE_SIZE=${2}
-IMAGE=${3}
+IMAGE_SIZE=${1}
+IMAGE=${2}
 IMAGE_COUNT=10
 
 # Check input parameters
-if [ "${NAME}" = "" ] || [ "${IMAGE_SIZE}" = "" ] || [ "${IMAGE}" = "" ]
+if [ "${IMAGE_SIZE}" = "" ] || [ "${IMAGE}" = "" ]
 then
-    if [ "${NAME}" = "" ]
-    then
-       echo "Supply test name, for instance 'kepler'!"
-    fi
     if [ "${IMAGE_SIZE}" = "" ]
     then
        echo "Supply image size, for instance '1920x1080'!"
@@ -181,8 +176,8 @@ then
     exit;
 fi
 
-echo "[${NAME}] quality ENCODE median avg min max pnsr DECODE median avg min max pnsr"
+echo "quality ENCODE:median avg min max size pnsr DECODE:median avg min max size pnsr"
 for (( QUALITY = 100; QUALITY > 0; QUALITY-=5 ))
 do
-    test ${NAME} ${IMAGE_SIZE} ${IMAGE} ${IMAGE_COUNT} ${QUALITY}
+    test ${IMAGE_SIZE} ${IMAGE} ${IMAGE_COUNT} ${QUALITY}
 done
