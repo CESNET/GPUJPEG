@@ -179,9 +179,7 @@ jpeg_decoder_print16(struct jpeg_decoder* decoder, int16_t* d_data)
 /** Documented at declaration */
 int
 jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size)
-{
-    int data_size = decoder->width * decoder->height * decoder->comp_count;
-    
+{    
     TIMER_INIT();
     TIMER_START();
     
@@ -190,6 +188,8 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         fprintf(stderr, "Decoder failed when decoding image data!\n");
         return -1;
     }
+    
+    int data_size = decoder->width * decoder->height * decoder->comp_count;
     
     TIMER_STOP_PRINT("-Stream Reader:     ");
     TIMER_START();
