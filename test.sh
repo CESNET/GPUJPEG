@@ -144,16 +144,16 @@ function test() {
     # Test Decode
     DECODE_IMAGE_INPUT=${ENCODE_IMAGE_OUTPUT}
     DECODE_IMAGE_OUTPUT=$(echo "${IMAGE}_decoded.rgb" | sed "s/.rgb//")
-    DECODE_PARAMETERS=""
+    DECODE_PARAMETERS="--size=${IMAGE_SIZE}"
     DECODE_NAME="[${NAME}] [${QUALITY}] [decode]"
     DECODE_RESULT=$(test_decode "${DECODE_IMAGE_INPUT}" "${DECODE_IMAGE_OUTPUT}" "${DECODE_PARAMETERS}" ${IMAGE_COUNT})
     # Compute Decode PNSR
-    convert ${DECODE_IMAGE_INPUT} __original.bmp
+    convert -depth 8 -size ${IMAGE_SIZE} rgb:${ENCODE_IMAGE_INPUT} __original.bmp
     convert -depth 8 -size ${IMAGE_SIZE} rgb:${DECODE_IMAGE_OUTPUT} __decompressed.bmp
     DECODE_PNSR=$(compare -metric psnr -size ${IMAGE_SIZE} __decompressed.bmp __original.bmp __diff.bmp 2>&1)
     rm __original.bmp __decompressed.bmp __diff.bmp
     
-    echo "[${NAME}] ${QUALITY} ENCODE ${ENCODE_RESULT} ${ENCODE_PNSR} DECODE ${DECODE_RESULT} ${DECODE_PNSR}"
+    echo "[${NAME}] ${QUALITY} ${ENCODE_RESULT} ${ENCODE_PNSR} ${DECODE_RESULT} ${DECODE_PNSR}"
 }
 
 # Parse input parameters
