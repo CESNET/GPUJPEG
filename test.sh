@@ -25,42 +25,91 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-function print_help
-{
+# Print script help
+function print_help {
     echo "Usage:"
     echo "  test.sh name image_size image.rgb";
 }
 
-function encode()
-{
+# Return the value of an operation
+function float_value() {
+     echo | awk 'END { print '"$1"'; }'
+}
+
+# Return status code of a comparison
+function float_test() {
+     echo | awk 'END { exit ( !( '"$1"')); }'
+}
+
+# Compute statistic info for array (meidan, avg, min, max)
+function compute_statistic() {
+    local VALUES=${1}
+    # Compute AVG, MIN, MAX
+    local COUNT=0
+    local SUM=0
+    local MIN=99999
+    local MAX=0
+    local ARRAY=
+    for VALUE in ${VALUES}
+    do
+        ARRAY[$COUNT]=$VALUE
+        COUNT=$((${COUNT} + 1))
+        SUM=$(float_value "${SUM} + ${VALUE}")
+        if `float_test "${VALUE} < ${MIN}"`
+        then
+            MIN=${VALUE}
+        fi
+        if `float_test "${VALUE} > ${MAX}"`
+        then
+            MAX=${VALUE};
+        fi
+    done
+    local AVG=$(float_value "$SUM / $COUNT")
+    # Sort values for choosing median
+    change=1
+    while [ $change -gt 0 ]
+    do
+        change=0
+        for (( i = 0; i < $((${COUNT} - 1)); i++ ))
+        do
+            if `float_test "${ARRAY[$i]} > ${ARRAY[$(($i + 1))]}"`
+            then
+                local TEMP=${ARRAY[$i]}
+                ARRAY[$i]=${ARRAY[$(($i+1))]}
+                ARRAY[$(($i + 1))]=$TEMP
+                change=1
+            fi
+        done
+    done
+    # Choose median
+    MEDIAN=${ARRAY[$((COUNT/2))]}
+    echo "median: ${MEDIAN} avg: ${AVG} min: ${MIN} max: ${MAX}"
+}
+
+# Encode image
+function test_encode() {
     local IMAGE_INPUT=${1}
     local IMAGE_OUTPUT=${2}
     local PARAMETERS=${3}
     local IMAGE_COUNT=${4}
     
-    echo "[${NAME}] Encoding image [${IMAGE_INPUT}] to [${IMAGE_OUTPUT}]"
-    
     local IMAGES=""
-    for ((i = 0; i < ${IMAGE_COUNT}; i++)) 
+    for (( i = 0; i < ${IMAGE_COUNT}; i++ )) 
     do
         IMAGES="${IMAGES} ${IMAGE_INPUT} ${IMAGE_OUTPUT}"
     done
     
     RESULT=$(./jpeg_compress --encode ${PARAMETERS} ${IMAGES} | grep "Encode Image:" | sed "s/Encode Image: *//" | sed "s/ ms//")
-    for DURATION in $RESULT
-    do
-        echo "$DURATION"
-    done
+    STAT=$(compute_statistic "${RESULT}")
+    echo "${STAT}"
 }
 
-function decode()
-{
+# Decode image
+function test_decode() {
     local IMAGE_INPUT=${1}
     local IMAGE_OUTPUT=${2}
     local PARAMETERS=${3}
     local IMAGE_COUNT=${4}
-    
-    echo "[${NAME}] Decoding image [${IMAGE_INPUT}] to [${IMAGE_OUTPUT}]"
     
     local IMAGES=""
     for ((i = 0; i < ${IMAGE_COUNT}; i++)) 
@@ -69,18 +118,49 @@ function decode()
     done
     
     RESULT=$(./jpeg_compress --decode ${PARAMETERS} ${IMAGES} | grep "Decode Image:" | sed "s/Decode Image: *//" | sed "s/ ms//")
-    for DURATION in $RESULT
-    do
-        echo "$DURATION"
-    done
+    STAT=$(compute_statistic "${RESULT}")
+    echo "${STAT}"
+}
+
+# Test encoding and decoding for specified quality
+function test() {
+    local NAME=${1}
+    local IMAGE_SIZE=${2}
+    local IMAGE=${3}
+    local IMAGE_COUNT=${4}
+    local QUALITY=${5}
+    
+    # Test Encode
+    ENCODE_IMAGE_INPUT=${IMAGE}
+    ENCODE_IMAGE_OUTPUT=$(echo "${IMAGE}.jpg" | sed "s/.rgb//")
+    ENCODE_PARAMETERS="--quality=${QUALITY} --restart=8 --size=${IMAGE_SIZE}"
+    ENCODE_RESULT=$(test_encode "${ENCODE_IMAGE_INPUT}" "${ENCODE_IMAGE_OUTPUT}" "${ENCODE_PARAMETERS}" ${IMAGE_COUNT})
+    # Compute Encode PNSR
+    convert -depth 8 -size ${IMAGE_SIZE} rgb:${ENCODE_IMAGE_INPUT} __original.bmp
+    convert ${ENCODE_IMAGE_OUTPUT} __compressed.bmp
+    ENCODE_PNSR=$(compare -metric psnr -size ${IMAGE_SIZE} __compressed.bmp __original.bmp __diff.bmp 2>&1)
+    rm __original.bmp __compressed.bmp __diff.bmp
+
+    # Test Decode
+    DECODE_IMAGE_INPUT=${ENCODE_IMAGE_OUTPUT}
+    DECODE_IMAGE_OUTPUT=$(echo "${IMAGE}_decoded.rgb" | sed "s/.rgb//")
+    DECODE_PARAMETERS=""
+    DECODE_NAME="[${NAME}] [${QUALITY}] [decode]"
+    DECODE_RESULT=$(test_decode "${DECODE_IMAGE_INPUT}" "${DECODE_IMAGE_OUTPUT}" "${DECODE_PARAMETERS}" ${IMAGE_COUNT})
+    # Compute Decode PNSR
+    convert ${DECODE_IMAGE_INPUT} __original.bmp
+    convert -depth 8 -size ${IMAGE_SIZE} rgb:${DECODE_IMAGE_OUTPUT} __decompressed.bmp
+    DECODE_PNSR=$(compare -metric psnr -size ${IMAGE_SIZE} __decompressed.bmp __original.bmp __diff.bmp 2>&1)
+    rm __original.bmp __decompressed.bmp __diff.bmp
+    
+    echo "[${NAME}] ${QUALITY} ENCODE ${ENCODE_RESULT} pnsr: ${ENCODE_PNSR} DECODE ${DECODE_RESULT} pnsr: ${DECODE_PNSR}"
 }
 
 # Parse input parameters
 NAME=${1}
 IMAGE_SIZE=${2}
 IMAGE=${3}
-RUN_COUNT=10
-RUN_IMAGE_COUNT=10
+IMAGE_COUNT=10
 
 # Check input parameters
 if [ "${NAME}" = "" ] || [ "${IMAGE_SIZE}" = "" ] || [ "${IMAGE}" = "" ]
@@ -101,14 +181,7 @@ then
     exit;
 fi
 
-# Encode
-ENCODE_IMAGE_INPUT=${IMAGE}
-ENCODE_IMAGE_OUTPUT=$(echo "${IMAGE}.jpg" | sed "s/.rgb//")
-ENCODE_PARAMETERS="--quality=90 --restart=8 --size=${IMAGE_SIZE}"
-encode "${ENCODE_IMAGE_INPUT}" "${ENCODE_IMAGE_OUTPUT}" "${ENCODE_PARAMETERS}" ${RUN_IMAGE_COUNT}
-
-# Encode
-DECODE_IMAGE_INPUT=${ENCODE_IMAGE_OUTPUT}
-DECODE_IMAGE_OUTPUT=$(echo "${IMAGE}_decoded.rgb" | sed "s/.rgb//")
-DECODE_PARAMETERS=""
-decode "${DECODE_IMAGE_INPUT}" "${DECODE_IMAGE_OUTPUT}" "${DECODE_PARAMETERS}" ${RUN_IMAGE_COUNT}
+for (( QUALITY = 100; QUALITY > 0; QUALITY-=5 ))
+do
+    test ${NAME} ${IMAGE_SIZE} ${IMAGE} ${IMAGE_COUNT} ${QUALITY}
+done
