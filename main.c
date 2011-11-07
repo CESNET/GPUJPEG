@@ -109,7 +109,7 @@ main(int argc, char *argv[])
         case 'd':
             decode = 1;
             break;
-        case 'd':
+        case 'D':
             device_id = atoi(optarg);
             break;
         case '?':
