@@ -46,6 +46,7 @@ print_help()
         "   -r, --restart\tset restart interval (default 8)\n"
         "   -e, --encode\t\tencode images\n"
         "   -d, --decode\t\tdecode images\n"
+        "   -D, --device\t\t\tcuda device id (default 0)\n"
     );
 }
 
@@ -59,6 +60,7 @@ main(int argc, char *argv[])
         {"restart", required_argument, 0, 'r'},
         {"encode",  no_argument,       0, 'e'},
         {"decode",  no_argument,       0, 'd'},
+        {"device",  required_argument, 0, 'D'},
     };
 
     // Parameters
@@ -69,6 +71,7 @@ main(int argc, char *argv[])
     int restart_interval = 8;
     int encode = 0;
     int decode = 0;
+    int device_id = 0;
     
     // Parse command line
     char ch = '\0';
@@ -106,6 +109,9 @@ main(int argc, char *argv[])
         case 'd':
             decode = 1;
             break;
+        case 'd':
+            device_id = atoi(optarg);
+            break;
         case '?':
             return -1;
         default:
@@ -139,7 +145,7 @@ main(int argc, char *argv[])
     }
     
     // Init device
-    jpeg_init_device(0);
+    jpeg_init_device(device_id);
     
     if ( encode == 1 ) {    
         // Create encoder
