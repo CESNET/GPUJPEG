@@ -24,7 +24,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "jpeg_common.h"
 #include "jpeg_encoder.h"
 #include "jpeg_decoder.h"
 #include "jpeg_util.h"
@@ -39,14 +38,14 @@ void
 print_help() 
 {
     printf(
-        "jpeg_compress [options] img.rgb\n"
+        "jpeg_compress [options] input.rgb output.jpg [input2.rgb output2.jpg...]\n"
         "   -h, --help\t\tprint help\n"
         "   -s, --size\t\timage size in pixels, e.g. 1920x1080\n"
         "   -q, --quality\tquality level 1-100 (default 75)\n"
         "   -r, --restart\tset restart interval (default 8)\n"
         "   -e, --encode\t\tencode images\n"
         "   -d, --decode\t\tdecode images\n"
-        "   -D, --device\t\t\tcuda device id (default 0)\n"
+        "   -D, --device\t\tcuda device id (default 0)\n"
     );
 }
 

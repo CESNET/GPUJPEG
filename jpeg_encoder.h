@@ -27,6 +27,7 @@
 #ifndef JPEG_ENCODER
 #define JPEG_ENCODER
 
+#include "jpeg_common.h"
 #include "jpeg_table.h"
 #include "jpeg_writer.h"
 

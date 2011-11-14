@@ -27,6 +27,7 @@
 #ifndef JPEG_DECODER
 #define JPEG_DECODER
 
+#include "jpeg_common.h"
 #include "jpeg_table.h"
 #include "jpeg_reader.h"
 
