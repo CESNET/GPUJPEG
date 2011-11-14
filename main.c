@@ -145,7 +145,7 @@ main(int argc, char *argv[])
     }
     
     // Init device
-    jpeg_init_device(device_id);
+    jpeg_init_device(device_id, 1);
     
     if ( encode == 1 ) {    
         // Create encoder
@@ -232,7 +232,7 @@ main(int argc, char *argv[])
             const char* output = argv[index + 1];
             if ( encode == 1 ) {
                 static char buffer_output[255];
-                sprintf(buffer_output, "decoded_%s", input);
+                sprintf(buffer_output, "%s.decoded.rgb", output);
                 input = output;
                 output = buffer_output;
             }

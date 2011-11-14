@@ -29,7 +29,7 @@
 
 /** Documented at declaration */
 int
-jpeg_init_device(int device_id)
+jpeg_init_device(int device_id, int verbose)
 {
     int dev_count;
 
@@ -54,7 +54,8 @@ jpeg_init_device(int device_id)
         return -1;
     }
 
-    printf("Setting device %d: %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
+    if ( verbose == 1 )
+        printf("Setting device %d: %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
     cudaSetDevice(device_id);
 
     return 0;

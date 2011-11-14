@@ -42,16 +42,17 @@ enum jpeg_image_file_format {
 /**
  * Init CUDA device
  * 
- * @param device_id
+ * @param device_id  CUDA device id (starting at 0)
+ * @param verbose  Flag if device info should be printed out (0 or 1)
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_init_device(int device_id);
+jpeg_init_device(int device_id, int verbose);
 
 /**
  * Get image file format from filename
  *
- * @param filename Filename of image file
+ * @param filename  Filename of image file
  * @return image_file_format or IMAGE_FILE_UNKNOWN if type cannot be determined
  */
 enum jpeg_image_file_format
@@ -72,7 +73,7 @@ jpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size
  * Save RGB image to file
  * 
  * @param filaname  Image filename
- * @param image   Image data buffer
+ * @param image  Image data buffer
  * @param image_size  Image data buffer size
  * @return 0 if succeeds, otherwise nonzero
  */

@@ -184,8 +184,8 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
 {
     int data_size = encoder->width * encoder->height * encoder->comp_count;
     
-    TIMER_INIT();
-    TIMER_START();
+    //TIMER_INIT();
+    //TIMER_START();
     
     // Copy image to device memory
     if ( cudaSuccess != cudaMemcpy(encoder->d_data_source, image, data_size * sizeof(uint8_t), cudaMemcpyHostToDevice) )
@@ -198,8 +198,8 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     if ( jpeg_preprocessor_encode(encoder) != 0 )
         return -1;
         
-    TIMER_STOP_PRINT("-Preprocessing:     ");
-    TIMER_START();
+    //TIMER_STOP_PRINT("-Preprocessing:     ");
+    //TIMER_START();
         
     // Perform DCT and quantization
     for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
@@ -237,8 +237,8 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     // Write header
     jpeg_writer_write_header(encoder);
     
-    TIMER_STOP_PRINT("-DCT & Quantization:");
-    TIMER_START();
+    //TIMER_STOP_PRINT("-DCT & Quantization:");
+    //TIMER_START();
     
     // Perform huffman coding on CPU (when restart interval is not set)
     if ( encoder->restart_interval == 0 ) {
@@ -300,7 +300,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     }
     jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_EOI);
     
-    TIMER_STOP_PRINT("-Huffman Encoder:   ");
+    //TIMER_STOP_PRINT("-Huffman Encoder:   ");
     
     // Set compressed image
     *image_compressed = encoder->writer->buffer;
