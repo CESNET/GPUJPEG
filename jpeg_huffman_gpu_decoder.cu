@@ -375,14 +375,14 @@ jpeg_huffman_gpu_decoder_decode(struct jpeg_decoder* decoder)
 {    
     assert(decoder->restart_interval > 0);
     
-    int comp_block_cx = (decoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
-    int comp_block_cy = (decoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int comp_block_cx = (decoder->param_image.width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int comp_block_cy = (decoder->param_image.height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
     int comp_block_count = comp_block_cx * comp_block_cy;
     int comp_segment_count = divAndRoundUp(comp_block_count, decoder->restart_interval);
     
     // Run kernel
     dim3 thread(32);
-    dim3 grid(divAndRoundUp(comp_segment_count, thread.x), decoder->comp_count);
+    dim3 grid(divAndRoundUp(comp_segment_count, thread.x), decoder->param_image.comp_count);
     jpeg_huffman_decoder_decode_kernel<<<grid, thread>>>(
         decoder->restart_interval,
         comp_block_count, 

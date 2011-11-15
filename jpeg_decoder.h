@@ -47,12 +47,8 @@ struct jpeg_decoder_scan
  */
 struct jpeg_decoder
 {  
-    // Image width
-    int width;
-    // Image height
-    int height;
-    // Component count
-    int comp_count;
+    // Parameters for image data (width, height, comp_count, etc.)
+    struct jpeg_image_parameters param_image;
     
     // Quantization tables
     struct jpeg_table_quantization table_quantization[JPEG_COMPONENT_TYPE_COUNT];
@@ -114,7 +110,7 @@ struct jpeg_decoder
  * @return encoder structure if succeeds, otherwise NULL
  */
 struct jpeg_decoder*
-jpeg_decoder_create(int width, int height, int comp_count);
+jpeg_decoder_create(struct jpeg_image_parameters* param_image);
 
 /**
  * Init JPEG decoder for specific image size

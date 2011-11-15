@@ -227,8 +227,8 @@ jpeg_huffman_cpu_encoder_encode_block(struct jpeg_huffman_cpu_encoder* coder, in
 int
 jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type type, int16_t* data)
 {    
-    int block_cx = (encoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
-    int block_cy = (encoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int block_cx = (encoder->param_image.width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int block_cy = (encoder->param_image.height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
     
     // Initialize huffman coder
     struct jpeg_huffman_cpu_encoder coder;
@@ -238,7 +238,7 @@ jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_componen
     coder.put_bits = 0;
     coder.dc = 0;
     coder.writer = encoder->writer;
-    coder.restart_interval = encoder->restart_interval;
+    coder.restart_interval = encoder->param.restart_interval;
     coder.block_count = 0;
     
     //uint8_t* buffer = encoder->writer->buffer_current;

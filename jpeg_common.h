@@ -29,15 +29,44 @@
 
 #include <stdint.h>
 
+#include "jpeg_type.h"
+
 /** Image file formats */
 enum jpeg_image_file_format {
     // Unknown image file format
-    IMAGE_FILE_UNKNOWN,
-    // RGB file format, simple data format without header [R G B] [R G B] [R G B] ...
-    IMAGE_FILE_RGB,
+    IMAGE_FILE_UNKNOWN = 0,
+    // Raw file format
+    IMAGE_FILE_RAW = 1,
     // JPEG file format
-    IMAGE_FILE_JPEG
+    IMAGE_FILE_JPEG = 2,
+    // RGB file format, simple data format without header [R G B] [R G B] ...
+    IMAGE_FILE_RGB = 1 | 4,
+    // YUV file format, simple data format without header [Y U V] [Y U V] ...
+    IMAGE_FILE_YUV = 1 | 8
 };
+
+/** Image parameters */
+struct jpeg_image_parameters {
+    // Image data width
+    int width;
+    // Image data height
+    int height;
+    // Image data component count
+    int comp_count;
+    // Image data color space
+    enum jpeg_color_space color_space;
+    // Image data sampling factor
+    enum jpeg_sampling_factor sampling_factor;
+};
+
+/**
+ * Set default parameters for JPEG image
+ * 
+ * @param param  Parameters for image
+ * @return void
+ */
+void
+jpeg_image_set_default_parameters(struct jpeg_image_parameters* param);
 
 /**
  * Init CUDA device

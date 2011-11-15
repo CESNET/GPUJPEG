@@ -28,6 +28,17 @@
 #include "jpeg_util.h"
 
 /** Documented at declaration */
+void
+jpeg_image_set_default_parameters(struct jpeg_image_parameters* param)
+{
+    param->width = 0;
+    param->height = 0;
+    param->comp_count = 3;
+    param->color_space = JPEG_RGB;
+    param->sampling_factor = JPEG_4_4_4;
+}
+
+/** Documented at declaration */
 int
 jpeg_init_device(int device_id, int verbose)
 {
@@ -65,8 +76,8 @@ jpeg_init_device(int device_id, int verbose)
 enum jpeg_image_file_format
 jpeg_image_get_file_format(const char* filename)
 {
-    static const char *extension[] = { "rgb", "jpg" };
-    static const enum jpeg_image_file_format format[] = { IMAGE_FILE_RGB, IMAGE_FILE_JPEG };
+    static const char *extension[] = { "raw", "rgb", "yuv", "jpg" };
+    static const enum jpeg_image_file_format format[] = { IMAGE_FILE_RAW, IMAGE_FILE_RGB, IMAGE_FILE_YUV, IMAGE_FILE_JPEG };
         
     char * ext = strrchr(filename, '.');
     if ( ext == NULL )

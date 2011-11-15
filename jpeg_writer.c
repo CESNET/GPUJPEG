@@ -39,7 +39,7 @@ jpeg_writer_create(struct jpeg_encoder* encoder)
     
     // Allocate output buffer
     int buffer_size = 1000;
-    buffer_size += encoder->width * encoder->height * encoder->comp_count * 2;
+    buffer_size += encoder->param_image.width * encoder->param_image.height * encoder->param_image.comp_count * 2;
     writer->buffer = malloc(buffer_size * sizeof(uint8_t));
     if ( writer->buffer == NULL )
         return NULL;
@@ -160,8 +160,8 @@ jpeg_writer_write_sof0(struct jpeg_encoder* encoder)
     // Precision (bit depth)
 	jpeg_writer_emit_byte(encoder->writer, 8);
     // Dimensions
-	jpeg_writer_emit_2byte(encoder->writer, encoder->height);
-	jpeg_writer_emit_2byte(encoder->writer, encoder->width);
+	jpeg_writer_emit_2byte(encoder->writer, encoder->param_image.height);
+	jpeg_writer_emit_2byte(encoder->writer, encoder->param_image.width);
     // Number of components
 	jpeg_writer_emit_byte(encoder->writer, 3);
 
@@ -246,7 +246,7 @@ jpeg_writer_write_dri(struct jpeg_encoder* encoder)
 	jpeg_writer_emit_2byte(encoder->writer, 4);
 
     // Restart interval
-    jpeg_writer_emit_2byte(encoder->writer, encoder->restart_interval);
+    jpeg_writer_emit_2byte(encoder->writer, encoder->param.restart_interval);
 }
 
 /** Documented at declaration */

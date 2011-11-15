@@ -40,8 +40,8 @@ print_help()
     printf(
         "jpeg_compress [options] input.rgb output.jpg [input2.rgb output2.jpg...]\n"
         "   -h, --help\t\tprint help\n"
-        "   -s, --size\t\timage size in pixels, e.g. 1920x1080\n"
-        "   -q, --quality\tquality level 1-100 (default 75)\n"
+        "   -s, --size\t\tset image size in pixels, e.g. 1920x1080\n"
+        "   -q, --quality\tset quality level 1-100 (default 75)\n"
         "   -r, --restart\tset restart interval (default 8)\n"
         "   -e, --encode\t\tencode images\n"
         "   -d, --decode\t\tdecode images\n"
@@ -62,12 +62,14 @@ main(int argc, char *argv[])
         {"device",  required_argument, 0, 'D'},
     };
 
-    // Parameters
-    int width = 0;
-    int height = 0;
-    int comp_count = 3;
-    int quality = 75;
-    int restart_interval = 8;
+    // Default image parameters
+    struct jpeg_image_parameters param_image;
+    jpeg_image_set_default_parameters(&param_image);
+    // Default encoder parameters
+    struct jpeg_encoder_parameters param_encoder;
+    jpeg_encoder_set_default_parameters(&param_encoder);   
+    
+    // Other parameters
     int encode = 0;
     int decode = 0;
     int device_id = 0;
@@ -82,25 +84,25 @@ main(int argc, char *argv[])
             print_help();
             return 0;
         case 's':
-            width = atoi(optarg);
+            param_image.width = atoi(optarg);
             pos = strstr(optarg, "x");
-            if ( pos == NULL || width == 0 || (strlen(pos) >= strlen(optarg)) ) {
+            if ( pos == NULL || param_image.width == 0 || (strlen(pos) >= strlen(optarg)) ) {
                 print_help();
                 return -1;
             }
-            height = atoi(pos + 1);
+            param_image.height = atoi(pos + 1);
             break;
         case 'q':
-            quality = atoi(optarg);
-            if ( quality <= 0 )
-                quality = 1;
-            if ( quality > 100 )
-                quality = 100;
+            param_encoder.quality = atoi(optarg);
+            if ( param_encoder.quality <= 0 )
+                param_encoder.quality = 1;
+            if ( param_encoder.quality > 100 )
+                param_encoder.quality = 100;
             break;
         case 'r':
-            restart_interval = atoi(optarg);
-            if ( restart_interval < 0 )
-                restart_interval = 0;
+            param_encoder.restart_interval = atoi(optarg);
+            if ( param_encoder.restart_interval < 0 )
+                param_encoder.restart_interval = 0;
             break;
         case 'e':
             encode = 1;
@@ -132,9 +134,9 @@ main(int argc, char *argv[])
     if ( encode == 0 && decode == 0 ) {
         enum jpeg_image_file_format input_format = jpeg_image_get_file_format(argv[0]);
         enum jpeg_image_file_format output_format = jpeg_image_get_file_format(argv[1]);
-        if ( input_format == IMAGE_FILE_RGB && output_format == IMAGE_FILE_JPEG ) {
+        if ( input_format & IMAGE_FILE_RAW && output_format == IMAGE_FILE_JPEG ) {
             encode = 1;
-        } else if ( input_format == IMAGE_FILE_JPEG && output_format == IMAGE_FILE_RGB ) {
+        } else if ( input_format == IMAGE_FILE_JPEG && output_format & IMAGE_FILE_RAW ) {
             decode = 1;
         } else {
             fprintf(stderr, "Action can't be recognized for specified images!\n");
@@ -148,7 +150,7 @@ main(int argc, char *argv[])
     
     if ( encode == 1 ) {    
         // Create encoder
-        struct jpeg_encoder* encoder = jpeg_encoder_create(width, height, comp_count, quality, restart_interval);
+        struct jpeg_encoder* encoder = jpeg_encoder_create(&param_image, &param_encoder);
         if ( encoder == NULL ) {
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
@@ -161,7 +163,7 @@ main(int argc, char *argv[])
             const char* output = argv[index + 1];
             enum jpeg_image_file_format input_format = jpeg_image_get_file_format(input);
             enum jpeg_image_file_format output_format = jpeg_image_get_file_format(output);
-            if ( input_format != IMAGE_FILE_RGB  ) {
+            if ( (input_format & IMAGE_FILE_RAW) == 0 ) {
                 fprintf(stderr, "Encoder input file [%s] should be RGB image (*.rgb)!\n", input);
                 return -1;
             }
@@ -177,7 +179,7 @@ main(int argc, char *argv[])
             printf("\nEncoding Image [%s]\n", input);
         
             // Load image
-            int image_size = width * height * 3;
+            int image_size = param_image.width * param_image.height * param_image.comp_count;
             uint8_t* image = NULL;
             if ( jpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
@@ -218,7 +220,7 @@ main(int argc, char *argv[])
     
     if ( decode == 1 ) {    
         // Create decoder
-        struct jpeg_decoder* decoder = jpeg_decoder_create(width, height, comp_count);
+        struct jpeg_decoder* decoder = jpeg_decoder_create(&param_image);
         if ( decoder == NULL ) {
             fprintf(stderr, "Failed to create decoder!\n");
             return -1;
@@ -241,7 +243,7 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Encoder input file [%s] should be JPEG image (*.jpg)!\n", input);
                 return -1;
             }
-            if ( output_format != IMAGE_FILE_RGB  ) {
+            if ( (output_format & IMAGE_FILE_RAW) == 0 ) {
                 fprintf(stderr, "Encoder output file [%s] should be RGB image (*.rgb)!\n", output);
                 return -1;
             }

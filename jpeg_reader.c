@@ -203,12 +203,12 @@ jpeg_reader_read_sof0(struct jpeg_decoder* decoder, uint8_t** image)
     int width = (int)jpeg_reader_read_2byte(*image);
     int comp_count = (int)jpeg_reader_read_byte(*image);
     jpeg_decoder_init(decoder, width, height, comp_count);
-    if ( width != decoder->width || height != decoder->height ) {
-        fprintf(stderr, "Error: SOF0 marker image size should be %dx%d but %dx%d was presented!\n", decoder->width, decoder->height, width, height);
+    if ( width != decoder->param_image.width || height != decoder->param_image.height ) {
+        fprintf(stderr, "Error: SOF0 marker image size should be %dx%d but %dx%d was presented!\n", decoder->param_image.width, decoder->param_image.height, width, height);
         return -1;
     }
-    if ( comp_count != decoder->comp_count ) {
-        fprintf(stderr, "Error: SOF0 marker component count should be %d but %d was presented!\n", decoder->comp_count, comp_count);
+    if ( comp_count != decoder->param_image.comp_count ) {
+        fprintf(stderr, "Error: SOF0 marker component count should be %d but %d was presented!\n", decoder->param_image.comp_count, comp_count);
         return -1;
     }
     length -= 6;
@@ -417,7 +417,7 @@ jpeg_reader_read_sos(struct jpeg_decoder* decoder, uint8_t** image, uint8_t* ima
         byte = jpeg_reader_read_byte(*image);
         decoder->data_scan[decoder->data_scan_size] = byte;
         //printf("set byte %d = 0x%X\n", &decoder->data_scan[decoder->data_scan_size], (unsigned char)byte);
-        decoder->data_scan_size++;
+        decoder->data_scan_size++;        
         
         // Check markers
         if ( byte_previous == 0xFF ) {

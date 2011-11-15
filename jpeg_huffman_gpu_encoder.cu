@@ -330,18 +330,18 @@ jpeg_huffman_gpu_encoder_init()
 int
 jpeg_huffman_gpu_encoder_encode(struct jpeg_encoder* encoder)
 {    
-    assert(encoder->restart_interval > 0);
+    assert(encoder->param.restart_interval > 0);
     
-    int block_cx = (encoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
-    int block_cy = (encoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int block_cx = (encoder->param_image.width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int block_cy = (encoder->param_image.height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
     int block_count = block_cx * block_cy;
-    int segment_count = (block_count / encoder->restart_interval + 1);
+    int segment_count = (block_count / encoder->param.restart_interval + 1);
             
     // Run kernel
     dim3 thread(32);
-    dim3 grid(segment_count / thread.x + 1, encoder->comp_count);
+    dim3 grid(segment_count / thread.x + 1, encoder->param_image.comp_count);
     jpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
-        encoder->restart_interval,
+        encoder->param.restart_interval,
         block_count, 
         encoder->d_segments, 
         segment_count,        

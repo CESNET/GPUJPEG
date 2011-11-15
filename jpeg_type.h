@@ -32,6 +32,22 @@
 static const int JPEG_BLOCK_SIZE = 8;
 
 /**
+ * Color spaces for JPEG codec
+ */
+enum jpeg_color_space {
+    JPEG_YUV = 1,
+    JPEG_RGB = 1,
+};
+
+/**
+ * Sampling factor for JPEG codec
+ */
+enum jpeg_sampling_factor {
+    JPEG_4_4_4 = ((4 << 16) | (4 << 8) | 4),
+    JPEG_4_2_2 = ((4 << 16) | (2 << 8) | 2),
+};
+
+/**
  * JPEG component type
  */
 enum jpeg_component_type {
@@ -49,4 +65,4 @@ enum jpeg_huffman_type {
     JPEG_HUFFMAN_TYPE_COUNT = 2
 };
 
-#endif // JPEG_TABLE
+#endif // JPEG_TYPE

@@ -1,10 +1,13 @@
 jpeg-codec - JPEG encoder and decoder library and console application
 
-Description:
+AUTHOR:
+Martin Srom
+
+DESCRIPTION:
   The first test implementation of the JPEG image compression standard for NVIDIA GPUs 
 used for real-time transmission of high-definition video.
 
-Overview:
+OVERVIEW:
 -It uses NVIDIA CUDA platform.
 -Not optimized yet (it is only the first test implementation).
 -Encoder and Decoder use Huffman coder for entropy encoding/decoding.
@@ -32,7 +35,7 @@ Overview:
        npp library (NVIDIA Performance Primitives)
       -Huffman encoder/decoder (when restart flags are enabled)  
 
-Performance:
+PERFORMANCE:
   Following tables summarizes encoding/decoding performance using GTX 580 for different quality 
 settings (time, PSNR and size values are averages of encoding several images, each of them 
 multiple times):
@@ -69,7 +72,7 @@ Decoding:
       90 | 
      100 | 
      
-Usage:
+USAGE:
   ...
 
 jpeg-codec library:

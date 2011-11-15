@@ -40,21 +40,27 @@ struct jpeg_encoder_segment {
 };
 
 /**
- * JPEG encoder structure
+ * JPEG encoder parameters
  */
-struct jpeg_encoder
-{  
-    // Image width
-    int width;
-    // Image height
-    int height;
-    // Component count
-    int comp_count;
+struct jpeg_encoder_parameters
+{
     // Quality level (0-100)
     int quality;
     
     // Restart interval
     int restart_interval;
+};
+
+/**
+ * JPEG encoder structure
+ */
+struct jpeg_encoder
+{  
+    // Parameters (quality, restart_interval, etc.)
+    struct jpeg_encoder_parameters param;
+    
+    // Parameters for image data (width, height, comp_count, etc.)
+    struct jpeg_image_parameters param_image;
     
     // Source image data in device memory (loaded from file)
     uint8_t* d_data_source;
@@ -94,17 +100,23 @@ struct jpeg_encoder
 };
 
 /**
+ * Set default parameters for JPEG encoder
+ * 
+ * @param param  Parameters for encoder
+ * @return void
+ */
+void
+jpeg_encoder_set_default_parameters(struct jpeg_encoder_parameters* param);
+
+/**
  * Create JPEG encoder
  * 
- * @param width  Width of encodable images
- * @param height  Height of encodable images
- * @param comp_count  Component count
- * @param quality  Quality
- * @param restart_interval  Restart interval
+ * @param param_image  Parameters for image data
+ * @param param  Parameters for encoder
  * @return encoder structure if succeeds, otherwise NULL
  */
 struct jpeg_encoder*
-jpeg_encoder_create(int width, int height, int comp_count, int quality, int restart_interval);
+jpeg_encoder_create(struct jpeg_image_parameters* param_image, struct jpeg_encoder_parameters* param);
 
 /**
  * Compress image by encoder

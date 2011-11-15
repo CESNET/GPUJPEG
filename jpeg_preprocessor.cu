@@ -113,7 +113,7 @@ d_comp_to_rgb(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uin
 int
 jpeg_preprocessor_encode(struct jpeg_encoder* encoder)
 {
-    int pixel_count = encoder->width * encoder->height;
+    int pixel_count = encoder->param_image.width * encoder->param_image.height;
     int alignedSize = (pixel_count / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
         
     // Kernel
@@ -139,7 +139,7 @@ jpeg_preprocessor_encode(struct jpeg_encoder* encoder)
 int
 jpeg_preprocessor_decode(struct jpeg_decoder* decoder)
 {
-    int pixel_count = decoder->width * decoder->height;
+    int pixel_count = decoder->param_image.width * decoder->param_image.height;
     int alignedSize = (pixel_count / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
         
     // Kernel

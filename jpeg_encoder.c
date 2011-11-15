@@ -34,10 +34,18 @@
 #define JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE (JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE * 2)
 
 /** Documented at declaration */
-struct jpeg_encoder*
-jpeg_encoder_create(int width, int height, int comp_count, int quality, int restart_interval)
+void
+jpeg_encoder_set_default_parameters(struct jpeg_encoder_parameters* param)
 {
-    assert(comp_count == 3);
+    param->quality = 75;
+    param->restart_interval = 8;
+}
+
+/** Documented at declaration */
+struct jpeg_encoder*
+jpeg_encoder_create(struct jpeg_image_parameters* param_image, struct jpeg_encoder_parameters* param)
+{
+    assert(param_image->comp_count == 3);
     
     struct jpeg_encoder* encoder = malloc(sizeof(struct jpeg_encoder));
     if ( encoder == NULL )
@@ -45,11 +53,8 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         
     // Set parameters
     memset(encoder, 0, sizeof(struct jpeg_encoder));
-    encoder->width = width;
-    encoder->height = height;
-    encoder->comp_count = comp_count;
-    encoder->quality = quality;
-    encoder->restart_interval = restart_interval;
+    encoder->param_image = *param_image;
+    encoder->param = *param;
     
     int result = 1;
     
@@ -59,7 +64,7 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         result = 0;
     
     // Allocate data buffers
-    int data_size = encoder->width * encoder->width * encoder->comp_count;
+    int data_size = encoder->param_image.width * encoder->param_image.width * encoder->param_image.comp_count;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_source, data_size * sizeof(uint8_t)) ) 
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data, data_size * sizeof(uint8_t)) ) 
@@ -71,10 +76,10 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
 	cudaCheckError("Encoder data allocation");
 
     // Calculate segments count
-    if ( encoder->restart_interval != 0 ) {
-        int block_count = ((encoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE) * ((encoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE);
-        encoder->segment_count_per_comp = (block_count / encoder->restart_interval + 1);
-        encoder->segment_count = encoder->comp_count * encoder->segment_count_per_comp;
+    if ( encoder->param.restart_interval != 0 ) {
+        int block_count = ((encoder->param_image.width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE) * ((encoder->param_image.height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE);
+        encoder->segment_count_per_comp = (block_count / encoder->param.restart_interval + 1);
+        encoder->segment_count = encoder->param_image.comp_count * encoder->segment_count_per_comp;
         
         // Allocate segments
         cudaMallocHost((void**)&encoder->segments, encoder->segment_count * sizeof(struct jpeg_encoder_segment));
@@ -86,7 +91,7 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         if ( result == 1 ) {
             // Prepare segments for encoding
             for ( int index = 0; index < encoder->segment_count; index++ ) {
-                encoder->segments[index].data_compressed_index = index * encoder->restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE;
+                encoder->segments[index].data_compressed_index = index * encoder->param.restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE;
                 encoder->segments[index].data_compressed_size = 0;
             }
             // Copy segments to device memory
@@ -95,9 +100,9 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
         } 
         
         // Allocate compressed data
-        if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_compressed, encoder->segment_count * encoder->restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
+        if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_compressed, encoder->segment_count * encoder->param.restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
             result = 0;   
-        if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
+        if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->param.restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
             result = 0;   
     }
 	cudaCheckError("Encoder segment allocation");
@@ -118,7 +123,7 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
     
     // Init quantization tables for encoder
     for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
-        if ( jpeg_table_quantization_encoder_init(&encoder->table_quantization[comp_type], comp_type, quality) != 0 )
+        if ( jpeg_table_quantization_encoder_init(&encoder->table_quantization[comp_type], comp_type, encoder->param.quality) != 0 )
             result = 0;
     }
     // Init huffman tables for encoder
@@ -145,15 +150,15 @@ jpeg_encoder_create(int width, int height, int comp_count, int quality, int rest
 void
 jpeg_encoder_print8(struct jpeg_encoder* encoder, uint8_t* d_data)
 {
-    int data_size = encoder->width * encoder->height;
+    int data_size = encoder->param_image.width * encoder->param_image.height;
     uint8_t* data = NULL;
     cudaMallocHost((void**)&data, data_size * sizeof(uint8_t)); 
     cudaMemcpy(data, d_data, data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
     
     printf("Print Data\n");
-    for ( int y = 0; y < encoder->height; y++ ) {
-        for ( int x = 0; x < encoder->width; x++ ) {
-            printf("%3u ", data[y * encoder->width + x]);
+    for ( int y = 0; y < encoder->param_image.height; y++ ) {
+        for ( int x = 0; x < encoder->param_image.width; x++ ) {
+            printf("%3u ", data[y * encoder->param_image.width + x]);
         }
         printf("\n");
     }
@@ -163,15 +168,15 @@ jpeg_encoder_print8(struct jpeg_encoder* encoder, uint8_t* d_data)
 void
 jpeg_encoder_print16(struct jpeg_encoder* encoder, int16_t* d_data)
 {
-    int data_size = encoder->width * encoder->height;
+    int data_size = encoder->param_image.width * encoder->param_image.height;
     int16_t* data = NULL;
     cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
     cudaMemcpy(data, d_data, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
     
     printf("Print Data\n");
-    for ( int y = 0; y < encoder->height; y++ ) {
-        for ( int x = 0; x < encoder->width; x++ ) {
-            printf("%3d ", data[y * encoder->width + x]);
+    for ( int y = 0; y < encoder->param_image.height; y++ ) {
+        for ( int x = 0; x < encoder->param_image.width; x++ ) {
+            printf("%3d ", data[y * encoder->param_image.width + x]);
         }
         printf("\n");
     }
@@ -182,7 +187,7 @@ jpeg_encoder_print16(struct jpeg_encoder* encoder, int16_t* d_data)
 int
 jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** image_compressed, int* image_compressed_size)
 {
-    int data_size = encoder->width * encoder->height * encoder->comp_count;
+    int data_size = encoder->param_image.width * encoder->param_image.height * encoder->param_image.comp_count;
     
     //TIMER_INIT();
     //TIMER_START();
@@ -202,9 +207,9 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     //TIMER_START();
         
     // Perform DCT and quantization
-    for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
-        uint8_t* d_data_comp = &encoder->d_data[comp * encoder->width * encoder->height];
-        int16_t* d_data_quantized_comp = &encoder->d_data_quantized[comp * encoder->width * encoder->height];
+    for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
+        uint8_t* d_data_comp = &encoder->d_data[comp * encoder->param_image.width * encoder->param_image.height];
+        int16_t* d_data_quantized_comp = &encoder->d_data_quantized[comp * encoder->param_image.width * encoder->param_image.height];
         
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
@@ -213,13 +218,13 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
         
         //Perform forward DCT
         NppiSize fwd_roi;
-        fwd_roi.width = encoder->width;
-        fwd_roi.height = encoder->height;
+        fwd_roi.width = encoder->param_image.width;
+        fwd_roi.height = encoder->param_image.height;
         NppStatus status = nppiDCTQuantFwd8x8LS_JPEG_8u16s_C1R(
             d_data_comp, 
-            encoder->width * sizeof(uint8_t), 
+            encoder->param_image.width * sizeof(uint8_t), 
             d_data_quantized_comp, 
-            encoder->width * JPEG_BLOCK_SIZE * sizeof(int16_t), 
+            encoder->param_image.width * JPEG_BLOCK_SIZE * sizeof(int16_t), 
             encoder->table_quantization[type].d_table, 
             fwd_roi
         );
@@ -241,15 +246,15 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     //TIMER_START();
     
     // Perform huffman coding on CPU (when restart interval is not set)
-    if ( encoder->restart_interval == 0 ) {
+    if ( encoder->param.restart_interval == 0 ) {
         // Copy quantized data from device memory to cpu memory
         cudaMemcpy(encoder->data_quantized, encoder->d_data_quantized, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
         
         // Perform huffman coding for all components
-        for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
+        for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
             // Get data buffer for component
-            int16_t* data_comp = &encoder->data_quantized[comp * encoder->width * encoder->height];
-            int16_t* d_data_comp = &encoder->d_data_quantized[comp * encoder->width * encoder->height];
+            int16_t* data_comp = &encoder->data_quantized[comp * encoder->param_image.width * encoder->param_image.height];
+            int16_t* d_data_comp = &encoder->d_data_quantized[comp * encoder->param_image.width * encoder->param_image.height];
             // Determine table type
             enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
             // Write scan header
@@ -270,14 +275,14 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
         }
         
         // Copy compressed data from device memory to cpu memory
-        if ( cudaSuccess != cudaMemcpy(encoder->data_compressed, encoder->d_data_compressed, encoder->segment_count * encoder->restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
+        if ( cudaSuccess != cudaMemcpy(encoder->data_compressed, encoder->d_data_compressed, encoder->segment_count * encoder->param.restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
             return -1;
         // Copy segments to device memory
         if ( cudaSuccess != cudaMemcpy(encoder->segments, encoder->d_segments, encoder->segment_count * sizeof(struct jpeg_encoder_segment), cudaMemcpyDeviceToHost) )
             return -1;
         
         // Write huffman coder results
-        for ( int comp = 0; comp < encoder->comp_count; comp++ ) {
+        for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
             // Determine table type
             enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
             // Write scan header

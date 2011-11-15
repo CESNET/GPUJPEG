@@ -315,8 +315,8 @@ jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, in
 int
 jpeg_huffman_cpu_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_type type, struct jpeg_decoder_scan* scan, int16_t* data_decompressed)
 {    
-    int block_cx = (decoder->width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
-    int block_cy = (decoder->height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int block_cx = (decoder->param_image.width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int block_cy = (decoder->param_image.height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
     
     // Initialize huffman coder
     struct jpeg_huffman_cpu_decoder coder;
