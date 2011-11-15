@@ -41,6 +41,7 @@ print_help()
         "jpeg_compress [options] input.rgb output.jpg [input2.rgb output2.jpg...]\n"
         "   -h, --help\t\tprint help\n"
         "   -s, --size\t\tset image size in pixels, e.g. 1920x1080\n"
+        "   -f, --sampling-factor\t\tset image sampling factor, e.g. 4:2:2\n"
         "   -q, --quality\tset quality level 1-100 (default 75)\n"
         "   -r, --restart\tset restart interval (default 8)\n"
         "   -e, --encode\t\tencode images\n"
@@ -53,13 +54,14 @@ int
 main(int argc, char *argv[])
 {       
     struct option longopts[] = {
-        {"help",    no_argument,       0, 'h'},
-        {"size",    required_argument, 0, 's'},
-        {"quality", required_argument, 0, 'q'},
-        {"restart", required_argument, 0, 'r'},
-        {"encode",  no_argument,       0, 'e'},
-        {"decode",  no_argument,       0, 'd'},
-        {"device",  required_argument, 0, 'D'},
+        {"help",            no_argument,       0, 'h'},
+        {"size",            required_argument, 0, 's'},
+        {"sampling-factor", required_argument, 0, 'f'},
+        {"quality",         required_argument, 0, 'q'},
+        {"restart",         required_argument, 0, 'r'},
+        {"encode",          no_argument,       0, 'e'},
+        {"decode",          no_argument,       0, 'd'},
+        {"device",          required_argument, 0, 'D'},
     };
 
     // Default image parameters
@@ -91,6 +93,14 @@ main(int argc, char *argv[])
                 return -1;
             }
             param_image.height = atoi(pos + 1);
+            break;
+        case 'f':
+            if ( strcmp(optarg, "4:4:4") == 0 )
+                param_image.sampling_factor = JPEG_4_4_4;
+            else if ( strcmp(optarg, "4:2:2") == 0 )
+                param_image.sampling_factor = JPEG_4_2_2;
+            else
+                fprintf(stderr, "Sampling factor '%s' is not available!\n", optarg);
             break;
         case 'q':
             param_encoder.quality = atoi(optarg);
@@ -125,7 +135,7 @@ main(int argc, char *argv[])
     
     // Source image and target image must be presented
     if ( argc < 2 ) {
-        printf("Please supply source and destination image filename!\n");
+        fprintf(stderr, "Please supply source and destination image filename!\n");
         print_help();
         return -1;
     }
@@ -147,6 +157,10 @@ main(int argc, char *argv[])
     
     // Init device
     jpeg_init_device(device_id, 1);
+    
+    // Detect color spalce
+    if ( jpeg_image_get_file_format(argv[0]) == IMAGE_FILE_YUV )
+        param_image.color_space = JPEG_YUV;
     
     if ( encode == 1 ) {    
         // Create encoder
@@ -170,7 +184,7 @@ main(int argc, char *argv[])
             if ( output_format != IMAGE_FILE_JPEG ) {
                 fprintf(stderr, "Encoder output file [%s] should be JPEG image (*.jpg)!\n", output);
                 return -1;
-            }
+            }                
             
             // Encode image
             TIMER_INIT();
@@ -180,6 +194,10 @@ main(int argc, char *argv[])
         
             // Load image
             int image_size = param_image.width * param_image.height * param_image.comp_count;
+            if ( param_image.sampling_factor == JPEG_4_2_2 ) {
+                assert(param_image.comp_count == 3);
+                image_size = image_size / 3 * 2;
+            }
             uint8_t* image = NULL;
             if ( jpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);

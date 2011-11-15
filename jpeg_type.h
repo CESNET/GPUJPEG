@@ -35,8 +35,9 @@ static const int JPEG_BLOCK_SIZE = 8;
  * Color spaces for JPEG codec
  */
 enum jpeg_color_space {
-    JPEG_YUV = 1,
     JPEG_RGB = 1,
+    JPEG_YUV = 2,
+    JPEG_YCBCR = 3,
 };
 
 /**
