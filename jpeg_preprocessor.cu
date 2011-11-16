@@ -42,6 +42,16 @@ struct jpeg_color_transform
     }
 };
 
+/** Specialization [color_space_from = color_space_to] */
+template<enum jpeg_color_space color_space>
+struct jpeg_color_transform<color_space, color_space> {
+    /** None transform */
+    static __device__ void 
+    perform(float & c1, float & c2, float & c3) {
+        // Same color space so do nothing 
+    }
+};
+
 /** Specialization [color_space_from = JPEG_RGB, color_space_to = JPEG_YCBCR] */
 template<>
 struct jpeg_color_transform<JPEG_RGB, JPEG_YCBCR> {
@@ -63,15 +73,7 @@ struct jpeg_color_transform<JPEG_YUV, JPEG_YCBCR> {
     /** YUV -> YCbCr transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
-        // Convert YUV to RGB
-        float r1 = 0.299f * c1 + 0.587f * c2 + 0.114f * c3;
-        float r2 = (c3 - r1) * 0.565f;
-        float r3 = (c1 - r1) * 0.713f;
-        c1 = r1;
-        c2 = r2;
-        c3 = r3;
-        // Convert RGB to YCbCr
-        jpeg_color_transform<JPEG_RGB, JPEG_YCBCR>::perform(c1, c2, c3);
+        // Do nothing
     }
 };
 
@@ -100,11 +102,34 @@ struct jpeg_color_transform<JPEG_YCBCR, JPEG_RGB> {
     }
 };
 
+/** Specialization [color_space_from = JPEG_YCBCR, color_space_to = JPEG_YUV] */
+template<>
+struct jpeg_color_transform<JPEG_YCBCR, JPEG_YUV> {
+    /** YCbCr -> YUV transform (8 bit) */
+    static __device__ void 
+    perform(float & c1, float & c2, float & c3) {
+        // Do nothing
+    }
+};
+
 #define RGB_8BIT_THREADS 256
 
+/**
+ * Kernel - Copy raw image source data into three separated component buffers
+ *
+ * @param d_c1  First component buffer
+ * @param d_c2  Second component buffer
+ * @param d_c3  Third component buffer
+ * @param d_source  Image source data
+ * @param pixel_count  Number of pixels to copy
+ * @return void
+ */
+typedef void (*jpeg_preprocessor_encode_kernel)(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int pixel_count);
+ 
+/** Specialization [sampling factor is 4:4:4] */
 template<enum jpeg_color_space color_space>
 __global__ void 
-jpeg_raw_to_comp_kernel_4_4_4(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int pixel_count)
+jpeg_preprocessor_raw_to_comp_kernel_4_4_4(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int pixel_count)
 {
     int x  = threadIdx.x;
     int gX = blockDim.x * blockIdx.x;
@@ -134,27 +159,35 @@ jpeg_raw_to_comp_kernel_4_4_4(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const
     }
 }
 
+/** Specialization [sampling factor is 4:2:2] */
 template<enum jpeg_color_space color_space>
 __global__ void 
-jpeg_raw_to_comp_kernel_4_2_2(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int pixel_count)
+jpeg_preprocessor_raw_to_comp_kernel_4_2_2(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int pixel_count)
 {
     int x  = threadIdx.x;
     int gX = blockDim.x * blockIdx.x;
         
     // Load to shared
-    __shared__ unsigned char s_data[RGB_8BIT_THREADS * 3];
-    if ( (x * 4) < RGB_8BIT_THREADS * 3 ) {
+    __shared__ unsigned char s_data[RGB_8BIT_THREADS * 2];
+    if ( (x * 4) < RGB_8BIT_THREADS * 2 ) {
         int* s = (int*)d_source;
         int* d = (int*)s_data;
-        d[x] = s[((gX * 3) >> 2) + x];
+        d[x] = s[((gX * 2) >> 2) + x];
     }
     __syncthreads();
 
     // Load
-    int offset = x * 3;
-    float r1 = (float)(s_data[offset]);
-    float r2 = (float)(s_data[offset + 1]);
-    float r3 = (float)(s_data[offset + 2]);
+    int offset = x * 2;
+    float r1 = (float)(s_data[offset + 1]);
+    float r2;
+    float r3;
+    if ( (gX + x) % 2 == 0 ) {
+        r2 = (float)(s_data[offset]);
+        r3 = (float)(s_data[offset + 2]);
+    } else {
+        r2 = (float)(s_data[offset - 2]);
+        r3 = (float)(s_data[offset]);
+    }
     // Color transform
     jpeg_color_transform<color_space, JPEG_YCBCR>::perform(r1, r2, r3);
     // Store
@@ -167,105 +200,63 @@ jpeg_raw_to_comp_kernel_4_2_2(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const
 }
 
 /**
- * Kernel - Copy RGB image source data into three separated component buffers
- *
- * @param d_c1  First component buffer
- * @param d_c2  Second component buffer
- * @param d_c3  Third component buffer
- * @param d_source  Image source data
- * @param pixel_count  Number of pixels to copy
- * @return void
+ * Select preprocessor encode kernel
+ * 
+ * @param encoder
+ * @return kernel
  */
-template<enum jpeg_color_space color_space, enum jpeg_sampling_factor sampling_factor>
-struct jpeg_raw_to_comp
-{    
-    static int
-    perform(struct jpeg_encoder* encoder)
-    {
+jpeg_preprocessor_encode_kernel
+jpeg_preprocessor_select_encode_kernel(struct jpeg_encoder* encoder)
+{
+    // RGB color space
+    if ( encoder->param_image.color_space == JPEG_RGB ) {
+        assert(encoder->param_image.sampling_factor == JPEG_4_4_4);
+        return &jpeg_preprocessor_raw_to_comp_kernel_4_4_4<JPEG_RGB>;
+    } 
+    // YUV color space
+    else if ( encoder->param_image.color_space == JPEG_YUV ) {
+        if ( encoder->param_image.sampling_factor == JPEG_4_4_4 ) {
+            return &jpeg_preprocessor_raw_to_comp_kernel_4_4_4<JPEG_YUV>;
+        } else if ( encoder->param_image.sampling_factor == JPEG_4_2_2 ) {
+            return &jpeg_preprocessor_raw_to_comp_kernel_4_2_2<JPEG_YUV>;
+        } else {
+            assert(false);
+        }
+    }
+    // Unknown color space
+    else {
         assert(false);
-        return 0;
     }
-};
-
-/** Specialization [sampling_factor = JPEG_4_4_4] */
-template<enum jpeg_color_space color_space>
-struct jpeg_raw_to_comp<color_space, JPEG_4_4_4>
-{    
-    static int
-    perform(struct jpeg_encoder* encoder)
-    {
-        int pixel_count = encoder->param_image.width * encoder->param_image.height;
-        int alignedSize = (pixel_count / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
-            
-        // Kernel
-        dim3 threads (RGB_8BIT_THREADS);
-        dim3 grid (alignedSize / (RGB_8BIT_THREADS * 3));
-        assert(alignedSize % (RGB_8BIT_THREADS * 3) == 0);
-
-        uint8_t* d_c1 = &encoder->d_data[0 * pixel_count];
-        uint8_t* d_c2 = &encoder->d_data[1 * pixel_count];
-        uint8_t* d_c3 = &encoder->d_data[2 * pixel_count];
-        jpeg_raw_to_comp_kernel_4_4_4<color_space>  <<<grid, threads>>>(d_c1, d_c2, d_c3, encoder->d_data_source, pixel_count);
-        
-        cudaError cuerr = cudaThreadSynchronize();
-        if ( cuerr != cudaSuccess ) {
-            fprintf(stderr, "Preprocessor encoding failed: %s!\n", cudaGetErrorString(cuerr));
-            return -1;
-        }
-        
-        return 0;
-    }
-};
-
-/** Specialization [sampling_factor = JPEG_4_2_2] */
-template<enum jpeg_color_space color_space>
-struct jpeg_raw_to_comp<color_space, JPEG_4_2_2>
-{    
-    static int
-    perform(struct jpeg_encoder* encoder)
-    {
-        int pixel_count = encoder->param_image.width * encoder->param_image.height;
-        int alignedSize = (pixel_count / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
-            
-        // Kernel
-        dim3 threads (RGB_8BIT_THREADS);
-        dim3 grid (alignedSize / (RGB_8BIT_THREADS * 3));
-        assert(alignedSize % (RGB_8BIT_THREADS * 3) == 0);
-
-        uint8_t* d_c1 = &encoder->d_data[0 * pixel_count];
-        uint8_t* d_c2 = &encoder->d_data[1 * pixel_count];
-        uint8_t* d_c3 = &encoder->d_data[2 * pixel_count];
-        jpeg_raw_to_comp_kernel_4_2_2<color_space>  <<<grid, threads>>>(d_c1, d_c2, d_c3, encoder->d_data_source, pixel_count);
-        
-        cudaError cuerr = cudaThreadSynchronize();
-        if ( cuerr != cudaSuccess ) {
-            fprintf(stderr, "Preprocessor encoding failed: %s!\n", cudaGetErrorString(cuerr));
-            return -1;
-        }
-        
-        return 0;
-    }
-};
+    return NULL;
+}
 
 /** Documented at declaration */
 int
 jpeg_preprocessor_encode(struct jpeg_encoder* encoder)
 {        
-    if ( encoder->param_image.color_space == JPEG_RGB ) {
-        assert(encoder->param_image.sampling_factor == JPEG_4_4_4);
-        return jpeg_raw_to_comp<JPEG_RGB, JPEG_4_4_4>::perform(encoder);
-    } else if ( encoder->param_image.color_space == JPEG_YUV ) {
-        if ( encoder->param_image.sampling_factor == JPEG_4_4_4 ) {
-            return jpeg_raw_to_comp<JPEG_YUV, JPEG_4_4_4>::perform(encoder);
-        } else if ( encoder->param_image.sampling_factor == JPEG_4_2_2 ) {
-            return jpeg_raw_to_comp<JPEG_YUV, JPEG_4_2_2>::perform(encoder);
-        } else {
-            assert(false);
-        }
-    } else {
-        assert(false);
+    int pixel_count = encoder->param_image.width * encoder->param_image.height;
+    int alignedSize = (pixel_count / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
+
+    // Select kernel
+    jpeg_preprocessor_encode_kernel kernel = jpeg_preprocessor_select_encode_kernel(encoder);
+    
+    // Prepare kernel
+    dim3 threads (RGB_8BIT_THREADS);
+    dim3 grid (alignedSize / (RGB_8BIT_THREADS * 3));
+    assert(alignedSize % (RGB_8BIT_THREADS * 3) == 0);
+
+    // Run kernel
+    uint8_t* d_c1 = &encoder->d_data[0 * pixel_count];
+    uint8_t* d_c2 = &encoder->d_data[1 * pixel_count];
+    uint8_t* d_c3 = &encoder->d_data[2 * pixel_count];
+    kernel<<<grid, threads>>>(d_c1, d_c2, d_c3, encoder->d_data_source, pixel_count);
+    cudaError cuerr = cudaThreadSynchronize();
+    if ( cuerr != cudaSuccess ) {
+        fprintf(stderr, "Preprocessor encoding failed: %s!\n", cudaGetErrorString(cuerr));
+        return -1;
     }
-    return -1;
+        
+    return 0;
 }
 
 /**
@@ -278,8 +269,12 @@ jpeg_preprocessor_encode(struct jpeg_encoder* encoder)
  * @param pixel_count  Number of pixels to copy
  * @return void
  */
+typedef void (*jpeg_preprocessor_decode_kernel)(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int pixel_count);
+
+/** Specialization [sampling factor is 4:4:4] */
+template<enum jpeg_color_space color_space>
 __global__ void
-d_comp_to_rgb(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int pixel_count)
+jpeg_preprocessor_comp_to_raw_kernel_4_4_4(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int pixel_count)
 {
     int x  = threadIdx.x;
     int gX = blockDim.x * blockIdx.x;
@@ -293,11 +288,37 @@ d_comp_to_rgb(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uin
     float r2 = (float)(d_c2[globalInputPosition]);
     float r3 = (float)(d_c3[globalInputPosition]);
     // Color transform
-    jpeg_color_transform<JPEG_YCBCR, JPEG_RGB>::perform(r1, r2, r3);
+    jpeg_color_transform<JPEG_YCBCR, color_space>::perform(r1, r2, r3);
     // Save
     d_target[globalOutputPosition + 0] = (uint8_t)r1;
     d_target[globalOutputPosition + 1] = (uint8_t)r2;
     d_target[globalOutputPosition + 2] = (uint8_t)r3;
+}
+
+/**
+ * Select preprocessor decode kernel
+ * 
+ * @param decoder
+ * @return kernel
+ */
+jpeg_preprocessor_decode_kernel
+jpeg_preprocessor_select_decode_kernel(struct jpeg_decoder* decoder)
+{
+    // RGB color space
+    if ( decoder->param_image.color_space == JPEG_RGB ) {
+        assert(decoder->param_image.sampling_factor == JPEG_4_4_4);
+        return &jpeg_preprocessor_comp_to_raw_kernel_4_4_4<JPEG_RGB>;
+    } 
+    // YUV color space
+    else if ( decoder->param_image.color_space == JPEG_YUV ) {
+        assert(decoder->param_image.sampling_factor == JPEG_4_4_4);
+        return &jpeg_preprocessor_comp_to_raw_kernel_4_4_4<JPEG_YUV>;
+    }
+    // Unknown color space
+    else {
+        assert(false);
+    }
+    return NULL;
 }
 
 /** Documented at declaration */
@@ -307,16 +328,19 @@ jpeg_preprocessor_decode(struct jpeg_decoder* decoder)
     int pixel_count = decoder->param_image.width * decoder->param_image.height;
     int alignedSize = (pixel_count / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
         
-    // Kernel
+    // Select kernel
+    jpeg_preprocessor_decode_kernel kernel = jpeg_preprocessor_select_decode_kernel(decoder);
+    
+    // Prepare kernel
     dim3 threads (RGB_8BIT_THREADS);
     dim3 grid (alignedSize / (RGB_8BIT_THREADS * 3));
     assert(alignedSize % (RGB_8BIT_THREADS * 3) == 0);
 
+    // Run kernel
     uint8_t* d_c1 = &decoder->d_data[0 * pixel_count];
     uint8_t* d_c2 = &decoder->d_data[1 * pixel_count];
     uint8_t* d_c3 = &decoder->d_data[2 * pixel_count];
-    d_comp_to_rgb<<<grid, threads>>>(d_c1, d_c2, d_c3, decoder->d_data_target, pixel_count);
-    
+    kernel<<<grid, threads>>>(d_c1, d_c2, d_c3, decoder->d_data_target, pixel_count);
     cudaError cuerr = cudaThreadSynchronize();
     if ( cuerr != cudaSuccess ) {
         fprintf(stderr, "Preprocessing decoding failed: %s!\n", cudaGetErrorString(cuerr));

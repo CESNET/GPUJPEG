@@ -67,6 +67,7 @@ main(int argc, char *argv[])
     // Default image parameters
     struct jpeg_image_parameters param_image;
     jpeg_image_set_default_parameters(&param_image);
+    
     // Default encoder parameters
     struct jpeg_encoder_parameters param_encoder;
     jpeg_encoder_set_default_parameters(&param_encoder);   
@@ -235,6 +236,9 @@ main(int argc, char *argv[])
         // Destroy encoder
         jpeg_encoder_destroy(encoder);
     }
+    
+    // Output sampling factor is always 4:4:4
+    param_image.sampling_factor = JPEG_4_4_4;
     
     if ( decode == 1 ) {    
         // Create decoder
