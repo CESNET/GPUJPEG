@@ -87,6 +87,13 @@ struct jpeg_decoder
     // Total segment count for all scans
     int segment_count;
     
+    // Allocated data width
+    int data_width;
+    // Allocated data height
+    int data_height;
+    // Allocated data coefficient count
+    int data_size;
+    
     // Data quantized (output from huffman coder)
     int16_t* data_quantized;
     // Data quantized in device memory (output from huffman coder)
@@ -94,6 +101,9 @@ struct jpeg_decoder
     
     // Data in device memory (output from inverse DCT and quantization)
     uint8_t* d_data;
+    
+    // Target image data coefficient count
+    int data_target_size;
     
     // Data target (output from preprocessing)
     uint8_t* data_target;

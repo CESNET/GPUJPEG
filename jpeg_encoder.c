@@ -217,7 +217,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
         // Determine table type
         enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
         
-        jpeg_encoder_print8(encoder, d_data_comp);
+        //jpeg_encoder_print8(encoder, d_data_comp);
         
         //Perform forward DCT
         NppiSize fwd_roi;
@@ -236,7 +236,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             return -1;
         }
         
-        jpeg_encoder_print16(encoder, d_data_quantized_comp);
+        //jpeg_encoder_print16(encoder, d_data_quantized_comp);
     }
     
     // Initialize writer output buffer current position

@@ -281,30 +281,31 @@ jpeg_preprocessor_encode(struct jpeg_encoder* encoder)
  * @param pixel_count  Number of pixels to copy
  * @return void
  */
-typedef void (*jpeg_preprocessor_decode_kernel)(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int pixel_count);
+typedef void (*jpeg_preprocessor_decode_kernel)(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int image_width, int image_height, int data_width, int data_height);
 
 /** Specialization [sampling factor is 4:4:4] */
 template<enum jpeg_color_space color_space>
 __global__ void
-jpeg_preprocessor_comp_to_raw_kernel_4_4_4(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int pixel_count)
+jpeg_preprocessor_comp_to_raw_kernel_4_4_4(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int image_width, int image_height, int data_width, int data_height)
 {
     int x  = threadIdx.x;
     int gX = blockDim.x * blockIdx.x;
-    int globalInputPosition = gX + x;
-    if ( globalInputPosition >= pixel_count )
+    int image_position = gX + x;
+    if ( image_position >= (image_width * image_height) )
         return;
-    int globalOutputPosition = (gX + x) * 3;
+    int data_position = (image_position / image_width) * data_width + image_position % image_width;
+    image_position = image_position * 3;
     
     // Load
-    float r1 = (float)(d_c1[globalInputPosition]);
-    float r2 = (float)(d_c2[globalInputPosition]);
-    float r3 = (float)(d_c3[globalInputPosition]);
+    float r1 = (float)(d_c1[data_position]);
+    float r2 = (float)(d_c2[data_position]);
+    float r3 = (float)(d_c3[data_position]);
     // Color transform
     jpeg_color_transform<JPEG_YCBCR, color_space>::perform(r1, r2, r3);
     // Save
-    d_target[globalOutputPosition + 0] = (uint8_t)r1;
-    d_target[globalOutputPosition + 1] = (uint8_t)r2;
-    d_target[globalOutputPosition + 2] = (uint8_t)r3;
+    d_target[image_position + 0] = (uint8_t)r1;
+    d_target[image_position + 1] = (uint8_t)r2;
+    d_target[image_position + 2] = (uint8_t)r3;
 }
 
 /**
@@ -337,8 +338,7 @@ jpeg_preprocessor_select_decode_kernel(struct jpeg_decoder* decoder)
 int
 jpeg_preprocessor_decode(struct jpeg_decoder* decoder)
 {
-    int pixel_count = decoder->param_image.width * decoder->param_image.height;
-    int alignedSize = (pixel_count / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
+    int alignedSize = ((decoder->param_image.width * decoder->param_image.height) / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
         
     // Select kernel
     jpeg_preprocessor_decode_kernel kernel = jpeg_preprocessor_select_decode_kernel(decoder);
@@ -349,10 +349,20 @@ jpeg_preprocessor_decode(struct jpeg_decoder* decoder)
     assert(alignedSize % (RGB_8BIT_THREADS * 3) == 0);
 
     // Run kernel
-    uint8_t* d_c1 = &decoder->d_data[0 * pixel_count];
-    uint8_t* d_c2 = &decoder->d_data[1 * pixel_count];
-    uint8_t* d_c3 = &decoder->d_data[2 * pixel_count];
-    kernel<<<grid, threads>>>(d_c1, d_c2, d_c3, decoder->d_data_target, pixel_count);
+    int data_comp_size = decoder->data_width * decoder->data_height;
+    uint8_t* d_c1 = &decoder->d_data[0 * data_comp_size];
+    uint8_t* d_c2 = &decoder->d_data[1 * data_comp_size];
+    uint8_t* d_c3 = &decoder->d_data[2 * data_comp_size];
+    kernel<<<grid, threads>>>(
+        d_c1, 
+        d_c2, 
+        d_c3, 
+        decoder->d_data_target, 
+        decoder->param_image.width,
+        decoder->param_image.height,
+        decoder->data_width,
+        decoder->data_height
+    );
     cudaError cuerr = cudaThreadSynchronize();
     if ( cuerr != cudaSuccess ) {
         fprintf(stderr, "Preprocessing decoding failed: %s!\n", cudaGetErrorString(cuerr));
