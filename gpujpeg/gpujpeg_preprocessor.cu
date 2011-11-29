@@ -1,16 +1,19 @@
 /**
- * Copyright (c) 2011, Martin Srom
+ * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011, Silicon Genome, LLC.
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
+ *
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -24,8 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "jpeg_preprocessor.h"
-#include "jpeg_util.h"
+#include "gpujpeg_preprocessor.h"
+#include "gpujpeg_util.h"
 
 /**
  * Color space transformation
@@ -33,8 +36,8 @@
  * @param color_space_from
  * @param color_space_to
  */
-template<enum jpeg_color_space color_space_from, enum jpeg_color_space color_space_to>
-struct jpeg_color_transform
+template<enum gpujpeg_color_space color_space_from, enum gpujpeg_color_space color_space_to>
+struct gpujpeg_color_transform
 {
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
@@ -43,8 +46,8 @@ struct jpeg_color_transform
 };
 
 /** Specialization [color_space_from = color_space_to] */
-template<enum jpeg_color_space color_space>
-struct jpeg_color_transform<color_space, color_space> {
+template<enum gpujpeg_color_space color_space>
+struct gpujpeg_color_transform<color_space, color_space> {
     /** None transform */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
@@ -52,9 +55,9 @@ struct jpeg_color_transform<color_space, color_space> {
     }
 };
 
-/** Specialization [color_space_from = JPEG_RGB, color_space_to = JPEG_YCBCR] */
+/** Specialization [color_space_from = GPUJPEG_RGB, color_space_to = GPUJPEG_YCBCR] */
 template<>
-struct jpeg_color_transform<JPEG_RGB, JPEG_YCBCR> {
+struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR> {
     /** RGB -> YCbCr transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
@@ -67,9 +70,9 @@ struct jpeg_color_transform<JPEG_RGB, JPEG_YCBCR> {
     }
 };
 
-/** Specialization [color_space_from = JPEG_YUV, color_space_to = JPEG_YCBCR] */
+/** Specialization [color_space_from = GPUJPEG_YUV, color_space_to = GPUJPEG_YCBCR] */
 template<>
-struct jpeg_color_transform<JPEG_YUV, JPEG_YCBCR> {
+struct gpujpeg_color_transform<GPUJPEG_YUV, GPUJPEG_YCBCR> {
     /** YUV -> YCbCr transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
@@ -77,9 +80,9 @@ struct jpeg_color_transform<JPEG_YUV, JPEG_YCBCR> {
     }
 };
 
-/** Specialization [color_space_from = JPEG_YCBCR, color_space_to = JPEG_RGB] */
+/** Specialization [color_space_from = GPUJPEG_YCBCR, color_space_to = GPUJPEG_RGB] */
 template<>
-struct jpeg_color_transform<JPEG_YCBCR, JPEG_RGB> {
+struct gpujpeg_color_transform<GPUJPEG_YCBCR, GPUJPEG_RGB> {
     /** YCbCr -> RGB transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
@@ -102,9 +105,9 @@ struct jpeg_color_transform<JPEG_YCBCR, JPEG_RGB> {
     }
 };
 
-/** Specialization [color_space_from = JPEG_YCBCR, color_space_to = JPEG_YUV] */
+/** Specialization [color_space_from = GPUJPEG_YCBCR, color_space_to = GPUJPEG_YUV] */
 template<>
-struct jpeg_color_transform<JPEG_YCBCR, JPEG_YUV> {
+struct gpujpeg_color_transform<GPUJPEG_YCBCR, GPUJPEG_YUV> {
     /** YCbCr -> YUV transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
@@ -124,12 +127,12 @@ struct jpeg_color_transform<JPEG_YCBCR, JPEG_YUV> {
  * @param pixel_count  Number of pixels to copy
  * @return void
  */
-typedef void (*jpeg_preprocessor_encode_kernel)(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int image_width, int image_height, int data_width, int data_height);
+typedef void (*gpujpeg_preprocessor_encode_kernel)(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int image_width, int image_height, int data_width, int data_height);
  
 /** Specialization [sampling factor is 4:4:4] */
-template<enum jpeg_color_space color_space>
+template<enum gpujpeg_color_space color_space>
 __global__ void 
-jpeg_preprocessor_raw_to_comp_kernel_4_4_4(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int image_width, int image_height, int data_width, int data_height)
+gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int image_width, int image_height, int data_width, int data_height)
 {
     int x  = threadIdx.x;
     int gX = blockDim.x * blockIdx.x;
@@ -149,7 +152,7 @@ jpeg_preprocessor_raw_to_comp_kernel_4_4_4(uint8_t* d_c1, uint8_t* d_c2, uint8_t
     float r2 = (float)(s_data[offset + 1]);
     float r3 = (float)(s_data[offset + 2]);
     // Color transform
-    jpeg_color_transform<color_space, JPEG_YCBCR>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR>::perform(r1, r2, r3);
     // Store
     int image_position = gX + x;
     if ( image_position < (image_width * image_height) ) {
@@ -161,9 +164,9 @@ jpeg_preprocessor_raw_to_comp_kernel_4_4_4(uint8_t* d_c1, uint8_t* d_c2, uint8_t
 }
 
 /** Specialization [sampling factor is 4:2:2] */
-template<enum jpeg_color_space color_space>
+template<enum gpujpeg_color_space color_space>
 __global__ void 
-jpeg_preprocessor_raw_to_comp_kernel_4_2_2(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int image_width, int image_height, int data_width, int data_height)
+gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(uint8_t* d_c1, uint8_t* d_c2, uint8_t* d_c3, const uint8_t* d_source, int image_width, int image_height, int data_width, int data_height)
 {
     int x  = threadIdx.x;
     int gX = blockDim.x * blockIdx.x;
@@ -190,7 +193,7 @@ jpeg_preprocessor_raw_to_comp_kernel_4_2_2(uint8_t* d_c1, uint8_t* d_c2, uint8_t
         r3 = (float)(s_data[offset]);
     }
     // Color transform
-    jpeg_color_transform<color_space, JPEG_YCBCR>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR>::perform(r1, r2, r3);
     // Store
     int image_position = gX + x;
     if ( image_position < (image_width * image_height) ) {
@@ -207,20 +210,20 @@ jpeg_preprocessor_raw_to_comp_kernel_4_2_2(uint8_t* d_c1, uint8_t* d_c2, uint8_t
  * @param encoder
  * @return kernel
  */
-jpeg_preprocessor_encode_kernel
-jpeg_preprocessor_select_encode_kernel(struct jpeg_encoder* encoder)
+gpujpeg_preprocessor_encode_kernel
+gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_encoder* encoder)
 {
     // RGB color space
-    if ( encoder->param_image.color_space == JPEG_RGB ) {
-        assert(encoder->param_image.sampling_factor == JPEG_4_4_4);
-        return &jpeg_preprocessor_raw_to_comp_kernel_4_4_4<JPEG_RGB>;
+    if ( encoder->param_image.color_space == GPUJPEG_RGB ) {
+        assert(encoder->param_image.sampling_factor == GPUJPEG_4_4_4);
+        return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_RGB>;
     } 
     // YUV color space
-    else if ( encoder->param_image.color_space == JPEG_YUV ) {
-        if ( encoder->param_image.sampling_factor == JPEG_4_4_4 ) {
-            return &jpeg_preprocessor_raw_to_comp_kernel_4_4_4<JPEG_YUV>;
-        } else if ( encoder->param_image.sampling_factor == JPEG_4_2_2 ) {
-            return &jpeg_preprocessor_raw_to_comp_kernel_4_2_2<JPEG_YUV>;
+    else if ( encoder->param_image.color_space == GPUJPEG_YUV ) {
+        if ( encoder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+            return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_YUV>;
+        } else if ( encoder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+            return &gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2<GPUJPEG_YUV>;
         } else {
             assert(false);
         }
@@ -234,12 +237,12 @@ jpeg_preprocessor_select_encode_kernel(struct jpeg_encoder* encoder)
 
 /** Documented at declaration */
 int
-jpeg_preprocessor_encode(struct jpeg_encoder* encoder)
+gpujpeg_preprocessor_encode(struct gpujpeg_encoder* encoder)
 {    
     cudaMemset(encoder->d_data, 0, encoder->data_size * sizeof(uint8_t));
 
     // Select kernel
-    jpeg_preprocessor_encode_kernel kernel = jpeg_preprocessor_select_encode_kernel(encoder);
+    gpujpeg_preprocessor_encode_kernel kernel = gpujpeg_preprocessor_select_encode_kernel(encoder);
     
     // Prepare kernel
     int alignedSize = (encoder->param_image.width * encoder->param_image.height / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
@@ -281,12 +284,12 @@ jpeg_preprocessor_encode(struct jpeg_encoder* encoder)
  * @param pixel_count  Number of pixels to copy
  * @return void
  */
-typedef void (*jpeg_preprocessor_decode_kernel)(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int image_width, int image_height, int data_width, int data_height);
+typedef void (*gpujpeg_preprocessor_decode_kernel)(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int image_width, int image_height, int data_width, int data_height);
 
 /** Specialization [sampling factor is 4:4:4] */
-template<enum jpeg_color_space color_space>
+template<enum gpujpeg_color_space color_space>
 __global__ void
-jpeg_preprocessor_comp_to_raw_kernel_4_4_4(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int image_width, int image_height, int data_width, int data_height)
+gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int image_width, int image_height, int data_width, int data_height)
 {
     int x  = threadIdx.x;
     int gX = blockDim.x * blockIdx.x;
@@ -301,7 +304,7 @@ jpeg_preprocessor_comp_to_raw_kernel_4_4_4(const uint8_t* d_c1, const uint8_t* d
     float r2 = (float)(d_c2[data_position]);
     float r3 = (float)(d_c3[data_position]);
     // Color transform
-    jpeg_color_transform<JPEG_YCBCR, color_space>::perform(r1, r2, r3);
+    gpujpeg_color_transform<GPUJPEG_YCBCR, color_space>::perform(r1, r2, r3);
     // Save
     d_target[image_position + 0] = (uint8_t)r1;
     d_target[image_position + 1] = (uint8_t)r2;
@@ -314,18 +317,18 @@ jpeg_preprocessor_comp_to_raw_kernel_4_4_4(const uint8_t* d_c1, const uint8_t* d
  * @param decoder
  * @return kernel
  */
-jpeg_preprocessor_decode_kernel
-jpeg_preprocessor_select_decode_kernel(struct jpeg_decoder* decoder)
+gpujpeg_preprocessor_decode_kernel
+gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_decoder* decoder)
 {
     // RGB color space
-    if ( decoder->param_image.color_space == JPEG_RGB ) {
-        assert(decoder->param_image.sampling_factor == JPEG_4_4_4);
-        return &jpeg_preprocessor_comp_to_raw_kernel_4_4_4<JPEG_RGB>;
+    if ( decoder->param_image.color_space == GPUJPEG_RGB ) {
+        assert(decoder->param_image.sampling_factor == GPUJPEG_4_4_4);
+        return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_RGB>;
     } 
     // YUV color space
-    else if ( decoder->param_image.color_space == JPEG_YUV ) {
-        assert(decoder->param_image.sampling_factor == JPEG_4_4_4);
-        return &jpeg_preprocessor_comp_to_raw_kernel_4_4_4<JPEG_YUV>;
+    else if ( decoder->param_image.color_space == GPUJPEG_YUV ) {
+        assert(decoder->param_image.sampling_factor == GPUJPEG_4_4_4);
+        return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_YUV>;
     }
     // Unknown color space
     else {
@@ -336,12 +339,12 @@ jpeg_preprocessor_select_decode_kernel(struct jpeg_decoder* decoder)
 
 /** Documented at declaration */
 int
-jpeg_preprocessor_decode(struct jpeg_decoder* decoder)
+gpujpeg_preprocessor_decode(struct gpujpeg_decoder* decoder)
 {
     int alignedSize = ((decoder->param_image.width * decoder->param_image.height) / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
         
     // Select kernel
-    jpeg_preprocessor_decode_kernel kernel = jpeg_preprocessor_select_decode_kernel(decoder);
+    gpujpeg_preprocessor_decode_kernel kernel = gpujpeg_preprocessor_select_decode_kernel(decoder);
     
     // Prepare kernel
     dim3 threads (RGB_8BIT_THREADS);

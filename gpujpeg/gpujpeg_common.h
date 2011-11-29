@@ -1,16 +1,19 @@
 /**
- * Copyright (c) 2011, Martin Srom
+ * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011, Silicon Genome, LLC.
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
+ *
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -24,29 +27,28 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#ifndef JPEG_COMMON_H
-#define JPEG_COMMON_H
+#ifndef GPUJPEG_COMMON_H
+#define GPUJPEG_COMMON_H
 
 #include <stdint.h>
-
-#include "jpeg_type.h"
+#include "gpujpeg_type.h"
 
 /** Image file formats */
-enum jpeg_image_file_format {
+enum gpujpeg_image_file_format {
     // Unknown image file format
-    IMAGE_FILE_UNKNOWN = 0,
+    GPUJPEG_IMAGE_FILE_UNKNOWN = 0,
     // Raw file format
-    IMAGE_FILE_RAW = 1,
+    GPUJPEG_IMAGE_FILE_RAW = 1,
     // JPEG file format
-    IMAGE_FILE_JPEG = 2,
+    GPUJPEG_IMAGE_FILE_JPEG = 2,
     // RGB file format, simple data format without header [R G B] [R G B] ...
-    IMAGE_FILE_RGB = 1 | 4,
+    GPUJPEG_IMAGE_FILE_RGB = 1 | 4,
     // YUV file format, simple data format without header [Y U V] [Y U V] ...
-    IMAGE_FILE_YUV = 1 | 8
+    GPUJPEG_IMAGE_FILE_YUV = 1 | 8
 };
 
 /** Image parameters */
-struct jpeg_image_parameters {
+struct gpujpeg_image_parameters {
     // Image data width
     int width;
     // Image data height
@@ -54,9 +56,9 @@ struct jpeg_image_parameters {
     // Image data component count
     int comp_count;
     // Image data color space
-    enum jpeg_color_space color_space;
+    enum gpujpeg_color_space color_space;
     // Image data sampling factor
-    enum jpeg_sampling_factor sampling_factor;
+    enum gpujpeg_sampling_factor sampling_factor;
 };
 
 /**
@@ -66,7 +68,7 @@ struct jpeg_image_parameters {
  * @return void
  */
 void
-jpeg_image_set_default_parameters(struct jpeg_image_parameters* param);
+gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param);
 
 /**
  * Init CUDA device
@@ -76,7 +78,7 @@ jpeg_image_set_default_parameters(struct jpeg_image_parameters* param);
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_init_device(int device_id, int verbose);
+gpujpeg_init_device(int device_id, int verbose);
 
 /**
  * Get image file format from filename
@@ -84,8 +86,8 @@ jpeg_init_device(int device_id, int verbose);
  * @param filename  Filename of image file
  * @return image_file_format or IMAGE_FILE_UNKNOWN if type cannot be determined
  */
-enum jpeg_image_file_format
-jpeg_image_get_file_format(const char* filename);
+enum gpujpeg_image_file_format
+gpujpeg_image_get_file_format(const char* filename);
 
 /**
  * Load RGB image from file
@@ -96,7 +98,7 @@ jpeg_image_get_file_format(const char* filename);
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size);
+gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size);
 
 /**
  * Save RGB image to file
@@ -107,7 +109,7 @@ jpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size);
+gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size);
 
 /**
  * Destroy DXT image
@@ -116,6 +118,6 @@ jpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size);
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_image_destroy(uint8_t* image);
+gpujpeg_image_destroy(uint8_t* image);
 
-#endif // JPEG_COMMON_H
+#endif // GPUJPEG_COMMON_H

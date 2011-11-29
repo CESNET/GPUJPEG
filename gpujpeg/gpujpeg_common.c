@@ -1,16 +1,19 @@
 /**
- * Copyright (c) 2011, Martin Srom
+ * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011, Silicon Genome, LLC.
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
+ *
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -24,23 +27,23 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "jpeg_common.h"
-#include "jpeg_util.h"
+#include "gpujpeg_common.h"
+#include "gpujpeg_util.h"
 
 /** Documented at declaration */
 void
-jpeg_image_set_default_parameters(struct jpeg_image_parameters* param)
+gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
 {
     param->width = 0;
     param->height = 0;
     param->comp_count = 3;
-    param->color_space = JPEG_RGB;
-    param->sampling_factor = JPEG_4_4_4;
+    param->color_space = GPUJPEG_RGB;
+    param->sampling_factor = GPUJPEG_4_4_4;
 }
 
 /** Documented at declaration */
 int
-jpeg_init_device(int device_id, int verbose)
+gpujpeg_init_device(int device_id, int verbose)
 {
     int dev_count;
 
@@ -73,11 +76,11 @@ jpeg_init_device(int device_id, int verbose)
 }
 
 /** Documented at declaration */
-enum jpeg_image_file_format
-jpeg_image_get_file_format(const char* filename)
+enum gpujpeg_image_file_format
+gpujpeg_image_get_file_format(const char* filename)
 {
     static const char *extension[] = { "raw", "rgb", "yuv", "jpg" };
-    static const enum jpeg_image_file_format format[] = { IMAGE_FILE_RAW, IMAGE_FILE_RGB, IMAGE_FILE_YUV, IMAGE_FILE_JPEG };
+    static const enum gpujpeg_image_file_format format[] = { GPUJPEG_IMAGE_FILE_RAW, GPUJPEG_IMAGE_FILE_RGB, GPUJPEG_IMAGE_FILE_YUV, GPUJPEG_IMAGE_FILE_JPEG };
         
     char * ext = strrchr(filename, '.');
     if ( ext == NULL )
@@ -88,12 +91,12 @@ jpeg_image_get_file_format(const char* filename)
             return format[i];
         }
     }
-    return IMAGE_FILE_UNKNOWN;
+    return GPUJPEG_IMAGE_FILE_UNKNOWN;
 }
 
 /** Documented at declaration */
 int
-jpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size)
+gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size)
 {
     FILE* file;
 	file = fopen(filename, "rb");
@@ -122,7 +125,7 @@ jpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size
 
 /** Documented at declaration */
 int
-jpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
+gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
 {
     FILE* file;
 	file = fopen(filename, "wb");
@@ -142,7 +145,7 @@ jpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
 
 /** Documented at declaration */
 int
-jpeg_image_destroy(uint8_t* image)
+gpujpeg_image_destroy(uint8_t* image)
 {
     free(image);
 }

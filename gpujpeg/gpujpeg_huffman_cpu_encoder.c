@@ -1,16 +1,19 @@
 /**
- * Copyright (c) 2011, Martin Srom
+ * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011, Silicon Genome, LLC.
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
+ *
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -24,27 +27,27 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "jpeg_huffman_cpu_encoder.h"
-#include "jpeg_format_type.h"
-#include "jpeg_util.h"
+#include "gpujpeg_huffman_cpu_encoder.h"
+#include "gpujpeg_format_type.h"
+#include "gpujpeg_util.h"
 
 #ifdef _DEBUG
 #define inline
 #endif
 
 /** Huffman encoder structure */
-struct jpeg_huffman_cpu_encoder
+struct gpujpeg_huffman_cpu_encoder
 {
     // Huffman table DC
-    struct jpeg_table_huffman_encoder* table_dc;
+    struct gpujpeg_table_huffman_encoder* table_dc;
     // Huffman table AC
-    struct jpeg_table_huffman_encoder* table_ac;
+    struct gpujpeg_table_huffman_encoder* table_ac;
     // The value (in 4 byte buffer) to be written out
     int put_value;
     // The size (in bits) to be written out
     int put_bits;
     // JPEG writer structure
-    struct jpeg_writer* writer;
+    struct gpujpeg_writer* writer;
     // DC differentize for component
     int dc;
     // Restart interval
@@ -65,7 +68,7 @@ struct jpeg_huffman_cpu_encoder
  * @return void
  */
 inline int
-jpeg_huffman_cpu_encoder_emit_bits(struct jpeg_huffman_cpu_encoder* coder, unsigned int code, int size)
+gpujpeg_huffman_cpu_encoder_emit_bits(struct gpujpeg_huffman_cpu_encoder* coder, unsigned int code, int size)
 {
     // This routine is heavily used, so it's worth coding tightly
     int put_buffer = (int)code;
@@ -86,11 +89,11 @@ jpeg_huffman_cpu_encoder_emit_bits(struct jpeg_huffman_cpu_encoder* coder, unsig
     while ( put_bits >= 8 ) {
         // Write one byte out
         uc = (unsigned char) ((put_buffer >> 16) & 0xFF);
-        jpeg_writer_emit_byte(coder->writer, uc);
+        gpujpeg_writer_emit_byte(coder->writer, uc);
         // If need to stuff a zero byte
         if ( uc == 0xFF ) {  
             // Write zero byte out
-            jpeg_writer_emit_byte(coder->writer, 0);
+            gpujpeg_writer_emit_byte(coder->writer, 0);
         }
         put_buffer <<= 8;
         put_bits -= 8;
@@ -108,15 +111,15 @@ jpeg_huffman_cpu_encoder_emit_bits(struct jpeg_huffman_cpu_encoder* coder, unsig
  * @return void
  */
 inline void
-jpeg_huffman_cpu_encoder_emit_left_bits(struct jpeg_huffman_cpu_encoder* coder)
+gpujpeg_huffman_cpu_encoder_emit_left_bits(struct gpujpeg_huffman_cpu_encoder* coder)
 {
     // Fill 7 bits with ones
-    if ( jpeg_huffman_cpu_encoder_emit_bits(coder, 0x7F, 7) != 0 )
+    if ( gpujpeg_huffman_cpu_encoder_emit_bits(coder, 0x7F, 7) != 0 )
         return;
     
     //unsigned char uc = (unsigned char) ((coder->put_value >> 16) & 0xFF);
     // Write one byte out
-    //jpeg_writer_emit_byte(coder->writer, uc);
+    //gpujpeg_writer_emit_byte(coder->writer, uc);
     
     coder->put_value = 0; 
     coder->put_bits = 0;
@@ -128,7 +131,7 @@ jpeg_huffman_cpu_encoder_emit_left_bits(struct jpeg_huffman_cpu_encoder* coder)
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_huffman_cpu_encoder_encode_block(struct jpeg_huffman_cpu_encoder* coder, int16_t* data)
+gpujpeg_huffman_cpu_encoder_encode_block(struct gpujpeg_huffman_cpu_encoder* coder, int16_t* data)
 {        
     int16_t* block = data;
     
@@ -161,14 +164,14 @@ jpeg_huffman_cpu_encoder_encode_block(struct jpeg_huffman_cpu_encoder* coder, in
     }
 
     //    Write category number
-    if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_dc->code[nbits], coder->table_dc->size[nbits]) != 0 ) {
+    if ( gpujpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_dc->code[nbits], coder->table_dc->size[nbits]) != 0 ) {
         fprintf(stderr, "Fail emit bits %d [code: %d, size: %d]!\n", nbits, coder->table_dc->code[nbits], coder->table_dc->size[nbits]);
         return -1;
     }
 
     //    Write category offset (EmitBits rejects calls with size 0)
     if ( nbits ) {
-        if ( jpeg_huffman_cpu_encoder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
+        if ( gpujpeg_huffman_cpu_encoder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
             return -1;
     }
     
@@ -176,13 +179,13 @@ jpeg_huffman_cpu_encoder_encode_block(struct jpeg_huffman_cpu_encoder* coder, in
     int r = 0;
     for ( int k = 1; k < 64; k++ ) 
     {
-        if ( (temp = block[jpeg_order_natural[k]]) == 0 ) {
+        if ( (temp = block[gpujpeg_order_natural[k]]) == 0 ) {
             r++;
         } 
         else {
             // If run length > 15, must emit special run-length-16 codes (0xF0)
             while ( r > 15 ) {
-                if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[0xF0], coder->table_ac->size[0xF0]) != 0 )
+                if ( gpujpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[0xF0], coder->table_ac->size[0xF0]) != 0 )
                     return -1;
                 r -= 16;
             }
@@ -203,11 +206,11 @@ jpeg_huffman_cpu_encoder_encode_block(struct jpeg_huffman_cpu_encoder* coder, in
 
             // Emit Huffman symbol for run length / number of bits
             int i = (r << 4) + nbits;
-            if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[i], coder->table_ac->size[i]) != 0 )
+            if ( gpujpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[i], coder->table_ac->size[i]) != 0 )
                 return -1;
 
             // Write Category offset
-            if ( jpeg_huffman_cpu_encoder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
+            if ( gpujpeg_huffman_cpu_encoder_emit_bits(coder, (unsigned int) temp2, nbits) != 0 )
                 return -1;
 
             r = 0;
@@ -216,7 +219,7 @@ jpeg_huffman_cpu_encoder_encode_block(struct jpeg_huffman_cpu_encoder* coder, in
 
     // If all the left coefs were zero, emit an end-of-block code
     if ( r > 0 ) {
-        if ( jpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[0], coder->table_ac->size[0]) != 0 )
+        if ( gpujpeg_huffman_cpu_encoder_emit_bits(coder, coder->table_ac->code[0], coder->table_ac->size[0]) != 0 )
             return -1;
     }
 
@@ -225,15 +228,15 @@ jpeg_huffman_cpu_encoder_encode_block(struct jpeg_huffman_cpu_encoder* coder, in
 
 /** Documented at declaration */
 int
-jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_component_type type, int16_t* data)
+gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder, enum gpujpeg_component_type type, int16_t* data)
 {    
-    int block_cx = (encoder->param_image.width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
-    int block_cy = (encoder->param_image.height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int block_cx = (encoder->param_image.width + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
+    int block_cy = (encoder->param_image.height + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
     
     // Initialize huffman coder
-    struct jpeg_huffman_cpu_encoder coder;
-    coder.table_dc = &encoder->table_huffman[type][JPEG_HUFFMAN_DC];
-    coder.table_ac = &encoder->table_huffman[type][JPEG_HUFFMAN_AC];
+    struct gpujpeg_huffman_cpu_encoder coder;
+    coder.table_dc = &encoder->table_huffman[type][GPUJPEG_HUFFMAN_DC];
+    coder.table_ac = &encoder->table_huffman[type][GPUJPEG_HUFFMAN_AC];
     coder.put_value = 0;
     coder.put_bits = 0;
     coder.dc = 0;
@@ -251,14 +254,14 @@ jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_componen
                 if ( coder.block_count > 0 && (coder.block_count % coder.restart_interval) == 0 ) {
                     // Emit left bits
                     if ( coder.put_bits > 0 )
-                        jpeg_huffman_cpu_encoder_emit_left_bits(&coder);
+                        gpujpeg_huffman_cpu_encoder_emit_left_bits(&coder);
                     // Restart huffman coder
                     coder.put_value = 0;
                     coder.put_bits = 0;
                     coder.dc = 0;
                     // Output restart marker
-                    int restart_marker = JPEG_MARKER_RST0 + (((coder.block_count - coder.restart_interval) / coder.restart_interval) & 0x7);
-                    jpeg_writer_emit_marker(encoder->writer, restart_marker);
+                    int restart_marker = GPUJPEG_MARKER_RST0 + (((coder.block_count - coder.restart_interval) / coder.restart_interval) & 0x7);
+                    gpujpeg_writer_emit_marker(encoder->writer, restart_marker);
                     //printf("byte count %d\n", (int)encoder->writer->buffer_current - (int)buffer);
                     //buffer = encoder->writer->buffer_current;
                 }
@@ -266,8 +269,8 @@ jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_componen
             uint8_t* buffer = encoder->writer->buffer_current;
             
             // Encoder block
-            int data_index = (block_y * block_cx + block_x) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE;
-            if ( jpeg_huffman_cpu_encoder_encode_block(&coder, &data[data_index]) != 0 ) {
+            int data_index = (block_y * block_cx + block_x) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+            if ( gpujpeg_huffman_cpu_encoder_encode_block(&coder, &data[data_index]) != 0 ) {
                 fprintf(stderr, "Huffman encoder failed at block [%d, %d]!\n", block_y, block_x);
                 return -1;
             }
@@ -277,7 +280,7 @@ jpeg_huffman_cpu_encoder_encode(struct jpeg_encoder* encoder, enum jpeg_componen
     
     // Emit left
     if ( coder.put_bits > 0 )
-        jpeg_huffman_cpu_encoder_emit_left_bits(&coder);
+        gpujpeg_huffman_cpu_encoder_emit_left_bits(&coder);
         
     //printf("byte count %d\n", (int)encoder->writer->buffer_current - (int)buffer);
     

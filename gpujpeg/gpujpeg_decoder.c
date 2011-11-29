@@ -1,16 +1,19 @@
 /**
- * Copyright (c) 2011, Martin Srom
+ * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011, Silicon Genome, LLC.
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
+ *
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -24,17 +27,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "jpeg_decoder.h"
-#include "jpeg_preprocessor.h"
-#include "jpeg_huffman_cpu_decoder.h"
-#include "jpeg_huffman_gpu_decoder.h"
-#include "jpeg_util.h"
+#include "gpujpeg_decoder.h"
+#include "gpujpeg_preprocessor.h"
+#include "gpujpeg_huffman_cpu_decoder.h"
+#include "gpujpeg_huffman_gpu_decoder.h"
+#include "gpujpeg_util.h"
 
 /** Documented at declaration */
-struct jpeg_decoder*
-jpeg_decoder_create(struct jpeg_image_parameters* param_image)
+struct gpujpeg_decoder*
+gpujpeg_decoder_create(struct gpujpeg_image_parameters* param_image)
 {
-    struct jpeg_decoder* decoder = malloc(sizeof(struct jpeg_decoder));
+    struct gpujpeg_decoder* decoder = malloc(sizeof(struct gpujpeg_decoder));
     if ( decoder == NULL )
         return NULL;
         
@@ -56,36 +59,36 @@ jpeg_decoder_create(struct jpeg_image_parameters* param_image)
     int result = 1;
     
     // Create reader
-    decoder->reader = jpeg_reader_create();
+    decoder->reader = gpujpeg_reader_create();
     if ( decoder->reader == NULL )
         result = 0;
     
     // Allocate quantization tables in device memory
-    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         if ( cudaSuccess != cudaMalloc((void**)&decoder->table_quantization[comp_type].d_table, 64 * sizeof(uint16_t)) ) 
             result = 0;
     }
     // Allocate huffman tables in device memory
-    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
-        for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
-            if ( cudaSuccess != cudaMalloc((void**)&decoder->d_table_huffman[comp_type][huff_type], sizeof(struct jpeg_table_huffman_decoder)) )
+    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
+            if ( cudaSuccess != cudaMalloc((void**)&decoder->d_table_huffman[comp_type][huff_type], sizeof(struct gpujpeg_table_huffman_decoder)) )
                 result = 0;
         }
     }
-    cudaCheckError("Decoder table allocation");
+    gpujpeg_cuda_check_error("Decoder table allocation");
     
     // Init decoder
     if ( param_image->width != 0 && param_image->height != 0 ) {
-        if ( jpeg_decoder_init(decoder, param_image->width, param_image->height, param_image->comp_count) != 0 )
+        if ( gpujpeg_decoder_init(decoder, param_image->width, param_image->height, param_image->comp_count) != 0 )
             result = 0;
     }
     
     // Init huffman encoder
-    if ( jpeg_huffman_gpu_decoder_init() != 0 )
+    if ( gpujpeg_huffman_gpu_decoder_init() != 0 )
         result = 0;
     
     if ( result == 0 ) {
-        jpeg_decoder_destroy(decoder);
+        gpujpeg_decoder_destroy(decoder);
         return NULL;
     }
     
@@ -94,7 +97,7 @@ jpeg_decoder_create(struct jpeg_image_parameters* param_image)
 
 /** Documented at declaration */
 int
-jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_count)
+gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, int width, int height, int comp_count)
 {
     assert(comp_count == 3);
     
@@ -116,13 +119,13 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
     // Allocate scan data
     int data_scan_size = decoder->param_image.comp_count * decoder->param_image.width * decoder->param_image.height;
     // Add some space for right, bottom corners (when image size isn't divisible by 8)
-    data_scan_size += divAndRoundUp(decoder->param_image.width, JPEG_BLOCK_SIZE) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE;
-    data_scan_size += divAndRoundUp(decoder->param_image.height, JPEG_BLOCK_SIZE) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE;
-    data_scan_size += JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE;
+    data_scan_size += gpujpeg_div_and_round_up(decoder->param_image.width, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+    data_scan_size += gpujpeg_div_and_round_up(decoder->param_image.height, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+    data_scan_size += GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
     // We need more data ie. twice, restart_interval could be 1 so a lot of data
     data_scan_size = data_scan_size * 2;
     // Allocate indexes to data for each segment too
-    int max_segment_count = decoder->param_image.comp_count * ((decoder->param_image.width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE) * ((decoder->param_image.height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE);
+    int max_segment_count = decoder->param_image.comp_count * ((decoder->param_image.width + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE) * ((decoder->param_image.height + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE);
     if ( cudaSuccess != cudaMallocHost((void**)&decoder->data_scan, data_scan_size * sizeof(uint8_t)) ) 
         return -1;
     if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_scan, data_scan_size * sizeof(uint8_t)) ) 
@@ -131,11 +134,11 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
         return -1;
     if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_scan_index, max_segment_count * sizeof(int)) ) 
         return -1;
-    cudaCheckError("Decoder scan allocation");
+    gpujpeg_cuda_check_error("Decoder scan allocation");
     
     // Calculate data size
-    decoder->data_width = divAndRoundUp(decoder->param_image.width, JPEG_BLOCK_SIZE) * JPEG_BLOCK_SIZE;
-    decoder->data_height = divAndRoundUp(decoder->param_image.height, JPEG_BLOCK_SIZE) * JPEG_BLOCK_SIZE;
+    decoder->data_width = gpujpeg_div_and_round_up(decoder->param_image.width, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
+    decoder->data_height = gpujpeg_div_and_round_up(decoder->param_image.height, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
     decoder->data_target_size = decoder->param_image.width * decoder->param_image.height * decoder->param_image.comp_count;
     decoder->data_size = decoder->data_width * decoder->data_height * decoder->param_image.comp_count;
     
@@ -150,13 +153,13 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
         return -1;
     if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_target, decoder->data_target_size * sizeof(uint8_t)) ) 
         return -1;
-    cudaCheckError("Decoder data allocation");
+    gpujpeg_cuda_check_error("Decoder data allocation");
     
     return 0;
 }
 
 void
-jpeg_decoder_print8(struct jpeg_decoder* decoder, uint8_t* d_data)
+gpujpeg_decoder_print8(struct gpujpeg_decoder* decoder, uint8_t* d_data)
 {
     int data_size = decoder->data_width * decoder->data_height;
     uint8_t* data = NULL;
@@ -174,7 +177,7 @@ jpeg_decoder_print8(struct jpeg_decoder* decoder, uint8_t* d_data)
 }
 
 void
-jpeg_decoder_print16(struct jpeg_decoder* decoder, int16_t* d_data)
+gpujpeg_decoder_print16(struct gpujpeg_decoder* decoder, int16_t* d_data)
 {
     int data_size = decoder->data_width * decoder->data_height;
     int16_t* data = NULL;
@@ -193,13 +196,13 @@ jpeg_decoder_print16(struct jpeg_decoder* decoder, int16_t* d_data)
 
 /** Documented at declaration */
 int
-jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size)
+gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size)
 {    
     //TIMER_INIT();
     //TIMER_START();
     
     // Read JPEG image data
-    if ( jpeg_reader_read_image(decoder, image, image_size) != 0 ) {
+    if ( gpujpeg_reader_read_image(decoder, image, image_size) != 0 ) {
         fprintf(stderr, "Decoder failed when decoding image data!\n");
         return -1;
     }
@@ -212,12 +215,12 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         // Perform huffman decoding for all components
         for ( int index = 0; index < decoder->scan_count; index++ ) {
             // Get scan and data buffer
-            struct jpeg_decoder_scan* scan = &decoder->scan[index];
+            struct gpujpeg_decoder_scan* scan = &decoder->scan[index];
             int16_t* data_quantized_comp = &decoder->data_quantized[index * decoder->data_width * decoder->data_height];
             // Determine table type
-            enum jpeg_component_type type = (index == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+            enum gpujpeg_component_type type = (index == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
             // Huffman decode
-            if ( jpeg_huffman_cpu_decoder_decode(decoder, type, scan, data_quantized_comp) != 0 ) {
+            if ( gpujpeg_huffman_cpu_decoder_decode(decoder, type, scan, data_quantized_comp) != 0 ) {
                 fprintf(stderr, "Huffman decoder failed for scan at index %d!\n", index);
                 return -1;
             }
@@ -232,16 +235,16 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         
         // Copy scan data to device memory
         cudaMemcpy(decoder->d_data_scan, decoder->data_scan, decoder->data_scan_size * sizeof(uint8_t), cudaMemcpyHostToDevice);
-        cudaCheckError("Decoder copy scan data");
+        gpujpeg_cuda_check_error("Decoder copy scan data");
         // Copy scan data to device memory
         cudaMemcpy(decoder->d_data_scan_index, decoder->data_scan_index, decoder->segment_count * sizeof(int), cudaMemcpyHostToDevice);
-        cudaCheckError("Decoder copy scan data index");
+        gpujpeg_cuda_check_error("Decoder copy scan data index");
         
         // Zero output memory
         cudaMemset(decoder->d_data_quantized, 0, decoder->data_size * sizeof(int16_t));
         
         // Perform huffman decoding
-        if ( jpeg_huffman_gpu_decoder_decode(decoder) != 0 ) {
+        if ( gpujpeg_huffman_gpu_decoder_decode(decoder) != 0 ) {
             fprintf(stderr, "Huffman decoder on GPU failed!\n");
             return -1;
         }
@@ -256,20 +259,20 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         int16_t* d_data_quantized_comp = &decoder->d_data_quantized[comp * decoder->data_width * decoder->data_height];
         
         // Determine table type
-        enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+        enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
         
-        //jpeg_decoder_print16(decoder, d_data_quantized_comp);
+        //gpujpeg_decoder_print16(decoder, d_data_quantized_comp);
         
         cudaMemset(d_data_comp, 0, decoder->param_image.width * decoder->param_image.height * sizeof(uint8_t));
         
         //Perform inverse DCT
         NppiSize inv_roi;
-        inv_roi.width = decoder->data_width * JPEG_BLOCK_SIZE;
-        inv_roi.height = decoder->data_height / JPEG_BLOCK_SIZE;
-        assert(JPEG_BLOCK_SIZE == 8);
+        inv_roi.width = decoder->data_width * GPUJPEG_BLOCK_SIZE;
+        inv_roi.height = decoder->data_height / GPUJPEG_BLOCK_SIZE;
+        assert(GPUJPEG_BLOCK_SIZE == 8);
         NppStatus status = nppiDCTQuantInv8x8LS_JPEG_16s8u_C1R(
             d_data_quantized_comp, 
-            decoder->data_width * JPEG_BLOCK_SIZE * sizeof(int16_t), 
+            decoder->data_width * GPUJPEG_BLOCK_SIZE * sizeof(int16_t), 
             d_data_comp, 
             decoder->data_width * sizeof(uint8_t), 
             decoder->table_quantization[type].d_table, 
@@ -278,14 +281,14 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
         if ( status != 0 )
             printf("Error %d\n", status);
             
-        //jpeg_decoder_print8(decoder, d_data_comp);
+        //gpujpeg_decoder_print8(decoder, d_data_comp);
     }
     
     //TIMER_STOP_PRINT("-DCT & Quantization:");
     //TIMER_START();
     
     // Preprocessing
-    if ( jpeg_preprocessor_decode(decoder) != 0 )
+    if ( gpujpeg_preprocessor_decode(decoder) != 0 )
         return -1;
         
     //TIMER_STOP_PRINT("-Postprocessing:    ");
@@ -301,17 +304,17 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
 
 /** Documented at declaration */
 int
-jpeg_decoder_destroy(struct jpeg_decoder* decoder)
+gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
 {    
     assert(decoder != NULL);
     
-    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         if ( decoder->table_quantization[comp_type].d_table != NULL )
             cudaFree(decoder->table_quantization[comp_type].d_table);
     }
     
     if ( decoder->reader != NULL )
-        jpeg_reader_destroy(decoder->reader);
+        gpujpeg_reader_destroy(decoder->reader);
     
     if ( decoder->data_scan != NULL )
         cudaFreeHost(decoder->data_scan);

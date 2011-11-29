@@ -1,16 +1,19 @@
 /**
- * Copyright (c) 2011, Martin Srom
+ * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011, Silicon Genome, LLC.
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
+ *
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -24,15 +27,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "jpeg_huffman_cpu_decoder.h"
-#include "jpeg_util.h"
+#include "gpujpeg_huffman_cpu_decoder.h"
+#include "gpujpeg_util.h"
 
 #ifdef _DEBUG
 #define inline
 #endif
 
 /** Huffman encoder structure */
-struct jpeg_huffman_cpu_decoder
+struct gpujpeg_huffman_cpu_decoder
 {
     // Scan data for all scans
     uint8_t* data_scan;
@@ -43,9 +46,9 @@ struct jpeg_huffman_cpu_decoder
     // Total segment count for all scans
     int segment_count;
     // Huffman table DC
-    struct jpeg_table_huffman_decoder* table_dc;
+    struct gpujpeg_table_huffman_decoder* table_dc;
     // Huffman table AC
-    struct jpeg_table_huffman_decoder* table_ac;
+    struct gpujpeg_table_huffman_decoder* table_ac;
     // DC differentize for component
     int dc;
     // Get bits
@@ -71,7 +74,7 @@ struct jpeg_huffman_cpu_decoder
  * @return void
  */
 void
-jpeg_huffman_cpu_decoder_decode_fill_bit_buffer(struct jpeg_huffman_cpu_decoder* coder)
+gpujpeg_huffman_cpu_decoder_decode_fill_bit_buffer(struct gpujpeg_huffman_cpu_decoder* coder)
 {
     while ( coder->get_bits < 25 ) {
         //Are there some data?
@@ -117,11 +120,11 @@ jpeg_huffman_cpu_decoder_decode_fill_bit_buffer(struct jpeg_huffman_cpu_decoder*
  * @return bits
  */
 inline int
-jpeg_huffman_cpu_decoder_get_bits(struct jpeg_huffman_cpu_decoder* coder, int nbits) 
+gpujpeg_huffman_cpu_decoder_get_bits(struct gpujpeg_huffman_cpu_decoder* coder, int nbits) 
 {
     //we should read nbits bits to get next data
     if( coder->get_bits < nbits )
-        jpeg_huffman_cpu_decoder_decode_fill_bit_buffer(coder);
+        gpujpeg_huffman_cpu_decoder_decode_fill_bit_buffer(coder);
     coder->get_bits -= nbits;
     return (int)(coder->get_buff >> coder->get_bits) & ((1 << nbits) - 1);
 }
@@ -135,18 +138,18 @@ jpeg_huffman_cpu_decoder_get_bits(struct jpeg_huffman_cpu_decoder* coder, int nb
  * @return int
  */
 int
-jpeg_huffman_cpu_decoder_decode_special_decode(struct jpeg_huffman_cpu_decoder* coder, struct jpeg_table_huffman_decoder* table, int min_bits)
+gpujpeg_huffman_cpu_decoder_decode_special_decode(struct gpujpeg_huffman_cpu_decoder* coder, struct gpujpeg_table_huffman_decoder* table, int min_bits)
 {
     // HUFF_DECODE has determined that the code is at least min_bits
     // bits long, so fetch that many bits in one swoop.
-    int code = jpeg_huffman_cpu_decoder_get_bits(coder, min_bits);
+    int code = gpujpeg_huffman_cpu_decoder_get_bits(coder, min_bits);
 
     // Collect the rest of the Huffman code one bit at a time.
     // This is per Figure F.16 in the JPEG spec.
     int l = min_bits;
     while ( code > table->maxcode[l] ) {
         code <<= 1;
-        code |= jpeg_huffman_cpu_decoder_get_bits(coder, 1);
+        code |= gpujpeg_huffman_cpu_decoder_get_bits(coder, 1);
         l++;
     }
 
@@ -165,7 +168,7 @@ jpeg_huffman_cpu_decoder_decode_special_decode(struct jpeg_huffman_cpu_decoder* 
  * @return int
  */
 inline int
-jpeg_huffman_cpu_decoder_value_from_category(int category, int offset)
+gpujpeg_huffman_cpu_decoder_value_from_category(int category, int offset)
 {
     // Method 1: 
     // On some machines, a shift and add will be faster than a table lookup.
@@ -203,15 +206,15 @@ jpeg_huffman_cpu_decoder_value_from_category(int category, int offset)
  * @return int
  */
 inline int
-jpeg_huffman_cpu_decoder_get_category(struct jpeg_huffman_cpu_decoder* coder, struct jpeg_table_huffman_decoder* table)
+gpujpeg_huffman_cpu_decoder_get_category(struct gpujpeg_huffman_cpu_decoder* coder, struct gpujpeg_table_huffman_decoder* table)
 {
     // If left bits < 8, we should get more data
     if ( coder->get_bits < 8 )
-        jpeg_huffman_cpu_decoder_decode_fill_bit_buffer(coder);
+        gpujpeg_huffman_cpu_decoder_decode_fill_bit_buffer(coder);
 
     // Call special process if data finished; min bits is 1
     if( coder->get_bits < 8 )
-        return jpeg_huffman_cpu_decoder_decode_special_decode(coder, table, 1);
+        return gpujpeg_huffman_cpu_decoder_decode_special_decode(coder, table, 1);
 
     // Peek the first valid byte    
     int look = ((coder->get_buff >> (coder->get_bits - 8)) & 0xFF);
@@ -222,7 +225,7 @@ jpeg_huffman_cpu_decoder_get_category(struct jpeg_huffman_cpu_decoder* coder, st
         return table->look_sym[look]; 
     } else {
         //Decode long codes with length >= 9
-        return jpeg_huffman_cpu_decoder_decode_special_decode(coder, table, 9);
+        return gpujpeg_huffman_cpu_decoder_decode_special_decode(coder, table, 9);
     }
 }
 
@@ -232,7 +235,7 @@ jpeg_huffman_cpu_decoder_get_category(struct jpeg_huffman_cpu_decoder* coder, st
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, int16_t* data)
+gpujpeg_huffman_cpu_decoder_decode_block(struct gpujpeg_huffman_cpu_decoder* coder, int16_t* data)
 {    
     // Restart coder
     if ( coder->restart_interval > 0 && coder->restart_position == 0 ) {
@@ -252,30 +255,30 @@ jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, in
     }
     
     // Zero block output
-    memset(data, 0, sizeof(int16_t) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE);
+    memset(data, 0, sizeof(int16_t) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE);
 
     // Section F.2.2.1: decode the DC coefficient difference
     // get dc category number, s
-    int s = jpeg_huffman_cpu_decoder_get_category(coder, coder->table_dc);
+    int s = gpujpeg_huffman_cpu_decoder_get_category(coder, coder->table_dc);
     if ( s ) {
         // Get offset in this dc category
-        int r = jpeg_huffman_cpu_decoder_get_bits(coder, s);
+        int r = gpujpeg_huffman_cpu_decoder_get_bits(coder, s);
         // Get dc difference value
-        s = jpeg_huffman_cpu_decoder_value_from_category(s, r);
+        s = gpujpeg_huffman_cpu_decoder_value_from_category(s, r);
     }
 
     // Convert DC difference to actual value, update last_dc_val
     s += coder->dc;
     coder->dc = s;
 
-    // Output the DC coefficient (assumes jpeg_natural_order[0] = 0)
+    // Output the DC coefficient (assumes gpujpeg_natural_order[0] = 0)
     data[0] = s;
     
     // Section F.2.2.2: decode the AC coefficients
     // Since zeroes are skipped, output area must be cleared beforehand
     for ( int k = 1; k < 64; k++ ) {
         // s: (run, category)
-        int s = jpeg_huffman_cpu_decoder_get_category(coder, coder->table_ac);
+        int s = gpujpeg_huffman_cpu_decoder_get_category(coder, coder->table_ac);
         // r: run length for ac zero, 0 <= r < 16
         int r = s >> 4;
         // s: category for this non-zero ac
@@ -284,11 +287,11 @@ jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, in
             //    k: position for next non-zero ac
             k += r;
             //    r: offset in this ac category
-            r = jpeg_huffman_cpu_decoder_get_bits(coder, s);
+            r = gpujpeg_huffman_cpu_decoder_get_bits(coder, s);
             //    s: ac value
-            s = jpeg_huffman_cpu_decoder_value_from_category(s, r);
+            s = gpujpeg_huffman_cpu_decoder_value_from_category(s, r);
 
-            data[jpeg_order_natural[k]] = s;
+            data[gpujpeg_order_natural[k]] = s;
         } else {
             // s = 0, means ac value is 0 ? Only if r = 15.  
             //means all the left ac are zero
@@ -313,19 +316,19 @@ jpeg_huffman_cpu_decoder_decode_block(struct jpeg_huffman_cpu_decoder* coder, in
 
 /** Documented at declaration */
 int
-jpeg_huffman_cpu_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_component_type type, struct jpeg_decoder_scan* scan, int16_t* data_decompressed)
+gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder, enum gpujpeg_component_type type, struct gpujpeg_decoder_scan* scan, int16_t* data_decompressed)
 {    
-    int block_cx = (decoder->param_image.width + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
-    int block_cy = (decoder->param_image.height + JPEG_BLOCK_SIZE - 1) / JPEG_BLOCK_SIZE;
+    int block_cx = (decoder->param_image.width + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
+    int block_cy = (decoder->param_image.height + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
     
     // Initialize huffman coder
-    struct jpeg_huffman_cpu_decoder coder;
+    struct gpujpeg_huffman_cpu_decoder coder;
     coder.data_scan = decoder->data_scan;
     coder.data_scan_size = decoder->data_scan_size;
     coder.data_scan_index = decoder->data_scan_index;
     coder.segment_count = decoder->segment_count;
-    coder.table_dc = &decoder->table_huffman[type][JPEG_HUFFMAN_DC];
-    coder.table_ac = &decoder->table_huffman[type][JPEG_HUFFMAN_AC];
+    coder.table_dc = &decoder->table_huffman[type][GPUJPEG_HUFFMAN_DC];
+    coder.table_ac = &decoder->table_huffman[type][GPUJPEG_HUFFMAN_AC];
     coder.get_buff = 0;
     coder.get_bits = 0;
     coder.dc = 0;
@@ -346,8 +349,8 @@ jpeg_huffman_cpu_decoder_decode(struct jpeg_decoder* decoder, enum jpeg_componen
     // Decode all blocks
     for ( int block_y = 0; block_y < block_cy; block_y++ ) {
         for ( int block_x = 0; block_x < block_cx; block_x++ ) {
-            int data_index = (block_y * block_cx + block_x) * JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE;
-            if ( jpeg_huffman_cpu_decoder_decode_block(&coder, &data_decompressed[data_index]) != 0 ) {
+            int data_index = (block_y * block_cx + block_x) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+            if ( gpujpeg_huffman_cpu_decoder_decode_block(&coder, &data_decompressed[data_index]) != 0 ) {
                 fprintf(stderr, "Huffman decoder failed at block [%d, %d]!\n", block_y, block_x);
                 return -1;
             }

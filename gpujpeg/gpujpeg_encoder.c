@@ -1,16 +1,19 @@
 /**
- * Copyright (c) 2011, Martin Srom
+ * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011, Silicon Genome, LLC.
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
+ *
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -24,48 +27,48 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "jpeg_encoder.h"
-#include "jpeg_preprocessor.h"
-#include "jpeg_huffman_cpu_encoder.h"
-#include "jpeg_huffman_gpu_encoder.h"
-#include "jpeg_format_type.h"
-#include "jpeg_util.h"
+#include "gpujpeg_encoder.h"
+#include "gpujpeg_preprocessor.h"
+#include "gpujpeg_huffman_cpu_encoder.h"
+#include "gpujpeg_huffman_gpu_encoder.h"
+#include "gpujpeg_format_type.h"
+#include "gpujpeg_util.h"
 
-#define JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE (JPEG_BLOCK_SIZE * JPEG_BLOCK_SIZE * 2)
+#define GPUJPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE * 2)
 
 /** Documented at declaration */
 void
-jpeg_encoder_set_default_parameters(struct jpeg_encoder_parameters* param)
+gpujpeg_encoder_set_default_parameters(struct gpujpeg_encoder_parameters* param)
 {
     param->quality = 75;
     param->restart_interval = 8;
 }
 
 /** Documented at declaration */
-struct jpeg_encoder*
-jpeg_encoder_create(struct jpeg_image_parameters* param_image, struct jpeg_encoder_parameters* param)
+struct gpujpeg_encoder*
+gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_parameters* param)
 {
     assert(param_image->comp_count == 3);
     
-    struct jpeg_encoder* encoder = malloc(sizeof(struct jpeg_encoder));
+    struct gpujpeg_encoder* encoder = malloc(sizeof(struct gpujpeg_encoder));
     if ( encoder == NULL )
         return NULL;
         
     // Set parameters
-    memset(encoder, 0, sizeof(struct jpeg_encoder));
+    memset(encoder, 0, sizeof(struct gpujpeg_encoder));
     encoder->param_image = *param_image;
     encoder->param = *param;
     
     int result = 1;
     
     // Create writer
-    encoder->writer = jpeg_writer_create(encoder);
+    encoder->writer = gpujpeg_writer_create(encoder);
     if ( encoder->writer == NULL )
         result = 0;
         
     // Calculate data size
-    encoder->data_width = divAndRoundUp(param_image->width, JPEG_BLOCK_SIZE) * JPEG_BLOCK_SIZE;
-    encoder->data_height = divAndRoundUp(param_image->height, JPEG_BLOCK_SIZE) * JPEG_BLOCK_SIZE;
+    encoder->data_width = gpujpeg_div_and_round_up(param_image->width, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
+    encoder->data_height = gpujpeg_div_and_round_up(param_image->height, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
     encoder->data_source_size = encoder->param_image.width * encoder->param_image.height * encoder->param_image.comp_count;
     encoder->data_size = encoder->data_width * encoder->data_height * encoder->param_image.comp_count;
     
@@ -78,74 +81,74 @@ jpeg_encoder_create(struct jpeg_image_parameters* param_image, struct jpeg_encod
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_quantized, encoder->data_size * sizeof(int16_t)) ) 
         result = 0;
-	cudaCheckError("Encoder data allocation");
+	gpujpeg_cuda_check_error("Encoder data allocation");
 
     // Calculate segments count
     if ( encoder->param.restart_interval != 0 ) {
-        int block_count = (encoder->data_width / JPEG_BLOCK_SIZE) * (encoder->data_height / JPEG_BLOCK_SIZE);
+        int block_count = (encoder->data_width / GPUJPEG_BLOCK_SIZE) * (encoder->data_height / GPUJPEG_BLOCK_SIZE);
         encoder->segment_count_per_comp = (block_count / encoder->param.restart_interval + 1);
         encoder->segment_count = encoder->param_image.comp_count * encoder->segment_count_per_comp;
         
         // Allocate segments
-        cudaMallocHost((void**)&encoder->segments, encoder->segment_count * sizeof(struct jpeg_encoder_segment));
+        cudaMallocHost((void**)&encoder->segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment));
         if ( encoder->segments == NULL )
             result = 0;
         // Allocate segments in device memory
-        if ( cudaSuccess != cudaMalloc((void**)&encoder->d_segments, encoder->segment_count * sizeof(struct jpeg_encoder_segment)) )
+        if ( cudaSuccess != cudaMalloc((void**)&encoder->d_segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment)) )
             result = 0;
         if ( result == 1 ) {
             // Prepare segments for encoding
             for ( int index = 0; index < encoder->segment_count; index++ ) {
-                encoder->segments[index].data_compressed_index = index * encoder->param.restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE;
+                encoder->segments[index].data_compressed_index = index * encoder->param.restart_interval * GPUJPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE;
                 encoder->segments[index].data_compressed_size = 0;
             }
             // Copy segments to device memory
-            if ( cudaSuccess != cudaMemcpy(encoder->d_segments, encoder->segments, encoder->segment_count * sizeof(struct jpeg_encoder_segment), cudaMemcpyHostToDevice) )
+            if ( cudaSuccess != cudaMemcpy(encoder->d_segments, encoder->segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment), cudaMemcpyHostToDevice) )
                 result = 0;
         } 
         
         // Allocate compressed data
-        if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_compressed, encoder->segment_count * encoder->param.restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
+        if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_compressed, encoder->segment_count * encoder->param.restart_interval * GPUJPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
             result = 0;   
-        if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->param.restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
+        if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->param.restart_interval * GPUJPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
             result = 0;   
     }
-	cudaCheckError("Encoder segment allocation");
+	gpujpeg_cuda_check_error("Encoder segment allocation");
      
     // Allocate quantization tables in device memory
-    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         if ( cudaSuccess != cudaMalloc((void**)&encoder->table_quantization[comp_type].d_table, 64 * sizeof(uint16_t)) ) 
             result = 0;
     }
     // Allocate huffman tables in device memory
-    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
-        for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
-            if ( cudaSuccess != cudaMalloc((void**)&encoder->d_table_huffman[comp_type][huff_type], sizeof(struct jpeg_table_huffman_encoder)) )
+    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
+            if ( cudaSuccess != cudaMalloc((void**)&encoder->d_table_huffman[comp_type][huff_type], sizeof(struct gpujpeg_table_huffman_encoder)) )
                 result = 0;
         }
     }
-	cudaCheckError("Encoder table allocation");
+	gpujpeg_cuda_check_error("Encoder table allocation");
     
     // Init quantization tables for encoder
-    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
-        if ( jpeg_table_quantization_encoder_init(&encoder->table_quantization[comp_type], comp_type, encoder->param.quality) != 0 )
+    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        if ( gpujpeg_table_quantization_encoder_init(&encoder->table_quantization[comp_type], comp_type, encoder->param.quality) != 0 )
             result = 0;
     }
     // Init huffman tables for encoder
-    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
-        for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
-            if ( jpeg_table_huffman_encoder_init(&encoder->table_huffman[comp_type][huff_type], encoder->d_table_huffman[comp_type][huff_type], comp_type, huff_type) != 0 )
+    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
+            if ( gpujpeg_table_huffman_encoder_init(&encoder->table_huffman[comp_type][huff_type], encoder->d_table_huffman[comp_type][huff_type], comp_type, huff_type) != 0 )
                 result = 0;
         }
     }
-	cudaCheckError("Encoder table init");
+	gpujpeg_cuda_check_error("Encoder table init");
     
     // Init huffman encoder
-    if ( jpeg_huffman_gpu_encoder_init() != 0 )
+    if ( gpujpeg_huffman_gpu_encoder_init() != 0 )
         result = 0;
     
     if ( result == 0 ) {
-        jpeg_encoder_destroy(encoder);
+        gpujpeg_encoder_destroy(encoder);
         return NULL;
     }
     
@@ -153,7 +156,7 @@ jpeg_encoder_create(struct jpeg_image_parameters* param_image, struct jpeg_encod
 }
 
 void
-jpeg_encoder_print8(struct jpeg_encoder* encoder, uint8_t* d_data)
+gpujpeg_encoder_print8(struct gpujpeg_encoder* encoder, uint8_t* d_data)
 {
     int data_size = encoder->data_width * encoder->data_height;
     uint8_t* data = NULL;
@@ -171,7 +174,7 @@ jpeg_encoder_print8(struct jpeg_encoder* encoder, uint8_t* d_data)
 }
 
 void
-jpeg_encoder_print16(struct jpeg_encoder* encoder, int16_t* d_data)
+gpujpeg_encoder_print16(struct gpujpeg_encoder* encoder, int16_t* d_data)
 {
     int data_size = encoder->data_width * encoder->data_height;
     int16_t* data = NULL;
@@ -190,7 +193,7 @@ jpeg_encoder_print16(struct jpeg_encoder* encoder, int16_t* d_data)
 
 /** Documented at declaration */
 int
-jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** image_compressed, int* image_compressed_size)
+gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t** image_compressed, int* image_compressed_size)
 {    
     //TIMER_INIT();
     //TIMER_START();
@@ -199,11 +202,11 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     if ( cudaSuccess != cudaMemcpy(encoder->d_data_source, image, encoder->data_source_size * sizeof(uint8_t), cudaMemcpyHostToDevice) )
         return -1;
     
-    //jpeg_table_print(encoder->table[JPEG_COMPONENT_LUMINANCE]);
-    //jpeg_table_print(encoder->table[JPEG_COMPONENT_CHROMINANCE]);
+    //gpujpeg_table_print(encoder->table[JPEG_COMPONENT_LUMINANCE]);
+    //gpujpeg_table_print(encoder->table[JPEG_COMPONENT_CHROMINANCE]);
     
     // Preprocessing
-    if ( jpeg_preprocessor_encode(encoder) != 0 )
+    if ( gpujpeg_preprocessor_encode(encoder) != 0 )
         return -1;
         
     //TIMER_STOP_PRINT("-Preprocessing:     ");
@@ -215,9 +218,9 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
         int16_t* d_data_quantized_comp = &encoder->d_data_quantized[comp * encoder->data_width * encoder->data_height];
         
         // Determine table type
-        enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+        enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
         
-        //jpeg_encoder_print8(encoder, d_data_comp);
+        //gpujpeg_encoder_print8(encoder, d_data_comp);
         
         //Perform forward DCT
         NppiSize fwd_roi;
@@ -227,7 +230,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             d_data_comp, 
             encoder->data_width * sizeof(uint8_t), 
             d_data_quantized_comp, 
-            encoder->data_width * JPEG_BLOCK_SIZE * sizeof(int16_t), 
+            encoder->data_width * GPUJPEG_BLOCK_SIZE * sizeof(int16_t), 
             encoder->table_quantization[type].d_table, 
             fwd_roi
         );
@@ -236,14 +239,14 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             return -1;
         }
         
-        //jpeg_encoder_print16(encoder, d_data_quantized_comp);
+        //gpujpeg_encoder_print16(encoder, d_data_quantized_comp);
     }
     
     // Initialize writer output buffer current position
     encoder->writer->buffer_current = encoder->writer->buffer;
     
     // Write header
-    jpeg_writer_write_header(encoder);
+    gpujpeg_writer_write_header(encoder);
     
     //TIMER_STOP_PRINT("-DCT & Quantization:");
     //TIMER_START();
@@ -259,11 +262,11 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             int16_t* data_comp = &encoder->data_quantized[comp * encoder->param_image.width * encoder->param_image.height];
             int16_t* d_data_comp = &encoder->d_data_quantized[comp * encoder->param_image.width * encoder->param_image.height];
             // Determine table type
-            enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+            enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
             // Write scan header
-            jpeg_writer_write_scan_header(encoder, comp, type);
+            gpujpeg_writer_write_scan_header(encoder, comp, type);
             // Perform huffman coding
-            if ( jpeg_huffman_cpu_encoder_encode(encoder, type, data_comp) != 0 ) {
+            if ( gpujpeg_huffman_cpu_encoder_encode(encoder, type, data_comp) != 0 ) {
                 fprintf(stderr, "Huffman encoder on CPU failed for component at index %d!\n", comp);
                 return -1;
             }
@@ -272,28 +275,28 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
     // Perform huffman coding on GPU (when restart interval is set)
     else {
         // Perform huffman coding
-        if ( jpeg_huffman_gpu_encoder_encode(encoder) != 0 ) {
+        if ( gpujpeg_huffman_gpu_encoder_encode(encoder) != 0 ) {
             fprintf(stderr, "Huffman encoder on GPU failed!\n");
             return -1;
         }
         
         // Copy compressed data from device memory to cpu memory
-        if ( cudaSuccess != cudaMemcpy(encoder->data_compressed, encoder->d_data_compressed, encoder->segment_count * encoder->param.restart_interval * JPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
+        if ( cudaSuccess != cudaMemcpy(encoder->data_compressed, encoder->d_data_compressed, encoder->segment_count * encoder->param.restart_interval * GPUJPEG_ENCODER_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
             return -1;
         // Copy segments to device memory
-        if ( cudaSuccess != cudaMemcpy(encoder->segments, encoder->d_segments, encoder->segment_count * sizeof(struct jpeg_encoder_segment), cudaMemcpyDeviceToHost) )
+        if ( cudaSuccess != cudaMemcpy(encoder->segments, encoder->d_segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment), cudaMemcpyDeviceToHost) )
             return -1;
         
         // Write huffman coder results
         for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
             // Determine table type
-            enum jpeg_component_type type = (comp == 0) ? JPEG_COMPONENT_LUMINANCE : JPEG_COMPONENT_CHROMINANCE;
+            enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
             // Write scan header
-            jpeg_writer_write_scan_header(encoder, comp, type);
+            gpujpeg_writer_write_scan_header(encoder, comp, type);
             // Write scan data
             for ( int index = 0; index < encoder->segment_count_per_comp; index++ ) {
                 int segment_index = (comp * encoder->segment_count_per_comp + index);
-                struct jpeg_encoder_segment* segment = &encoder->segments[segment_index];
+                struct gpujpeg_encoder_segment* segment = &encoder->segments[segment_index];
                 
                 // Copy compressed data to writer
                 memcpy(
@@ -306,7 +309,7 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
             }
         }
     }
-    jpeg_writer_emit_marker(encoder->writer, JPEG_MARKER_EOI);
+    gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_EOI);
     
     //TIMER_STOP_PRINT("-Huffman Encoder:   ");
     
@@ -319,23 +322,23 @@ jpeg_encoder_encode(struct jpeg_encoder* encoder, uint8_t* image, uint8_t** imag
 
 /** Documented at declaration */
 int
-jpeg_encoder_destroy(struct jpeg_encoder* encoder)
+gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)
 {
     assert(encoder != NULL);
     
-    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         if ( encoder->table_quantization[comp_type].d_table != NULL )
             cudaFree(encoder->table_quantization[comp_type].d_table);
     }
-    for ( int comp_type = 0; comp_type < JPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
-        for ( int huff_type = 0; huff_type < JPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
+    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
             if ( encoder->d_table_huffman[comp_type][huff_type] != NULL )
                 cudaFree(encoder->d_table_huffman[comp_type][huff_type]);
         }
     }
     
     if ( encoder->writer != NULL )
-        jpeg_writer_destroy(encoder->writer);
+        gpujpeg_writer_destroy(encoder->writer);
     
     if ( encoder->d_data_source != NULL )
         cudaFree(encoder->d_data_source);

@@ -1,16 +1,19 @@
 /**
- * Copyright (c) 2011, Martin Srom
+ * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011, Silicon Genome, LLC.
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
+ *
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -24,17 +27,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JPEG_DECODER
-#define JPEG_DECODER
+#ifndef GPUJPEG_DECODER_H
+#define GPUJPEG_DECODER_H
 
-#include "jpeg_common.h"
-#include "jpeg_table.h"
-#include "jpeg_reader.h"
+#include "gpujpeg_common.h"
+#include "gpujpeg_table.h"
+#include "gpujpeg_reader.h"
 
-#define JPEG_MAX_COMPONENT_COUNT 3
+#define GPUJPEG_MAX_COMPONENT_COUNT 3
 
 /** JPEG reader scan structure */
-struct jpeg_decoder_scan
+struct gpujpeg_decoder_scan
 {
     // Index into array of segment indexes [decoder->data_scan_index] for the first byte of scan
     int segment_index;
@@ -45,24 +48,24 @@ struct jpeg_decoder_scan
 /**
  * JPEG decoder structure
  */
-struct jpeg_decoder
+struct gpujpeg_decoder
 {  
     // Parameters for image data (width, height, comp_count, etc.)
-    struct jpeg_image_parameters param_image;
+    struct gpujpeg_image_parameters param_image;
     
     // Quantization tables
-    struct jpeg_table_quantization table_quantization[JPEG_COMPONENT_TYPE_COUNT];
+    struct gpujpeg_table_quantization table_quantization[GPUJPEG_COMPONENT_TYPE_COUNT];
     
     // Huffman coder tables
-    struct jpeg_table_huffman_decoder table_huffman[JPEG_COMPONENT_TYPE_COUNT][JPEG_HUFFMAN_TYPE_COUNT];
+    struct gpujpeg_table_huffman_decoder table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
     // Huffman coder tables in device memory
-    struct jpeg_table_huffman_decoder* d_table_huffman[JPEG_COMPONENT_TYPE_COUNT][JPEG_HUFFMAN_TYPE_COUNT];
+    struct gpujpeg_table_huffman_decoder* d_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
     
     // JPEG reader structure
-    struct jpeg_reader* reader;
+    struct gpujpeg_reader* reader;
     
     // Scan definitions
-    struct jpeg_decoder_scan scan[JPEG_MAX_COMPONENT_COUNT];
+    struct gpujpeg_decoder_scan scan[GPUJPEG_MAX_COMPONENT_COUNT];
     
     // Number of used scans in current decoding image
     int scan_count;
@@ -119,8 +122,8 @@ struct jpeg_decoder
  * @param comp_count  Component count
  * @return encoder structure if succeeds, otherwise NULL
  */
-struct jpeg_decoder*
-jpeg_decoder_create(struct jpeg_image_parameters* param_image);
+struct gpujpeg_decoder*
+gpujpeg_decoder_create(struct gpujpeg_image_parameters* param_image);
 
 /**
  * Init JPEG decoder for specific image size
@@ -132,7 +135,7 @@ jpeg_decoder_create(struct jpeg_image_parameters* param_image);
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_count);
+gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, int width, int height, int comp_count);
 
 /**
  * Decompress image by decoder
@@ -145,7 +148,7 @@ jpeg_decoder_init(struct jpeg_decoder* decoder, int width, int height, int comp_
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size);
+gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size);
 
 /**
  * Destory JPEG decoder
@@ -154,6 +157,6 @@ jpeg_decoder_decode(struct jpeg_decoder* decoder, uint8_t* image, int image_size
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-jpeg_decoder_destroy(struct jpeg_decoder* decoder);
+gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder);
 
-#endif // JPEG_ENCODER
+#endif // GPUJPEG_DECODER_H
