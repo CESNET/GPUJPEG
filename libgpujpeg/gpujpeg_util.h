@@ -53,7 +53,7 @@
     cudaEventElapsedTime(&__elapsedTime, __start, __stop)
 #define GPUJPEG_TIMER_DURATION() __elapsedTime
 #define GPUJPEG_TIMER_STOP_PRINT(text) \
-    TIMER_STOP(); \
+    GPUJPEG_TIMER_STOP(); \
     printf("%s %f ms\n", text, __elapsedTime)
 	
 // CUDA check error

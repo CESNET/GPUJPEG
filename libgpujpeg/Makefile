@@ -1,12 +1,15 @@
-# Copyright (c) 2011, Martin Srom
+#
+# Copyright (c) 2011, CESNET z.s.p.o
+# Copyright (c) 2011, Silicon Genome, LLC.
+#
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
-#    # Redistributions of source code must retain the above copyright
+#     * Redistributions of source code must retain the above copyright
 #       notice, this list of conditions and the following disclaimer.
-#    # Redistributions in binary form must reproduce the above copyright
+#
+#     * Redistributions in binary form must reproduce the above copyright
 #       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
 # 
@@ -21,9 +24,10 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+#
 
 # Target executable
-TARGET := gpujpeg.so
+TARGET := libgpujpeg.so
 # C files
 CFILES := \
     gpujpeg_common.c \
@@ -44,9 +48,9 @@ CUFILES := \
 CUDA_INSTALL_PATH ?= /usr/local/cuda
 
 # Compilers
-CC := gcc
+CC := gcc -fPIC
 LINK := g++ -fPIC
-NVCC := $(CUDA_INSTALL_PATH)/bin/nvcc
+NVCC := $(CUDA_INSTALL_PATH)/bin/nvcc -Xcompiler -fPIC
 
 # Common flags
 COMMONFLAGS += -I. -I$(CUDA_INSTALL_PATH)/include -O2
@@ -57,7 +61,7 @@ NVCCFLAGS += $(COMMONFLAGS) \
 	-gencode arch=compute_20,code=sm_20 \
 	-gencode arch=compute_11,code=sm_11
 # Linker flags
-LDFLAGS +=
+LDFLAGS += -shared
 
 # Do 32bit vs. 64bit setup
 LBITS := $(shell getconf LONG_BIT)

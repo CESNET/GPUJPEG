@@ -1,16 +1,19 @@
-/* 
- * Copyright (c) 2011, Martin Srom
+/**
+ * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011, Silicon Genome, LLC.
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
+ *
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -24,7 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "gpujpeg/gpujpeg.h"
+#include "libgpujpeg/gpujpeg.h"
+#include "libgpujpeg/gpujpeg_util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,15 +40,15 @@ void
 print_help() 
 {
     printf(
-        "jpeg_compress [options] input.rgb output.jpg [input2.rgb output2.jpg...]\n"
-        "   -h, --help\t\tprint help\n"
-        "   -s, --size\t\tset image size in pixels, e.g. 1920x1080\n"
-        "   -f, --sampling-factor\t\tset image sampling factor, e.g. 4:2:2\n"
-        "   -q, --quality\tset quality level 1-100 (default 75)\n"
-        "   -r, --restart\tset restart interval (default 8)\n"
-        "   -e, --encode\t\tencode images\n"
-        "   -d, --decode\t\tdecode images\n"
-        "   -D, --device\t\tcuda device id (default 0)\n"
+        "gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
+        "   -h, --help\t\t\tprint help\n"
+        "   -s, --size\t\t\tset image size in pixels, e.g. 1920x1080\n"
+        "   -f, --sampling-factor\tset image sampling factor, e.g. 4:2:2\n"
+        "   -q, --quality\t\tset quality level 1-100 (default 75)\n"
+        "   -r, --restart\t\tset restart interval (default 8)\n"
+        "   -e, --encode\t\t\tencode images\n"
+        "   -d, --decode\t\t\tdecode images\n"
+        "   -D, --device\t\t\tcuda device id (default 0)\n"
     );
 }
 
@@ -63,12 +67,12 @@ main(int argc, char *argv[])
     };
 
     // Default image parameters
-    struct jpeg_image_parameters param_image;
-    jpeg_image_set_default_parameters(&param_image);
+    struct gpujpeg_image_parameters param_image;
+    gpujpeg_image_set_default_parameters(&param_image);
     
     // Default encoder parameters
-    struct jpeg_encoder_parameters param_encoder;
-    jpeg_encoder_set_default_parameters(&param_encoder);   
+    struct gpujpeg_encoder_parameters param_encoder;
+    gpujpeg_encoder_set_default_parameters(&param_encoder);   
     
     // Other parameters
     int encode = 0;
@@ -95,9 +99,9 @@ main(int argc, char *argv[])
             break;
         case 'f':
             if ( strcmp(optarg, "4:4:4") == 0 )
-                param_image.sampling_factor = JPEG_4_4_4;
+                param_image.sampling_factor = GPUJPEG_4_4_4;
             else if ( strcmp(optarg, "4:2:2") == 0 )
-                param_image.sampling_factor = JPEG_4_2_2;
+                param_image.sampling_factor = GPUJPEG_4_2_2;
             else
                 fprintf(stderr, "Sampling factor '%s' is not available!\n", optarg);
             break;
@@ -141,11 +145,11 @@ main(int argc, char *argv[])
     
     // Detect action if none is specified
     if ( encode == 0 && decode == 0 ) {
-        enum jpeg_image_file_format input_format = jpeg_image_get_file_format(argv[0]);
-        enum jpeg_image_file_format output_format = jpeg_image_get_file_format(argv[1]);
-        if ( input_format & IMAGE_FILE_RAW && output_format == IMAGE_FILE_JPEG ) {
+        enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(argv[0]);
+        enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(argv[1]);
+        if ( input_format & GPUJPEG_IMAGE_FILE_RAW && output_format == GPUJPEG_IMAGE_FILE_JPEG ) {
             encode = 1;
-        } else if ( input_format == IMAGE_FILE_JPEG && output_format & IMAGE_FILE_RAW ) {
+        } else if ( input_format == GPUJPEG_IMAGE_FILE_JPEG && output_format & GPUJPEG_IMAGE_FILE_RAW ) {
             decode = 1;
         } else {
             fprintf(stderr, "Action can't be recognized for specified images!\n");
@@ -155,15 +159,15 @@ main(int argc, char *argv[])
     }
     
     // Init device
-    jpeg_init_device(device_id, 1);
+    gpujpeg_init_device(device_id, 1);
     
     // Detect color spalce
-    if ( jpeg_image_get_file_format(argv[0]) == IMAGE_FILE_YUV )
-        param_image.color_space = JPEG_YUV;
+    if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV )
+        param_image.color_space = GPUJPEG_YUV;
     
     if ( encode == 1 ) {    
         // Create encoder
-        struct jpeg_encoder* encoder = jpeg_encoder_create(&param_image, &param_encoder);
+        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&param_image, &param_encoder);
         if ( encoder == NULL ) {
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
@@ -174,73 +178,73 @@ main(int argc, char *argv[])
             // Get and check input and output image
             const char* input = argv[index];
             const char* output = argv[index + 1];
-            enum jpeg_image_file_format input_format = jpeg_image_get_file_format(input);
-            enum jpeg_image_file_format output_format = jpeg_image_get_file_format(output);
-            if ( (input_format & IMAGE_FILE_RAW) == 0 ) {
+            enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
+            enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
+            if ( (input_format & GPUJPEG_IMAGE_FILE_RAW) == 0 ) {
                 fprintf(stderr, "Encoder input file [%s] should be RGB image (*.rgb)!\n", input);
                 return -1;
             }
-            if ( output_format != IMAGE_FILE_JPEG ) {
+            if ( output_format != GPUJPEG_IMAGE_FILE_JPEG ) {
                 fprintf(stderr, "Encoder output file [%s] should be JPEG image (*.jpg)!\n", output);
                 return -1;
             }                
             
             // Encode image
-            TIMER_INIT();
-            TIMER_START();
+            GPUJPEG_TIMER_INIT();
+            GPUJPEG_TIMER_START();
             
             printf("\nEncoding Image [%s]\n", input);
         
             // Load image
             int image_size = param_image.width * param_image.height * param_image.comp_count;
-            if ( param_image.sampling_factor == JPEG_4_2_2 ) {
+            if ( param_image.sampling_factor == GPUJPEG_4_2_2 ) {
                 assert(param_image.comp_count == 3);
                 image_size = image_size / 3 * 2;
             }
             uint8_t* image = NULL;
-            if ( jpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
+            if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Load Image:         ");
-            TIMER_START();
+            GPUJPEG_TIMER_STOP_PRINT("Load Image:         ");
+            GPUJPEG_TIMER_START();
                 
             // Encode image
             uint8_t* image_compressed = NULL;
             int image_compressed_size = 0;
-            if ( jpeg_encoder_encode(encoder, image, &image_compressed, &image_compressed_size) != 0 ) {
+            if ( gpujpeg_encoder_encode(encoder, image, &image_compressed, &image_compressed_size) != 0 ) {
                 fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Encode Image:       ");
-            TIMER_START();
+            GPUJPEG_TIMER_STOP_PRINT("Encode Image:       ");
+            GPUJPEG_TIMER_START();
             
             // Save image
-            if ( jpeg_image_save_to_file(output, image_compressed, image_compressed_size) != 0 ) {
+            if ( gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Save Image:         ");
+            GPUJPEG_TIMER_STOP_PRINT("Save Image:         ");
             
             printf("Compressed Size:     %d bytes [%s]\n", image_compressed_size, output);
             
             // Destroy image
-            jpeg_image_destroy(image);
+            gpujpeg_image_destroy(image);
         }
         
         // Destroy encoder
-        jpeg_encoder_destroy(encoder);
+        gpujpeg_encoder_destroy(encoder);
     }
     
     // Output sampling factor is always 4:4:4
-    param_image.sampling_factor = JPEG_4_4_4;
+    param_image.sampling_factor = GPUJPEG_4_4_4;
     
     if ( decode == 1 ) {    
         // Create decoder
-        struct jpeg_decoder* decoder = jpeg_decoder_create(&param_image);
+        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(&param_image);
         if ( decoder == NULL ) {
             fprintf(stderr, "Failed to create decoder!\n");
             return -1;
@@ -257,61 +261,61 @@ main(int argc, char *argv[])
                 input = output;
                 output = buffer_output;
             }
-            enum jpeg_image_file_format input_format = jpeg_image_get_file_format(input);
-            enum jpeg_image_file_format output_format = jpeg_image_get_file_format(output);
-            if ( input_format != IMAGE_FILE_JPEG ) {
+            enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
+            enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
+            if ( input_format != GPUJPEG_IMAGE_FILE_JPEG ) {
                 fprintf(stderr, "Encoder input file [%s] should be JPEG image (*.jpg)!\n", input);
                 return -1;
             }
-            if ( (output_format & IMAGE_FILE_RAW) == 0 ) {
+            if ( (output_format & GPUJPEG_IMAGE_FILE_RAW) == 0 ) {
                 fprintf(stderr, "Encoder output file [%s] should be RGB image (*.rgb)!\n", output);
                 return -1;
             }
             
             // Decode image
-            TIMER_INIT();
-            TIMER_START();
+            GPUJPEG_TIMER_INIT();
+            GPUJPEG_TIMER_START();
             
             printf("\nDecoding Image [%s]\n", input);
         
             // Load image
             int image_size = 0;
             uint8_t* image = NULL;
-            if ( jpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
+            if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Load Image:         ");
-            TIMER_START();
+            GPUJPEG_TIMER_STOP_PRINT("Load Image:         ");
+            GPUJPEG_TIMER_START();
                 
             // Encode image
             uint8_t* image_decompressed = NULL;
             int image_decompressed_size = 0;
-            if ( jpeg_decoder_decode(decoder, image, image_size, &image_decompressed, &image_decompressed_size) != 0 ) {
+            if ( gpujpeg_decoder_decode(decoder, image, image_size, &image_decompressed, &image_decompressed_size) != 0 ) {
                 fprintf(stderr, "Failed to decode image [%s]!\n", argv[index]);
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Decode Image:       ");
-            TIMER_START();
+            GPUJPEG_TIMER_STOP_PRINT("Decode Image:       ");
+            GPUJPEG_TIMER_START();
             
             // Save image
-            if ( jpeg_image_save_to_file(output, image_decompressed, image_decompressed_size) != 0 ) {
+            if ( gpujpeg_image_save_to_file(output, image_decompressed, image_decompressed_size) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
                 return -1;
             }
             
-            TIMER_STOP_PRINT("Save Image:         ");
+            GPUJPEG_TIMER_STOP_PRINT("Save Image:         ");
             
             printf("Decompressed Size:   %d bytes [%s]\n", image_decompressed_size, output);
             
             // Destroy image
-            jpeg_image_destroy(image);
+            gpujpeg_image_destroy(image);
         }
         
         // Destroy decoder
-        jpeg_decoder_destroy(decoder);
+        gpujpeg_decoder_destroy(decoder);
     }
     
 	return 0;

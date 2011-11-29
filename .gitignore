@@ -1,3 +1,5 @@
-jpeg_compress
+gpujpeg
+gpujpeg.sh
+libgpujpeg/libgpujpeg.so
 *.o
 *.rgb

@@ -198,8 +198,8 @@ gpujpeg_decoder_print16(struct gpujpeg_decoder* decoder, int16_t* d_data)
 int
 gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size)
 {    
-    //TIMER_INIT();
-    //TIMER_START();
+    //GPUJPEG_TIMER_INIT();
+    //GPUJPEG_TIMER_START();
     
     // Read JPEG image data
     if ( gpujpeg_reader_read_image(decoder, image, image_size) != 0 ) {
@@ -207,8 +207,8 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         return -1;
     }
     
-    //TIMER_STOP_PRINT("-Stream Reader:     ");
-    //TIMER_START();
+    //GPUJPEG_TIMER_STOP_PRINT("-Stream Reader:     ");
+    //GPUJPEG_TIMER_START();
     
     // Perform huffman decoding on CPU (when restart interval is not set)
     if ( decoder->restart_interval == 0 ) {
@@ -250,8 +250,8 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         }
     }
     
-    //TIMER_STOP_PRINT("-Huffman Decoder:   ");
-    //TIMER_START();
+    //GPUJPEG_TIMER_STOP_PRINT("-Huffman Decoder:   ");
+    //GPUJPEG_TIMER_START();
     
     // Perform IDCT and dequantization
     for ( int comp = 0; comp < decoder->param_image.comp_count; comp++ ) {
@@ -284,14 +284,14 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         //gpujpeg_decoder_print8(decoder, d_data_comp);
     }
     
-    //TIMER_STOP_PRINT("-DCT & Quantization:");
-    //TIMER_START();
+    //GPUJPEG_TIMER_STOP_PRINT("-DCT & Quantization:");
+    //GPUJPEG_TIMER_START();
     
     // Preprocessing
     if ( gpujpeg_preprocessor_decode(decoder) != 0 )
         return -1;
         
-    //TIMER_STOP_PRINT("-Postprocessing:    ");
+    //GPUJPEG_TIMER_STOP_PRINT("-Postprocessing:    ");
     
     cudaMemcpy(decoder->data_target, decoder->d_data_target, decoder->data_target_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
     

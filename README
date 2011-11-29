@@ -1,7 +1,8 @@
-jpeg-codec - JPEG encoder and decoder library and console application
+GPUJPEG
+  JPEG encoder and decoder library and console application.
 
 AUTHOR:
-Martin Srom
+  Martin Srom, CESNET z.s.p.o
 
 DESCRIPTION:
   The first test implementation of the JPEG image compression standard for NVIDIA GPUs 
@@ -32,7 +33,7 @@ OVERVIEW:
    -GPU: 
       -Preprocessing/Postprocessing (color component parsing, color transformation RGB <-> YCbCr)
       -Forward/Inverse DCT (Discrete cosine transform) implementation from NVIDIA
-       npp library (NVIDIA Performance Primitives)
+       NPP library (NVIDIA Performance Primitives)
       -Huffman encoder/decoder (when restart flags are enabled)  
 
 PERFORMANCE:
@@ -73,10 +74,10 @@ Decoding:
      100 | 
      
 USAGE:
-  ...
+  TODO:
 
-jpeg-codec library:
-  ...
+gpujpeg library:
+  TODO:
 
-jpeg-codec application:
-  ...
+gpujpeg console application:
+  TODO:
