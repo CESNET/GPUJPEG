@@ -51,12 +51,13 @@ build: $(TARGET) $(TARGET).sh
 # Clean
 clean:
 	rm -f *.o $(TARGET) $(TARGET).sh
+	@cd libgpujpeg; make clean
 
 # Lists of object files
 COBJS=$(CFILES:.c=.c.o)
 
 # Build target
-$(TARGET): $(COBJS)
+$(TARGET): $(COBJS) libgpujpeg/libgpujpeg.so 
 	$(LINK) $(COBJS) $(LDFLAGS) -o $(TARGET);    
     
 # Build target run script
@@ -69,6 +70,10 @@ $(TARGET).sh:
 	@printf "PATH/gpujpeg\n" >> $(TARGET).sh
 	@chmod a+x $(TARGET).sh
 
+# Build gpujpeg library
+libgpujpeg/libgpujpeg.so:
+	@cd libgpujpeg; make
+    
 # Pattern rule for compiling C files
 %.c.o: %.c 
 	$(CC) $(CFLAGS) -c $< -o $@
