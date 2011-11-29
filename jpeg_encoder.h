@@ -62,8 +62,18 @@ struct jpeg_encoder
     // Parameters for image data (width, height, comp_count, etc.)
     struct jpeg_image_parameters param_image;
     
+    // Source image data coefficient count
+    int data_source_size;
+    
     // Source image data in device memory (loaded from file)
     uint8_t* d_data_source;
+    
+    // Allocated data width
+    int data_width;
+    // Allocated data height
+    int data_height;
+    // Allocated data coefficient count
+    int data_size;
     
     // Preprocessed data in device memory (output from preprocessor)
     uint8_t* d_data;
