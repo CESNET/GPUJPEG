@@ -74,10 +74,21 @@ Decoding:
      100 | 
      
 USAGE:
+  1) gpujpeg library:
+    TODO:
+  2) gpujpeg console application:
+    TODO:
+
+LICENSE:
+  It uses NVIDIA Performance Primitives library [3].
+  Code is based on SiGenGPU [4].
+
+KNOWN BUGS:
   TODO:
 
-gpujpeg library:
-  TODO:
-
-gpujpeg console application:
-  TODO:
+REFERENCES:
+  [1] http://www.w3.org/Graphics/JPEG/itu-t81.pdf
+  [2] http://www.ijg.org/
+  [3] http://developer.download.nvidia.com/compute/cuda/4_0_rc2/toolkit/docs/NPP_Library.pdf
+  [4] https://github.com/silicongenome/SiGenGPU
+  
