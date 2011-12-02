@@ -1,5 +1,5 @@
 GPUJPEG
-  JPEG encoder and decoder library and console application.
+  JPEG encoder and decoder library and console application for NVIDIA GPUs.
 
 AUTHOR:
   Martin Srom, CESNET z.s.p.o
@@ -11,20 +11,20 @@ used for real-time transmission of high-definition video.
 OVERVIEW:
 -It uses NVIDIA CUDA platform.
 -Not optimized yet (it is only the first test implementation).
--Encoder and Decoder use Huffman coder for entropy encoding/decoding.
+-Encoder and decoder use Huffman coder for entropy encoding/decoding.
 -Encoder produces baseline JPEG codestream which consists of proper codestream headers and one scan 
  for each color component without subsampling and it uses restart flags that allows fast parallel encoding. 
  The quality of encoded images can be specified by value 0-100 as standard defines.
 -Decoder can decompress only JPEG codestreams that contains separate scan for each color component 
- which aren't subsampled. If scan contains restart flags, decoder can use parallelism for fast decoding.
--Encoding/Decoding is divided into following phases:
+ which isn't subsampled. If scan contains restart flags, decoder can use parallelism for fast decoding.
+-Encoding/Decoding of JPEG codestream is divided into following phases:
    Encoding:                       Decoding
    1) Input data loading           1) Input data loading
    2) Preprocessing                2) Parsing codestream 
    3) Forward DCT                  3) Huffman decoder
    4) Huffman encoder              4) Inverse DCT
    5) Formatting codestream        5) Postprocessing
- and they are implemented on CPU or/and GPU:
+ and they are implemented on CPU or/and GPU as follows:
    -CPU: 
       -Input data loading
       -Parsing codestream
@@ -32,13 +32,13 @@ OVERVIEW:
       -Output data formatting
    -GPU: 
       -Preprocessing/Postprocessing (color component parsing, color transformation RGB <-> YCbCr)
-      -Forward/Inverse DCT (Discrete cosine transform) implementation from NVIDIA
+      -Forward/Inverse DCT (discrete cosine transform), implementation from NVIDIA
        NPP library (NVIDIA Performance Primitives)
       -Huffman encoder/decoder (when restart flags are enabled)  
 
 PERFORMANCE:
-  Following tables summarizes encoding/decoding performance using GTX 580 for different quality 
-settings (time, PSNR and size values are averages of encoding several images, each of them 
+  Following tables summarizes encoding/decoding performance using NVIDIA GTX 580 for different quality 
+settings (time, PSNR and encoded size values are averages of encoding several images, each of them 
 multiple times):
 
 Encoding:
@@ -46,45 +46,100 @@ Encoding:
  --------+----------------------------------+---------------------------------
  quality | duration |     psnr |       size | duration |     psnr |       size
  --------+----------+----------+------------+---------------------------------
-      10 | 26.57 ms | 30.08 dB |  497.00 kB |  6.62 ms | 28.15 dB |  135.50 kB 
-      20 | 26.68 ms | 33.32 dB |  607.50 kB |  6.68 ms | 31.14 dB |  174.00 kB 
-      30 | 26.76 ms | 35.83 dB |  732.00 kB |  6.73 ms | 32.68 dB |  209.50 kB 
-      40 | 26.83 ms | 36.86 dB |  823.50 kB |  6.78 ms | 33.70 dB |  239.50 kB 
-      50 | 26.96 ms | 37.70 dB |  914.50 kB |  6.81 ms | 34.58 dB |  269.50 kB 
-      60 | 27.00 ms | 38.41 dB | 1018.00 kB |  6.88 ms | 35.44 dB |  303.00 kB 
-      70 | 27.13 ms | 39.57 dB | 1176.00 kB |  6.94 ms | 36.62 dB |  355.00 kB 
-      80 | 27.29 ms | 40.71 dB | 1442.50 kB |  7.00 ms | 38.01 dB |  440.50 kB 
-      90 | 27.78 ms | 42.42 dB | 2069.50 kB |  7.12 ms | 40.25 dB |  650.50 kB 
-     100 | 34.69 ms | 46.49 dB | 6650.00 kB |  9.20 ms | 46.34 dB | 2126.50 kB
-     
+      10 | 26.79 ms | 29.33 dB |  539.30 kB |  6.71 ms | 27.41 dB |  145.90 kB
+      20 | 26.91 ms | 32.70 dB |  697.20 kB |  6.74 ms | 30.32 dB |  198.30 kB
+      30 | 27.17 ms | 34.63 dB |  850.60 kB |  6.84 ms | 31.92 dB |  243.60 kB
+      40 | 27.19 ms | 35.97 dB |  958.90 kB |  6.89 ms | 32.99 dB |  282.20 kB
+      50 | 27.29 ms | 36.94 dB | 1073.30 kB |  6.92 ms | 33.82 dB |  319.10 kB
+      60 | 27.39 ms | 37.96 dB | 1217.10 kB |  6.95 ms | 34.65 dB |  360.00 kB
+      70 | 27.51 ms | 39.22 dB | 1399.20 kB |  7.04 ms | 35.71 dB |  422.10 kB
+      80 | 27.76 ms | 40.67 dB | 1710.00 kB |  7.13 ms | 37.15 dB |  526.70 kB
+      90 | 28.36 ms | 42.83 dB | 2441.40 kB |  7.32 ms | 39.84 dB |  768.40 kB
+     100 | 35.47 ms | 47.09 dB | 7798.70 kB |  9.31 ms | 47.21 dB | 2499.60 kB
+
 Decoding:
          |           4k (4096x2160)         |         HD (1920x1080)
  --------+----------------------------------+---------------------------------
  quality | duration |     psnr |       size | duration |     psnr |       size
- --------+----------+----------+------------+---------------------------------
-      10 | 
-      20 | 
-      30 | 
-      40 | 
-      50 | 
-      60 | 
-      70 | 
-      80 | 
-      90 | 
-     100 | 
+ --------+----------+----------+------------+---------------------------------	
+      10 | 10.28 ms | 29.33 dB |  539.30 kB |  3.13 ms | 27.41 dB |  145.90 kB
+      20 | 11.31 ms | 32.70 dB |  697.20 kB |  3.59 ms | 30.32 dB |  198.30 kB
+      30 | 12.36 ms | 34.63 dB |  850.60 kB |  3.97 ms | 31.92 dB |  243.60 kB
+      40 | 12.90 ms | 35.97 dB |  958.90 kB |  4.28 ms | 32.99 dB |  282.20 kB
+      50 | 13.45 ms | 36.94 dB | 1073.30 kB |  4.56 ms | 33.82 dB |  319.10 kB
+      60 | 14.71 ms | 37.96 dB | 1217.10 kB |  4.81 ms | 34.65 dB |  360.00 kB
+      70 | 15.03 ms | 39.22 dB | 1399.20 kB |  5.24 ms | 35.71 dB |  422.10 kB
+      80 | 16.64 ms | 40.67 dB | 1710.00 kB |  5.89 ms | 37.15 dB |  526.70 kB
+      90 | 19.99 ms | 42.83 dB | 2441.40 kB |  7.48 ms | 39.84 dB |  768.40 kB
+     100 | 46.45 ms | 47.09 dB | 7798.70 kB | 16.42 ms | 47.21 dB | 2499.60 kB
      
 USAGE:
-  1) gpujpeg library:
-    TODO:
-  2) gpujpeg console application:
-    TODO:
+  1) LIBGPUJPEG LIBRARY:
+      To build libgpujpeg library check REQUIREMENTS and go to gpujpeg/libgpujpeg/ directory and run 
+    'make' command.
+    
+  2) GPUJPEG CONSOLE APPLICATION:
+      Console application gpujpeg uses libgpujpeg library to demonstrate it's functions. To build 
+    console application check REQUIREMENTS and go to gpujpeg directory (where README and LICENSE files 
+    are placed) and run 'make' command. It builds libgpugjpeg library in subdirectory ./libgpujpeg/ and
+    it creates executable file ./gpujpeg and run script ./gpujpeg.sh, which runs executable file linked to
+    runtime library libgpujpeg.so (which is placed in ./libgpujpeg/ subdirectory).
+      To encode image from raw RGB image file to JPEG image file use following command:
+      
+      ./gpujpeg.sh --encode --size=WIDTHxHEIGHT --quality=QUALITY INPUT_IMAGE.rgb OUTPUT_IMAGE.jpg
+      
+    You must specify image size by --size=WIDTHxHEIGHT parameter. Optionally you can specify desired output 
+    quality by parameter --quality=QUALITY which accepts values 1-100. Console application accepts a few more 
+    parameters and you can list them by folling command:
+    
+      ./gpujpeg.sh --help
+      
+    To decode image from JPEG image file to raw RGB image file use following command:
+      
+      ./gpujpeg.sh --decode OUTPUT_IMAGE.jpg INPUT_IMAGE.rgb
+      
+    You can also encode and decode image to test the console application:
+      
+      ./gpujpeg.sh --encode --decode --size=WIDTHxHEIGHT --quality=QUALITY INPUT_IMAGE.rgb OUTPUT_IMAGE.jpg
+      
+    Decoder will create new decoded file OUTPUT_IMAGE.jpg.decoded.rgb and do not overwrite your INPUT_IMAGE.rgb file.
+      Console application is able to load raw RGB image file data from *.rgb files and raw YUV and YUV422 data from *.yuv
+    files. For YUV422 you must specify *.yuv file and use '--sampling-factor=4:2:2' parameter.
+    All supported parameters for console application are following:
+      --help
+          Prints console application help
+      --size=1920x1080
+          Input image size in pixels, e.g. 1920x1080
+      --sampling-factor=4:4:4
+          Input image sampling factor (supported are '4:4:4' and '4:2:2')
+      --quality
+          Set output quality level 1-100 (default 75)
+      --restart=8
+          Set restart interval for encoder, number of MCUs between restart markers
+      --encode
+          Encode images
+      --decode
+          Decode images
+      --device=0
+          By using this parameter you can specify CUDA device id which will be used for encoding/decoding.
+    
+    Restart interval is important for parallel huffman encoding and decoding. When '--restart=N' is used (default is 8), 
+    the coder can process each N MCUs independently, and so he can code each N MCUs in parallel. When '--restart=0' 
+    is specified, restart interval is disabled and the coder must use CPU version of huffman coder (because on GPU would
+    run only one thread, which is very slow).
+    
+REQUIREMENTS:
+  To be able to build and run libgpujpeg library and gpujpeg console application you need:
+  1) CUDA Toolkit (http://developer.nvidia.com/cuda-toolkit) with NPP installed, default installation path
+     is /usr/local/cuda. If you have the CUDA installed somewhere else, you need to specify it by 
+     environment variable CUDA_INSTALL_PATH or in Makefiles by CUDA_INSTALL_PATH variable.
+  2) NVIDIA developer drivers
+  3) CUDA enabled NVIDIA GPU
 
 LICENSE:
-  It uses NVIDIA Performance Primitives library [3].
-  Code is based on SiGenGPU [4].
-
-KNOWN BUGS:
-  TODO:
+  See file LICENSE.
+  This software uses NVIDIA Performance Primitives library [3].
+  This software source code is based on SiGenGPU [4].
 
 REFERENCES:
   [1] http://www.w3.org/Graphics/JPEG/itu-t81.pdf

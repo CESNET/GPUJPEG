@@ -67,7 +67,8 @@ $(TARGET).sh:
 	@printf "0)\n" >> $(TARGET).sh
 	@printf "LD_LIBRARY_PATH=$$" >> $(TARGET).sh
 	@printf "PATH/libgpujpeg $$" >> $(TARGET).sh
-	@printf "PATH/gpujpeg\n" >> $(TARGET).sh
+	@printf "PATH/gpujpeg $$" >> $(TARGET).sh
+	@printf "@\n" >> $(TARGET).sh
 	@chmod a+x $(TARGET).sh
 
 # Build gpujpeg library
