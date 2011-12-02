@@ -163,7 +163,7 @@ main(int argc, char *argv[])
     
     // Detect color spalce
     if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV )
-        param_image.color_space = GPUJPEG_YUV;
+        param_image.color_space = GPUJPEG_YCBCR_ITU_R;
     
     if ( encode == 1 ) {    
         // Create encoder
@@ -257,7 +257,10 @@ main(int argc, char *argv[])
             const char* output = argv[index + 1];
             if ( encode == 1 ) {
                 static char buffer_output[255];
-                sprintf(buffer_output, "%s.decoded.rgb", output);
+                if ( param_image.color_space == GPUJPEG_YCBCR_ITU_R )
+                    sprintf(buffer_output, "%s.decoded.yuv", output);
+                else
+                    sprintf(buffer_output, "%s.decoded.rgb", output);
                 input = output;
                 output = buffer_output;
             }

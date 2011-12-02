@@ -55,9 +55,9 @@ struct gpujpeg_color_transform<color_space, color_space> {
     }
 };
 
-/** Specialization [color_space_from = GPUJPEG_RGB, color_space_to = GPUJPEG_YCBCR] */
+/** Specialization [color_space_from = GPUJPEG_RGB, color_space_to = GPUJPEG_YCBCR_JPEG] */
 template<>
-struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR> {
+struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_JPEG> {
     /** RGB -> YCbCr transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
@@ -70,19 +70,21 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR> {
     }
 };
 
-/** Specialization [color_space_from = GPUJPEG_YUV, color_space_to = GPUJPEG_YCBCR] */
+/** Specialization [color_space_from = GPUJPEG_YCBCR_ITU_R, color_space_to = GPUJPEG_YCBCR_JPEG] */
 template<>
-struct gpujpeg_color_transform<GPUJPEG_YUV, GPUJPEG_YCBCR> {
+struct gpujpeg_color_transform<GPUJPEG_YCBCR_ITU_R, GPUJPEG_YCBCR_JPEG> {
     /** YUV -> YCbCr transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
-        // Do nothing
+        c1 -= 16;
+        // Check minimum value 0
+        c1 = (c1 >= 0.0f) ? c1 : 0.0f;
     }
 };
 
-/** Specialization [color_space_from = GPUJPEG_YCBCR, color_space_to = GPUJPEG_RGB] */
+/** Specialization [color_space_from = GPUJPEG_YCBCR_JPEG, color_space_to = GPUJPEG_RGB] */
 template<>
-struct gpujpeg_color_transform<GPUJPEG_YCBCR, GPUJPEG_RGB> {
+struct gpujpeg_color_transform<GPUJPEG_YCBCR_JPEG, GPUJPEG_RGB> {
     /** YCbCr -> RGB transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
@@ -105,13 +107,15 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR, GPUJPEG_RGB> {
     }
 };
 
-/** Specialization [color_space_from = GPUJPEG_YCBCR, color_space_to = GPUJPEG_YUV] */
+/** Specialization [color_space_from = GPUJPEG_YCBCR_JPEG, color_space_to = GPUJPEG_YCBCR_ITU_R] */
 template<>
-struct gpujpeg_color_transform<GPUJPEG_YCBCR, GPUJPEG_YUV> {
+struct gpujpeg_color_transform<GPUJPEG_YCBCR_JPEG, GPUJPEG_YCBCR_ITU_R> {
     /** YCbCr -> YUV transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
-        // Do nothing
+        c1 += 16;
+        // Check maximum value 255
+        c1 = (c1 <= 255.0) ? c1 : 255.0f;
     }
 };
 
@@ -152,7 +156,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(uint8_t* d_c1, uint8_t* d_c2, uint
     float r2 = (float)(s_data[offset + 1]);
     float r3 = (float)(s_data[offset + 2]);
     // Color transform
-    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR_JPEG>::perform(r1, r2, r3);
     // Store
     int image_position = gX + x;
     if ( image_position < (image_width * image_height) ) {
@@ -193,7 +197,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(uint8_t* d_c1, uint8_t* d_c2, uint
         r3 = (float)(s_data[offset]);
     }
     // Color transform
-    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR_JPEG>::perform(r1, r2, r3);
     // Store
     int image_position = gX + x;
     if ( image_position < (image_width * image_height) ) {
@@ -219,11 +223,11 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_encoder* encoder)
         return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_RGB>;
     } 
     // YUV color space
-    else if ( encoder->param_image.color_space == GPUJPEG_YUV ) {
+    else if ( encoder->param_image.color_space == GPUJPEG_YCBCR_ITU_R ) {
         if ( encoder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
-            return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_YUV>;
+            return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_YCBCR_ITU_R>;
         } else if ( encoder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
-            return &gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2<GPUJPEG_YUV>;
+            return &gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2<GPUJPEG_YCBCR_ITU_R>;
         } else {
             assert(false);
         }
@@ -304,7 +308,7 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(const uint8_t* d_c1, const uint8_t
     float r2 = (float)(d_c2[data_position]);
     float r3 = (float)(d_c3[data_position]);
     // Color transform
-    gpujpeg_color_transform<GPUJPEG_YCBCR, color_space>::perform(r1, r2, r3);
+    gpujpeg_color_transform<GPUJPEG_YCBCR_JPEG, color_space>::perform(r1, r2, r3);
     // Save
     d_target[image_position + 0] = (uint8_t)r1;
     d_target[image_position + 1] = (uint8_t)r2;
@@ -326,9 +330,9 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_decoder* decoder)
         return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_RGB>;
     } 
     // YUV color space
-    else if ( decoder->param_image.color_space == GPUJPEG_YUV ) {
+    else if ( decoder->param_image.color_space == GPUJPEG_YCBCR_ITU_R ) {
         assert(decoder->param_image.sampling_factor == GPUJPEG_4_4_4);
-        return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_YUV>;
+        return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_YCBCR_ITU_R>;
     }
     // Unknown color space
     else {
