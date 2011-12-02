@@ -39,8 +39,8 @@ static const int GPUJPEG_BLOCK_SIZE = 8;
  */
 enum gpujpeg_color_space {
     GPUJPEG_RGB = 1,
-    GPUJPEG_YUV = 2,
-    GPUJPEG_YCBCR = 3,
+    GPUJPEG_YCBCR_ITU_R = 2,
+    GPUJPEG_YCBCR_JPEG = 3,
 };
 
 /**
