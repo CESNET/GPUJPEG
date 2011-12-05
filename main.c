@@ -29,12 +29,7 @@
 
 #include "libgpujpeg/gpujpeg.h"
 #include "libgpujpeg/gpujpeg_util.h"
-
-#include <stdio.h>
-#include <stdlib.h>
 #include <getopt.h>
-#include <string.h>
-#include <strings.h>
 
 void
 print_help() 
@@ -64,6 +59,7 @@ main(int argc, char *argv[])
         {"encode",          no_argument,       0, 'e'},
         {"decode",          no_argument,       0, 'd'},
         {"device",          required_argument, 0, 'D'},
+        0
     };
 
     // Default image parameters

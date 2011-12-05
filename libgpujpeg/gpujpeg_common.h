@@ -84,7 +84,7 @@ gpujpeg_init_device(int device_id, int verbose);
  * Get image file format from filename
  *
  * @param filename  Filename of image file
- * @return image_file_format or IMAGE_FILE_UNKNOWN if type cannot be determined
+ * @return image_file_format or GPUJPEG_IMAGE_FILE_UNKNOWN if type cannot be determined
  */
 enum gpujpeg_image_file_format
 gpujpeg_image_get_file_format(const char* filename);
