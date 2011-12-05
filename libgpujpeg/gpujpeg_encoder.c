@@ -49,6 +49,7 @@ struct gpujpeg_encoder*
 gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_parameters* param)
 {
     assert(param_image->comp_count == 3);
+    assert(param->quality >= 0 && param->quality <= 100);
     
     struct gpujpeg_encoder* encoder = malloc(sizeof(struct gpujpeg_encoder));
     if ( encoder == NULL )

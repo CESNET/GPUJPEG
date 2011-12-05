@@ -37,6 +37,8 @@
 struct gpujpeg_decoder*
 gpujpeg_decoder_create(struct gpujpeg_image_parameters* param_image)
 {
+    assert(param_image->sampling_factor == GPUJPEG_4_4_4);
+    
     struct gpujpeg_decoder* decoder = malloc(sizeof(struct gpujpeg_decoder));
     if ( decoder == NULL )
         return NULL;

@@ -44,7 +44,7 @@ print_help()
         "   -h, --help\t\t\tprint help\n"
         "   -s, --size\t\t\tset image size in pixels, e.g. 1920x1080\n"
         "   -f, --sampling-factor\tset image sampling factor, e.g. 4:2:2\n"
-        "   -q, --quality\t\tset quality level 1-100 (default 75)\n"
+        "   -q, --quality\t\tset quality level 0-100 (default 75)\n"
         "   -r, --restart\t\tset restart interval (default 8)\n"
         "   -e, --encode\t\t\tencode images\n"
         "   -d, --decode\t\t\tdecode images\n"
@@ -107,8 +107,8 @@ main(int argc, char *argv[])
             break;
         case 'q':
             param_encoder.quality = atoi(optarg);
-            if ( param_encoder.quality <= 0 )
-                param_encoder.quality = 1;
+            if ( param_encoder.quality < 0 )
+                param_encoder.quality = 0;
             if ( param_encoder.quality > 100 )
                 param_encoder.quality = 100;
             break;
