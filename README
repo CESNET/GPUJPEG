@@ -5,18 +5,20 @@ AUTHOR:
   Martin Srom, CESNET z.s.p.o
 
 DESCRIPTION:
-  The first test implementation of the JPEG image compression standard for NVIDIA GPUs 
-used for real-time transmission of high-definition video.
+  The first test implementation of the JPEG image compression standard for 
+NVIDIA GPUs used for real-time transmission of high-definition video.
 
 OVERVIEW:
 -It uses NVIDIA CUDA platform.
 -Not optimized yet (it is only the first test implementation).
 -Encoder and decoder use Huffman coder for entropy encoding/decoding.
--Encoder produces baseline JPEG codestream which consists of proper codestream headers and one scan 
- for each color component without subsampling and it uses restart flags that allows fast parallel encoding. 
- The quality of encoded images can be specified by value 0-100.
--Decoder can decompress only JPEG codestreams that contains separate scan for each color component 
- which isn't subsampled. If scan contains restart flags, decoder can use parallelism for fast decoding.
+-Encoder produces baseline JPEG codestream which consists of proper codestream
+ headers and one scan for each color component without subsampling and it uses
+ restart flags that allows fast parallel encoding. The quality of encoded 
+ images can be specified by value 0-100.
+-Decoder can decompress only JPEG codestreams that contains separate scan for 
+ each color component which isn't subsampled. If scan contains restart flags, 
+ decoder can use parallelism for fast decoding.
 -Encoding/Decoding of JPEG codestream is divided into following phases:
    Encoding:                       Decoding
    1) Input data loading           1) Input data loading
@@ -31,15 +33,16 @@ OVERVIEW:
       -Huffman encoder/decoder (when restart flags are disabled)
       -Output data formatting
    -GPU: 
-      -Preprocessing/Postprocessing (color component parsing, color transformation RGB <-> YCbCr)
-      -Forward/Inverse DCT (discrete cosine transform), implementation from NVIDIA
-       NPP library (NVIDIA Performance Primitives)
+      -Preprocessing/Postprocessing (color component parsing, 
+       color transformation RGB <-> YCbCr)
+      -Forward/Inverse DCT (discrete cosine transform), implementation 
+       from NVIDIA NPP library (NVIDIA Performance Primitives)
       -Huffman encoder/decoder (when restart flags are enabled)  
 
 PERFORMANCE:
-  Following tables summarizes encoding/decoding performance using NVIDIA GTX 580 for different quality 
-settings (time, PSNR and encoded size values are averages of encoding several images, each of them 
-multiple times):
+  Following tables summarizes encoding/decoding performance using NVIDIA 
+GTX 580 for different quality settings (time, PSNR and encoded size values are
+averages of encoding several images, each of them multiple times):
 
 Encoding:
          |           4k (4096x2160)         |         HD (1920x1080)
@@ -75,158 +78,186 @@ Decoding:
      
 USAGE:
   1) LIBGPUJPEG LIBRARY:
-      To build libgpujpeg library check REQUIREMENTS and go to gpujpeg/libgpujpeg/ directory and run 
-    'make' command. The shared library object ./libgpujpeg.so will be build.
-      To use library in your project you have to include library to your sources and linked shared
-    library object to your executable:
+      To build libgpujpeg library check REQUIREMENTS and go to 
+    gpujpeg/libgpujpeg/ directory and run 'make' command. The shared library 
+    object ./libgpujpeg.so will be build.
+      To use library in your project you have to include library to your 
+    sources and linked shared library object to your executable:
       
       #include "libgpujpeg/gpujpeg.h"
       
     ENCODING:
-      For encoding by libgpujpeg library you have to declare two structures and set 
-    proper values to them. The first is structure with parameters of input image, 
-    and the second is definition of encoding parameters:
-    
-        #include "libgpujpeg/gpujpeg.h"
+      For encoding by libgpujpeg library you have to declare two structures
+    and set proper values to them. The first is structure with parameters 
+    of input image, and the second is definition of encoding parameters:
       
-        struct gpujpeg_image_parameters param_image;
-        gpujpeg_image_set_default_parameters(&param_image);
-        param_image->width = 1920;
-        param_image->height = 1080;
-        param_image->comp_count = 3;
-        // (for now, it must be 3)
-        param_image->color_space = GPUJPEG_RGB; 
-        // or GPUJPEG_YCBCR_ITU_R or GPUJPEG_YCBCR_JPEG
-        // (default value is GPUJPEG_RGB)
-        param_image.sampling_factor = GPUJPEG_4_4_4;
-        // or GPUJPEG_4_2_2
-        // (default value is GPUJPEG_4_4_4 )
-    
-        struct gpujpeg_encoder_parameters param_encoder;
-        gpujpeg_encoder_set_default_parameters(&param_encoder);   
-        param_encoder.quality = 80; 
-        // (default value is 75)
-        param_encoder.restart_interval = 16; 
-        // (default value is 8)
+      struct gpujpeg_image_parameters param_image;
+      gpujpeg_image_set_default_parameters(&param_image);
+      param_image->width = 1920;
+      param_image->height = 1080;
+      param_image->comp_count = 3;
+      // (for now, it must be 3)
+      param_image->color_space = GPUJPEG_RGB; 
+      // or GPUJPEG_YCBCR_ITU_R or GPUJPEG_YCBCR_JPEG
+      // (default value is GPUJPEG_RGB)
+      param_image.sampling_factor = GPUJPEG_4_4_4;
+      // or GPUJPEG_4_2_2
+      // (default value is GPUJPEG_4_4_4 )
+  
+      struct gpujpeg_encoder_parameters param_encoder;
+      gpujpeg_encoder_set_default_parameters(&param_encoder);   
+      param_encoder.quality = 80; 
+      // (default value is 75)
+      param_encoder.restart_interval = 16; 
+      // (default value is 8)
         
     Next you have to initialize CUDA device by calling:
       
-        gpujpeg_init_device(device_id, 0);
+      gpujpeg_init_device(device_id, 0);
         
-    where first parameters is CUDA device id and second parameter is flag if verbose output should be 
-    used (0 or 1). Next step is to create encoder:
+    where first parameters is CUDA device id and second parameter is flag if 
+    verbose output should be used (0 or 1). Next step is to create encoder:
     
-        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&param_image, &param_encoder);
-        if ( encoder == NULL )
-            return -1;
+      struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&param_image, 
+          &param_encoder);
+      if ( encoder == NULL )
+          return -1;
         
-    When creating encoder, library allocates all device buffers which will be needed for image encoding
-    and when you encode concrete image, they are already allocated and encoder will used them for every image.
-    Now we need raw image data that we can encode by encoder, for example we can load it from file:
+    When creating encoder, library allocates all device buffers which will be 
+    needed for image encoding and when you encode concrete image, they are 
+    already allocated and encoder will used them for every image. Now we need 
+    raw image data that we can encode by encoder, for example we can load it 
+    from file:
     
-        int image_size = 0;
-        uint8_t* image = NULL;
-        if ( gpujpeg_image_load_from_file("input_image.rgb", &image, &image_size) != 0 )
-            return -1;
+      int image_size = 0;
+      uint8_t* image = NULL;
+      if ( gpujpeg_image_load_from_file("input_image.rgb", &image, 
+               &image_size) != 0 )
+          return -1;
             
-    Next step is to encode uncompressed image data to JPEG compressed data by encoder:
+    Next step is to encode uncompressed image data to JPEG compressed data 
+    by encoder:
     
-        uint8_t* image_compressed = NULL;
-        int image_compressed_size = 0;
-        if ( gpujpeg_encoder_encode(encoder, image, &image_compressed, &image_compressed_size) != 0 )
-            return -1;
+      uint8_t* image_compressed = NULL;
+      int image_compressed_size = 0;
+      if ( gpujpeg_encoder_encode(encoder, image, &image_compressed, 
+               &image_compressed_size) != 0 )
+          return -1;
             
-    Compressed data are placed in internal encoder buffer so we have to save them somewhere else before we start encoding
-    next image, for example we can save them to file:
+    Compressed data are placed in internal encoder buffer so we have to save 
+    them somewhere else before we start encoding next image, for example we 
+    can save them to file:
             
-        if ( gpujpeg_image_save_to_file("output_image.jpg", image_compressed, image_compressed_size) != 0 )
-            return -1;
+      if ( gpujpeg_image_save_to_file("output_image.jpg", image_compressed, 
+               image_compressed_size) != 0 )
+          return -1;
             
-    Now we can load, encode and save next image or finish and move to clean up encoder.
-    Finally we have to clean up so destroy loaded image and destroy the encoder.
+    Now we can load, encode and save next image or finish and move to clean up
+    encoder. Finally we have to clean up so destroy loaded image and destroy 
+    the encoder.
     
-        gpujpeg_image_destroy(image);
-        gpujpeg_encoder_destroy(encoder);
+      gpujpeg_image_destroy(image);
+      gpujpeg_encoder_destroy(encoder);
         
     DECODING:
-      For decoding we have to initialize only image parameters structure, we have to initialize CUDA device
-    if we haven't initialized it yet and create decoder:
+      For decoding we have to initialize only image parameters structure, we 
+    have to initialize CUDA device if we haven't initialized it yet and 
+    create decoder:
       
-        struct gpujpeg_image_parameters param_image;
-        gpujpeg_image_set_default_parameters(&param_image);
-        param_image->width = 1920;
-        param_image->height = 1080;
-        // (input image size is optional, when not used buffer allocation is postponed to first image)
-        param_image->comp_count = 3;
-        // (should not be used, is always 3)
-        param_image->color_space = GPUJPEG_RGB; 
-        // (defines output image color space)
-        param_image.sampling_factor = GPUJPEG_4_4_4;
-        // (defines output image sampling factor, must be GPUJPEG_4_4_4)
+      struct gpujpeg_image_parameters param_image;
+      gpujpeg_image_set_default_parameters(&param_image);
+      param_image->width = 1920;
+      param_image->height = 1080;
+      // (input image size is optional, when not used buffer allocation is 
+      // postponed to first image)
+      param_image->comp_count = 3;
+      // (should not be used, is always 3)
+      param_image->color_space = GPUJPEG_RGB; 
+      // (defines output image color space)
+      param_image.sampling_factor = GPUJPEG_4_4_4;
+      // (defines output image sampling factor, must be GPUJPEG_4_4_4)
         
-        gpujpeg_init_device(device_id, 0);
+      gpujpeg_init_device(device_id, 0);
         
-        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(&param_image);
-        if ( decoder == NULL )
-            return -1;
+      struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(&param_image);
+      if ( decoder == NULL )
+          return -1;
             
-    For decoder we have two options when initializing input image parameters. The first is to leave image size to default
-    values. Decoder than will postpone buffer allocations to decoding first image where it determines proper image
-    size and all following images must have the same dimensions. The second option is to provide input image size
-    and the decoder will allocate all buffers when it is creating and it is fully ready when encoding even the first image.
-    Parameter param_image->comp_count is ignored for decoder (but it is always 3 as for encoder). Pay attention to parameter
-    param_image->color_space which defines OUTPUT image color space that decoder will produce unlike image size is for input image.
-    Default value for color_space is same as for encoder - GPUJPEG_RGB (rgb color space). For now, parameter 
-    param_image->sampling_factor must be always GPUJPEG_4_4_4 for decoder.
+    For decoder we have two options when initializing input image parameters. 
+    The first is to leave image size to default values. Decoder than will 
+    postpone buffer allocations to decoding first image where it determines 
+    proper image size and all following images must have the same dimensions. 
+    The second option is to provide input image size and the decoder will 
+    allocate all buffers when it is creating and it is fully ready when 
+    encoding even the first image. Parameter param_image->comp_count is
+    ignored for decoder (but it is always 3 as for encoder). Pay attention to 
+    parameter param_image->color_space which defines OUTPUT image color space 
+    that decoder will produce unlike image size is for input image. Default 
+    value for color_space is same as for encoder - GPUJPEG_RGB (rgb color 
+    space). For now, parameter param_image->sampling_factor must be always 
+    GPUJPEG_4_4_4 for decoder.
             
-    Next we have to load JPEG image data from file and decoded it to raw image data:
+    Next we have to load JPEG image data from file and decoded it to raw 
+    image data:
             
-        int image_size = 0;
-        uint8_t* image = NULL;
-        if ( gpujpeg_image_load_from_file("input_image.jpg", &image, &image_size) != 0 )
-            return -1;
+      int image_size = 0;
+      uint8_t* image = NULL;
+      if ( gpujpeg_image_load_from_file("input_image.jpg", &image, 
+               &image_size) != 0 )
+          return -1;
     
-        uint8_t* image_decompressed = NULL;
-        int image_decompressed_size = 0;
-        if ( gpujpeg_decoder_decode(decoder, image, image_size, &image_decompressed, &image_decompressed_size) != 0 )
-            return -1;
+      uint8_t* image_decompressed = NULL;
+      int image_decompressed_size = 0;
+      if ( gpujpeg_decoder_decode(decoder, image, image_size, 
+               &image_decompressed, &image_decompressed_size) != 0 )
+          return -1;
             
     Now we can save decoded raw image data to file and perform cleanup:
             
-        if ( gpujpeg_image_save_to_file("output_image.rgb", image_decompressed, image_decompressed_size) != 0 )
-            return -1;
+      if ( gpujpeg_image_save_to_file("output_image.rgb", image_decompressed, 
+               image_decompressed_size) != 0 )
+          return -1;
         
-        gpujpeg_image_destroy(image);
-        gpujpeg_decoder_destroy(decoder);
+      gpujpeg_image_destroy(image);
+      gpujpeg_decoder_destroy(decoder);
       
     
   2) GPUJPEG CONSOLE APPLICATION:
-      The console application gpujpeg uses libgpujpeg library to demonstrate it's functions. To build 
-    console application check REQUIREMENTS and go to gpujpeg directory (where README and LICENSE files 
-    are placed) and run 'make' command. It builds libgpugjpeg library in subdirectory ./libgpujpeg/ and
-    it creates executable file ./gpujpeg and run script ./gpujpeg.sh, which runs executable file linked to
-    runtime library libgpujpeg.so (which is placed in ./libgpujpeg/ subdirectory).
-      To encode image from raw RGB image file to JPEG image file use following command:
+      The console application gpujpeg uses libgpujpeg library to demonstrate
+    it's functions. To build console application check REQUIREMENTS and go to
+    gpujpeg directory (where README and LICENSE files are placed) and run 
+    'make' command. It builds libgpugjpeg library in subdirectory 
+    ./libgpujpeg/ and it creates executable file ./gpujpeg and run script 
+    ./gpujpeg.sh, which runs executable file linked to runtime library 
+    libgpujpeg.so (which is placed in ./libgpujpeg/ subdirectory).
+      To encode image from raw RGB image file to JPEG image file use following
+    command:
       
-        ./gpujpeg.sh --encode --size=WIDTHxHEIGHT --quality=QUALITY INPUT_IMAGE.rgb OUTPUT_IMAGE.jpg
+      ./gpujpeg.sh --encode --size=WIDTHxHEIGHT --quality=QUALITY \ 
+              INPUT_IMAGE.rgb OUTPUT_IMAGE.jpg
       
-    You must specify input image size by --size=WIDTHxHEIGHT parameter. Optionally you can specify desired output 
-    quality by parameter --quality=QUALITY which accepts values 0-100. Console application accepts a few more 
-    parameters and you can list them by folling command:
+    You must specify input image size by --size=WIDTHxHEIGHT parameter. 
+    Optionally you can specify desired output quality by parameter 
+    --quality=QUALITY which accepts values 0-100. Console application accepts 
+    a few more parameters and you can list them by folling command:
     
-        ./gpujpeg.sh --help
+      ./gpujpeg.sh --help
       
-    To decode image from JPEG image file to raw RGB image file use following command:
+    To decode image from JPEG image file to raw RGB image file use following 
+    command:
       
-        ./gpujpeg.sh --decode OUTPUT_IMAGE.jpg INPUT_IMAGE.rgb
+      ./gpujpeg.sh --decode OUTPUT_IMAGE.jpg INPUT_IMAGE.rgb
       
     You can also encode and decode image to test the console application:
       
-        ./gpujpeg.sh --encode --decode --size=WIDTHxHEIGHT --quality=QUALITY INPUT_IMAGE.rgb OUTPUT_IMAGE.jpg
+      ./gpujpeg.sh --encode --decode --size=WIDTHxHEIGHT --quality=QUALITY \
+              INPUT_IMAGE.rgb OUTPUT_IMAGE.jpg
       
-    Decoder will create new decoded file OUTPUT_IMAGE.jpg.decoded.rgb and do not overwrite your INPUT_IMAGE.rgb file.
-      Console application is able to load raw RGB image file data from *.rgb files and raw YUV and YUV422 data from *.yuv
-    files. For YUV422 you must specify *.yuv file and use '--sampling-factor=4:2:2' parameter.
+    Decoder will create new decoded file OUTPUT_IMAGE.jpg.decoded.rgb and do 
+    not overwrite your INPUT_IMAGE.rgb file.
+      Console application is able to load raw RGB image file data from *.rgb 
+    files and raw YUV and YUV422 data from *.yuv files. For YUV422 you must 
+    specify *.yuv file and use '--sampling-factor=4:2:2' parameter. 
     All supported parameters for console application are following:
       --help
           Prints console application help
@@ -237,27 +268,36 @@ USAGE:
       --quality
           Set output quality level 0-100 (default 75)
       --restart=8
-          Set restart interval for encoder, number of MCUs between restart markers
+          Set restart interval for encoder, number of MCUs between 
+          restart markers
       --encode
           Encode images
       --decode
           Decode images
       --device=0
-          By using this parameter you can specify CUDA device id which will be used for encoding/decoding.
+          By using this parameter you can specify CUDA device id which will 
+          be used for encoding/decoding.
     
-    Restart interval is important for parallel huffman encoding and decoding. When '--restart=N' is used (default is 8), 
-    the coder can process each N MCUs independently, and so he can code each N MCUs in parallel. When '--restart=0' 
-    is specified, restart interval is disabled and the coder must use CPU version of huffman coder (because on GPU would
-    run only one thread, which is very slow).
-      The console application can encode/decode multiple images by following command:
+    Restart interval is important for parallel huffman encoding and decoding.
+    When '--restart=N' is used (default is 8), the coder can process each 
+    N MCUs independently, and so he can code each N MCUs in parallel. When 
+    '--restart=0' is specified, restart interval is disabled and the coder 
+    must use CPU version of huffman coder (because on GPU would run only one 
+    thread, which is very slow).
+      The console application can encode/decode multiple images by following 
+    command:
       
-      ./gpujpeg.sh ARGUMENTS INPUT_IMAGE_1.rgb OUTPUT_IMAGE_1.jpg INPUT_IMAGE_2.rgb OUTPUT_IMAGE_2.jpg ...
+      ./gpujpeg.sh ARGUMENTS INPUT_IMAGE_1.rgb OUTPUT_IMAGE_1.jpg \
+              INPUT_IMAGE_2.rgb OUTPUT_IMAGE_2.jpg ...
     
 REQUIREMENTS:
-  To be able to build and run libgpujpeg library and gpujpeg console application you need:
-  1) CUDA Toolkit (http://developer.nvidia.com/cuda-toolkit) installed (which contains NPP libraray), 
-     default installation path is /usr/local/cuda. If you have the CUDA installed somewhere else, you need to 
-     specify it by environment variable CUDA_INSTALL_PATH or in Makefiles by CUDA_INSTALL_PATH variable.
+    To be able to build and run libgpujpeg library and gpujpeg console 
+  application you need:
+  1) CUDA Toolkit (http://developer.nvidia.com/cuda-toolkit) installed 
+     (which contains NPP libraray), default installation path is 
+     /usr/local/cuda. If you have the CUDA installed somewhere else, you need
+     to specify it by environment variable CUDA_INSTALL_PATH or in Makefiles 
+     by CUDA_INSTALL_PATH variable.
   2) NVIDIA developer drivers
   3) CUDA enabled NVIDIA GPU
 
@@ -270,6 +310,7 @@ LICENSE:
 REFERENCES:
   [1] http://www.w3.org/Graphics/JPEG/itu-t81.pdf
   [2] http://www.ijg.org/
-  [3] http://developer.download.nvidia.com/compute/cuda/4_0_rc2/toolkit/docs/NPP_Library.pdf
+  [3] http://developer.download.nvidia.com/compute/cuda/4_0_rc2/toolkit/
+      docs/NPP_Library.pdf
   [4] https://github.com/silicongenome/SiGenGPU
   
