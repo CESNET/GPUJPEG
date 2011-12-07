@@ -57,7 +57,7 @@ clean:
 COBJS=$(CFILES:.c=.c.o)
 
 # Build target
-$(TARGET): $(COBJS) libgpujpeg/libgpujpeg.so 
+$(TARGET): $(COBJS) libgpujpeg/libgpujpeg.so.build
 	$(LINK) $(COBJS) $(LDFLAGS) -o $(TARGET);    
     
 # Build target run script
@@ -72,7 +72,7 @@ $(TARGET).sh:
 	@chmod a+x $(TARGET).sh
 
 # Build gpujpeg library
-libgpujpeg/libgpujpeg.so:
+libgpujpeg/libgpujpeg.so.build:
 	@cd libgpujpeg; make
     
 # Pattern rule for compiling C files

@@ -90,6 +90,15 @@ enum gpujpeg_image_file_format
 gpujpeg_image_get_file_format(const char* filename);
 
 /**
+ * Calculate size for image by parameters
+ * 
+ * @param param  Image parameters
+ * @return calculate size
+ */
+int
+gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param);
+
+/**
  * Load RGB image from file
  * 
  * @param filaname  Image filename

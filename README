@@ -175,7 +175,7 @@ USAGE:
       param_image->color_space = GPUJPEG_RGB; 
       // (defines output image color space)
       param_image.sampling_factor = GPUJPEG_4_4_4;
-      // (defines output image sampling factor, must be GPUJPEG_4_4_4)
+      // (defines output image sampling factor)
         
       gpujpeg_init_device(device_id, 0);
         
@@ -194,8 +194,7 @@ USAGE:
     parameter param_image->color_space which defines OUTPUT image color space 
     that decoder will produce unlike image size is for input image. Default 
     value for color_space is same as for encoder - GPUJPEG_RGB (rgb color 
-    space). For now, parameter param_image->sampling_factor must be always 
-    GPUJPEG_4_4_4 for decoder.
+    space).
             
     Next we have to load JPEG image data from file and decoded it to raw 
     image data:
@@ -265,6 +264,10 @@ USAGE:
           Input image size in pixels, e.g. 1920x1080
       --sampling-factor=4:4:4
           Input image sampling factor (supported are '4:4:4' and '4:2:2')
+      --colorspace=rgb
+          Input image colorspace (supported are 'rgb', 'yuv' and 'ycbcr-jpeg', 
+          where 'yuv' means YCbCr ITU-R BT.601), when *.yuv file is specified,
+          instead of default 'rgb', automatically the colorspace 'yuv' is used
       --quality
           Set output quality level 0-100 (default 75)
       --restart=8

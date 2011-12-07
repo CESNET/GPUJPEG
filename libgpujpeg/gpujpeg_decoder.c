@@ -36,9 +36,7 @@
 /** Documented at declaration */
 struct gpujpeg_decoder*
 gpujpeg_decoder_create(struct gpujpeg_image_parameters* param_image)
-{
-    assert(param_image->sampling_factor == GPUJPEG_4_4_4);
-    
+{    
     struct gpujpeg_decoder* decoder = malloc(sizeof(struct gpujpeg_decoder));
     if ( decoder == NULL )
         return NULL;
@@ -141,8 +139,8 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, int width, int height, int
     // Calculate data size
     decoder->data_width = gpujpeg_div_and_round_up(decoder->param_image.width, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
     decoder->data_height = gpujpeg_div_and_round_up(decoder->param_image.height, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
-    decoder->data_target_size = decoder->param_image.width * decoder->param_image.height * decoder->param_image.comp_count;
     decoder->data_size = decoder->data_width * decoder->data_height * decoder->param_image.comp_count;
+    decoder->data_target_size = gpujpeg_image_calculate_size(&decoder->param_image);
     
     // Allocate buffers
     if ( cudaSuccess != cudaMallocHost((void**)&decoder->data_quantized, decoder->data_size * sizeof(int16_t)) ) 

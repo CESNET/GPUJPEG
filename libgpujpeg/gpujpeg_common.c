@@ -96,6 +96,24 @@ gpujpeg_image_get_file_format(const char* filename)
 
 /** Documented at declaration */
 int
+gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
+{
+    assert(param->comp_count == 3);
+    
+    int image_size = 0;
+    if ( param->sampling_factor == GPUJPEG_4_4_4 ) {
+        image_size = param->width * param->height * param->comp_count;
+    } else if ( param->sampling_factor == GPUJPEG_4_2_2 ) {
+        int width = gpujpeg_div_and_round_up(param->width, 2) * 2 + 0;
+        image_size = (width * param->height) * 2;
+    } else {
+        assert(0);
+    }
+    return image_size;
+}
+
+/** Documented at declaration */
+int
 gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size)
 {
     FILE* file;

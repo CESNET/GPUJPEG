@@ -222,12 +222,22 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_encoder* encoder)
         assert(encoder->param_image.sampling_factor == GPUJPEG_4_4_4);
         return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_RGB>;
     } 
-    // YUV color space
+    // YCbCr ITU-R color space
     else if ( encoder->param_image.color_space == GPUJPEG_YCBCR_ITU_R ) {
         if ( encoder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_YCBCR_ITU_R>;
         } else if ( encoder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2<GPUJPEG_YCBCR_ITU_R>;
+        } else {
+            assert(false);
+        }
+    } 
+    // YCbCr JPEG color space
+    else if ( encoder->param_image.color_space == GPUJPEG_YCBCR_JPEG ) {
+        if ( encoder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+            return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_YCBCR_JPEG>;
+        } else if ( encoder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+            return &gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2<GPUJPEG_YCBCR_JPEG>;
         } else {
             assert(false);
         }
@@ -248,11 +258,23 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder* encoder)
     // Select kernel
     gpujpeg_preprocessor_encode_kernel kernel = gpujpeg_preprocessor_select_encode_kernel(encoder);
     
+    int image_width = encoder->param_image.width;
+    int image_height = encoder->param_image.height;
+    
+    // When loading 4:2:2 data of odd width, the data in fact has even width, so round it
+    // (at least imagemagick convert tool generates data stream in this way)
+    if ( encoder->param_image.sampling_factor == GPUJPEG_4_2_2 )
+        image_width = gpujpeg_div_and_round_up(encoder->param_image.width, 2) * 2;
+        
+    // Prepare unit size
+    assert(encoder->param_image.sampling_factor == GPUJPEG_4_4_4 || encoder->param_image.sampling_factor == GPUJPEG_4_2_2);
+    int unitSize = encoder->param_image.sampling_factor == GPUJPEG_4_4_4 ? 3 : 2;
+    
     // Prepare kernel
-    int alignedSize = (encoder->param_image.width * encoder->param_image.height / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
+    int alignedSize = gpujpeg_div_and_round_up(image_width * image_height, RGB_8BIT_THREADS) * RGB_8BIT_THREADS * unitSize;
     dim3 threads (RGB_8BIT_THREADS);
-    dim3 grid (alignedSize / (RGB_8BIT_THREADS * 3));
-    assert(alignedSize % (RGB_8BIT_THREADS * 3) == 0);
+    dim3 grid (alignedSize / (RGB_8BIT_THREADS * unitSize));
+    assert(alignedSize % (RGB_8BIT_THREADS * unitSize) == 0);
 
     // Run kernel
     int data_comp_size = encoder->data_width * encoder->data_height;
@@ -264,8 +286,8 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder* encoder)
         d_c2, 
         d_c3, 
         encoder->d_data_source, 
-        encoder->param_image.width,
-        encoder->param_image.height,
+        image_width,
+        image_height,
         encoder->data_width,
         encoder->data_height
     );
@@ -315,6 +337,34 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(const uint8_t* d_c1, const uint8_t
     d_target[image_position + 2] = (uint8_t)r3;
 }
 
+/** Specialization [sampling factor is 4:2:2] */
+template<enum gpujpeg_color_space color_space>
+__global__ void
+gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(const uint8_t* d_c1, const uint8_t* d_c2, const uint8_t* d_c3, uint8_t* d_target, int image_width, int image_height, int data_width, int data_height)
+{
+    int x  = threadIdx.x;
+    int gX = blockDim.x * blockIdx.x;
+    int image_position = gX + x;
+    if ( image_position >= (image_width * image_height) )
+        return;
+    int image_x = image_position % image_width;
+    int data_position = (image_position / image_width) * data_width + image_position % image_width;
+    image_position = image_position * 2;
+    
+    // Load
+    float r1 = (float)(d_c1[data_position]);
+    float r2 = (float)(d_c2[data_position]);
+    float r3 = (float)(d_c3[data_position]);
+    // Color transform
+    gpujpeg_color_transform<GPUJPEG_YCBCR_JPEG, color_space>::perform(r1, r2, r3);
+    // Save
+    d_target[image_position + 1] = (uint8_t)r1;
+    if ( (image_x % 2) == 0 )
+        d_target[image_position + 0] = (uint8_t)r2;
+    else
+        d_target[image_position + 0] = (uint8_t)r3;
+}
+
 /**
  * Select preprocessor decode kernel
  * 
@@ -329,10 +379,25 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_decoder* decoder)
         assert(decoder->param_image.sampling_factor == GPUJPEG_4_4_4);
         return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_RGB>;
     } 
-    // YUV color space
+    // YCbCr ITU-R color space
     else if ( decoder->param_image.color_space == GPUJPEG_YCBCR_ITU_R ) {
-        assert(decoder->param_image.sampling_factor == GPUJPEG_4_4_4);
-        return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_YCBCR_ITU_R>;
+        if ( decoder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_YCBCR_ITU_R>;
+        } else if ( decoder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2<GPUJPEG_YCBCR_ITU_R>;
+        } else {
+            assert(false);
+        }
+    }
+    // YCbCr JPEG color space
+    else if ( decoder->param_image.color_space == GPUJPEG_YCBCR_JPEG ) {
+        if ( decoder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_YCBCR_JPEG>;
+        } else if ( decoder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2<GPUJPEG_YCBCR_JPEG>;
+        } else {
+            assert(false);
+        }
     }
     // Unknown color space
     else {
@@ -345,15 +410,27 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_decoder* decoder)
 int
 gpujpeg_preprocessor_decode(struct gpujpeg_decoder* decoder)
 {
-    int alignedSize = ((decoder->param_image.width * decoder->param_image.height) / RGB_8BIT_THREADS + 1) * RGB_8BIT_THREADS * 3;
-        
+    cudaMemset(decoder->d_data_target, 0, decoder->data_target_size * sizeof(uint8_t));
+    
     // Select kernel
     gpujpeg_preprocessor_decode_kernel kernel = gpujpeg_preprocessor_select_decode_kernel(decoder);
     
+    int image_width = decoder->param_image.width;
+    int image_height = decoder->param_image.height;
+    
+    // When saving 4:2:2 data of odd width, the data should have even width, so round it
+    if ( decoder->param_image.sampling_factor == GPUJPEG_4_2_2 )
+        image_width = gpujpeg_div_and_round_up(decoder->param_image.width, 2) * 2;
+        
+    // Prepare unit size
+    assert(decoder->param_image.sampling_factor == GPUJPEG_4_4_4 || decoder->param_image.sampling_factor == GPUJPEG_4_2_2);
+    int unitSize = decoder->param_image.sampling_factor == GPUJPEG_4_4_4 ? 3 : 2;
+    
     // Prepare kernel
+    int alignedSize = gpujpeg_div_and_round_up(image_width * image_height, RGB_8BIT_THREADS) * RGB_8BIT_THREADS * unitSize;
     dim3 threads (RGB_8BIT_THREADS);
-    dim3 grid (alignedSize / (RGB_8BIT_THREADS * 3));
-    assert(alignedSize % (RGB_8BIT_THREADS * 3) == 0);
+    dim3 grid (alignedSize / (RGB_8BIT_THREADS * unitSize));
+    assert(alignedSize % (RGB_8BIT_THREADS * unitSize) == 0);
 
     // Run kernel
     int data_comp_size = decoder->data_width * decoder->data_height;
@@ -365,8 +442,8 @@ gpujpeg_preprocessor_decode(struct gpujpeg_decoder* decoder)
         d_c2, 
         d_c3, 
         decoder->d_data_target, 
-        decoder->param_image.width,
-        decoder->param_image.height,
+        image_width,
+        image_height,
         decoder->data_width,
         decoder->data_height
     );

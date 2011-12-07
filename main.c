@@ -39,6 +39,7 @@ print_help()
         "   -h, --help\t\t\tprint help\n"
         "   -s, --size\t\t\tset image size in pixels, e.g. 1920x1080\n"
         "   -f, --sampling-factor\tset image sampling factor, e.g. 4:2:2\n"
+        "   -c, --colorspace\tset image colorspace, e.g. rgb, yuv, ycbcr-jpeg\n"
         "   -q, --quality\t\tset quality level 0-100 (default 75)\n"
         "   -r, --restart\t\tset restart interval (default 8)\n"
         "   -e, --encode\t\t\tencode images\n"
@@ -54,6 +55,7 @@ main(int argc, char *argv[])
         {"help",            no_argument,       0, 'h'},
         {"size",            required_argument, 0, 's'},
         {"sampling-factor", required_argument, 0, 'f'},
+        {"colorspace",      required_argument, 0, 'c'},
         {"quality",         required_argument, 0, 'q'},
         {"restart",         required_argument, 0, 'r'},
         {"encode",          no_argument,       0, 'e'},
@@ -92,6 +94,16 @@ main(int argc, char *argv[])
                 return -1;
             }
             param_image.height = atoi(pos + 1);
+            break;
+        case 'c':
+            if ( strcmp(optarg, "rgb") == 0 )
+                param_image.color_space = GPUJPEG_RGB;
+            else if ( strcmp(optarg, "yuv") == 0 )
+                param_image.color_space = GPUJPEG_YCBCR_ITU_R;
+            else if ( strcmp(optarg, "ycbcr-jpeg") == 0 )
+                param_image.color_space = GPUJPEG_YCBCR_JPEG;
+            else
+                fprintf(stderr, "Colorspace '%s' is not available!\n", optarg);
             break;
         case 'f':
             if ( strcmp(optarg, "4:4:4") == 0 )
@@ -158,7 +170,7 @@ main(int argc, char *argv[])
     gpujpeg_init_device(device_id, 1);
     
     // Detect color spalce
-    if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV )
+    if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV && param_image.color_space == GPUJPEG_RGB )
         param_image.color_space = GPUJPEG_YCBCR_ITU_R;
     
     if ( encode == 1 ) {    
@@ -192,11 +204,7 @@ main(int argc, char *argv[])
             printf("\nEncoding Image [%s]\n", input);
         
             // Load image
-            int image_size = param_image.width * param_image.height * param_image.comp_count;
-            if ( param_image.sampling_factor == GPUJPEG_4_2_2 ) {
-                assert(param_image.comp_count == 3);
-                image_size = image_size / 3 * 2;
-            }
+            int image_size = gpujpeg_image_calculate_size(&param_image);
             uint8_t* image = NULL;
             if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
@@ -234,9 +242,6 @@ main(int argc, char *argv[])
         // Destroy encoder
         gpujpeg_encoder_destroy(encoder);
     }
-    
-    // Output sampling factor is always 4:4:4
-    param_image.sampling_factor = GPUJPEG_4_4_4;
     
     if ( decode == 1 ) {    
         // Create decoder
