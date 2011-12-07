@@ -26,8 +26,17 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+# Shared/Static library?
+SHARED_LIBRARY ?= 1
+# CUDA install path
+CUDA_INSTALL_PATH ?= /usr/local/cuda
+
 # Target executable
-TARGET := libgpujpeg.so
+TARGET := libgpujpeg.a
+ifeq ($(SHARED_LIBRARY),1)
+    TARGET := libgpujpeg.so
+endif
+
 # C files
 CFILES := \
     gpujpeg_common.c \
@@ -43,9 +52,6 @@ CUFILES := \
     gpujpeg_preprocessor.cu \
     gpujpeg_huffman_gpu_encoder.cu \
     gpujpeg_huffman_gpu_decoder.cu
-
-# CUDA install path
-CUDA_INSTALL_PATH ?= /usr/local/cuda
 
 # Compilers
 CC := gcc -fPIC
@@ -67,11 +73,12 @@ LDFLAGS += -shared
 LBITS := $(shell getconf LONG_BIT)
 ifeq ($(LBITS),64)
     # 64bit
-    LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64 -lcudart -lnpp
+    LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64
 else
     # 32bit
-    LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib -lcudart
+    LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib
 endif
+LDFLAGS += -lcudart -lnpp
 
 # Build
 build: $(TARGET)
@@ -85,8 +92,14 @@ COBJS=$(CFILES:.c=.c.o)
 CUOBJS=$(CUFILES:.cu=.cu.o)
 
 # Build target
-$(TARGET): $(COBJS) $(CUOBJS)
-	$(LINK) $(COBJS) $(CUOBJS) $(LDFLAGS) -o $(TARGET);    
+ifeq ($(SHARED_LIBRARY),1)
+    $(TARGET): $(COBJS) $(CUOBJS)
+		$(LINK) $(COBJS) $(CUOBJS) $(LDFLAGS) -o $(TARGET);    
+else
+    $(TARGET): $(COBJS) $(CUOBJS)
+    
+		ar rcs $(TARGET) $(COBJS) $(CUOBJS);
+endif
 
 # Set suffix for CUDA files
 .SUFFIXES: .cu

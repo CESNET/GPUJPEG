@@ -26,13 +26,15 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+# Use shared/static libgpujpeg library?
+SHARED_LIBRARY ?= 1
+# CUDA install path
+CUDA_INSTALL_PATH ?= /usr/local/cuda
+
 # Target executable
 TARGET := gpujpeg
 # C files
 CFILES := main.c
-
-# CUDA install path
-CUDA_INSTALL_PATH ?= /usr/local/cuda
 
 # Compilers
 CC := gcc
@@ -43,7 +45,23 @@ COMMONFLAGS += -I. -I$(CUDA_INSTALL_PATH)/include -O2
 # C flags
 CFLAGS += $(COMMONFLAGS) -std=c99
 # Linker flags
-LDFLAGS += -Llibgpujpeg -lgpujpeg
+LDFLAGS += 
+
+# Link libgpujpeg library
+ifeq ($(SHARED_LIBRARY),1)
+    LDFLAGS += -Llibgpujpeg -lgpujpeg
+else
+    # Do 32bit vs. 64bit setup
+    LBITS := $(shell getconf LONG_BIT)
+    ifeq ($(LBITS),64)
+        # 64bit
+        LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64
+    else
+        # 32bit
+        LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib
+    endif
+    LDFLAGS += -lcudart -lnpp libgpujpeg/libgpujpeg.a
+endif
 
 # Build
 build: $(TARGET) $(TARGET).sh
@@ -57,23 +75,35 @@ clean:
 COBJS=$(CFILES:.c=.c.o)
 
 # Build target
-$(TARGET): $(COBJS) libgpujpeg/libgpujpeg.so.build
+$(TARGET): $(COBJS) libgpujpeg/libgpujpeg.build
 	$(LINK) $(COBJS) $(LDFLAGS) -o $(TARGET);    
     
 # Build target run script
-$(TARGET).sh:
-	@printf "PATH=$$" > $(TARGET).sh
-	@printf "(dirname $$" >> $(TARGET).sh
-	@printf "0)\n" >> $(TARGET).sh
-	@printf "LD_LIBRARY_PATH=$$" >> $(TARGET).sh
-	@printf "PATH/libgpujpeg $$" >> $(TARGET).sh
-	@printf "PATH/gpujpeg $$" >> $(TARGET).sh
-	@printf "@\n" >> $(TARGET).sh
-	@chmod a+x $(TARGET).sh
+ifeq ($(SHARED_LIBRARY),1)
+    $(TARGET).sh:
+		@printf "PATH=$$" > $(TARGET).sh
+		@printf "(dirname $$" >> $(TARGET).sh
+		@printf "0)\n" >> $(TARGET).sh
+		@printf "LD_LIBRARY_PATH=$$" >> $(TARGET).sh
+		@printf "PATH/libgpujpeg $$" >> $(TARGET).sh
+		@printf "PATH/gpujpeg $$" >> $(TARGET).sh
+		@printf "@\n" >> $(TARGET).sh
+		@chmod a+x $(TARGET).sh
+else
+    $(TARGET).sh:
+		@printf "PATH=$$" > $(TARGET).sh
+		@printf "(dirname $$" >> $(TARGET).sh
+		@printf "0)\n" >> $(TARGET).sh
+		@printf "$$" >> $(TARGET).sh
+		@printf "PATH/gpujpeg $$" >> $(TARGET).sh
+		@printf "@\n" >> $(TARGET).sh
+		@chmod a+x $(TARGET).sh
+endif
+
 
 # Build gpujpeg library
-libgpujpeg/libgpujpeg.so.build:
-	@cd libgpujpeg; make
+libgpujpeg/libgpujpeg.build:
+	@cd libgpujpeg; make SHARED_LIBRARY=$(SHARED_LIBRARY)
     
 # Pattern rule for compiling C files
 %.c.o: %.c 
