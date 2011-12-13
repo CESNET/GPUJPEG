@@ -32,7 +32,9 @@
 
 #include <stdint.h>
 
-static const int GPUJPEG_BLOCK_SIZE = 8;
+#define GPUJPEG_BLOCK_SIZE                  8
+#define GPUJPEG_MAX_COMPONENT_COUNT         3
+#define GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE   (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE * 2)
 
 /**
  * Color spaces for JPEG codec
@@ -44,11 +46,20 @@ enum gpujpeg_color_space {
 };
 
 /**
- * Sampling factor for JPEG codec
+ * Sampling factor for image data
  */
 enum gpujpeg_sampling_factor {
     GPUJPEG_4_4_4 = ((4 << 16) | (4 << 8) | 4),
     GPUJPEG_4_2_2 = ((4 << 16) | (2 << 8) | 2),
+};
+
+/**
+ * Sampling factor for color component in JPEG format
+ */
+struct gpujpeg_component_sampling_factor
+{
+    int horizontal;
+    int vertical;
 };
 
 /**

@@ -34,8 +34,6 @@
 #include "gpujpeg_table.h"
 #include "gpujpeg_reader.h"
 
-#define GPUJPEG_MAX_COMPONENT_COUNT 3
-
 /** JPEG reader scan structure */
 struct gpujpeg_decoder_scan
 {
