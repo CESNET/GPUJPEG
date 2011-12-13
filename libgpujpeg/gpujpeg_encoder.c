@@ -187,21 +187,26 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         
         if ( result == 1 ) {
             if ( encoder->param.interleaved == 1 ) {
-                // Prepare segments for encoding
+                // Prepare segments for encoding (one scan only)
                 for ( int index = 0; index < encoder->segment_count; index++ ) {
                     encoder->segments[index].scan_index = 0;
+                    encoder->segments[index].scan_segment_index = index;
                     encoder->segments[index].data_compressed_index = index * encoder->param.restart_interval * encoder->mcu_size;
                     encoder->segments[index].data_compressed_size = 0;
                 }
             } else {
-                // Prepare segments for encoding
+                // Prepare segments for encoding (scan for each color component)
                 int index = 0;
+                int data_compressed_index = 0;
                 for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
                     int mcu_size = encoder->component[comp].mcu_size;
                     for ( int segment = 0; segment < encoder->component[comp].segment_count; segment++ ) {
-                        encoder->segments[index].data_compressed_index = index * encoder->param.restart_interval * mcu_size;
+                        encoder->segments[index].scan_index = comp;
+                        encoder->segments[index].scan_segment_index = segment;
+                        encoder->segments[index].data_compressed_index = data_compressed_index;
                         encoder->segments[index].data_compressed_size = 0;
                         index++;
+                        data_compressed_index += encoder->param.restart_interval * mcu_size;
                     }
                 }
             }

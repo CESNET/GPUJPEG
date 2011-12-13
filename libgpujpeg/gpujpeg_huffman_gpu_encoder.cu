@@ -249,12 +249,19 @@ gpujpeg_huffman_encoder_encode_kernel(
     struct gpujpeg_table_huffman_encoder* d_table_cbcr_ac
 )
 {	
-    int segment_index = blockIdx.x * blockDim.x + threadIdx.x;
+    /*int segment_index = blockIdx.x * blockDim.x + threadIdx.x;
     int comp_index = blockIdx.y;
     if ( segment_index >= segment_count )
         return;
         
-    struct gpujpeg_encoder_segment* segment = &d_segments[comp_index * segment_count + segment_index];
+    struct gpujpeg_encoder_segment* segment = &d_segments[comp_index * segment_count + segment_index];*/
+    
+    int segment_index = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( segment_index >= segment_count )
+        return;
+    
+    struct gpujpeg_encoder_segment* segment = &d_segments[segment_index];
+    int comp_index = segment->scan_index;
     
     // Get huffman tables
     struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
@@ -283,7 +290,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         if ( block_index >= block_count )
             break;
         // Encode block
-        int data_index = (block_count * comp_index + block_index) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+        int data_index = (block_index) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
         gpujpeg_huffman_gpu_encoder_encode_block(
             put_value, 
             put_bits, 
@@ -302,7 +309,7 @@ gpujpeg_huffman_encoder_encode_kernel(
                         
     // Output restart marker
     if ( block_index < block_count ) {
-        int restart_marker = GPUJPEG_MARKER_RST0 + (((block_index - restart_interval) / restart_interval) & 0x7);
+        int restart_marker = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index & 0x7);
         //printf("%d,%d: marker 0x%X\n", comp_index, segment_index, restart_marker);
         gpujpeg_huffman_gpu_encoder_marker(data_compressed, restart_marker);
     }
@@ -334,20 +341,15 @@ int
 gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
 {    
     assert(encoder->param.restart_interval > 0);
-    
-    int block_cx = (encoder->param_image.width + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
-    int block_cy = (encoder->param_image.height + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
-    int block_count = block_cx * block_cy;
-    int segment_count = gpujpeg_div_and_round_up(block_count,encoder->param.restart_interval);
             
     // Run kernel
     dim3 thread(32);
-    dim3 grid(segment_count / thread.x + 1, encoder->param_image.comp_count);
+    dim3 grid(gpujpeg_div_and_round_up(encoder->segment_count, thread.x));
     gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
         encoder->param.restart_interval,
-        block_count, 
+        encoder->mcu_count, 
         encoder->d_segments, 
-        segment_count,        
+        encoder->segment_count, 
         encoder->d_data_quantized, 
         encoder->d_data_compressed, 
         encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC],
