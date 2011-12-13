@@ -80,6 +80,13 @@ struct gpujpeg_encoder_component
     int mcu_count;
     // Segment count
     int segment_count;
+    
+    // Preprocessed data in device memory (output from preprocessor)
+    uint8_t* d_data;
+    // Data after DCT and quantization in device memory (output from DCT and quantization)
+    int16_t* d_data_quantized;
+    // Data after DCT and quantization (output from DCT and quantization)
+    int16_t* data_quantized;
 };
 
 /** 
@@ -116,36 +123,37 @@ struct gpujpeg_encoder
     // Color components
     struct gpujpeg_encoder_component* component;
     
-    // Source image data coefficient count
-    int data_source_size;
-    
-    // Source image data in device memory (loaded from file)
-    uint8_t* d_data_source;
+    // Maximum sampling factor from components
+    struct gpujpeg_component_sampling_factor sampling_factor;
+    // Minimun coded unit size (for all components)
+    int mcu_size;
+    // Minimun coded unit count (for all components)
+    int mcu_count;    
     
     // Allocated data width
     int data_width;
     // Allocated data height
     int data_height;
+    // Source image data coefficient count
+    int data_source_size;
     // Allocated data coefficient count for all components
     int data_size;
+    // Compressed allocated data size
+    int data_compressed_size;
     
+    // Source image data in device memory (loaded from file)
+    uint8_t* d_data_source;
     // Preprocessed data in device memory (output from preprocessor)
     uint8_t* d_data;
-    
-    // Data after DCT and quantization (output from DCT and quantization)
-    int16_t* data_quantized;
     // Data after DCT and quantization in device memory (output from DCT and quantization)
     int16_t* d_data_quantized;
-    
-    // Data after huffman coder (output from huffman coder)
-    uint8_t* data_compressed;
     // Data after huffman coder (output from huffman coder)
     uint8_t* d_data_compressed;
     
-    // Minimun coded unit size (for all components)
-    int mcu_size;
-    // Minimun coded unit count (for all components)
-    int mcu_count;
+    // Data after DCT and quantization (output from DCT and quantization)
+    int16_t* data_quantized;
+    // Data after huffman coder (output from huffman coder)
+    uint8_t* data_compressed;
     
     // Segments for all components
     struct gpujpeg_encoder_segment* segments;

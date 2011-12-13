@@ -42,7 +42,7 @@ gpujpeg_encoder_set_default_parameters(struct gpujpeg_encoder_parameters* param)
     param->restart_interval = 8;
     param->interleaved = 0;
     for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ ) {
-        if ( 0 && comp == 0 ) {
+        if ( comp == 0 ) {
             param->sampling_factor[comp].horizontal = 2;
             param->sampling_factor[comp].vertical = 2;
         } else {
@@ -82,18 +82,17 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
     if ( encoder->component == NULL )
         result = 0;
         
-    // Initialize sampling factors and compute maximum sampling factor
-    struct gpujpeg_component_sampling_factor sampling_factor_max;
-    sampling_factor_max.horizontal = 0;
-    sampling_factor_max.vertical = 0;
+    // Initialize sampling factors and compute maximum sampling factor to encoder->sampling_factor
+    encoder->sampling_factor.horizontal = 0;
+    encoder->sampling_factor.vertical = 0;
     for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
         assert(encoder->param.sampling_factor[comp].horizontal >= 1 && encoder->param.sampling_factor[comp].horizontal <= 15);
         assert(encoder->param.sampling_factor[comp].vertical >= 1 && encoder->param.sampling_factor[comp].vertical <= 15);
         encoder->component[comp].sampling_factor = encoder->param.sampling_factor[comp];
-        if ( encoder->component[comp].sampling_factor.horizontal > sampling_factor_max.horizontal )
-            sampling_factor_max.horizontal = encoder->component[comp].sampling_factor.horizontal;
-        if ( encoder->component[comp].sampling_factor.vertical > sampling_factor_max.vertical )
-            sampling_factor_max.vertical = encoder->component[comp].sampling_factor.vertical;
+        if ( encoder->component[comp].sampling_factor.horizontal > encoder->sampling_factor.horizontal )
+            encoder->sampling_factor.horizontal = encoder->component[comp].sampling_factor.horizontal;
+        if ( encoder->component[comp].sampling_factor.vertical > encoder->sampling_factor.vertical )
+            encoder->sampling_factor.vertical = encoder->component[comp].sampling_factor.vertical;
     }
     
     // Calculate data size
@@ -105,8 +104,8 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         // Set proper color component sizes in pixels based on sampling factors
         int samp_factor_h = encoder->component[comp].sampling_factor.horizontal;
         int samp_factor_v = encoder->component[comp].sampling_factor.vertical;
-        encoder->component[comp].width = (encoder->param_image.width * samp_factor_h) / sampling_factor_max.horizontal;
-        encoder->component[comp].height = (encoder->param_image.height * samp_factor_v) / sampling_factor_max.vertical;
+        encoder->component[comp].width = (encoder->param_image.width * samp_factor_h) / encoder->sampling_factor.horizontal;
+        encoder->component[comp].height = (encoder->param_image.height * samp_factor_v) / encoder->sampling_factor.vertical;
         encoder->component[comp].data_width = gpujpeg_div_and_round_up(encoder->component[comp].width, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
         encoder->component[comp].data_height = gpujpeg_div_and_round_up(encoder->component[comp].height, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
         encoder->component[comp].data_size = encoder->component[comp].data_width * encoder->component[comp].data_height;
@@ -142,7 +141,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
     encoder->data_width = gpujpeg_div_and_round_up(param_image->width, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
     encoder->data_height = gpujpeg_div_and_round_up(param_image->height, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
     
-    // Allocate data buffers
+    // Allocate data buffers for all color components
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_source, encoder->data_source_size * sizeof(uint8_t)) ) 
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data, encoder->data_size * sizeof(uint8_t)) ) 
@@ -153,9 +152,24 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         result = 0;
 	gpujpeg_cuda_check_error("Encoder data allocation");
     
-    // Compute MCU size, MCU count and segment count
+    // Set data buffer to color components
+    uint8_t* d_comp_data = encoder->d_data;
+    int16_t* d_comp_data_quantized = encoder->d_data_quantized;
+    int16_t* comp_data_quantized = encoder->data_quantized;
+    for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
+        encoder->component[comp].d_data = d_comp_data;
+        encoder->component[comp].d_data_quantized = d_comp_data_quantized;
+        encoder->component[comp].data_quantized = comp_data_quantized;
+        d_comp_data += encoder->component[comp].data_width * encoder->component[comp].data_height;
+        d_comp_data_quantized += encoder->component[comp].data_width * encoder->component[comp].data_height;
+        comp_data_quantized += encoder->component[comp].data_width * encoder->component[comp].data_height;
+    }
+    
+    // Compute MCU size, MCU count, segment count and compressed data allocation size
     encoder->mcu_count = 0;
     encoder->mcu_size = 0;
+    encoder->segment_count = 0;
+    encoder->data_compressed_size = 0;
     if ( encoder->param.interleaved == 1 ) {
         assert(encoder->param_image.comp_count > 0);
         encoder->mcu_count = encoder->component[0].mcu_count;
@@ -164,6 +178,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
             assert(encoder->mcu_count == encoder->component[comp].mcu_count);
             encoder->mcu_size += encoder->component[comp].mcu_size;
         }
+        encoder->data_compressed_size = encoder->segment_count * encoder->mcu_size * encoder->param.restart_interval;
     } else {
         assert(encoder->param_image.comp_count > 0);
         encoder->mcu_size = encoder->component[0].mcu_size;
@@ -171,8 +186,11 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
             assert(encoder->mcu_size == encoder->component[comp].mcu_size);
             encoder->mcu_count += encoder->component[comp].mcu_count;
             encoder->segment_count += encoder->component[comp].segment_count;
+            encoder->data_compressed_size = encoder->component[comp].segment_count * encoder->component[comp].mcu_size * encoder->param.restart_interval;
         }
     }
+    
+    // TODO: modify compressed size in all cases (e.g. restart_interval = 0, etc)
     
     printf("mcu size %d, mcu count %d\n", encoder->mcu_size, encoder->mcu_count);
 
@@ -265,17 +283,17 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
 }
 
 void
-gpujpeg_encoder_print8(struct gpujpeg_encoder* encoder, uint8_t* d_data)
+gpujpeg_encoder_print8(struct gpujpeg_encoder_component* component, uint8_t* d_data)
 {
-    int data_size = encoder->data_width * encoder->data_height;
+    int data_size = component->data_width * component->data_height;
     uint8_t* data = NULL;
     cudaMallocHost((void**)&data, data_size * sizeof(uint8_t)); 
     cudaMemcpy(data, d_data, data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
     
     printf("Print Data\n");
-    for ( int y = 0; y < encoder->data_height; y++ ) {
-        for ( int x = 0; x < encoder->data_width; x++ ) {
-            printf("%3u ", data[y * encoder->data_width + x]);
+    for ( int y = 0; y < component->data_height; y++ ) {
+        for ( int x = 0; x < component->data_width; x++ ) {
+            printf("%3u ", data[y * component->data_width + x]);
         }
         printf("\n");
     }
@@ -283,17 +301,17 @@ gpujpeg_encoder_print8(struct gpujpeg_encoder* encoder, uint8_t* d_data)
 }
 
 void
-gpujpeg_encoder_print16(struct gpujpeg_encoder* encoder, int16_t* d_data)
+gpujpeg_encoder_print16(struct gpujpeg_encoder_component* component, int16_t* d_data)
 {
-    int data_size = encoder->data_width * encoder->data_height;
+    int data_size = component->data_width * component->data_height;
     int16_t* data = NULL;
     cudaMallocHost((void**)&data, data_size * sizeof(int16_t)); 
     cudaMemcpy(data, d_data, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
     
     printf("Print Data\n");
-    for ( int y = 0; y < encoder->data_height; y++ ) {
-        for ( int x = 0; x < encoder->data_width; x++ ) {
-            printf("%3d ", data[y * encoder->data_width + x]);
+    for ( int y = 0; y < component->data_height; y++ ) {
+        for ( int x = 0; x < component->data_width; x++ ) {
+            printf("%3d ", data[y * component->data_width + x]);
         }
         printf("\n");
     }
@@ -322,24 +340,21 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
     //GPUJPEG_TIMER_START();
         
     // Perform DCT and quantization
-    for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
-        uint8_t* d_data_comp = &encoder->d_data[comp * encoder->data_width * encoder->data_height];
-        int16_t* d_data_quantized_comp = &encoder->d_data_quantized[comp * encoder->data_width * encoder->data_height];
-        
+    for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {        
         // Determine table type
         enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
         
-        //gpujpeg_encoder_print8(encoder, d_data_comp);
+        gpujpeg_encoder_print8(&encoder->component[comp], encoder->component[comp].d_data);
         
         //Perform forward DCT
         NppiSize fwd_roi;
-        fwd_roi.width = encoder->data_width;
-        fwd_roi.height = encoder->data_height;
+        fwd_roi.width = encoder->component[comp].data_width;
+        fwd_roi.height = encoder->component[comp].data_height;
         NppStatus status = nppiDCTQuantFwd8x8LS_JPEG_8u16s_C1R(
-            d_data_comp, 
-            encoder->data_width * sizeof(uint8_t), 
-            d_data_quantized_comp, 
-            encoder->data_width * GPUJPEG_BLOCK_SIZE * sizeof(int16_t), 
+            encoder->component[comp].d_data, 
+            encoder->component[comp].data_width * sizeof(uint8_t), 
+            encoder->component[comp].d_data_quantized, 
+            encoder->component[comp].data_width * GPUJPEG_BLOCK_SIZE * sizeof(int16_t), 
             encoder->table_quantization[type].d_table, 
             fwd_roi
         );
@@ -348,7 +363,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
             return -1;
         }
         
-        //gpujpeg_encoder_print16(encoder, d_data_quantized_comp);
+        gpujpeg_encoder_print16(&encoder->component[comp], encoder->component[comp].d_data_quantized);
     }
     
     // Initialize writer output buffer current position
@@ -368,8 +383,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         // Perform huffman coding for all components
         for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
             // Get data buffer for component
-            int16_t* data_comp = &encoder->data_quantized[comp * encoder->param_image.width * encoder->param_image.height];
-            int16_t* d_data_comp = &encoder->d_data_quantized[comp * encoder->param_image.width * encoder->param_image.height];
+            int16_t* data_comp = &encoder->component[comp].data_quantized;
             // Determine table type
             enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
             // Write scan header
