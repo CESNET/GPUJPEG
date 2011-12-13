@@ -78,6 +78,8 @@ struct gpujpeg_encoder_component
     int mcu_size;
     // Minimun coded unit count (for interleaved mode the same value as encoder->mcu_count)
     int mcu_count;
+    // Segment count
+    int segment_count;
 };
 
 /** 
@@ -86,6 +88,8 @@ struct gpujpeg_encoder_component
  */
 struct gpujpeg_encoder_segment
 {
+    // Scan index
+    int scan_index;
     // Data compressed index
     int data_compressed_index;
     // Data compressed size

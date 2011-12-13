@@ -338,7 +338,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
     int block_cx = (encoder->param_image.width + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
     int block_cy = (encoder->param_image.height + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
     int block_count = block_cx * block_cy;
-    int segment_count = (block_count / encoder->param.restart_interval + 1);
+    int segment_count = gpujpeg_div_and_round_up(block_count,encoder->param.restart_interval);
             
     // Run kernel
     dim3 thread(32);
