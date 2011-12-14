@@ -67,6 +67,7 @@ struct gpujpeg_encoder*
 gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_parameters* param)
 {
     assert(param_image->comp_count == 3);
+    assert(param_image->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     assert(param->quality >= 0 && param->quality <= 100);
     assert(param->restart_interval >= 0);
     assert(param->interleaved == 0 || param->interleaved == 1);
@@ -143,11 +144,15 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         // Compute component MCU count
         encoder->component[comp].mcu_count = gpujpeg_div_and_round_up(encoder->component[comp].data_width, mcu_width) * gpujpeg_div_and_round_up(encoder->component[comp].data_height, mcu_height);
         
+        // Compute MCU count per segment
+        encoder->component[comp].segment_mcu_count = encoder->param.restart_interval;
+        if ( encoder->component[comp].segment_mcu_count == 0 ) {
+            // If restart interval is disabled, restart interval is equal MCU count
+            encoder->component[comp].segment_mcu_count = encoder->component[comp].mcu_count;
+        }
+        
         // Calculate segment count
-        if ( encoder->param.restart_interval > 0 )
-            encoder->component[comp].segment_count = gpujpeg_div_and_round_up(encoder->component[comp].mcu_count, encoder->param.restart_interval);
-        else
-            encoder->component[comp].segment_count = 1;
+        encoder->component[comp].segment_count = gpujpeg_div_and_round_up(encoder->component[comp].mcu_count, encoder->component[comp].segment_mcu_count);
         
         printf("Subsampling %dx%d, Resolution %d, %d, mcu size %d, mcu count %d\n",
             encoder->param.sampling_factor[comp].horizontal, encoder->param.sampling_factor[comp].vertical,
@@ -194,8 +199,10 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         assert(encoder->param_image.comp_count > 0);
         encoder->mcu_count = encoder->component[0].mcu_count;
         encoder->segment_count = encoder->component[0].segment_count;
+        encoder->segment_mcu_count = encoder->component[0].segment_mcu_count;
         for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
             assert(encoder->mcu_count == encoder->component[comp].mcu_count);
+            assert(encoder->segment_mcu_count == encoder->component[comp].segment_mcu_count);
             encoder->mcu_size += encoder->component[comp].mcu_size;
             encoder->mcu_compressed_size += encoder->component[comp].mcu_compressed_size;
         }
@@ -203,6 +210,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         assert(encoder->param_image.comp_count > 0);
         encoder->mcu_size = encoder->component[0].mcu_size;
         encoder->mcu_compressed_size = encoder->component[0].mcu_compressed_size;
+        encoder->segment_mcu_count = 0;
         for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
             assert(encoder->mcu_size == encoder->component[comp].mcu_size);
             assert(encoder->mcu_compressed_size == encoder->component[comp].mcu_compressed_size);
@@ -210,7 +218,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
             encoder->segment_count += encoder->component[comp].segment_count;
         }
     }
-    printf("mcu size %d -> %d, mcu count %d\n", encoder->mcu_size, encoder->mcu_compressed_size, encoder->mcu_count);
+    printf("mcu size %d -> %d, mcu count %d, segment mcu count %d\n", encoder->mcu_size, encoder->mcu_compressed_size, encoder->mcu_count, encoder->segment_mcu_count);
 
     // Allocate segments
     cudaMallocHost((void**)&encoder->segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment));
@@ -228,25 +236,18 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         
         // Prepare segments based on (non-)interleaved mode
         if ( encoder->param.interleaved == 1 ) {
-            // Prepare restart interval
-            int restart_interval = encoder->param.restart_interval;
-            if ( restart_interval == 0 ) {
-                // If restart interval is disabled, restart interval is equal MCU count
-                assert(encoder->segment_count == 1);
-                restart_interval = encoder->mcu_count;
-            }
             // Prepare segments for encoding (only one scan for all color components)
             int mcu_index = 0;
             for ( int index = 0; index < encoder->segment_count; index++ ) {
                 // Prepare segment MCU count
-                int mcu_count = restart_interval;
+                int mcu_count = encoder->segment_mcu_count;
                 if ( (mcu_index + mcu_count) >= encoder->mcu_count )
                     mcu_count = encoder->mcu_count - mcu_index;
                 // Set parameters for segment
                 encoder->segments[index].scan_index = 0;
                 encoder->segments[index].scan_segment_index = index;
-                encoder->segments[index].mcu_size = encoder->mcu_size;
                 encoder->segments[index].mcu_count = mcu_count;
+                encoder->segments[index].mcu_size = encoder->mcu_size;
                 encoder->segments[index].data_index = data_index;
                 encoder->segments[index].data_compressed_index = data_compressed_index;
                 encoder->segments[index].data_compressed_size = 0;
@@ -259,18 +260,11 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
             // Prepare segments for encoding (one scan for each color component)
             int index = 0;
             for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
-                // Prepare restart interval
-                int restart_interval = encoder->param.restart_interval;
-                if ( restart_interval == 0 ) {
-                    // If restart interval is disabled, restart interval is equal MCU count
-                    assert(encoder->component[comp].segment_count == 1);
-                    restart_interval = encoder->component[comp].mcu_count;
-                }
                 // Prepare component segments
                 int mcu_index = 0;
                 for ( int segment = 0; segment < encoder->component[comp].segment_count; segment++ ) {
                     // Prepare segment MCU count
-                    int mcu_count = restart_interval;
+                    int mcu_count = encoder->component[comp].segment_mcu_count;
                     if ( (mcu_index + mcu_count) >= encoder->component[comp].mcu_count )
                         mcu_count = encoder->component[comp].mcu_count - mcu_index;
                     // Set parameters for segment

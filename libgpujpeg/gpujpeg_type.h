@@ -58,8 +58,8 @@ enum gpujpeg_sampling_factor {
  */
 struct gpujpeg_component_sampling_factor
 {
-    int horizontal;
-    int vertical;
+    uint8_t horizontal;
+    uint8_t vertical;
 };
 
 /**

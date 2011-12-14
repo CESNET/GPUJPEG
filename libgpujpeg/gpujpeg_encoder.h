@@ -77,14 +77,16 @@ struct gpujpeg_encoder_component
     // Allocated data size
     int data_size;
     
-    // Minimun coded unit input size (for interleaved mode the same value as encoder->mcu_size)
+    // Minimun coded unit input size
     int mcu_size;
-    // Minimun coded unit compressed size (for interleaved mode the same value as encoder->mcu_compressed_size)
+    // Minimun coded unit compressed size
     int mcu_compressed_size;
     // Minimun coded unit count (for interleaved mode the same value as encoder->mcu_count)
     int mcu_count;
     // Segment count
     int segment_count;
+    // MCU count per segment (the last segment can contain less MCUs, but all other must contain this count)
+    int segment_mcu_count;
     
     // Preprocessed data in device memory (output from preprocessor)
     uint8_t* d_data;
@@ -110,7 +112,7 @@ struct gpujpeg_encoder_segment
     // MCU size (input blocks)
     int mcu_size;
     // Data index (input blocks)
-    int data_index;
+    int data_index;    
     // Data compressed index (output data)
     int data_compressed_index;
     // Data compressed size (output data)
@@ -141,7 +143,11 @@ struct gpujpeg_encoder
     // Minimun coded unit compressed size (for all components)
     int mcu_compressed_size;
     // Minimun coded unit count (for all components)
-    int mcu_count;    
+    int mcu_count;  
+    // Segment total count for all components
+    int segment_count;
+    // MCU count per segment (the last segment can contain less MCUs, but all other must contain this count)
+    int segment_mcu_count;
     
     // Allocated data width
     int data_width;
@@ -172,8 +178,6 @@ struct gpujpeg_encoder
     struct gpujpeg_encoder_segment* segments;
     // Segments in device memory for all components
     struct gpujpeg_encoder_segment* d_segments;
-    // Segment total count for all components
-    int segment_count;
     
     // Quantization tables
     struct gpujpeg_table_quantization table_quantization[GPUJPEG_COMPONENT_TYPE_COUNT];
