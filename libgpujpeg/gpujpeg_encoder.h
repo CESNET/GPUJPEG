@@ -188,6 +188,15 @@ void
 gpujpeg_encoder_set_default_parameters(struct gpujpeg_encoder_parameters* param);
 
 /**
+ * Set parameters for using chroma subsampling
+ * 
+ * @param param  Parameters for encoder
+ * @return void
+ */
+void
+gpujpeg_encoder_parameters_chroma_subsampling(struct gpujpeg_encoder_parameters* param);
+
+/**
  * Create JPEG encoder
  * 
  * @param param_image  Parameters for image data

@@ -42,12 +42,22 @@ gpujpeg_encoder_set_default_parameters(struct gpujpeg_encoder_parameters* param)
     param->restart_interval = 8;
     param->interleaved = 0;
     for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ ) {
+        param->sampling_factor[comp].horizontal = 1;
+        param->sampling_factor[comp].vertical = 1;
+    }
+}
+
+/** Documented at declaration */
+void
+gpujpeg_encoder_parameters_chroma_subsampling(struct gpujpeg_encoder_parameters* param)
+{
+    for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ ) {
         if ( comp == 0 ) {
             param->sampling_factor[comp].horizontal = 2;
             param->sampling_factor[comp].vertical = 2;
         } else {
-            param->sampling_factor[comp].horizontal = 2;
-            param->sampling_factor[comp].vertical = 2;
+            param->sampling_factor[comp].horizontal = 1;
+            param->sampling_factor[comp].vertical = 1;
         }
     }
 }

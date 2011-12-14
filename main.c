@@ -38,10 +38,12 @@ print_help()
         "gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
         "   -h, --help\t\t\tprint help\n"
         "   -s, --size\t\t\tset image size in pixels, e.g. 1920x1080\n"
-        "   -f, --sampling-factor\tset image sampling factor, e.g. 4:2:2\n"
+        "   -f, --sampling-factor\tset input/output raw image sampling factor, e.g. 4:2:2\n"
         "   -c, --colorspace\tset image colorspace, e.g. rgb, yuv, ycbcr-jpeg\n"
         "   -q, --quality\t\tset quality level 0-100 (default 75)\n"
         "   -r, --restart\t\tset restart interval (default 8)\n"
+        "       --chroma-subsampling\t\tuse chroma subsampling\n"
+        "   -i  --interleaved\t\tflag if use interleaved stream for encoding (default 0)\n"
         "   -e, --encode\t\t\tencode images\n"
         "   -d, --decode\t\t\tdecode images\n"
         "   -D, --device\t\t\tcuda device id (default 0)\n"
@@ -52,15 +54,17 @@ int
 main(int argc, char *argv[])
 {       
     struct option longopts[] = {
-        {"help",            no_argument,       0, 'h'},
-        {"size",            required_argument, 0, 's'},
-        {"sampling-factor", required_argument, 0, 'f'},
-        {"colorspace",      required_argument, 0, 'c'},
-        {"quality",         required_argument, 0, 'q'},
-        {"restart",         required_argument, 0, 'r'},
-        {"encode",          no_argument,       0, 'e'},
-        {"decode",          no_argument,       0, 'd'},
-        {"device",          required_argument, 0, 'D'},
+        {"help",               no_argument,       0, 'h'},
+        {"size",               required_argument, 0, 's'},
+        {"sampling-factor",    required_argument, 0, 'f'},
+        {"colorspace",         required_argument, 0, 'c'},
+        {"quality",            required_argument, 0, 'q'},
+        {"restart",            required_argument, 0, 'r'},
+        {"chroma-subsampling", no_argument,       0,  1 },
+        {"interleaved",        required_argument, 0, 'i'},
+        {"encode",             no_argument,       0, 'e'},
+        {"decode",             no_argument,       0, 'd'},
+        {"device",             required_argument, 0, 'D'},
         0
     };
 
@@ -124,6 +128,12 @@ main(int argc, char *argv[])
             param_encoder.restart_interval = atoi(optarg);
             if ( param_encoder.restart_interval < 0 )
                 param_encoder.restart_interval = 0;
+            break;
+        case 1:
+            gpujpeg_encoder_parameters_chroma_subsampling(&param_encoder);
+            break;
+        case 'i':
+            param_encoder.interleaved = atoi(optarg);
             break;
         case 'e':
             encode = 1;
