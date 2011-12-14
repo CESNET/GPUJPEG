@@ -239,7 +239,8 @@ __global__ void
 gpujpeg_huffman_encoder_encode_kernel(
     int restart_interval,
     int mcu_count,
-    struct gpujpeg_encoder_segment* d_segments,
+    struct gpujpeg_encoder_component* d_component,
+    struct gpujpeg_encoder_segment* d_segment,
     int segment_count,    
     int16_t* d_data,
     uint8_t* d_data_compressed,
@@ -260,13 +261,13 @@ gpujpeg_huffman_encoder_encode_kernel(
     if ( segment_index >= segment_count )
         return;
     
-    struct gpujpeg_encoder_segment* segment = &d_segments[segment_index];
-    int comp_index = segment->scan_index;
+    struct gpujpeg_encoder_segment* segment = &d_segment[segment_index];
+    struct gpujpeg_encoder_component* component = &d_component[segment->scan_index];
     
     // Get huffman tables
     struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
     struct gpujpeg_table_huffman_encoder* d_table_ac = NULL;
-    if ( comp_index == 0 ) {
+    if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
         d_table_dc = d_table_y_dc;
         d_table_ac = d_table_y_ac;
     } else {
@@ -286,12 +287,13 @@ gpujpeg_huffman_encoder_encode_kernel(
     // Encode blocks in restart segment
     for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
         // Encode block
-        int data_index = segment->data_index + mcu_index * segment->mcu_size;
+        int data_index = (segment->scan_segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size;        
         gpujpeg_huffman_gpu_encoder_encode_block(
             put_value, 
             put_bits, 
             dc, 
-            &d_data[data_index], 
+            //&d_data[data_index], 
+            &component->d_data_quantized[data_index],
             data_compressed,
             d_table_dc,
             d_table_ac
@@ -341,7 +343,8 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
     gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
         encoder->param.restart_interval,
         encoder->mcu_count, 
-        encoder->d_segments, 
+        encoder->d_component, 
+        encoder->d_segment, 
         encoder->segment_count, 
         encoder->d_data_quantized, 
         encoder->d_data_compressed, 

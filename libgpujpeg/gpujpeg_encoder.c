@@ -87,11 +87,15 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
     encoder->writer = gpujpeg_writer_create(encoder);
     if ( encoder->writer == NULL )
         result = 0;
-        
+    
     // Allocate color components
-    encoder->component = malloc(encoder->param_image.comp_count * sizeof(struct gpujpeg_encoder_component));
+    cudaMallocHost((void**)&encoder->component, encoder->param_image.comp_count * sizeof(struct gpujpeg_encoder_component));
     if ( encoder->component == NULL )
         result = 0;
+    // Allocate color components in device memory
+    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_component, encoder->param_image.comp_count * sizeof(struct gpujpeg_encoder_component)) )
+        result = 0;
+    gpujpeg_cuda_check_error("Encoder color component allocation");
         
     // Initialize sampling factors and compute maximum sampling factor to encoder->sampling_factor
     encoder->sampling_factor.horizontal = 0;
@@ -189,6 +193,11 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         comp_data_quantized += encoder->component[comp].data_width * encoder->component[comp].data_height;
     }
     
+    // Copy components to device memory
+    if ( cudaSuccess != cudaMemcpy(encoder->d_component, encoder->component, encoder->param_image.comp_count * sizeof(struct gpujpeg_encoder_component), cudaMemcpyHostToDevice) )
+        result = 0;
+    gpujpeg_cuda_check_error("Encoder component copy");
+    
     // Compute MCU size, MCU count, segment count and compressed data allocation size
     encoder->mcu_count = 0;
     encoder->mcu_size = 0;
@@ -221,12 +230,13 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
     printf("mcu size %d -> %d, mcu count %d, segment mcu count %d\n", encoder->mcu_size, encoder->mcu_compressed_size, encoder->mcu_count, encoder->segment_mcu_count);
 
     // Allocate segments
-    cudaMallocHost((void**)&encoder->segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment));
-    if ( encoder->segments == NULL )
+    cudaMallocHost((void**)&encoder->segment, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment));
+    if ( encoder->segment == NULL )
         result = 0;
     // Allocate segments in device memory
-    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment)) )
+    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_segment, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment)) )
         result = 0;
+    gpujpeg_cuda_check_error("Encoder segment allocation");
     
     // Prepare segments
     if ( result == 1 ) {            
@@ -244,13 +254,12 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
                 if ( (mcu_index + mcu_count) >= encoder->mcu_count )
                     mcu_count = encoder->mcu_count - mcu_index;
                 // Set parameters for segment
-                encoder->segments[index].scan_index = 0;
-                encoder->segments[index].scan_segment_index = index;
-                encoder->segments[index].mcu_count = mcu_count;
-                encoder->segments[index].mcu_size = encoder->mcu_size;
-                encoder->segments[index].data_index = data_index;
-                encoder->segments[index].data_compressed_index = data_compressed_index;
-                encoder->segments[index].data_compressed_size = 0;
+                encoder->segment[index].scan_index = 0;
+                encoder->segment[index].scan_segment_index = index;
+                encoder->segment[index].mcu_count = mcu_count;
+                encoder->segment[index].data_index = data_index;
+                encoder->segment[index].data_compressed_index = data_compressed_index;
+                encoder->segment[index].data_compressed_size = 0;
                 // Increase parameters for next segment
                 data_index += mcu_count * encoder->mcu_size;
                 data_compressed_index += mcu_count * encoder->mcu_compressed_size;
@@ -268,13 +277,12 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
                     if ( (mcu_index + mcu_count) >= encoder->component[comp].mcu_count )
                         mcu_count = encoder->component[comp].mcu_count - mcu_index;
                     // Set parameters for segment
-                    encoder->segments[index].scan_index = comp;
-                    encoder->segments[index].scan_segment_index = segment;
-                    encoder->segments[index].mcu_count = mcu_count;
-                    encoder->segments[index].mcu_size = encoder->component[comp].mcu_size;
-                    encoder->segments[index].data_index = data_index;
-                    encoder->segments[index].data_compressed_index = data_compressed_index;
-                    encoder->segments[index].data_compressed_size = 0;
+                    encoder->segment[index].scan_index = comp;
+                    encoder->segment[index].scan_segment_index = segment;
+                    encoder->segment[index].mcu_count = mcu_count;
+                    encoder->segment[index].data_index = data_index;
+                    encoder->segment[index].data_compressed_index = data_compressed_index;
+                    encoder->segment[index].data_compressed_size = 0;
                     // Increase parameters for next segment
                     data_index += mcu_count * encoder->component[comp].mcu_size;
                     data_compressed_index += mcu_count * encoder->component[comp].mcu_compressed_size;
@@ -294,7 +302,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
     //printf("Compressed size %d (segments %d)\n", encoder->data_compressed_size, encoder->segment_count);
         
     // Copy segments to device memory
-    if ( cudaSuccess != cudaMemcpy(encoder->d_segments, encoder->segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment), cudaMemcpyHostToDevice) )
+    if ( cudaSuccess != cudaMemcpy(encoder->d_segment, encoder->segment, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment), cudaMemcpyHostToDevice) )
         result = 0;
         
         // Allocate compressed data
@@ -302,8 +310,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         result = 0;   
     if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->param.restart_interval * GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
         result = 0;   
-    
-	gpujpeg_cuda_check_error("Encoder segment allocation");
+	gpujpeg_cuda_check_error("Encoder data compressed allocation");
      
     // Allocate quantization tables in device memory
     for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -439,7 +446,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
     //GPUJPEG_TIMER_START();
     
     // Perform huffman coding on CPU (when restart interval is not set)
-    if ( 1 || encoder->param.restart_interval == 0 ) {
+    if ( 0 || encoder->param.restart_interval == 0 ) {
         // Copy quantized data from device memory to cpu memory
         cudaMemcpy(encoder->data_quantized, encoder->d_data_quantized, encoder->data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
         
@@ -461,7 +468,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         if ( cudaSuccess != cudaMemcpy(encoder->data_compressed, encoder->d_data_compressed, encoder->segment_count * encoder->param.restart_interval * GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
             return -1;
         // Copy segments to device memory
-        if ( cudaSuccess != cudaMemcpy(encoder->segments, encoder->d_segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment), cudaMemcpyDeviceToHost) )
+        if ( cudaSuccess != cudaMemcpy(encoder->segment, encoder->d_segment, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment), cudaMemcpyDeviceToHost) )
             return -1;
             
         if ( encoder->param.interleaved == 1 ) {
@@ -469,7 +476,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
             gpujpeg_writer_write_scan_header(encoder, 0);
             // Write scan data
             for ( int segment_index = 0; segment_index < encoder->segment_count; segment_index++ ) {
-                struct gpujpeg_encoder_segment* segment = &encoder->segments[segment_index];
+                struct gpujpeg_encoder_segment* segment = &encoder->segment[segment_index];
                     
                 // Copy compressed data to writer
                 memcpy(
@@ -488,7 +495,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
                 gpujpeg_writer_write_scan_header(encoder, comp);
                 // Write scan data
                 for ( int index = 0; index < encoder->component[comp].segment_count; index++ ) {
-                    struct gpujpeg_encoder_segment* segment = &encoder->segments[segment_index];
+                    struct gpujpeg_encoder_segment* segment = &encoder->segment[segment_index];
                     
                     // Copy compressed data to writer
                     memcpy(
@@ -547,10 +554,10 @@ gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)
         cudaFreeHost(encoder->data_compressed);    
     if ( encoder->d_data_compressed != NULL )
         cudaFree(encoder->d_data_compressed);    
-    if ( encoder->segments != NULL )
-        cudaFreeHost(encoder->segments);  
-    if ( encoder->d_segments != NULL )
-        cudaFree(encoder->d_segments);    
+    if ( encoder->segment != NULL )
+        cudaFreeHost(encoder->segment); 
+    if ( encoder->d_segment != NULL )
+        cudaFree(encoder->d_segment);
     
     free(encoder);
     
