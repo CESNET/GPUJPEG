@@ -244,7 +244,7 @@ gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder)
             enum gpujpeg_component_type type = (segment->scan_index == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
             
             // Write scan header
-            gpujpeg_writer_write_scan_header(encoder, segment->scan_index, type);
+            gpujpeg_writer_write_scan_header(encoder, segment->scan_index);
             
             // Initialize huffman coder
             coder.table_dc = &encoder->table_huffman[type][GPUJPEG_HUFFMAN_DC];

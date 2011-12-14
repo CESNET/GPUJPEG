@@ -146,11 +146,11 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         else
             encoder->component[comp].segment_count = 1;
         
-        printf("Subsampling %dx%d, Resolution %d, %d, mcu size %d, mcu count %d\n",
-            encoder->param.sampling_factor[comp].horizontal, encoder->param.sampling_factor[comp].vertical,
-            encoder->component[comp].data_width, encoder->component[comp].data_height,
-            encoder->component[comp].mcu_size, encoder->component[comp].mcu_count
-        );
+        //printf("Subsampling %dx%d, Resolution %d, %d, mcu size %d, mcu count %d\n",
+        //    encoder->param.sampling_factor[comp].horizontal, encoder->param.sampling_factor[comp].vertical,
+        //    encoder->component[comp].data_width, encoder->component[comp].data_height,
+        //    encoder->component[comp].mcu_size, encoder->component[comp].mcu_count
+        //);
     }
     
     // Maximum component data size for allocated buffers
@@ -203,8 +203,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
             encoder->segment_count += encoder->component[comp].segment_count;
         }
     }
-    
-    printf("mcu size %d, mcu count %d\n", encoder->mcu_size, encoder->mcu_count);
+    //printf("mcu size %d, mcu count %d\n", encoder->mcu_size, encoder->mcu_count);
 
     // Allocate segments
     cudaMallocHost((void**)&encoder->segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment));
@@ -223,7 +222,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
             if ( restart_interval == 0 ) {
                 assert(encoder->segment_count == 1);
                 restart_interval = encoder->mcu_count;
-                printf("change restart %d (segments %d)\n", restart_interval, encoder->segment_count);
+                //printf("change restart %d (segments %d)\n", restart_interval, encoder->segment_count);
             }
             
             // Prepare segments for encoding (one scan only)
@@ -248,7 +247,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
                 if ( restart_interval == 0 ) {
                     assert(encoder->component[comp].segment_count == 1);
                     restart_interval = encoder->component[comp].mcu_count;
-                    printf("change restart %d (segments %d)\n", restart_interval, encoder->component[comp].segment_count);
+                    //printf("change restart %d (segments %d)\n", restart_interval, encoder->component[comp].segment_count);
                 }
                 // Prepare component segments
                 int mcu_size = encoder->component[comp].mcu_size;
@@ -269,8 +268,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         // Set compressed size
         encoder->data_compressed_size = data_compressed_index;
     }
-        
-    printf("Compressed size %d (segments %d)\n", encoder->data_compressed_size, encoder->segment_count);
+    //printf("Compressed size %d (segments %d)\n", encoder->data_compressed_size, encoder->segment_count);
         
     // Copy segments to device memory
     if ( cudaSuccess != cudaMemcpy(encoder->d_segments, encoder->segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment), cudaMemcpyHostToDevice) )
@@ -442,18 +440,14 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         // Copy segments to device memory
         if ( cudaSuccess != cudaMemcpy(encoder->segments, encoder->d_segments, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment), cudaMemcpyDeviceToHost) )
             return -1;
-        
-        // Write huffman coder results
-        int segment_index = 0;
-        for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
-            // Determine table type
-            enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
-            // Write scan header
-            gpujpeg_writer_write_scan_header(encoder, comp, type);
+            
+        if ( encoder->param.interleaved == 1 ) {
+            // Write scan header (only one scan is written, that contains all color components data)
+            gpujpeg_writer_write_scan_header(encoder, 0);
             // Write scan data
-            for ( int index = 0; index < encoder->component[comp].segment_count; index++ ) {
+            for ( int segment_index = 0; segment_index < encoder->segment_count; segment_index++ ) {
                 struct gpujpeg_encoder_segment* segment = &encoder->segments[segment_index];
-                
+                    
                 // Copy compressed data to writer
                 memcpy(
                     encoder->writer->buffer_current, 
@@ -462,8 +456,28 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
                 );
                 encoder->writer->buffer_current += segment->data_compressed_size;
                 //printf("Compressed data %d bytes\n", segment->data_compressed_size);
-                
-                segment_index++;
+            }
+        } else {
+            // Write huffman coder results as one scan for each color component
+            int segment_index = 0;
+            for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
+                // Write scan header
+                gpujpeg_writer_write_scan_header(encoder, comp);
+                // Write scan data
+                for ( int index = 0; index < encoder->component[comp].segment_count; index++ ) {
+                    struct gpujpeg_encoder_segment* segment = &encoder->segments[segment_index];
+                    
+                    // Copy compressed data to writer
+                    memcpy(
+                        encoder->writer->buffer_current, 
+                        &encoder->data_compressed[segment->data_compressed_index],
+                        segment->data_compressed_size
+                    );
+                    encoder->writer->buffer_current += segment->data_compressed_size;
+                    //printf("Compressed data %d bytes\n", segment->data_compressed_size);
+                    
+                    segment_index++;
+                }
             }
         }
     }

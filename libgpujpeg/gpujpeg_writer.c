@@ -170,17 +170,17 @@ gpujpeg_writer_write_sof0(struct gpujpeg_encoder* encoder)
 	gpujpeg_writer_emit_byte(encoder->writer, encoder->param_image.comp_count);
     
     // Components
-    for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
+    for ( int comp_index = 0; comp_index < encoder->param_image.comp_count; comp_index++ ) {
         // Component index
-        gpujpeg_writer_emit_byte(encoder->writer, comp + 1);  
+        gpujpeg_writer_emit_byte(encoder->writer, comp_index + 1);  
         
         // Sampling factors (1 << 4) + 1 (sampling h: 1, v: 1)
-        gpujpeg_writer_emit_byte(encoder->writer, (encoder->component[comp].sampling_factor.horizontal << 4) + encoder->component[comp].sampling_factor.vertical);
+        gpujpeg_writer_emit_byte(encoder->writer, (encoder->component[comp_index].sampling_factor.horizontal << 4) + encoder->component[comp_index].sampling_factor.vertical);
         
         // Quantization table index
-        if ( encoder->component[comp].type == GPUJPEG_COMPONENT_LUMINANCE ) {
+        if ( encoder->component[comp_index].type == GPUJPEG_COMPONENT_LUMINANCE ) {
             gpujpeg_writer_emit_byte(encoder->writer, 0);
-        } else if ( encoder->component[comp].type == GPUJPEG_COMPONENT_CHROMINANCE ) {
+        } else if ( encoder->component[comp_index].type == GPUJPEG_COMPONENT_CHROMINANCE ) {
             gpujpeg_writer_emit_byte(encoder->writer, 1);
         } else {
             assert(0);
@@ -278,28 +278,55 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 
 /** Documented at declaration */
 void
-gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int index, enum gpujpeg_component_type type)
+gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int scan_index)
 {        
     gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_SOS);
-
-    // Length
-	int length = 2 + 1 + 2 + 3;
-	gpujpeg_writer_emit_2byte(encoder->writer, length);
-
-    // Component count
-	gpujpeg_writer_emit_byte(encoder->writer, 1);
-
-    if ( type == GPUJPEG_COMPONENT_LUMINANCE ) {
-        // Component Y
-        gpujpeg_writer_emit_byte(encoder->writer, index + 1); // index
-        gpujpeg_writer_emit_byte(encoder->writer, 0);         // (0 << 4) | 0
+    
+    if ( encoder->param.interleaved == 1 ) {
+        // Length
+        gpujpeg_writer_emit_2byte(encoder->writer, 6 + 2 * encoder->param_image.comp_count);
+        
+        // Component count
+        gpujpeg_writer_emit_byte(encoder->writer, encoder->param_image.comp_count);
+        
+        // Components
+        for ( int comp_index = 0; comp_index < encoder->param_image.comp_count; comp_index++ ) {
+            // Component index
+            gpujpeg_writer_emit_byte(encoder->writer, comp_index + 1);
+            
+            // Component DC and AC entropy coding table indexes
+            if ( encoder->component[comp_index].type == GPUJPEG_COMPONENT_LUMINANCE ) {
+                gpujpeg_writer_emit_byte(encoder->writer, 0);    // (0 << 4) | 0
+            } else if ( encoder->component[comp_index].type == GPUJPEG_COMPONENT_CHROMINANCE ) {
+                gpujpeg_writer_emit_byte(encoder->writer, 0x11); // (1 << 4) | 1
+            } else {
+                assert(0);
+            }
+        }
     } else {
-        // Component Cb or Cr
-        gpujpeg_writer_emit_byte(encoder->writer, index + 1); // index
-        gpujpeg_writer_emit_byte(encoder->writer, 0x11);      // (1 << 4) | 1
-    }
+        // Component index
+        int comp_index = scan_index;
 
-	gpujpeg_writer_emit_byte(encoder->writer, 0);    // Ss
-	gpujpeg_writer_emit_byte(encoder->writer, 0x3F); // Se
-	gpujpeg_writer_emit_byte(encoder->writer, 0);    // Ah/Al
+        // Length
+        gpujpeg_writer_emit_2byte(encoder->writer, 8);
+
+        // Component count
+        gpujpeg_writer_emit_byte(encoder->writer, 1);
+
+        // Component index
+        gpujpeg_writer_emit_byte(encoder->writer, comp_index + 1);
+        
+        // Component DC and AC entropy coding table indexes
+        if ( encoder->component[comp_index].type == GPUJPEG_COMPONENT_LUMINANCE ) {
+            gpujpeg_writer_emit_byte(encoder->writer, 0);    // (0 << 4) | 0
+        } else if ( encoder->component[comp_index].type == GPUJPEG_COMPONENT_CHROMINANCE ) {
+            gpujpeg_writer_emit_byte(encoder->writer, 0x11); // (1 << 4) | 1
+        } else {
+            assert(0);
+        }
+    }
+    
+    gpujpeg_writer_emit_byte(encoder->writer, 0);    // Ss
+    gpujpeg_writer_emit_byte(encoder->writer, 0x3F); // Se
+    gpujpeg_writer_emit_byte(encoder->writer, 0);    // Ah/Al
 }

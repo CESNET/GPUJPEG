@@ -111,10 +111,10 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder);
  * Write scan header for one component
  * 
  * @param encoder  Encoder structure
- * @param type  Component scan type
+ * @param scan_index  Scan index  
  * @return void
  */
 void
-gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int index, enum gpujpeg_component_type type);
+gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int scan_index);
 
 #endif // GPUJPEG_WRITER_H
