@@ -43,7 +43,7 @@ print_help()
         "   -q, --quality\t\tset quality level 0-100 (default 75)\n"
         "   -r, --restart\t\tset restart interval (default 8)\n"
         "       --chroma-subsampling\t\tuse chroma subsampling\n"
-        "   -i  --interleaved\t\tflag if use interleaved stream for encoding (default 0)\n"
+        "   -i  --interleaving\t\tflag if use interleaved stream for encoding\n"
         "   -e, --encode\t\t\tencode images\n"
         "   -d, --decode\t\t\tdecode images\n"
         "   -D, --device\t\t\tcuda device id (default 0)\n"
@@ -61,7 +61,7 @@ main(int argc, char *argv[])
         {"quality",            required_argument, 0, 'q'},
         {"restart",            required_argument, 0, 'r'},
         {"chroma-subsampling", no_argument,       0,  1 },
-        {"interleaved",        required_argument, 0, 'i'},
+        {"interleaving",       no_argument,       0, 'i'},
         {"encode",             no_argument,       0, 'e'},
         {"decode",             no_argument,       0, 'd'},
         {"device",             required_argument, 0, 'D'},
@@ -133,7 +133,7 @@ main(int argc, char *argv[])
             gpujpeg_encoder_parameters_chroma_subsampling(&param_encoder);
             break;
         case 'i':
-            param_encoder.interleaved = atoi(optarg);
+            param_encoder.interleaved = 1;
             break;
         case 'e':
             encode = 1;

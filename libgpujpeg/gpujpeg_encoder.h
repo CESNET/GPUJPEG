@@ -77,8 +77,10 @@ struct gpujpeg_encoder_component
     // Allocated data size
     int data_size;
     
-    // Minimun coded unit size (for interleaved mode the same value as encoder->mcu_size)
+    // Minimun coded unit input size (for interleaved mode the same value as encoder->mcu_size)
     int mcu_size;
+    // Minimun coded unit compressed size (for interleaved mode the same value as encoder->mcu_compressed_size)
+    int mcu_compressed_size;
     // Minimun coded unit count (for interleaved mode the same value as encoder->mcu_count)
     int mcu_count;
     // Segment count
@@ -107,6 +109,8 @@ struct gpujpeg_encoder_segment
     int mcu_index;
     // MCU count (input blocks)
     int mcu_count;
+    // MCU size (input blocks)
+    int mcu_size;
     // Data compressed index (output data)
     int data_compressed_index;
     // Data compressed size (output data)
@@ -132,8 +136,10 @@ struct gpujpeg_encoder
     
     // Maximum sampling factor from components
     struct gpujpeg_component_sampling_factor sampling_factor;
-    // Minimun coded unit size (for all components)
+    // Minimun coded unit input size (for all components)
     int mcu_size;
+    // Minimun coded unit compressed size (for all components)
+    int mcu_compressed_size;
     // Minimun coded unit count (for all components)
     int mcu_count;    
     
