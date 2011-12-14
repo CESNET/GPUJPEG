@@ -105,8 +105,6 @@ struct gpujpeg_encoder_segment
     int scan_index;
     // Segment index in the scan
     int scan_segment_index;
-    // MCU index (input blocks)
-    int mcu_index;
     // MCU count (input blocks)
     int mcu_count;
     // MCU size (input blocks)
