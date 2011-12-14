@@ -59,6 +59,9 @@ struct gpujpeg_encoder_parameters
  */
 struct gpujpeg_encoder_component
 {
+    // Component type
+    enum gpujpeg_component_type type;
+    
     // Component sampling factor
     struct gpujpeg_component_sampling_factor sampling_factor;
     

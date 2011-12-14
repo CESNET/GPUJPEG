@@ -238,7 +238,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
 __global__ void
 gpujpeg_huffman_encoder_encode_kernel(
     int restart_interval,
-    int block_count,
+    int mcu_count,
     struct gpujpeg_encoder_segment* d_segments,
     int segment_count,    
     int16_t* d_data,
@@ -284,13 +284,13 @@ gpujpeg_huffman_encoder_encode_kernel(
     uint8_t* data_compressed_start = data_compressed;
     
     // Encode blocks in restart segment
-    int block_index = segment_index * restart_interval;
-    for ( int block = 0; block < restart_interval; block++ ) {
+    int mcu_index = segment->mcu_index;
+    for ( int mcu = 0; mcu < segment->mcu_count; mcu++ ) {
         // Skip blocks out of memory
-        if ( block_index >= block_count )
+        if ( mcu_index >= mcu_count )
             break;
         // Encode block
-        int data_index = (block_index) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+        int data_index = (mcu_index) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
         gpujpeg_huffman_gpu_encoder_encode_block(
             put_value, 
             put_bits, 
@@ -300,7 +300,7 @@ gpujpeg_huffman_encoder_encode_kernel(
             d_table_dc,
             d_table_ac
         );
-        block_index++;
+        mcu_index++;
     }
     
     // Emit left bits
@@ -308,7 +308,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         gpujpeg_huffman_gpu_encoder_emit_left_bits(put_value, put_bits, data_compressed);
                         
     // Output restart marker
-    if ( block_index < block_count ) {
+    if ( mcu_index < mcu_count ) {
         int restart_marker = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index & 0x7);
         //printf("%d,%d: marker 0x%X\n", comp_index, segment_index, restart_marker);
         gpujpeg_huffman_gpu_encoder_marker(data_compressed, restart_marker);

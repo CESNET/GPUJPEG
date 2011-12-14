@@ -101,6 +101,9 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
     
     // Initialize color components
     for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
+        // Set type
+        encoder->component[comp].type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
+        
         // Set proper color component sizes in pixels based on sampling factors
         int samp_factor_h = encoder->component[comp].sampling_factor.horizontal;
         int samp_factor_v = encoder->component[comp].sampling_factor.vertical;
@@ -373,7 +376,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         // Determine table type
         enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
         
-        gpujpeg_encoder_print8(&encoder->component[comp], encoder->component[comp].d_data);
+        //gpujpeg_encoder_print8(&encoder->component[comp], encoder->component[comp].d_data);
         
         //Perform forward DCT
         NppiSize fwd_roi;
@@ -392,7 +395,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
             return -1;
         }
         
-        gpujpeg_encoder_print16(&encoder->component[comp], encoder->component[comp].d_data_quantized);
+        //gpujpeg_encoder_print16(&encoder->component[comp], encoder->component[comp].d_data_quantized);
     }
     
     // Initialize writer output buffer current position
@@ -431,15 +434,14 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
             return -1;
         
         // Write huffman coder results
+        int segment_index = 0;
         for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
             // Determine table type
             enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
             // Write scan header
             gpujpeg_writer_write_scan_header(encoder, comp, type);
             // Write scan data
-            int comp_segment_count = encoder->segment_count / encoder->param_image.comp_count;
-            for ( int index = 0; index < comp_segment_count; index++ ) {
-                int segment_index = (comp * comp_segment_count + index);
+            for ( int index = 0; index < encoder->component[comp].segment_count; index++ ) {
                 struct gpujpeg_encoder_segment* segment = &encoder->segments[segment_index];
                 
                 // Copy compressed data to writer
@@ -450,6 +452,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
                 );
                 encoder->writer->buffer_current += segment->data_compressed_size;
                 //printf("Compressed data %d bytes\n", segment->data_compressed_size);
+                
+                segment_index++;
             }
         }
     }

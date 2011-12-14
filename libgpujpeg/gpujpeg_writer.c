@@ -158,30 +158,34 @@ gpujpeg_writer_write_sof0(struct gpujpeg_encoder* encoder)
 	gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_SOF0);
     
     // Length
-	gpujpeg_writer_emit_2byte(encoder->writer, 17);
+	gpujpeg_writer_emit_2byte(encoder->writer, 8 + 3 * encoder->param_image.comp_count);
 
     // Precision (bit depth)
 	gpujpeg_writer_emit_byte(encoder->writer, 8);
     // Dimensions
 	gpujpeg_writer_emit_2byte(encoder->writer, encoder->param_image.height);
 	gpujpeg_writer_emit_2byte(encoder->writer, encoder->param_image.width);
+    
     // Number of components
-	gpujpeg_writer_emit_byte(encoder->writer, 3);
-
-	// Component Y
-	gpujpeg_writer_emit_byte(encoder->writer, 1);  // component index
-	gpujpeg_writer_emit_byte(encoder->writer, 17); // (1 << 4) + 1 (sampling h: 1, v: 1)
-	gpujpeg_writer_emit_byte(encoder->writer, 0);  // quantization table index
-
-	// Component Cb
-	gpujpeg_writer_emit_byte(encoder->writer, 2);  // component index
-	gpujpeg_writer_emit_byte(encoder->writer, 17); // (1 << 4) + 1 (sampling h: 1, v: 1)
-	gpujpeg_writer_emit_byte(encoder->writer, 1);  // quantization table index
-
-	// Component Cr
-	gpujpeg_writer_emit_byte(encoder->writer, 3);  // component index
-	gpujpeg_writer_emit_byte(encoder->writer, 17); // (1 << 4) + 1 (sampling h: 1, v: 1)
-	gpujpeg_writer_emit_byte(encoder->writer, 1);  // quantization table index
+	gpujpeg_writer_emit_byte(encoder->writer, encoder->param_image.comp_count);
+    
+    // Components
+    for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
+        // Component index
+        gpujpeg_writer_emit_byte(encoder->writer, comp + 1);  
+        
+        // Sampling factors (1 << 4) + 1 (sampling h: 1, v: 1)
+        gpujpeg_writer_emit_byte(encoder->writer, (encoder->component[comp].sampling_factor.horizontal << 4) + encoder->component[comp].sampling_factor.vertical);
+        
+        // Quantization table index
+        if ( encoder->component[comp].type == GPUJPEG_COMPONENT_LUMINANCE ) {
+            gpujpeg_writer_emit_byte(encoder->writer, 0);
+        } else if ( encoder->component[comp].type == GPUJPEG_COMPONENT_CHROMINANCE ) {
+            gpujpeg_writer_emit_byte(encoder->writer, 1);
+        } else {
+            assert(0);
+        }
+    }
 }
 
 /**
