@@ -100,9 +100,13 @@ struct gpujpeg_encoder_segment
     int scan_index;
     // Segment index in the scan
     int scan_segment_index;
-    // Data compressed index
+    // MCU index (input blocks)
+    int mcu_index;
+    // MCU count (input blocks)
+    int mcu_count;
+    // Data compressed index (output data)
     int data_compressed_index;
-    // Data compressed size
+    // Data compressed size (output data)
     int data_compressed_size;
 };
 

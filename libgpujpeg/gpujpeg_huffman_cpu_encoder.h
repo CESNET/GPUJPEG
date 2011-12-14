@@ -41,6 +41,6 @@
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder, enum gpujpeg_component_type type, int16_t* data);
+gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder);
 
 #endif // GPUJPEG_HUFFMAN_CPU_ENCODER_H
