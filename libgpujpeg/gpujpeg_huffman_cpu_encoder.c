@@ -49,11 +49,7 @@ struct gpujpeg_huffman_cpu_encoder
     // JPEG writer structure
     struct gpujpeg_writer* writer;
     // DC differentize for component
-    int dc;
-    // Restart interval
-    int restart_interval;
-    // Block count
-    int block_count;
+    int dc;    
 };
 
 /**
@@ -229,20 +225,27 @@ gpujpeg_huffman_cpu_encoder_encode_mcu(struct gpujpeg_huffman_cpu_encoder* coder
 /** Documented at declaration */
 int
 gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder)
-{    
+{            
+    // Init encoder
     struct gpujpeg_huffman_cpu_encoder coder;
-    
-    //uint8_t* buffer = encoder->writer->buffer_current;
+    coder.put_bits = 0;
     
     // Encode all blocks
     int scan_index = -1;
     for ( int segment_index = 0; segment_index < encoder->segment_count; segment_index++ ) {
         struct gpujpeg_encoder_segment* segment = &encoder->segments[segment_index];
         
+        //printf("segment %d, %d\n", segment_index, segment->scan_index);
+        
+        // Init scan if changed
         if ( scan_index != segment->scan_index ) {
+            // Emit left from previous scan
+            if ( coder.put_bits > 0 )
+                gpujpeg_huffman_cpu_encoder_emit_left_bits(&coder);
+            
             // Determine component type
             enum gpujpeg_component_type type = (segment->scan_index == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
-            
+        
             // Write scan header
             gpujpeg_writer_write_scan_header(encoder, segment->scan_index);
             
@@ -253,25 +256,22 @@ gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder)
             coder.put_bits = 0;
             coder.dc = 0;
             coder.writer = encoder->writer;
-            coder.restart_interval = encoder->param.restart_interval;
-            coder.block_count = 0;
             
+            // Set current scan index
             scan_index = segment->scan_index;
         }
         
+        // Encode segment MCUs
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
-            uint8_t* buffer = encoder->writer->buffer_current;
-            
-            // Encoder block
-            int data_index = (segment->mcu_index + mcu_index) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+            int data_index = segment->data_index + mcu_index * segment->mcu_size;
             if ( gpujpeg_huffman_cpu_encoder_encode_mcu(&coder, &encoder->data_quantized[data_index]) != 0 ) {
                 fprintf(stderr, "Huffman encoder failed at block [%d, %d]!\n", segment_index, mcu_index);
                 return -1;
             }
-            coder.block_count++;
         }
         
-        if ( (segment_index + 1) < encoder->segment_count ) {
+        // Output restart marker, if segment is not last in current scan
+        if ( (segment_index + 1) < encoder->segment_count && encoder->segments[segment_index + 1].scan_index == scan_index ) {
             // Emit left bits
             if ( coder.put_bits > 0 )
                 gpujpeg_huffman_cpu_encoder_emit_left_bits(&coder);
@@ -282,16 +282,12 @@ gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder)
             // Output restart marker
             int restart_marker = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index & 0x7);
             gpujpeg_writer_emit_marker(encoder->writer, restart_marker);
-            //printf("byte count %d\n", (int)encoder->writer->buffer_current - (int)buffer);
-            //buffer = encoder->writer->buffer_current;
         }
     }
     
     // Emit left
     if ( coder.put_bits > 0 )
         gpujpeg_huffman_cpu_encoder_emit_left_bits(&coder);
-        
-    //printf("byte count %d\n", (int)encoder->writer->buffer_current - (int)buffer);
     
     return 0;
 }

@@ -220,7 +220,8 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         result = 0;
     
     if ( result == 1 ) {            
-        // Prepare segments and compute compressed size
+        // Prepare segments and compute input size and compressed size
+        int data_index = 0;
         int data_compressed_index = 0;
         if ( encoder->param.interleaved == 1 ) {
             // Prepare restart interval
@@ -234,20 +235,25 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
             // Prepare segments for encoding (one scan only)
             int mcu_index = 0;
             for ( int index = 0; index < encoder->segment_count; index++ ) {
+                int mcu_count = restart_interval;
+                if ( (mcu_index + mcu_count) >= encoder->mcu_count )
+                    mcu_count = encoder->mcu_count - mcu_index;
+                    
                 encoder->segments[index].scan_index = 0;
                 encoder->segments[index].scan_segment_index = index;
                 encoder->segments[index].mcu_index = mcu_index;
                 encoder->segments[index].mcu_size = encoder->mcu_size;
-                encoder->segments[index].mcu_count = restart_interval;
+                encoder->segments[index].mcu_count = mcu_count;
+                encoder->segments[index].data_index = data_index;
                 encoder->segments[index].data_compressed_index = data_compressed_index;
                 encoder->segments[index].data_compressed_size = 0;
-                data_compressed_index += restart_interval * encoder->mcu_compressed_size;
-                mcu_index += restart_interval;
+                data_index += mcu_count * encoder->mcu_size;
+                data_compressed_index += mcu_count * encoder->mcu_compressed_size;
+                mcu_index += mcu_count;
             }
         } else {
             // Prepare segments for encoding (scan for each color component)
             int index = 0;
-            int mcu_index = 0;
             for ( int comp = 0; comp < encoder->param_image.comp_count; comp++ ) {
                 // Prepare restart interval
                 int restart_interval = encoder->param.restart_interval;
@@ -257,20 +263,30 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
                     //printf("change restart %d (segments %d)\n", restart_interval, encoder->component[comp].segment_count);
                 }
                 // Prepare component segments
+                int mcu_index = 0;
                 for ( int segment = 0; segment < encoder->component[comp].segment_count; segment++ ) {
+                    int mcu_count = restart_interval;
+                    if ( (mcu_index + mcu_count) >= encoder->component[comp].mcu_count )
+                        mcu_count = encoder->component[comp].mcu_count - mcu_index;
+                    
                     encoder->segments[index].scan_index = comp;
                     encoder->segments[index].scan_segment_index = segment;
                     encoder->segments[index].mcu_index = mcu_index;
-                    encoder->segments[index].mcu_count = restart_interval;
+                    encoder->segments[index].mcu_count = mcu_count;
                     encoder->segments[index].mcu_size = encoder->component[comp].mcu_size;
+                    encoder->segments[index].data_index = data_index;
                     encoder->segments[index].data_compressed_index = data_compressed_index;
                     encoder->segments[index].data_compressed_size = 0;
-                    data_compressed_index += restart_interval * encoder->component[comp].mcu_compressed_size;
+                    data_index += mcu_count * encoder->component[comp].mcu_size;
+                    data_compressed_index += mcu_count * encoder->component[comp].mcu_compressed_size;
+                    mcu_index += mcu_count;
                     index++;
-                    mcu_index += restart_interval;
                 }
             }
         }
+        
+        // Check data size
+        assert(encoder->data_size == data_index);
             
         // Set compressed size
         encoder->data_compressed_size = data_compressed_index;

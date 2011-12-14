@@ -290,7 +290,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         if ( mcu_index >= mcu_count )
             break;
         // Encode block
-        int data_index = (mcu_index) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+        int data_index = (mcu_index) * segment->mcu_size;
         gpujpeg_huffman_gpu_encoder_encode_block(
             put_value, 
             put_bits, 
