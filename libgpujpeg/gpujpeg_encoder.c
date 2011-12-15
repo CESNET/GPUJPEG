@@ -159,11 +159,11 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         // Calculate segment count
         encoder->component[comp].segment_count = gpujpeg_div_and_round_up(encoder->component[comp].mcu_count, encoder->component[comp].segment_mcu_count);
         
-        printf("Subsampling %dx%d, Resolution %d, %d, mcu size %d, mcu count %d\n",
-            encoder->param.sampling_factor[comp].horizontal, encoder->param.sampling_factor[comp].vertical,
-            encoder->component[comp].data_width, encoder->component[comp].data_height,
-            encoder->component[comp].mcu_compressed_size, encoder->component[comp].mcu_count
-        );
+        //printf("Subsampling %dx%d, Resolution %d, %d, mcu size %d, mcu count %d\n",
+        //    encoder->param.sampling_factor[comp].horizontal, encoder->param.sampling_factor[comp].vertical,
+        //    encoder->component[comp].data_width, encoder->component[comp].data_height,
+        //    encoder->component[comp].mcu_compressed_size, encoder->component[comp].mcu_count
+        //);
     }
     
     // Maximum component data size for allocated buffers
@@ -228,7 +228,7 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
             encoder->segment_count += encoder->component[comp].segment_count;
         }
     }
-    printf("mcu size %d -> %d, mcu count %d, segment mcu count %d\n", encoder->mcu_size, encoder->mcu_compressed_size, encoder->mcu_count, encoder->segment_mcu_count);
+    //printf("mcu size %d -> %d, mcu count %d, segment mcu count %d\n", encoder->mcu_size, encoder->mcu_compressed_size, encoder->mcu_count, encoder->segment_mcu_count);
 
     // Allocate segments
     cudaMallocHost((void**)&encoder->segment, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment));
