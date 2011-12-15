@@ -305,9 +305,9 @@ gpujpeg_encoder_create(struct gpujpeg_image_parameters* param_image, struct gpuj
         result = 0;
         
         // Allocate compressed data
-    if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_compressed, encoder->segment_count * encoder->param.restart_interval * GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
+    if ( cudaSuccess != cudaMallocHost((void**)&encoder->data_compressed, encoder->data_compressed_size * sizeof(uint8_t)) ) 
         result = 0;   
-    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->segment_count * encoder->param.restart_interval * GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t)) ) 
+    if ( cudaSuccess != cudaMalloc((void**)&encoder->d_data_compressed, encoder->data_compressed_size * sizeof(uint8_t)) ) 
         result = 0;   
 	gpujpeg_cuda_check_error("Encoder data compressed allocation");
      
@@ -445,7 +445,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
     //GPUJPEG_TIMER_START();
     
     // Perform huffman coding on CPU (when restart interval is not set)
-    if ( 1 || encoder->param.restart_interval == 0 ) {
+    if ( encoder->param.restart_interval == 0 ) {
         // Copy quantized data from device memory to cpu memory
         cudaMemcpy(encoder->data_quantized, encoder->d_data_quantized, encoder->data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
         
@@ -464,7 +464,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         }
         
         // Copy compressed data from device memory to cpu memory
-        if ( cudaSuccess != cudaMemcpy(encoder->data_compressed, encoder->d_data_compressed, encoder->segment_count * encoder->param.restart_interval * GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
+        if ( cudaSuccess != cudaMemcpy(encoder->data_compressed, encoder->d_data_compressed, encoder->data_compressed_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
             return -1;
         // Copy segments to device memory
         if ( cudaSuccess != cudaMemcpy(encoder->segment, encoder->d_segment, encoder->segment_count * sizeof(struct gpujpeg_encoder_segment), cudaMemcpyDeviceToHost) )

@@ -226,8 +226,6 @@ gpujpeg_huffman_cpu_encoder_encode_block(struct gpujpeg_huffman_cpu_encoder* cod
     return 0;
 }
 
-
-
 /**
  * Encode one MCU
  *
@@ -306,6 +304,11 @@ gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder)
     // Init encoder
     struct gpujpeg_huffman_cpu_encoder coder;
     coder.put_bits = 0;
+    coder.writer = encoder->writer;
+    for ( int type = 0; type < GPUJPEG_COMPONENT_TYPE_COUNT; type++ ) {
+        coder.table_dc[type] = &encoder->table_huffman[type][GPUJPEG_HUFFMAN_DC];
+        coder.table_ac[type] = &encoder->table_huffman[type][GPUJPEG_HUFFMAN_AC];
+    }
     coder.scan_index = -1;
     coder.component = encoder->component;
     if ( encoder->param.interleaved == 1 )
@@ -314,7 +317,7 @@ gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder)
         coder.comp_count = 1;
     assert(coder.comp_count >= 1 && coder.comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     
-    // Encode all blocks
+    // Encode all segments
     for ( int segment_index = 0; segment_index < encoder->segment_count; segment_index++ ) {
         struct gpujpeg_encoder_segment* segment = &encoder->segment[segment_index];
         
@@ -332,11 +335,6 @@ gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder)
             // Initialize huffman coder
             coder.put_value = 0;
             coder.put_bits = 0;
-            coder.writer = encoder->writer;
-            for ( int type = 0; type < GPUJPEG_COMPONENT_TYPE_COUNT; type++ ) {
-                coder.table_dc[type] = &encoder->table_huffman[type][GPUJPEG_HUFFMAN_DC];
-                coder.table_ac[type] = &encoder->table_huffman[type][GPUJPEG_HUFFMAN_AC];
-            }
             for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ )
                 coder.dc[comp] = 0;
             
