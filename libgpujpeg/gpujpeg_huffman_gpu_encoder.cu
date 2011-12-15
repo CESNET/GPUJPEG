@@ -292,7 +292,6 @@ gpujpeg_huffman_encoder_encode_kernel(
             put_value, 
             put_bits, 
             dc, 
-            //&d_data[data_index], 
             &component->d_data_quantized[data_index],
             data_compressed,
             d_table_dc,

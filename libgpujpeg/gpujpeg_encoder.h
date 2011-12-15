@@ -79,10 +79,18 @@ struct gpujpeg_encoder_component
     
     // Minimun coded unit input size
     int mcu_size;
+    // MCU size in x-axis
+    int mcu_size_x;
+    // MCU size in y-axis
+    int mcu_size_y;
     // Minimun coded unit compressed size
     int mcu_compressed_size;
     // Minimun coded unit count (for interleaved mode the same value as encoder->mcu_count)
     int mcu_count;
+    // MCU count in x-axis
+    int mcu_count_x;
+    // MCU count in y-axis
+    int mcu_count_y;
     // Segment count
     int segment_count;
     // MCU count per segment (the last segment can contain less MCUs, but all other must contain this count)
@@ -109,8 +117,6 @@ struct gpujpeg_encoder_segment
     int scan_segment_index;
     // MCU count (input blocks)
     int mcu_count;
-    // Data index (input blocks)
-    int data_index;    
     // Data compressed index (output data)
     int data_compressed_index;
     // Data compressed size (output data)
