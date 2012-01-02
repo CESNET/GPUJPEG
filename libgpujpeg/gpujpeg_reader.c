@@ -367,9 +367,31 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     length -= 2;
     
     int comp_count = (int)gpujpeg_reader_read_byte(*image);
-    if ( comp_count != 1 ) {
-        fprintf(stderr, "Error: SOS marker component count %d is not supported!\n", comp_count);
+    // Not interleaved mode
+    if ( comp_count == 1 ) {
+        decoder->interleaved = 0;
+    }
+    // Interleaved mode
+    else if ( comp_count == decoder->param_image.comp_count ) {
+        if ( decoder->reader->comp_count != 0 ) {
+            fprintf(stderr, "Error: SOS marker component count %d is not supported for multiple scans!\n", comp_count);
+            return -1;
+        }
+        decoder->interleaved = 1;
+    }
+    // Unknown mode
+    else {
+        fprintf(stderr, "Error: SOS marker component count %d is not supported (should be 1 or equals to total component count)!\n", comp_count);
         return -1;
+    }
+    
+    assert(decoder->interleaved == 0);
+    
+    // Check maximum component count
+    decoder->reader->comp_count += comp_count;
+    if ( decoder->reader->comp_count > decoder->param_image.comp_count ) {
+        fprintf(stderr, "Error: SOS marker component count for all scans %d exceeds maximum component count %d!\n", 
+            decoder->reader->comp_count, decoder->param_image.comp_count);
     }
     
     // Collect the component-spec parameters
@@ -398,13 +420,13 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     int Al = (Ax) & 15;
     
     // Check maximum scan count
-    if ( decoder->scan_count >= 3 ) {
+    if ( decoder->reader->scan_count >= GPUJPEG_MAX_COMPONENT_COUNT ) {
         fprintf(stderr, "Error: SOS marker reached maximum number of scans (3)!\n");
         return -1;
     }
     // Get scan structure
-    struct gpujpeg_decoder_scan* scan = &decoder->scan[decoder->scan_count];
-    decoder->scan_count++;
+    struct gpujpeg_reader_scan* scan = &decoder->reader->scan[decoder->reader->scan_count];
+    decoder->reader->scan_count++;
     
     // Scan segments begin at the end of previous scan segments or from zero index
     scan->segment_index = decoder->segment_count;
@@ -424,8 +446,12 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
         
         // Check markers
         if ( byte_previous == 0xFF ) {
+            // Check zero byte
+            if ( byte == 0 ) {
+                continue;
+            }
             // Check restart marker
-            if ( byte >= GPUJPEG_MARKER_RST0 && byte <= GPUJPEG_MARKER_RST7 ) {
+            else if ( byte >= GPUJPEG_MARKER_RST0 && byte <= GPUJPEG_MARKER_RST7 ) {
                 decoder->data_scan_size -= 2;
                 
                 // Set data start index for next scan segment
@@ -443,6 +469,9 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
                 
                 //printf("end marker 0x%X (revert to %d)\n", (unsigned char)byte, &decoder->data_scan[decoder->data_scan_size]);
                 return 0;
+            } else {
+                fprintf(stderr, "Error: JPEG scan contains unexpected marker 0x%X!\n", byte);
+                return -1;
             }
         }
     } while( *image < image_end );
@@ -456,8 +485,11 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
 int
 gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size)
 {
+    // Setup reader
+    decoder->reader->comp_count = 0;
+    decoder->reader->scan_count = 0;
+    
     // Setup decoder
-    decoder->scan_count = 0;
     decoder->data_scan_size = 0;
     decoder->segment_count = 0; // Total segment count for all scans
     decoder->restart_interval = 0;
@@ -478,7 +510,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         int marker = gpujpeg_reader_read_marker(&image);
 
         // Read more info according to the marker
-        // the order of cases is in jpg file made by ms paint
         switch (marker) 
         {
         case GPUJPEG_MARKER_APP0:

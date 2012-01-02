@@ -47,6 +47,7 @@ gpujpeg_decoder_create(struct gpujpeg_image_parameters* param_image)
     decoder->param_image.height = 0;
     decoder->param_image.comp_count = 0;
     decoder->restart_interval = 0;
+    decoder->interleaved = 0;
     decoder->data_width = 0;
     decoder->data_height = 0;
     decoder->data_size = 0;
@@ -213,9 +214,9 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     // Perform huffman decoding on CPU (when restart interval is not set)
     if ( decoder->restart_interval == 0 ) {
         // Perform huffman decoding for all components
-        for ( int index = 0; index < decoder->scan_count; index++ ) {
+        for ( int index = 0; index < decoder->reader->scan_count; index++ ) {
             // Get scan and data buffer
-            struct gpujpeg_decoder_scan* scan = &decoder->scan[index];
+            struct gpujpeg_reader_scan* scan = &decoder->reader->scan[index];
             int16_t* data_quantized_comp = &decoder->data_quantized[index * decoder->data_width * decoder->data_height];
             // Determine table type
             enum gpujpeg_component_type type = (index == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;

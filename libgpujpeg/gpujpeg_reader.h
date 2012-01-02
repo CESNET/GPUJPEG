@@ -30,14 +30,31 @@
 #ifndef GPUJPEG_READER_H
 #define GPUJPEG_READER_H
 
-#include <stdint.h>
+#include "gpujpeg_type.h"
 
 /** JPEG decoder structure predeclaration */
 struct gpujpeg_decoder;
 
+/** JPEG reader scan structure */
+struct gpujpeg_reader_scan
+{
+    // Global segment index
+    int segment_index;
+    // Segment count in scan
+    int segment_count;
+};  
+
 /** JPEG reader structure */
 struct gpujpeg_reader
 {
+    // Loaded component count
+    int comp_count;
+    
+    // Loaded scans
+    struct gpujpeg_reader_scan scan[GPUJPEG_MAX_COMPONENT_COUNT];
+    
+    // Loaded scans count
+    int scan_count;
 };
 
 /**

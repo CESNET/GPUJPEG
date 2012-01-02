@@ -62,15 +62,14 @@ struct gpujpeg_decoder
     // JPEG reader structure
     struct gpujpeg_reader* reader;
     
-    // Scan definitions
-    struct gpujpeg_decoder_scan scan[GPUJPEG_MAX_COMPONENT_COUNT];
-    
-    // Number of used scans in current decoding image
-    int scan_count;
-    
     // Restart interval for all scans (number of MCU that can be coded independatly, 
     // 0 means seqeuential coding, 1 means every MCU can be coded independantly)
     int restart_interval;
+    
+    // Flag which determines if interleaved format of JPEG stream should be used (only
+    // one scan which includes all color components, e.g. Y Cb Cr Y Cb Cr ...),
+    // or one scan for each color component (e.g. Y Y Y ..., Cb Cb Cb ..., Cr Cr Cr ...)
+    int interleaved;
     
     // Data buffer for all scans
     uint8_t* data_scan;
