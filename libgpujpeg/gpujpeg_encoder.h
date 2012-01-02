@@ -39,7 +39,7 @@
  */
 struct gpujpeg_encoder
 {   
-    // JPEG coder
+    // JPEG coder structure
     struct gpujpeg_coder coder;
     
     // JPEG writer structure

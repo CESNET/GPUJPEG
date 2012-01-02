@@ -255,10 +255,18 @@ main(int argc, char *argv[])
     
     if ( decode == 1 ) {    
         // Create decoder
-        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(&param, &param_image);
+        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create();
         if ( decoder == NULL ) {
             fprintf(stderr, "Failed to create decoder!\n");
             return -1;
+        }
+        
+        // Init decoder if image size is filled
+        if ( param_image.width != 0 && param_image.height != 0 ) {
+            if ( gpujpeg_decoder_init(decoder, &param, &param_image) != 0 ) {
+                fprintf(stderr, "Failed to preinitialize decoder!\n");
+                return -1;
+            }
         }
         
         // Decode images

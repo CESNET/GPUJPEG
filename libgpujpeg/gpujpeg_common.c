@@ -189,7 +189,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     }
     
     // Calculate data size
-    coder->data_raw_size = coder->param_image.width * coder->param_image.height * coder->param_image.comp_count;
+    coder->data_raw_size = gpujpeg_image_calculate_size(&coder->param_image);
     coder->data_size = 0;
     
     // Initialize color components
@@ -252,6 +252,8 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     coder->data_height = gpujpeg_div_and_round_up(coder->param_image.height, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
     
     // Allocate data buffers for all color components
+    if ( cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t)) ) 
+        return -1;
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t)) ) 
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data, coder->data_size * sizeof(uint8_t)) ) 
@@ -391,9 +393,12 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         result = 0;
         
     // Allocate compressed data
-    if ( cudaSuccess != cudaMallocHost((void**)&coder->data_compressed, coder->data_compressed_size * sizeof(uint8_t)) ) 
+    int max_compressed_data_size = coder->data_compressed_size;
+    max_compressed_data_size += GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+    max_compressed_data_size *= 2;
+    if ( cudaSuccess != cudaMallocHost((void**)&coder->data_compressed, max_compressed_data_size * sizeof(uint8_t)) ) 
         result = 0;   
-    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_compressed, coder->data_compressed_size * sizeof(uint8_t)) ) 
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_compressed, max_compressed_data_size * sizeof(uint8_t)) ) 
         result = 0;   
 	gpujpeg_cuda_check_error("Coder data compressed allocation");
      
@@ -404,6 +409,8 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
 int
 gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
 {
+    if ( coder->data_raw != NULL )
+        cudaFreeHost(coder->data_raw);
     if ( coder->d_data_raw != NULL )
         cudaFree(coder->d_data_raw);
     if ( coder->d_data != NULL )

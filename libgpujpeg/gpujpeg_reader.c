@@ -202,21 +202,13 @@ gpujpeg_reader_read_sof0(struct gpujpeg_decoder* decoder, uint8_t** image)
         fprintf(stderr, "Error: SOF0 marker precision should be 8 but %d was presented!\n", precision);
         return -1;
     }
-    int height = (int)gpujpeg_reader_read_2byte(*image);
-    int width = (int)gpujpeg_reader_read_2byte(*image);
-    int comp_count = (int)gpujpeg_reader_read_byte(*image);
-    gpujpeg_decoder_init(decoder, width, height, comp_count);
-    if ( width != decoder->param_image.width || height != decoder->param_image.height ) {
-        fprintf(stderr, "Error: SOF0 marker image size should be %dx%d but %dx%d was presented!\n", decoder->param_image.width, decoder->param_image.height, width, height);
-        return -1;
-    }
-    if ( comp_count != decoder->param_image.comp_count ) {
-        fprintf(stderr, "Error: SOF0 marker component count should be %d but %d was presented!\n", decoder->param_image.comp_count, comp_count);
-        return -1;
-    }
+    
+    decoder->reader->param_image.height = (int)gpujpeg_reader_read_2byte(*image);
+    decoder->reader->param_image.width = (int)gpujpeg_reader_read_2byte(*image);
+    decoder->reader->param_image.comp_count = (int)gpujpeg_reader_read_byte(*image);
     length -= 6;
 
-    for ( int comp = 0; comp < comp_count; comp++ ) {
+    for ( int comp = 0; comp < decoder->reader->param_image.comp_count; comp++ ) {
         int index = (int)gpujpeg_reader_read_byte(*image);
         if ( index != (comp + 1) ) {
             fprintf(stderr, "Error: SOF0 marker component %d id should be %d but %d was presented!\n", comp, comp + 1, index);
@@ -342,13 +334,17 @@ gpujpeg_reader_read_dri(struct gpujpeg_decoder* decoder, uint8_t** image)
         return -1;
     }
     
-    if ( decoder->restart_interval != 0 ) {
+    int restart_interval = gpujpeg_reader_read_2byte(*image);
+    if ( restart_interval == decoder->reader->param.restart_interval )
+        return 0;
+    
+    if ( decoder->reader->param.restart_interval != 0 ) {
         fprintf(stderr, "Error: DRI marker can't redefine restart interval!");
         fprintf(stderr, "This may be caused when more DRI markers are presented which is not supported!\n");
         return -1;
     }
     
-    decoder->restart_interval = gpujpeg_reader_read_2byte(*image);
+    decoder->reader->param.restart_interval = restart_interval;
     
     return 0;
 }
@@ -369,15 +365,15 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     int comp_count = (int)gpujpeg_reader_read_byte(*image);
     // Not interleaved mode
     if ( comp_count == 1 ) {
-        decoder->interleaved = 0;
+        decoder->reader->param.interleaved = 0;
     }
     // Interleaved mode
-    else if ( comp_count == decoder->param_image.comp_count ) {
+    else if ( comp_count == decoder->reader->param_image.comp_count ) {
         if ( decoder->reader->comp_count != 0 ) {
             fprintf(stderr, "Error: SOS marker component count %d is not supported for multiple scans!\n", comp_count);
             return -1;
         }
-        decoder->interleaved = 1;
+        decoder->reader->param.interleaved = 1;
     }
     // Unknown mode
     else {
@@ -387,9 +383,9 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     
     // Check maximum component count
     decoder->reader->comp_count += comp_count;
-    if ( decoder->reader->comp_count > decoder->param_image.comp_count ) {
+    if ( decoder->reader->comp_count > decoder->reader->param_image.comp_count ) {
         fprintf(stderr, "Error: SOS marker component count for all scans %d exceeds maximum component count %d!\n", 
-            decoder->reader->comp_count, decoder->param_image.comp_count);
+            decoder->reader->comp_count, decoder->reader->param_image.comp_count);
     }
     
     // Collect the component-spec parameters
@@ -429,18 +425,15 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     struct gpujpeg_reader_scan* scan = &decoder->reader->scan[scan_index];
     decoder->reader->scan_count++;
     // Scan segments begin at the end of previous scan segments or from zero index
-    scan->segment_index = decoder->segment_count;
+    scan->segment_index = decoder->coder.segment_count;
     scan->segment_count = 0;
     
     // Get first segment in scan
-    struct gpujpeg_segment* segment = &decoder->segment[scan->segment_index];
+    struct gpujpeg_segment* segment = &decoder->coder.segment[scan->segment_index];
     segment->scan_index = scan_index;
     segment->scan_segment_index = scan->segment_count;
-    segment->data_compressed_index = decoder->data_scan_size;
+    segment->data_compressed_index = decoder->coder.data_compressed_size;
     scan->segment_count++;
-    
-    // TODO: remove
-    segment->mcu_count = decoder->restart_interval;
     
     // Read scan data
     uint8_t byte = 0;
@@ -448,9 +441,9 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     do {
         byte_previous = byte;
         byte = gpujpeg_reader_read_byte(*image);
-        decoder->data_scan[decoder->data_scan_size] = byte;
+        decoder->coder.data_compressed[decoder->coder.data_compressed_size] = byte;
         //printf("set byte %d = 0x%X\n", &decoder->data_scan[decoder->data_scan_size], (unsigned char)byte);
-        decoder->data_scan_size++;        
+        decoder->coder.data_compressed_size++;        
         
         // Check markers
         if ( byte_previous == 0xFF ) {
@@ -460,33 +453,30 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
             }
             // Check restart marker
             else if ( byte >= GPUJPEG_MARKER_RST0 && byte <= GPUJPEG_MARKER_RST7 ) {
-                decoder->data_scan_size -= 2;
+                decoder->coder.data_compressed_size -= 2;
                 
                 // Set segment byte count
-                segment->data_compressed_size = decoder->data_scan_size - segment->data_compressed_index;
+                segment->data_compressed_size = decoder->coder.data_compressed_size - segment->data_compressed_index;
                 
                 // Start new segment in scan
-                segment = &decoder->segment[scan->segment_index + scan->segment_count];
+                segment = &decoder->coder.segment[scan->segment_index + scan->segment_count];
                 segment->scan_index = scan_index;
                 segment->scan_segment_index = scan->segment_count;
-                segment->data_compressed_index = decoder->data_scan_size;
-                scan->segment_count++;
+                segment->data_compressed_index = decoder->coder.data_compressed_size;
+                scan->segment_count++;    
                 
-                // TODO: remove
-                segment->mcu_count = decoder->restart_interval;
-    
                 //printf("restart marker 0x%X (revert to %d)\n", (unsigned char)byte, &decoder->data_scan[decoder->data_scan_size]);
             }
             // Check scan end
             else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {                
                 *image -= 2;
-                decoder->data_scan_size -= 2;
+                decoder->coder.data_compressed_size -= 2;
                 
                 // Set segment byte count
-                segment->data_compressed_size = decoder->data_scan_size - segment->data_compressed_index;
+                segment->data_compressed_size = decoder->coder.data_compressed_size - segment->data_compressed_index;
                 
                 // Add scan segment count to decoder segment count
-                decoder->segment_count += scan->segment_count;
+                decoder->coder.segment_count += scan->segment_count;
                 
                 //printf("end marker 0x%X (revert to %d)\n", (unsigned char)byte, &decoder->data_scan[decoder->data_scan_size]);
                 return 0;
@@ -507,11 +497,12 @@ int
 gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size)
 {
     // Setup reader and decoder
+    decoder->reader->param = decoder->coder.param;
+    decoder->reader->param_image = decoder->coder.param_image;
     decoder->reader->comp_count = 0;
     decoder->reader->scan_count = 0;
-    decoder->segment_count = 0;  // Total segment count for all scans
-    decoder->data_scan_size = 0; // Total byte count for all scans
-    decoder->restart_interval = 0;    
+    decoder->coder.segment_count = 0;  // Total segment count for all scans
+    decoder->coder.data_compressed_size = 0; // Total byte count for all scans
     
     // Get image end
     uint8_t* image_end = image + image_size;
@@ -642,6 +633,9 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         fprintf(stderr, "Error: JPEG data should end with EOI marker!\n");
         return -1;
     }
+    
+    // Init decoder
+    gpujpeg_decoder_init(decoder, &decoder->reader->param, &decoder->reader->param_image);
     
     return 0;
 }

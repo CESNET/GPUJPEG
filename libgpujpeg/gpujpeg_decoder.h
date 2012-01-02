@@ -39,8 +39,8 @@
  */
 struct gpujpeg_decoder
 {  
-    // Parameters for image data (width, height, comp_count, etc.)
-    struct gpujpeg_image_parameters param_image;
+    // JPEG coder structure
+    struct gpujpeg_coder coder;
     
     // JPEG reader structure
     struct gpujpeg_reader* reader;
@@ -52,67 +52,6 @@ struct gpujpeg_decoder
     struct gpujpeg_table_huffman_decoder table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
     // Huffman coder tables in device memory
     struct gpujpeg_table_huffman_decoder* d_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
-    
-    // Color components
-    struct gpujpeg_component* component;
-    // Color components in device memory
-    struct gpujpeg_component* d_component;
-    
-    // Segments for all components
-    struct gpujpeg_segment* segment;
-    // Segments in device memory for all components
-    struct gpujpeg_segment* d_segment;
-    
-    // Maximum sampling factor from components
-    //struct gpujpeg_component_sampling_factor sampling_factor;
-    
-    // Restart interval for all scans (number of MCU that can be coded independatly, 
-    // 0 means seqeuential coding, 1 means every MCU can be coded independantly)
-    int restart_interval;
-    
-    // Flag which determines if interleaved format of JPEG stream should be used (only
-    // one scan which includes all color components, e.g. Y Cb Cr Y Cb Cr ...),
-    // or one scan for each color component (e.g. Y Y Y ..., Cb Cb Cb ..., Cr Cr Cr ...)
-    int interleaved;
-    
-    // Data buffer for all scans
-    uint8_t* data_scan;
-    // Data buffer for all scans in device memory
-    uint8_t* d_data_scan;
-    
-    // Size for data buffer for all scans
-    int data_scan_size;
-    
-    // Indexes into scan data buffer for all segments (index point to segment data start in buffer)
-    int* data_scan_index;
-    // Indexes into scan data buffer for all segments in device memory (index point to segment data start in buffer)
-    int* d_data_scan_index;
-    
-    // Total segment count for all scans
-    int segment_count;
-    
-    // Allocated data width
-    int data_width;
-    // Allocated data height
-    int data_height;
-    // Allocated data coefficient count
-    int data_size;
-    
-    // Data quantized (output from huffman coder)
-    int16_t* data_quantized;
-    // Data quantized in device memory (output from huffman coder)
-    int16_t* d_data_quantized;
-    
-    // Data in device memory (output from inverse DCT and quantization)
-    uint8_t* d_data;
-    
-    // Target image data coefficient count
-    int data_target_size;
-    
-    // Data target (output from preprocessing)
-    uint8_t* data_target;
-    // Data target in device memory (output from preprocessing)
-    uint8_t* d_data_target;
 };
 
 /**
@@ -123,19 +62,18 @@ struct gpujpeg_decoder
  * @return decoder structure if succeeds, otherwise NULL
  */
 struct gpujpeg_decoder*
-gpujpeg_decoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image);
+gpujpeg_decoder_create();
 
 /**
  * Init JPEG decoder for specific image size
  * 
  * @param decoder  Decoder structure
- * @param width  Width of decodable images
- * @param height  Height of decodable images
- * @param comp_count  Component count
+ * @param param  Parameters for coder
+ * @param param_image  Parameters for image data
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, int width, int height, int comp_count);
+gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image);
 
 /**
  * Decompress image by decoder

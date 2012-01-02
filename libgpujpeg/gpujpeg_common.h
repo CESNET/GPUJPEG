@@ -54,9 +54,9 @@ struct gpujpeg_parameters
     // Restart interval
     int restart_interval;
     
-    // Flag which determines if interleaved format of JPEG stream should be used (only
-    // one scan which includes all color components, e.g. Y Cb Cr Y Cb Cr ...),
-    // or one scan for each color component (e.g. Y Y Y ..., Cb Cb Cb ..., Cr Cr Cr ...)
+    // Flag which determines if interleaved format of JPEG stream should be used, "1" = only
+    // one scan which includes all color components (e.g. Y Cb Cr Y Cb Cr ...),
+    // or "0" = one scan for each color component (e.g. Y Y Y ..., Cb Cb Cb ..., Cr Cr Cr ...)
     int interleaved;
     
     // Sampling factors for each color component
@@ -263,6 +263,8 @@ struct gpujpeg_coder
     // Compressed allocated data size
     int data_compressed_size;
     
+    // Raw image data in host memory (loaded from file for encoder, saved to file for decoder)
+    uint8_t* data_raw;
     // Raw image data in device memory (loaded from file for encoder, saved to file for decoder)
     uint8_t* d_data_raw;
     
@@ -281,7 +283,7 @@ struct gpujpeg_coder
 };
 
 /**
- * Initialize JPEG codec
+ * Initialize JPEG coder (allocate buffers and initialize structures)
  * 
  * @param codec  Codec structure
  * @return 0 if succeeds, otherwise nonzero
@@ -290,7 +292,7 @@ int
 gpujpeg_coder_init(struct gpujpeg_coder* coder);
 
 /**
- * Deinitialize JPEG codec
+ * Deinitialize JPEG coder (free buffers)
  * 
  * @param codec  Codec structure
  * @return 0 if succeeds, otherwise nonzero

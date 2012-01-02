@@ -376,25 +376,28 @@ gpujpeg_huffman_gpu_decoder_init()
 int
 gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
 {    
-    assert(decoder->restart_interval > 0);
+    // Get coder
+    struct gpujpeg_coder* coder = &decoder->coder;
     
-    int comp_block_cx = (decoder->param_image.width + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
-    int comp_block_cy = (decoder->param_image.height + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
+    assert(coder->param.restart_interval > 0);
+    
+    int comp_block_cx = (coder->param_image.width + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
+    int comp_block_cy = (coder->param_image.height + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
     int comp_block_count = comp_block_cx * comp_block_cy;
-    int comp_segment_count = gpujpeg_div_and_round_up(comp_block_count, decoder->restart_interval);
+    int comp_segment_count = gpujpeg_div_and_round_up(comp_block_count, coder->param.restart_interval);
     
     // Run kernel
     dim3 thread(32);
-    dim3 grid(gpujpeg_div_and_round_up(comp_segment_count, thread.x), decoder->param_image.comp_count);
+    dim3 grid(gpujpeg_div_and_round_up(comp_segment_count, thread.x), coder->param_image.comp_count);
     gpujpeg_huffman_decoder_decode_kernel<<<grid, thread>>>(
-        decoder->restart_interval,
+        coder->param.restart_interval,
         comp_block_count, 
         comp_segment_count,
-        decoder->segment_count,
-        decoder->d_data_scan,
-        decoder->data_scan_size,
-        decoder->d_data_scan_index,
-        decoder->d_data_quantized,
+        coder->segment_count,
+        coder->d_data_compressed,
+        coder->data_compressed_size,
+        NULL,// TODO: coder->d_data_scan_index,
+        NULL,// TODO: coder->d_data_quantized,
         decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC],
         decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC],
         decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC],

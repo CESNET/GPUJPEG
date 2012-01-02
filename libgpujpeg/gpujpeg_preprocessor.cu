@@ -424,25 +424,25 @@ gpujpeg_preprocessor_decode_kernel
 gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_decoder* decoder)
 {
     // RGB color space
-    if ( decoder->param_image.color_space == GPUJPEG_RGB ) {
-        assert(decoder->param_image.sampling_factor == GPUJPEG_4_4_4);
+    if ( decoder->coder.param_image.color_space == GPUJPEG_RGB ) {
+        assert(decoder->coder.param_image.sampling_factor == GPUJPEG_4_4_4);
         return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_RGB>;
     } 
     // YCbCr ITU-R color space
-    else if ( decoder->param_image.color_space == GPUJPEG_YCBCR_ITU_R ) {
-        if ( decoder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+    else if ( decoder->coder.param_image.color_space == GPUJPEG_YCBCR_ITU_R ) {
+        if ( decoder->coder.param_image.sampling_factor == GPUJPEG_4_4_4 ) {
             return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_YCBCR_ITU_R>;
-        } else if ( decoder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( decoder->coder.param_image.sampling_factor == GPUJPEG_4_2_2 ) {
             return &gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2<GPUJPEG_YCBCR_ITU_R>;
         } else {
             assert(false);
         }
     }
     // YCbCr JPEG color space
-    else if ( decoder->param_image.color_space == GPUJPEG_YCBCR_JPEG ) {
-        if ( decoder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+    else if ( decoder->coder.param_image.color_space == GPUJPEG_YCBCR_JPEG ) {
+        if ( decoder->coder.param_image.sampling_factor == GPUJPEG_4_4_4 ) {
             return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<GPUJPEG_YCBCR_JPEG>;
-        } else if ( decoder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( decoder->coder.param_image.sampling_factor == GPUJPEG_4_2_2 ) {
             return &gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2<GPUJPEG_YCBCR_JPEG>;
         } else {
             assert(false);
@@ -459,21 +459,21 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_decoder* decoder)
 int
 gpujpeg_preprocessor_decode(struct gpujpeg_decoder* decoder)
 {
-    cudaMemset(decoder->d_data_target, 0, decoder->data_target_size * sizeof(uint8_t));
+    cudaMemset(decoder->coder.d_data_raw, 0, decoder->coder.data_raw_size * sizeof(uint8_t));
     
     // Select kernel
     gpujpeg_preprocessor_decode_kernel kernel = gpujpeg_preprocessor_select_decode_kernel(decoder);
     
-    int image_width = decoder->param_image.width;
-    int image_height = decoder->param_image.height;
+    int image_width = decoder->coder.param_image.width;
+    int image_height = decoder->coder.param_image.height;
     
     // When saving 4:2:2 data of odd width, the data should have even width, so round it
-    if ( decoder->param_image.sampling_factor == GPUJPEG_4_2_2 )
-        image_width = gpujpeg_div_and_round_up(decoder->param_image.width, 2) * 2;
+    if ( decoder->coder.param_image.sampling_factor == GPUJPEG_4_2_2 )
+        image_width = gpujpeg_div_and_round_up(decoder->coder.param_image.width, 2) * 2;
         
     // Prepare unit size
-    assert(decoder->param_image.sampling_factor == GPUJPEG_4_4_4 || decoder->param_image.sampling_factor == GPUJPEG_4_2_2);
-    int unitSize = decoder->param_image.sampling_factor == GPUJPEG_4_4_4 ? 3 : 2;
+    assert(decoder->coder.param_image.sampling_factor == GPUJPEG_4_4_4 || decoder->coder.param_image.sampling_factor == GPUJPEG_4_2_2);
+    int unitSize = decoder->coder.param_image.sampling_factor == GPUJPEG_4_4_4 ? 3 : 2;
     
     // Prepare kernel
     int alignedSize = gpujpeg_div_and_round_up(image_width * image_height, RGB_8BIT_THREADS) * RGB_8BIT_THREADS * unitSize;
@@ -482,19 +482,19 @@ gpujpeg_preprocessor_decode(struct gpujpeg_decoder* decoder)
     assert(alignedSize % (RGB_8BIT_THREADS * unitSize) == 0);
 
     // Run kernel
-    int data_comp_size = decoder->data_width * decoder->data_height;
-    uint8_t* d_c1 = &decoder->d_data[0 * data_comp_size];
-    uint8_t* d_c2 = &decoder->d_data[1 * data_comp_size];
-    uint8_t* d_c3 = &decoder->d_data[2 * data_comp_size];
+    int data_comp_size = decoder->coder.data_width * decoder->coder.data_height;
+    uint8_t* d_c1 = &decoder->coder.d_data[0 * data_comp_size];
+    uint8_t* d_c2 = &decoder->coder.d_data[1 * data_comp_size];
+    uint8_t* d_c3 = &decoder->coder.d_data[2 * data_comp_size];
     kernel<<<grid, threads>>>(
         d_c1, 
         d_c2, 
         d_c3, 
-        decoder->d_data_target, 
+        decoder->coder.d_data_raw, 
         image_width,
         image_height,
-        decoder->data_width,
-        decoder->data_height
+        decoder->coder.data_width,
+        decoder->coder.data_height
     );
     cudaError cuerr = cudaThreadSynchronize();
     if ( cuerr != cudaSuccess ) {

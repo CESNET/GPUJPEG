@@ -30,7 +30,7 @@
 #ifndef GPUJPEG_READER_H
 #define GPUJPEG_READER_H
 
-#include "gpujpeg_type.h"
+#include "gpujpeg_common.h"
 
 /** JPEG decoder structure predeclaration */
 struct gpujpeg_decoder;
@@ -47,6 +47,12 @@ struct gpujpeg_reader_scan
 /** JPEG reader structure */
 struct gpujpeg_reader
 {
+    // Parameters
+    struct gpujpeg_parameters param;
+    
+    // Parameters for image data
+    struct gpujpeg_image_parameters param_image;
+    
     // Loaded component count
     int comp_count;
     
