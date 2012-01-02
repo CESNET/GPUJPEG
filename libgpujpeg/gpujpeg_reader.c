@@ -433,10 +433,10 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     scan->segment_count = 0;
     
     // Get first segment in scan
-    struct gpujpeg_decoder_segment* segment = &decoder->segment[scan->segment_index];
+    struct gpujpeg_segment* segment = &decoder->segment[scan->segment_index];
     segment->scan_index = scan_index;
     segment->scan_segment_index = scan->segment_count;
-    segment->data_scan_index = decoder->data_scan_size;
+    segment->data_compressed_index = decoder->data_scan_size;
     scan->segment_count++;
     
     // TODO: remove
@@ -463,13 +463,13 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
                 decoder->data_scan_size -= 2;
                 
                 // Set segment byte count
-                segment->data_scan_count = decoder->data_scan_size - segment->data_scan_index;
+                segment->data_compressed_size = decoder->data_scan_size - segment->data_compressed_index;
                 
                 // Start new segment in scan
                 segment = &decoder->segment[scan->segment_index + scan->segment_count];
                 segment->scan_index = scan_index;
                 segment->scan_segment_index = scan->segment_count;
-                segment->data_scan_index = decoder->data_scan_size;
+                segment->data_compressed_index = decoder->data_scan_size;
                 scan->segment_count++;
                 
                 // TODO: remove
@@ -483,7 +483,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
                 decoder->data_scan_size -= 2;
                 
                 // Set segment byte count
-                segment->data_scan_count = decoder->data_scan_size - segment->data_scan_index;
+                segment->data_compressed_size = decoder->data_scan_size - segment->data_compressed_index;
                 
                 // Add scan segment count to decoder segment count
                 decoder->segment_count += scan->segment_count;

@@ -68,13 +68,13 @@ main(int argc, char *argv[])
         0
     };
 
+    // Default coder parameters
+    struct gpujpeg_parameters param;
+    gpujpeg_set_default_parameters(&param);
+    
     // Default image parameters
     struct gpujpeg_image_parameters param_image;
     gpujpeg_image_set_default_parameters(&param_image);
-    
-    // Default encoder parameters
-    struct gpujpeg_encoder_parameters param_encoder;
-    gpujpeg_encoder_set_default_parameters(&param_encoder);   
     
     // Other parameters
     int encode = 0;
@@ -118,22 +118,22 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Sampling factor '%s' is not available!\n", optarg);
             break;
         case 'q':
-            param_encoder.quality = atoi(optarg);
-            if ( param_encoder.quality < 0 )
-                param_encoder.quality = 0;
-            if ( param_encoder.quality > 100 )
-                param_encoder.quality = 100;
+            param.quality = atoi(optarg);
+            if ( param.quality < 0 )
+                param.quality = 0;
+            if ( param.quality > 100 )
+                param.quality = 100;
             break;
         case 'r':
-            param_encoder.restart_interval = atoi(optarg);
-            if ( param_encoder.restart_interval < 0 )
-                param_encoder.restart_interval = 0;
+            param.restart_interval = atoi(optarg);
+            if ( param.restart_interval < 0 )
+                param.restart_interval = 0;
             break;
         case 1:
-            gpujpeg_encoder_parameters_chroma_subsampling(&param_encoder);
+            gpujpeg_parameters_chroma_subsampling(&param);
             break;
         case 'i':
-            param_encoder.interleaved = 1;
+            param.interleaved = 1;
             break;
         case 'e':
             encode = 1;
@@ -185,7 +185,7 @@ main(int argc, char *argv[])
     
     if ( encode == 1 ) {    
         // Create encoder
-        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&param_image, &param_encoder);
+        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&param, &param_image);
         if ( encoder == NULL ) {
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
@@ -255,7 +255,7 @@ main(int argc, char *argv[])
     
     if ( decode == 1 ) {    
         // Create decoder
-        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(&param_image);
+        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(&param, &param_image);
         if ( decoder == NULL ) {
             fprintf(stderr, "Failed to create decoder!\n");
             return -1;

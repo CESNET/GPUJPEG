@@ -37,13 +37,13 @@
 /** Huffman encoder structure */
 struct gpujpeg_huffman_cpu_decoder
 {
+    // Color components
+    struct gpujpeg_component* component;
+    
     // Huffman table DC
     struct gpujpeg_table_huffman_decoder* table_dc[GPUJPEG_COMPONENT_TYPE_COUNT];
     // Huffman table AC
     struct gpujpeg_table_huffman_decoder* table_ac[GPUJPEG_COMPONENT_TYPE_COUNT];
-    
-    // Color components
-    struct gpujpeg_decoder_component* component;
     
     // Get bits
     int get_bits;
@@ -305,7 +305,7 @@ gpujpeg_huffman_cpu_decoder_decode_mcu(struct gpujpeg_huffman_cpu_decoder* coder
     // Non-interleaving mode
     if ( coder->comp_count == 1 ) {
         // Get component for current scan
-        struct gpujpeg_decoder_component* component = &coder->component[coder->scan_index];
+        struct gpujpeg_component* component = &coder->component[coder->scan_index];
  
         // Get component data for MCU
         int16_t* block = &component->data_quantized[(segment_index * /*TODO: component->segment_mcu_count*/coder->restart_interval + mcu_index) * component->mcu_size];
@@ -323,7 +323,7 @@ gpujpeg_huffman_cpu_decoder_decode_mcu(struct gpujpeg_huffman_cpu_decoder* coder
     else {
         assert(coder->scan_index == 0);
         for ( int comp = 0; comp < coder->comp_count; comp++ ) {
-            struct gpujpeg_decoder_component* component = &coder->component[comp];
+            struct gpujpeg_component* component = &coder->component[comp];
 
             // Prepare mcu indexes
             /*int mcu_index_x = (segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
@@ -396,7 +396,7 @@ gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder)
     // Decode all segments
     for ( int segment_index = 0; segment_index < decoder->segment_count; segment_index++ ) {
         // Get segment structure
-        struct gpujpeg_decoder_segment* segment = &decoder->segment[segment_index];
+        struct gpujpeg_segment* segment = &decoder->segment[segment_index];
         
         // Change current scan index
         if ( coder.scan_index != segment->scan_index ) {
@@ -408,8 +408,8 @@ gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder)
         coder.get_bits = 0;
         for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ )
             coder.dc[comp] = 0;
-        coder.data = &decoder->data_scan[segment->data_scan_index];
-        coder.data_size = segment->data_scan_count;
+        coder.data = &decoder->data_scan[segment->data_compressed_index];
+        coder.data_size = segment->data_compressed_size;
         
         // Decode segment MCUs
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {

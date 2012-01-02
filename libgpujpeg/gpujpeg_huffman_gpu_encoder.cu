@@ -237,8 +237,8 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
  */
 __global__ void
 gpujpeg_huffman_encoder_encode_kernel(
-    struct gpujpeg_encoder_component* d_component,
-    struct gpujpeg_encoder_segment* d_segment,
+    struct gpujpeg_component* d_component,
+    struct gpujpeg_segment* d_segment,
     int comp_count,
     int segment_count, 
     uint8_t* d_data_compressed,
@@ -252,7 +252,7 @@ gpujpeg_huffman_encoder_encode_kernel(
     if ( segment_index >= segment_count )
         return;
     
-    struct gpujpeg_encoder_segment* segment = &d_segment[segment_index];
+    struct gpujpeg_segment* segment = &d_segment[segment_index];
     
     // Initialize huffman coder
     int put_value = 0;
@@ -271,7 +271,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
             // Get component for current scan
-            struct gpujpeg_encoder_component* component = &d_component[segment->scan_index];
+            struct gpujpeg_component* component = &d_component[segment->scan_index];
      
             // Get component data for MCU
             int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size];
@@ -302,7 +302,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
             //assert(segment->scan_index == 0);
             for ( int comp = 0; comp < comp_count; comp++ ) {
-                struct gpujpeg_encoder_component* component = &d_component[comp];
+                struct gpujpeg_component* component = &d_component[comp];
 
                 // Prepare mcu indexes
                 int mcu_index_x = (segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
@@ -385,22 +385,25 @@ gpujpeg_huffman_gpu_encoder_init()
 int
 gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
 {    
-    assert(encoder->param.restart_interval > 0);
+    // Get coder
+    struct gpujpeg_coder* coder = &encoder->coder;
+    
+    assert(coder->param.restart_interval > 0);
     
     int comp_count = 1;
-    if ( encoder->param.interleaved == 1 )
-        comp_count = encoder->param_image.comp_count;
+    if ( coder->param.interleaved == 1 )
+        comp_count = coder->param_image.comp_count;
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
             
     // Run kernel
     dim3 thread(32);
-    dim3 grid(gpujpeg_div_and_round_up(encoder->segment_count, thread.x));
+    dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, thread.x));
     gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
-        encoder->d_component, 
-        encoder->d_segment, 
+        coder->d_component, 
+        coder->d_segment, 
         comp_count,
-        encoder->segment_count, 
-        encoder->d_data_compressed, 
+        coder->segment_count, 
+        coder->d_data_compressed, 
         encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC],
         encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC],
         encoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC],

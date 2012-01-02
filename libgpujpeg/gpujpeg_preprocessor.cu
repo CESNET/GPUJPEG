@@ -262,25 +262,25 @@ gpujpeg_preprocessor_encode_kernel
 gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_encoder* encoder)
 {
     // RGB color space
-    if ( encoder->param_image.color_space == GPUJPEG_RGB ) {
-        assert(encoder->param_image.sampling_factor == GPUJPEG_4_4_4);
+    if ( encoder->coder.param_image.color_space == GPUJPEG_RGB ) {
+        assert(encoder->coder.param_image.sampling_factor == GPUJPEG_4_4_4);
         return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_RGB>;
     } 
     // YCbCr ITU-R color space
-    else if ( encoder->param_image.color_space == GPUJPEG_YCBCR_ITU_R ) {
-        if ( encoder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+    else if ( encoder->coder.param_image.color_space == GPUJPEG_YCBCR_ITU_R ) {
+        if ( encoder->coder.param_image.sampling_factor == GPUJPEG_4_4_4 ) {
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_YCBCR_ITU_R>;
-        } else if ( encoder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( encoder->coder.param_image.sampling_factor == GPUJPEG_4_2_2 ) {
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2<GPUJPEG_YCBCR_ITU_R>;
         } else {
             assert(false);
         }
     } 
     // YCbCr JPEG color space
-    else if ( encoder->param_image.color_space == GPUJPEG_YCBCR_JPEG ) {
-        if ( encoder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+    else if ( encoder->coder.param_image.color_space == GPUJPEG_YCBCR_JPEG ) {
+        if ( encoder->coder.param_image.sampling_factor == GPUJPEG_4_4_4 ) {
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<GPUJPEG_YCBCR_JPEG>;
-        } else if ( encoder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( encoder->coder.param_image.sampling_factor == GPUJPEG_4_2_2 ) {
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2<GPUJPEG_YCBCR_JPEG>;
         } else {
             assert(false);
@@ -297,22 +297,25 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_encoder* encoder)
 int
 gpujpeg_preprocessor_encode(struct gpujpeg_encoder* encoder)
 {    
-    cudaMemset(encoder->d_data, 0, encoder->data_size * sizeof(uint8_t));
+    // Get coder
+    struct gpujpeg_coder* coder = &encoder->coder;
+    
+    cudaMemset(coder->d_data, 0, coder->data_size * sizeof(uint8_t));
 
     // Select kernel
     gpujpeg_preprocessor_encode_kernel kernel = gpujpeg_preprocessor_select_encode_kernel(encoder);
     
-    int image_width = encoder->param_image.width;
-    int image_height = encoder->param_image.height;
+    int image_width = coder->param_image.width;
+    int image_height = coder->param_image.height;
     
     // When loading 4:2:2 data of odd width, the data in fact has even width, so round it
     // (at least imagemagick convert tool generates data stream in this way)
-    if ( encoder->param_image.sampling_factor == GPUJPEG_4_2_2 )
-        image_width = gpujpeg_div_and_round_up(encoder->param_image.width, 2) * 2;
+    if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 )
+        image_width = gpujpeg_div_and_round_up(coder->param_image.width, 2) * 2;
         
     // Prepare unit size
-    assert(encoder->param_image.sampling_factor == GPUJPEG_4_4_4 || encoder->param_image.sampling_factor == GPUJPEG_4_2_2);
-    int unitSize = encoder->param_image.sampling_factor == GPUJPEG_4_4_4 ? 3 : 2;
+    assert(coder->param_image.sampling_factor == GPUJPEG_4_4_4 || coder->param_image.sampling_factor == GPUJPEG_4_2_2);
+    int unitSize = coder->param_image.sampling_factor == GPUJPEG_4_4_4 ? 3 : 2;
     
     // Prepare kernel
     int alignedSize = gpujpeg_div_and_round_up(image_width * image_height, RGB_8BIT_THREADS) * RGB_8BIT_THREADS * unitSize;
@@ -323,17 +326,17 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder* encoder)
     // Run kernel
     struct gpujpeg_preprocessor_encode_data data;
     for ( int comp = 0; comp < 3; comp++ ) {
-        assert(encoder->sampling_factor.horizontal % encoder->component[comp].sampling_factor.horizontal == 0);
-        assert(encoder->sampling_factor.vertical % encoder->component[comp].sampling_factor.vertical == 0);
-        data.comp[comp].d_data = encoder->component[comp].d_data;
-        data.comp[comp].sampling_factor.horizontal = encoder->sampling_factor.horizontal / encoder->component[comp].sampling_factor.horizontal;
-        data.comp[comp].sampling_factor.vertical = encoder->sampling_factor.vertical / encoder->component[comp].sampling_factor.vertical;
-        data.comp[comp].data_width = encoder->component[comp].data_width;
-        data.comp[comp].data_height = encoder->component[comp].data_height;
+        assert(coder->sampling_factor.horizontal % coder->component[comp].sampling_factor.horizontal == 0);
+        assert(coder->sampling_factor.vertical % coder->component[comp].sampling_factor.vertical == 0);
+        data.comp[comp].d_data = coder->component[comp].d_data;
+        data.comp[comp].sampling_factor.horizontal = coder->sampling_factor.horizontal / coder->component[comp].sampling_factor.horizontal;
+        data.comp[comp].sampling_factor.vertical = coder->sampling_factor.vertical / coder->component[comp].sampling_factor.vertical;
+        data.comp[comp].data_width = coder->component[comp].data_width;
+        data.comp[comp].data_height = coder->component[comp].data_height;
     }
     kernel<<<grid, threads>>>(
         data,
-        encoder->d_data_source, 
+        coder->d_data_raw, 
         image_width,
         image_height
     );

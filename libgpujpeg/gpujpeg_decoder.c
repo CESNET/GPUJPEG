@@ -35,7 +35,7 @@
 
 /** Documented at declaration */
 struct gpujpeg_decoder*
-gpujpeg_decoder_create(struct gpujpeg_image_parameters* param_image)
+gpujpeg_decoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image)
 {    
     struct gpujpeg_decoder* decoder = malloc(sizeof(struct gpujpeg_decoder));
     if ( decoder == NULL )
@@ -118,21 +118,21 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, int width, int height, int
     decoder->param_image.comp_count = comp_count; 
 
     // Allocate color components
-    cudaMallocHost((void**)&decoder->component, decoder->param_image.comp_count * sizeof(struct gpujpeg_decoder_component));
+    cudaMallocHost((void**)&decoder->component, decoder->param_image.comp_count * sizeof(struct gpujpeg_component));
     if ( decoder->component == NULL )
         return -1;
     // Allocate color components in device memory
-    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_component, decoder->param_image.comp_count * sizeof(struct gpujpeg_decoder_component)) )
+    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_component, decoder->param_image.comp_count * sizeof(struct gpujpeg_component)) )
         return -1;
     gpujpeg_cuda_check_error("Decoder color component allocation");
     
     // Allocate segments
     int max_segment_count = decoder->param_image.comp_count * gpujpeg_div_and_round_up(decoder->param_image.width, GPUJPEG_BLOCK_SIZE) * gpujpeg_div_and_round_up(decoder->param_image.height, GPUJPEG_BLOCK_SIZE);
-    cudaMallocHost((void**)&decoder->segment, max_segment_count * sizeof(struct gpujpeg_decoder_segment));
+    cudaMallocHost((void**)&decoder->segment, max_segment_count * sizeof(struct gpujpeg_segment));
     if ( decoder->segment == NULL )
         return -1;
     // Allocate segments in device memory
-    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_segment, max_segment_count * sizeof(struct gpujpeg_decoder_segment)) )
+    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_segment, max_segment_count * sizeof(struct gpujpeg_segment)) )
         return -1;
     gpujpeg_cuda_check_error("Decoder segment allocation");
     
