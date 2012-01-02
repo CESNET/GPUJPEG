@@ -486,6 +486,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
                 encoder->writer->buffer_current += segment->data_compressed_size;
                 //printf("Compressed data %d bytes\n", segment->data_compressed_size);
             }
+            // Remove last restart marker in scan (is not needed)
+            encoder->writer->buffer_current -= 2;
         } else {
             // Write huffman coder results as one scan for each color component
             int segment_index = 0;
@@ -507,6 +509,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
                     
                     segment_index++;
                 }
+                // Remove last restart marker in scan (is not needed)
+                encoder->writer->buffer_current -= 2;
             }
         }
     }

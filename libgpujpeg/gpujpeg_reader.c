@@ -460,7 +460,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
                 //printf("restart marker 0x%X (revert to %d)\n", (unsigned char)byte, &decoder->data_scan[decoder->data_scan_size]);
             }
             // Check scan end
-            else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {
+            else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {                
                 *image -= 2;
                 decoder->data_scan_size -= 2;
                 
