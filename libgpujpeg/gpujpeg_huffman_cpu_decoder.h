@@ -38,6 +38,6 @@
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder, enum gpujpeg_component_type type, struct gpujpeg_decoder_scan* scan, int16_t* data_decompressed);
+gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder);
 
 #endif // GPUJPEG_HUFFMAN_CPU_DECODER_H

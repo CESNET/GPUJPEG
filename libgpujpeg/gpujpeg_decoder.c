@@ -115,9 +115,28 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, int width, int height, int
     
     decoder->param_image.width = width;
     decoder->param_image.height = height;
-    decoder->param_image.comp_count = comp_count;    
+    decoder->param_image.comp_count = comp_count; 
+
+    // Allocate color components
+    cudaMallocHost((void**)&decoder->component, decoder->param_image.comp_count * sizeof(struct gpujpeg_decoder_component));
+    if ( decoder->component == NULL )
+        return -1;
+    // Allocate color components in device memory
+    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_component, decoder->param_image.comp_count * sizeof(struct gpujpeg_decoder_component)) )
+        return -1;
+    gpujpeg_cuda_check_error("Decoder color component allocation");
     
-    // Allocate scan data
+    // Allocate segments
+    int max_segment_count = decoder->param_image.comp_count * gpujpeg_div_and_round_up(decoder->param_image.width, GPUJPEG_BLOCK_SIZE) * gpujpeg_div_and_round_up(decoder->param_image.height, GPUJPEG_BLOCK_SIZE);
+    cudaMallocHost((void**)&decoder->segment, max_segment_count * sizeof(struct gpujpeg_decoder_segment));
+    if ( decoder->segment == NULL )
+        return -1;
+    // Allocate segments in device memory
+    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_segment, max_segment_count * sizeof(struct gpujpeg_decoder_segment)) )
+        return -1;
+    gpujpeg_cuda_check_error("Decoder segment allocation");
+    
+    // Compute maximum scan data
     int data_scan_size = decoder->param_image.comp_count * decoder->param_image.width * decoder->param_image.height;
     // Add some space for right, bottom corners (when image size isn't divisible by 8)
     data_scan_size += gpujpeg_div_and_round_up(decoder->param_image.width, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
@@ -125,15 +144,10 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, int width, int height, int
     data_scan_size += GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
     // We need more data ie. twice, restart_interval could be 1 so a lot of data
     data_scan_size = data_scan_size * 2;
-    // Allocate indexes to data for each segment too
-    int max_segment_count = decoder->param_image.comp_count * ((decoder->param_image.width + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE) * ((decoder->param_image.height + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE);
+    // Allocate maximum scan data
     if ( cudaSuccess != cudaMallocHost((void**)&decoder->data_scan, data_scan_size * sizeof(uint8_t)) ) 
         return -1;
     if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_scan, data_scan_size * sizeof(uint8_t)) ) 
-        return -1;
-    if ( cudaSuccess != cudaMallocHost((void**)&decoder->data_scan_index, max_segment_count * sizeof(int)) ) 
-        return -1;
-    if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_scan_index, max_segment_count * sizeof(int)) ) 
         return -1;
     gpujpeg_cuda_check_error("Decoder scan allocation");
     
@@ -155,6 +169,19 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, int width, int height, int
     if ( cudaSuccess != cudaMalloc((void**)&decoder->d_data_target, decoder->data_target_size * sizeof(uint8_t)) ) 
         return -1;
     gpujpeg_cuda_check_error("Decoder data allocation");
+    
+    // Initialize color components
+    for ( int comp = 0; comp < decoder->param_image.comp_count; comp++ ) {
+        // Set type
+        decoder->component[comp].type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
+        
+        // Compute MCU info
+        decoder->component[comp].mcu_size = GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+        decoder->component[comp].segment_mcu_count = 1;
+        
+        decoder->component[comp].data_quantized = decoder->data_quantized + comp * decoder->data_width * decoder->data_height;
+        decoder->component[comp].d_data_quantized = decoder->d_data_quantized + comp * decoder->data_width * decoder->data_height;
+    }
     
     return 0;
 }
@@ -198,7 +225,7 @@ gpujpeg_decoder_print16(struct gpujpeg_decoder* decoder, int16_t* d_data)
 /** Documented at declaration */
 int
 gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size)
-{    
+{
     //GPUJPEG_TIMER_INIT();
     //GPUJPEG_TIMER_START();
     
@@ -207,31 +234,27 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         fprintf(stderr, "Decoder failed when decoding image data!\n");
         return -1;
     }
+    assert(decoder->interleaved == 0);
+    
+    // Init segments
+    for ( int segment_index = 0; segment_index < decoder->segment_count; segment_index++ ) {
+        
+    }
     
     //GPUJPEG_TIMER_STOP_PRINT("-Stream Reader:     ");
     //GPUJPEG_TIMER_START();
     
     // Perform huffman decoding on CPU (when restart interval is not set)
-    if ( decoder->restart_interval == 0 ) {
-        // Perform huffman decoding for all components
-        for ( int index = 0; index < decoder->reader->scan_count; index++ ) {
-            // Get scan and data buffer
-            struct gpujpeg_reader_scan* scan = &decoder->reader->scan[index];
-            int16_t* data_quantized_comp = &decoder->data_quantized[index * decoder->data_width * decoder->data_height];
-            // Determine table type
-            enum gpujpeg_component_type type = (index == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
-            // Huffman decode
-            if ( gpujpeg_huffman_cpu_decoder_decode(decoder, type, scan, data_quantized_comp) != 0 ) {
-                fprintf(stderr, "Huffman decoder failed for scan at index %d!\n", index);
-                return -1;
-            }
+    /*if ( decoder->restart_interval == 0 )*/ {
+        if ( gpujpeg_huffman_cpu_decoder_decode(decoder) != 0 ) {
+            fprintf(stderr, "Huffman decoder failed!\n", index);
+            return -1;
         }
-        
         // Copy quantized data to device memory from cpu memory    
         cudaMemcpy(decoder->d_data_quantized, decoder->data_quantized, decoder->data_size * sizeof(int16_t), cudaMemcpyHostToDevice);
     }
     // Perform huffman decoding on GPU (when restart interval is set)
-    else {
+    /*else {
         cudaMemset(decoder->d_data_quantized, 0, decoder->data_size * sizeof(int16_t));
         
         // Copy scan data to device memory
@@ -249,7 +272,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
             fprintf(stderr, "Huffman decoder on GPU failed!\n");
             return -1;
         }
-    }
+    }*/
     
     //GPUJPEG_TIMER_STOP_PRINT("-Huffman Decoder:   ");
     //GPUJPEG_TIMER_START();

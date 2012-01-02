@@ -37,34 +37,33 @@
 /** Huffman encoder structure */
 struct gpujpeg_huffman_cpu_decoder
 {
-    // Scan data for all scans
-    uint8_t* data_scan;
-    // Size for data for all scans
-    int data_scan_size;
-    // Indexes into scan data buffer for all segments
-    int* data_scan_index;
-    // Total segment count for all scans
-    int segment_count;
     // Huffman table DC
-    struct gpujpeg_table_huffman_decoder* table_dc;
+    struct gpujpeg_table_huffman_decoder* table_dc[GPUJPEG_COMPONENT_TYPE_COUNT];
     // Huffman table AC
-    struct gpujpeg_table_huffman_decoder* table_ac;
-    // DC differentize for component
-    int dc;
+    struct gpujpeg_table_huffman_decoder* table_ac[GPUJPEG_COMPONENT_TYPE_COUNT];
+    
+    // Color components
+    struct gpujpeg_decoder_component* component;
+    
     // Get bits
     int get_bits;
     // Get buffer
     int get_buff;
+    // DC differentize for component
+    int dc[GPUJPEG_MAX_COMPONENT_COUNT];
+    
+    // Coding component count
+    int comp_count;
+    // Current scan index
+    int scan_index;
+    
     // Compressed data
     uint8_t* data;
     // Compressed data size
     int data_size;
-    // Restart interval
+    
+    // TODO: remove
     int restart_interval;
-    // Restart interval position
-    int restart_position;
-    // Current segment index
-    int segment_index;
 };
 
 /**
@@ -235,31 +234,14 @@ gpujpeg_huffman_cpu_decoder_get_category(struct gpujpeg_huffman_cpu_decoder* cod
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_huffman_cpu_decoder_decode_block(struct gpujpeg_huffman_cpu_decoder* coder, int16_t* data)
+gpujpeg_huffman_cpu_decoder_decode_block(struct gpujpeg_huffman_cpu_decoder* coder, int16_t* data, int* dc, struct gpujpeg_table_huffman_decoder* table_dc, struct gpujpeg_table_huffman_decoder* table_ac)
 {    
-    // Restart coder
-    if ( coder->restart_interval > 0 && coder->restart_position == 0 ) {
-        coder->get_buff = 0;
-        coder->get_bits = 0;
-        coder->dc = 0;
-        coder->restart_position = coder->restart_interval;
-        coder->segment_index++;
-        
-        // Set coder data for next segment
-        int data_index = coder->data_scan_index[coder->segment_index];
-        coder->data = &coder->data_scan[data_index];
-        if ( (coder->segment_index + 1) >= coder->segment_count )
-            coder->data_size = coder->data_scan_size - data_index;
-        else
-            coder->data_size = coder->data_scan_index[coder->segment_index + 1] - data_index;
-    }
-    
     // Zero block output
     memset(data, 0, sizeof(int16_t) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE);
 
     // Section F.2.2.1: decode the DC coefficient difference
     // get dc category number, s
-    int s = gpujpeg_huffman_cpu_decoder_get_category(coder, coder->table_dc);
+    int s = gpujpeg_huffman_cpu_decoder_get_category(coder, table_dc);
     if ( s ) {
         // Get offset in this dc category
         int r = gpujpeg_huffman_cpu_decoder_get_bits(coder, s);
@@ -268,8 +250,8 @@ gpujpeg_huffman_cpu_decoder_decode_block(struct gpujpeg_huffman_cpu_decoder* cod
     }
 
     // Convert DC difference to actual value, update last_dc_val
-    s += coder->dc;
-    coder->dc = s;
+    s += *dc;
+    *dc = s;
 
     // Output the DC coefficient (assumes gpujpeg_natural_order[0] = 0)
     data[0] = s;
@@ -278,7 +260,7 @@ gpujpeg_huffman_cpu_decoder_decode_block(struct gpujpeg_huffman_cpu_decoder* cod
     // Since zeroes are skipped, output area must be cleared beforehand
     for ( int k = 1; k < 64; k++ ) {
         // s: (run, category)
-        int s = gpujpeg_huffman_cpu_decoder_get_category(coder, coder->table_ac);
+        int s = gpujpeg_huffman_cpu_decoder_get_category(coder, table_ac);
         // r: run length for ac zero, 0 <= r < 16
         int r = s >> 4;
         // s: category for this non-zero ac
@@ -301,8 +283,6 @@ gpujpeg_huffman_cpu_decoder_decode_block(struct gpujpeg_huffman_cpu_decoder* cod
         }
     }
     
-    coder->restart_position--;
-    
     /*printf("CPU Decode Block\n");
     for ( int y = 0; y < 8; y++ ) {
         for ( int x = 0; x < 8; x++ ) {
@@ -314,44 +294,127 @@ gpujpeg_huffman_cpu_decoder_decode_block(struct gpujpeg_huffman_cpu_decoder* cod
     return 0;
 }
 
+/**
+ * Decode one MCU
+ *
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_huffman_cpu_decoder_decode_mcu(struct gpujpeg_huffman_cpu_decoder* coder, int segment_index, int mcu_index)
+{
+    // Non-interleaving mode
+    if ( coder->comp_count == 1 ) {
+        // Get component for current scan
+        struct gpujpeg_decoder_component* component = &coder->component[coder->scan_index];
+ 
+        // Get component data for MCU
+        int16_t* block = &component->data_quantized[(segment_index * /*TODO: component->segment_mcu_count*/coder->restart_interval + mcu_index) * component->mcu_size];
+        
+        // Get coder parameters
+        int* dc = &coder->dc[coder->scan_index];
+        struct gpujpeg_table_huffman_decoder* table_dc = coder->table_dc[component->type];
+        struct gpujpeg_table_huffman_decoder* table_ac = coder->table_ac[component->type];
+        
+        // Encode 8x8 block
+        if ( gpujpeg_huffman_cpu_decoder_decode_block(coder, block, dc, table_dc, table_ac) != 0 )
+            return -1;
+    } 
+    // Interleaving mode
+    else {
+        assert(coder->scan_index == 0);
+        for ( int comp = 0; comp < coder->comp_count; comp++ ) {
+            struct gpujpeg_decoder_component* component = &coder->component[comp];
+
+            // Prepare mcu indexes
+            /*int mcu_index_x = (segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
+            int mcu_index_y = (segment_index * component->segment_mcu_count + mcu_index) / component->mcu_count_x;
+            // Compute base data index
+            int data_index_base = mcu_index_y * (component->mcu_size * component->mcu_count_x) + mcu_index_x * (component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
+            
+            // For all vertical 8x8 blocks
+            for ( int y = 0; y < component->sampling_factor.vertical; y++ ) {
+                // Compute base row data index
+                assert((component->mcu_count_x * component->mcu_size_x) == component->data_width);
+                int data_index_row = data_index_base + y * (component->mcu_count_x * component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
+                // For all horizontal 8x8 blocks
+                for ( int x = 0; x < component->sampling_factor.horizontal; x++ ) {
+                    // Compute 8x8 block data index
+                    int data_index = data_index_row + x * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+                    
+                    // Get component data for MCU
+                    int16_t* block = &component->data_quantized[data_index];
+                    
+                    // Get coder parameters
+                    int* dc = &coder->dc[comp];
+                    struct gpujpeg_table_huffman_encoder* table_dc = coder->table_dc[component->type];
+                    struct gpujpeg_table_huffman_encoder* table_ac = coder->table_ac[component->type];
+                    
+                    // Encode 8x8 block
+                    if ( gpujpeg_huffman_cpu_encoder_encode_block(coder, block, dc, table_dc, table_ac) != 0 )
+                        return -1;
+                        
+                    //int block_x = mcu_index_x * component->sampling_factor.horizontal + x;
+                    //int block_y = mcu_index_y * component->sampling_factor.vertical + y;
+                    //printf("[%d,%d] ", block_x, block_y);
+                }
+            }*/
+            //printf("\n");
+        }
+    }
+
+    return 0;
+}
+
 /** Documented at declaration */
 int
-gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder, enum gpujpeg_component_type type, struct gpujpeg_decoder_scan* scan, int16_t* data_decompressed)
+gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder)
 {    
     int block_cx = (decoder->param_image.width + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
     int block_cy = (decoder->param_image.height + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
     
     // Initialize huffman coder
     struct gpujpeg_huffman_cpu_decoder coder;
-    coder.data_scan = decoder->data_scan;
-    coder.data_scan_size = decoder->data_scan_size;
-    coder.data_scan_index = decoder->data_scan_index;
-    coder.segment_count = decoder->segment_count;
-    coder.table_dc = &decoder->table_huffman[type][GPUJPEG_HUFFMAN_DC];
-    coder.table_ac = &decoder->table_huffman[type][GPUJPEG_HUFFMAN_AC];
-    coder.get_buff = 0;
-    coder.get_bits = 0;
-    coder.dc = 0;
-    coder.restart_interval = decoder->restart_interval;
-    coder.restart_position = decoder->restart_interval;
-    coder.segment_index = scan->segment_index;
+    coder.component = decoder->component;
+    coder.scan_index = -1;
     
-    // Set coder data
-    int data_index = coder.data_scan_index[coder.segment_index];
-    coder.data = &coder.data_scan[data_index];
-    if ( (coder.segment_index + 1) >= coder.segment_count )
-        coder.data_size = coder.data_scan_size - data_index;
+    // Set huffman tables
+    for ( int type = 0; type < GPUJPEG_COMPONENT_TYPE_COUNT; type++ ) {
+        coder.table_dc[type] = &decoder->table_huffman[type][GPUJPEG_HUFFMAN_DC];
+        coder.table_ac[type] = &decoder->table_huffman[type][GPUJPEG_HUFFMAN_AC];
+    }
+    
+    // Set mcu component count
+    if ( decoder->interleaved == 1 )
+        coder.comp_count = decoder->param_image.comp_count;
     else
-        coder.data_size = coder.data_scan_index[coder.segment_index + 1] - data_index;
-        
-    //printf("start %d, size %d\n", coder.data, coder.data_size);
+        coder.comp_count = 1;
+    assert(coder.comp_count >= 1 && coder.comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     
-    // Decode all blocks
-    for ( int block_y = 0; block_y < block_cy; block_y++ ) {
-        for ( int block_x = 0; block_x < block_cx; block_x++ ) {
-            int data_index = (block_y * block_cx + block_x) * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
-            if ( gpujpeg_huffman_cpu_decoder_decode_block(&coder, &data_decompressed[data_index]) != 0 ) {
-                fprintf(stderr, "Huffman decoder failed at block [%d, %d]!\n", block_y, block_x);
+    // TODO: remove
+    coder.restart_interval = decoder->restart_interval;
+    
+    // Decode all segments
+    for ( int segment_index = 0; segment_index < decoder->segment_count; segment_index++ ) {
+        // Get segment structure
+        struct gpujpeg_decoder_segment* segment = &decoder->segment[segment_index];
+        
+        // Change current scan index
+        if ( coder.scan_index != segment->scan_index ) {
+            coder.scan_index = segment->scan_index;
+        }
+        
+        // Initialize huffman coder
+        coder.get_buff = 0;
+        coder.get_bits = 0;
+        for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ )
+            coder.dc[comp] = 0;
+        coder.data = &decoder->data_scan[segment->data_scan_index];
+        coder.data_size = segment->data_scan_count;
+        
+        // Decode segment MCUs
+        for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
+            if ( gpujpeg_huffman_cpu_decoder_decode_mcu(&coder, segment->scan_segment_index, mcu_index) != 0 ) {
+                fprintf(stderr, "Huffman decoder failed at block [%d, %d]!\n", segment_index, mcu_index);
                 return -1;
             }
         }

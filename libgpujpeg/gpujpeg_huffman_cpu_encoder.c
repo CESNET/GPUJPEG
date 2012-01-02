@@ -38,6 +38,8 @@
 /** Huffman encoder structure */
 struct gpujpeg_huffman_cpu_encoder
 {
+    // JPEG writer structure
+    struct gpujpeg_writer* writer;
     // Huffman table DC
     struct gpujpeg_table_huffman_encoder* table_dc[GPUJPEG_COMPONENT_TYPE_COUNT];
     // Huffman table AC
@@ -46,8 +48,6 @@ struct gpujpeg_huffman_cpu_encoder
     int put_value;
     // The size (in bits) to be written out
     int put_bits;
-    // JPEG writer structure
-    struct gpujpeg_writer* writer;
     // DC differentize for component
     int dc[GPUJPEG_MAX_COMPONENT_COUNT];
     // Current scan index
@@ -301,21 +301,28 @@ gpujpeg_huffman_cpu_encoder_encode_mcu(struct gpujpeg_huffman_cpu_encoder* coder
 int
 gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder)
 {
-    // Init encoder
+    // Init huffman ecoder
     struct gpujpeg_huffman_cpu_encoder coder;
-    coder.put_bits = 0;
     coder.writer = encoder->writer;
+    coder.component = encoder->component;
+    
+    // Set huffman tables
     for ( int type = 0; type < GPUJPEG_COMPONENT_TYPE_COUNT; type++ ) {
         coder.table_dc[type] = &encoder->table_huffman[type][GPUJPEG_HUFFMAN_DC];
         coder.table_ac[type] = &encoder->table_huffman[type][GPUJPEG_HUFFMAN_AC];
     }
-    coder.scan_index = -1;
-    coder.component = encoder->component;
+    
+    // Set mcu component count
     if ( encoder->param.interleaved == 1 )
         coder.comp_count = encoder->param_image.comp_count;
     else
         coder.comp_count = 1;
     assert(coder.comp_count >= 1 && coder.comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
+    
+    // Ensure that before first scan the emit_left_bits will not be invoked
+    coder.put_bits = 0;
+    // Perform scan init also for first scan
+    coder.scan_index = -1; 
     
     // Encode all segments
     for ( int segment_index = 0; segment_index < encoder->segment_count; segment_index++ ) {

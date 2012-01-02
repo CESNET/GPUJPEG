@@ -137,6 +137,24 @@ struct gpujpeg_encoder
     // JPEG writer structure
     struct gpujpeg_writer* writer;
     
+    // Quantization tables
+    struct gpujpeg_table_quantization table_quantization[GPUJPEG_COMPONENT_TYPE_COUNT];
+    
+    // Huffman coder tables
+    struct gpujpeg_table_huffman_encoder table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
+    // Huffman coder tables in device memory
+    struct gpujpeg_table_huffman_encoder* d_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
+    
+    // Color components
+    struct gpujpeg_encoder_component* component;
+    // Color components in device memory
+    struct gpujpeg_encoder_component* d_component;
+    
+    // Segments for all components
+    struct gpujpeg_encoder_segment* segment;
+    // Segments in device memory for all components
+    struct gpujpeg_encoder_segment* d_segment;
+    
     // Maximum sampling factor from components
     struct gpujpeg_component_sampling_factor sampling_factor;
     // Minimun coded unit input size (for all components)
@@ -149,16 +167,6 @@ struct gpujpeg_encoder
     int segment_count;
     // MCU count per segment (the last segment can contain less MCUs, but all other must contain this count)
     int segment_mcu_count;
-    
-    // Color components
-    struct gpujpeg_encoder_component* component;
-    // Color components in device memory
-    struct gpujpeg_encoder_component* d_component;
-    
-    // Segments for all components
-    struct gpujpeg_encoder_segment* segment;
-    // Segments in device memory for all components
-    struct gpujpeg_encoder_segment* d_segment;
     
     // Allocated data width
     int data_width;
@@ -184,14 +192,6 @@ struct gpujpeg_encoder
     int16_t* data_quantized;
     // Data after huffman coder (output from huffman coder)
     uint8_t* data_compressed;
-    
-    // Quantization tables
-    struct gpujpeg_table_quantization table_quantization[GPUJPEG_COMPONENT_TYPE_COUNT];
-    
-    // Huffman coder tables
-    struct gpujpeg_table_huffman_encoder table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
-    // Huffman coder tables in device memory
-    struct gpujpeg_table_huffman_encoder* d_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
 };
 
 /**

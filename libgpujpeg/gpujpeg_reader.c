@@ -385,8 +385,6 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
         return -1;
     }
     
-    assert(decoder->interleaved == 0);
-    
     // Check maximum component count
     decoder->reader->comp_count += comp_count;
     if ( decoder->reader->comp_count > decoder->param_image.comp_count ) {
@@ -424,19 +422,29 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
         fprintf(stderr, "Error: SOS marker reached maximum number of scans (3)!\n");
         return -1;
     }
-    // Get scan structure
-    struct gpujpeg_reader_scan* scan = &decoder->reader->scan[decoder->reader->scan_count];
-    decoder->reader->scan_count++;
     
+    int scan_index = decoder->reader->scan_count;
+    
+    // Get scan structure
+    struct gpujpeg_reader_scan* scan = &decoder->reader->scan[scan_index];
+    decoder->reader->scan_count++;
     // Scan segments begin at the end of previous scan segments or from zero index
     scan->segment_index = decoder->segment_count;
-    // Every scan has first segment
     scan->segment_count = 0;
-    decoder->data_scan_index[scan->segment_index + scan->segment_count] = decoder->data_scan_size;
+    
+    // Get first segment in scan
+    struct gpujpeg_decoder_segment* segment = &decoder->segment[scan->segment_index];
+    segment->scan_index = scan_index;
+    segment->scan_segment_index = scan->segment_count;
+    segment->data_scan_index = decoder->data_scan_size;
     scan->segment_count++;
+    
+    // TODO: remove
+    segment->mcu_count = decoder->restart_interval;
+    
     // Read scan data
     uint8_t byte = 0;
-    uint8_t byte_previous = 0;
+    uint8_t byte_previous = 0;    
     do {
         byte_previous = byte;
         byte = gpujpeg_reader_read_byte(*image);
@@ -454,15 +462,28 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
             else if ( byte >= GPUJPEG_MARKER_RST0 && byte <= GPUJPEG_MARKER_RST7 ) {
                 decoder->data_scan_size -= 2;
                 
-                // Set data start index for next scan segment
-                decoder->data_scan_index[scan->segment_index + scan->segment_count] = decoder->data_scan_size;
+                // Set segment byte count
+                segment->data_scan_count = decoder->data_scan_size - segment->data_scan_index;
+                
+                // Start new segment in scan
+                segment = &decoder->segment[scan->segment_index + scan->segment_count];
+                segment->scan_index = scan_index;
+                segment->scan_segment_index = scan->segment_count;
+                segment->data_scan_index = decoder->data_scan_size;
                 scan->segment_count++;
+                
+                // TODO: remove
+                segment->mcu_count = decoder->restart_interval;
+    
                 //printf("restart marker 0x%X (revert to %d)\n", (unsigned char)byte, &decoder->data_scan[decoder->data_scan_size]);
             }
             // Check scan end
             else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {                
                 *image -= 2;
                 decoder->data_scan_size -= 2;
+                
+                // Set segment byte count
+                segment->data_scan_count = decoder->data_scan_size - segment->data_scan_index;
                 
                 // Add scan segment count to decoder segment count
                 decoder->segment_count += scan->segment_count;
@@ -485,14 +506,12 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
 int
 gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size)
 {
-    // Setup reader
+    // Setup reader and decoder
     decoder->reader->comp_count = 0;
     decoder->reader->scan_count = 0;
-    
-    // Setup decoder
-    decoder->data_scan_size = 0;
-    decoder->segment_count = 0; // Total segment count for all scans
-    decoder->restart_interval = 0;
+    decoder->segment_count = 0;  // Total segment count for all scans
+    decoder->data_scan_size = 0; // Total byte count for all scans
+    decoder->restart_interval = 0;    
     
     // Get image end
     uint8_t* image_end = image + image_size;
