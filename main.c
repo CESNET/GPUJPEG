@@ -36,17 +36,17 @@ print_help()
 {
     printf(
         "gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
-        "   -h, --help\t\t\tprint help\n"
-        "   -s, --size\t\t\tset image size in pixels, e.g. 1920x1080\n"
-        "   -f, --sampling-factor\tset input/output raw image sampling factor, e.g. 4:2:2\n"
-        "   -c, --colorspace\tset image colorspace, e.g. rgb, yuv, ycbcr-jpeg\n"
-        "   -q, --quality\t\tset quality level 0-100 (default 75)\n"
-        "   -r, --restart\t\tset restart interval (default 8)\n"
-        "       --chroma-subsampling\t\tuse chroma subsampling\n"
-        "   -i  --interleaving\t\tflag if use interleaved stream for encoding\n"
-        "   -e, --encode\t\t\tencode images\n"
-        "   -d, --decode\t\t\tdecode images\n"
-        "   -D, --device\t\t\tcuda device id (default 0)\n"
+        "   -h, --help                  print help\n"
+        "   -s, --size                  set raw image size in pixels, e.g. 1920x1080\n"
+        "   -f, --sampling-factor       set raw image sampling factor, e.g. 4:2:2\n"
+        "   -c, --colorspace            set raw image colorspace, e.g. rgb, yuv, ycbcr-jpeg\n"
+        "   -q, --quality               set quality level 0-100 (default 75)\n"
+        "   -r, --restart               set restart interval (default 8)\n"
+        "       --chroma-subsampling    use chroma subsampling\n"
+        "   -i  --interleaving          flag if use interleaved stream for encoding\n"
+        "   -e, --encode                encode images\n"
+        "   -d, --decode                decode images\n"
+        "   -D, --device                cuda device id (default 0)\n"
     );
 }
 
@@ -79,6 +79,7 @@ main(int argc, char *argv[])
     // Other parameters
     int encode = 0;
     int decode = 0;
+    int adjust_restart_interval = -1;
     int device_id = 0;
     
     // Parse command line
@@ -128,9 +129,12 @@ main(int argc, char *argv[])
             param.restart_interval = atoi(optarg);
             if ( param.restart_interval < 0 )
                 param.restart_interval = 0;
+            adjust_restart_interval = 0;
             break;
         case 1:
             gpujpeg_parameters_chroma_subsampling(&param);
+            if ( adjust_restart_interval != 0 )
+                adjust_restart_interval = 1;
             break;
         case 'i':
             param.interleaved = 1;
@@ -178,6 +182,12 @@ main(int argc, char *argv[])
     
     // Init device
     gpujpeg_init_device(device_id, 1);
+    
+    // Adjust restart interval
+    if ( adjust_restart_interval == 1 ) {
+        printf("Auto-adjusting restart interval to 2 for better performance!\n");
+        param.restart_interval = 2;
+    }
     
     // Detect color spalce
     if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV && param_image.color_space == GPUJPEG_RGB )
