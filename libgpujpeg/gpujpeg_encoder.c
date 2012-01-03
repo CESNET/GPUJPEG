@@ -192,7 +192,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         // Copy compressed data from device memory to cpu memory
         if ( cudaSuccess != cudaMemcpy(coder->data_compressed, coder->d_data_compressed, coder->data_compressed_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
             return -1;
-        // Copy segments to device memory
+        // Copy segments from device memory
         if ( cudaSuccess != cudaMemcpy(coder->segment, coder->d_segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyDeviceToHost) )
             return -1;
             

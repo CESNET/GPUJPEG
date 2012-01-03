@@ -287,13 +287,8 @@ gpujpeg_huffman_cpu_encoder_encode_mcu(struct gpujpeg_huffman_cpu_encoder* coder
                     // Encode 8x8 block
                     if ( gpujpeg_huffman_cpu_encoder_encode_block(coder, block, dc, table_dc, table_ac) != 0 )
                         return -1;
-                        
-                    //int block_x = mcu_index_x * component->sampling_factor.horizontal + x;
-                    //int block_y = mcu_index_y * component->sampling_factor.vertical + y;
-                    //printf("[%d,%d] ", block_x, block_y);
                 }
             }
-            //printf("\n");
         }
     }
 

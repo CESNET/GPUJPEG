@@ -146,7 +146,8 @@ gpujpeg_huffman_gpu_encoder_emit_left_bits(int & put_value, int & put_bits, uint
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, int16_t* data, uint8_t* & data_compressed, struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
+gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, int16_t* data, uint8_t* & data_compressed, 
+    struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
 	// Encode the DC coefficient difference per section F.1.2.1
 	int temp = data[0] - dc;
@@ -339,13 +340,8 @@ gpujpeg_huffman_encoder_encode_kernel(
                         
                         // Encode 8x8 block
                         gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, component_dc, block, data_compressed, d_table_dc, d_table_ac);
-                            
-                        //int block_x = mcu_index_x * component->sampling_factor.horizontal + x;
-                        //int block_y = mcu_index_y * component->sampling_factor.vertical + y;
-                        //printf("[%d,%d] ", block_x, block_y);
                     }
                 }
-                //printf("\n");
             }
         }
     }

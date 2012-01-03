@@ -139,34 +139,35 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     //GPUJPEG_TIMER_START();
     
     // Perform huffman decoding on CPU (when restart interval is not set)
-    /*if ( decoder->restart_interval == 0 )*/ {
+    if ( coder->param.restart_interval == 0 ) {
         if ( gpujpeg_huffman_cpu_decoder_decode(decoder) != 0 ) {
             fprintf(stderr, "Huffman decoder failed!\n", index);
             return -1;
         }
-        // Copy quantized data to device memory from cpu memory    
+        // Copy quantized data to device memory from cpu memory
         cudaMemcpy(coder->d_data_quantized, coder->data_quantized, coder->data_size * sizeof(int16_t), cudaMemcpyHostToDevice);
     }
     // Perform huffman decoding on GPU (when restart interval is set)
-    /*else {
-        cudaMemset(decoder->d_data_quantized, 0, decoder->data_size * sizeof(int16_t));
+    else {
+        cudaMemset(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t));
         
         // Copy scan data to device memory
-        cudaMemcpy(decoder->d_data_scan, decoder->data_scan, decoder->data_scan_size * sizeof(uint8_t), cudaMemcpyHostToDevice);
-        gpujpeg_cuda_check_error("Decoder copy scan data");
-        // Copy scan data to device memory
-        cudaMemcpy(decoder->d_data_scan_index, decoder->data_scan_index, decoder->segment_count * sizeof(int), cudaMemcpyHostToDevice);
-        gpujpeg_cuda_check_error("Decoder copy scan data index");
+        cudaMemcpy(coder->d_data_compressed, coder->data_compressed, coder->data_compressed_size * sizeof(uint8_t), cudaMemcpyHostToDevice);
+        gpujpeg_cuda_check_error("Decoder copy compressed data");
+        
+        // Copy segments to device memory
+        cudaMemcpy(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice);
+        gpujpeg_cuda_check_error("Decoder copy compressed data");
         
         // Zero output memory
-        cudaMemset(decoder->d_data_quantized, 0, decoder->data_size * sizeof(int16_t));
+        cudaMemset(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t));
         
         // Perform huffman decoding
         if ( gpujpeg_huffman_gpu_decoder_decode(decoder) != 0 ) {
             fprintf(stderr, "Huffman decoder on GPU failed!\n");
             return -1;
         }
-    }*/
+    }
     
     //GPUJPEG_TIMER_STOP_PRINT("-Huffman Decoder:   ");
     //GPUJPEG_TIMER_START();
