@@ -79,8 +79,11 @@ main(int argc, char *argv[])
     // Other parameters
     int encode = 0;
     int decode = 0;
-    int adjust_restart_interval = -1;
     int device_id = 0;
+    
+    // Flags
+    int restart_interval_default = 1;
+    int chroma_subsampled = 0;
     
     // Parse command line
     char ch = '\0';
@@ -129,12 +132,11 @@ main(int argc, char *argv[])
             param.restart_interval = atoi(optarg);
             if ( param.restart_interval < 0 )
                 param.restart_interval = 0;
-            adjust_restart_interval = 0;
+            restart_interval_default = 0;
             break;
         case 1:
             gpujpeg_parameters_chroma_subsampling(&param);
-            if ( adjust_restart_interval != 0 )
-                adjust_restart_interval = 1;
+            chroma_subsampled = 1;
             break;
         case 'i':
             param.interleaved = 1;
@@ -183,8 +185,8 @@ main(int argc, char *argv[])
     // Init device
     gpujpeg_init_device(device_id, 1);
     
-    // Adjust restart interval
-    if ( adjust_restart_interval == 1 ) {
+    // Adjust restart interval (when chroma subsampling and interleaving is enabled and restart interval is not changed)
+    if ( restart_interval_default == 1 && chroma_subsampled == 1 && param.interleaved == 1 ) {
         printf("Auto-adjusting restart interval to 2 for better performance!\n");
         param.restart_interval = 2;
     }
