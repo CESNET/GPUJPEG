@@ -442,7 +442,6 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
         byte_previous = byte;
         byte = gpujpeg_reader_read_byte(*image);
         decoder->coder.data_compressed[decoder->coder.data_compressed_size] = byte;
-        //printf("set byte %d = 0x%X\n", &decoder->data_scan[decoder->data_scan_size], (unsigned char)byte);
         decoder->coder.data_compressed_size++;        
         
         // Check markers
@@ -464,8 +463,6 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
                 segment->scan_segment_index = scan->segment_count;
                 segment->data_compressed_index = decoder->coder.data_compressed_size;
                 scan->segment_count++;    
-                
-                //printf("restart marker 0x%X (revert to %d)\n", (unsigned char)byte, &decoder->data_scan[decoder->data_scan_size]);
             }
             // Check scan end
             else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {                
@@ -478,7 +475,6 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
                 // Add scan segment count to decoder segment count
                 decoder->coder.segment_count += scan->segment_count;
                 
-                //printf("end marker 0x%X (revert to %d)\n", (unsigned char)byte, &decoder->data_scan[decoder->data_scan_size]);
                 return 0;
             } else {
                 fprintf(stderr, "Error: JPEG scan contains unexpected marker 0x%X!\n", byte);

@@ -323,7 +323,7 @@ gpujpeg_huffman_cpu_decoder_decode_mcu(struct gpujpeg_huffman_cpu_decoder* coder
             struct gpujpeg_component* component = &coder->component[comp];
 
             // Prepare mcu indexes
-            /*int mcu_index_x = (segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
+            int mcu_index_x = (segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
             int mcu_index_y = (segment_index * component->segment_mcu_count + mcu_index) / component->mcu_count_x;
             // Compute base data index
             int data_index_base = mcu_index_y * (component->mcu_size * component->mcu_count_x) + mcu_index_x * (component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
@@ -343,22 +343,16 @@ gpujpeg_huffman_cpu_decoder_decode_mcu(struct gpujpeg_huffman_cpu_decoder* coder
                     
                     // Get coder parameters
                     int* dc = &coder->dc[comp];
-                    struct gpujpeg_table_huffman_encoder* table_dc = coder->table_dc[component->type];
-                    struct gpujpeg_table_huffman_encoder* table_ac = coder->table_ac[component->type];
+                    struct gpujpeg_table_huffman_decoder* table_dc = coder->table_dc[component->type];
+                    struct gpujpeg_table_huffman_decoder* table_ac = coder->table_ac[component->type];
                     
                     // Encode 8x8 block
-                    if ( gpujpeg_huffman_cpu_encoder_encode_block(coder, block, dc, table_dc, table_ac) != 0 )
+                    if ( gpujpeg_huffman_cpu_decoder_decode_block(coder, block, dc, table_dc, table_ac) != 0 )
                         return -1;
-                        
-                    //int block_x = mcu_index_x * component->sampling_factor.horizontal + x;
-                    //int block_y = mcu_index_y * component->sampling_factor.vertical + y;
-                    //printf("[%d,%d] ", block_x, block_y);
                 }
-            }*/
-            //printf("\n");
+            }
         }
     }
-
     return 0;
 }
 

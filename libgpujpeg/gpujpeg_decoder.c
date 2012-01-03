@@ -134,7 +134,6 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         fprintf(stderr, "Decoder failed when decoding image data!\n");
         return -1;
     }
-    assert(coder->param.interleaved == 0);
     
     //GPUJPEG_TIMER_STOP_PRINT("-Stream Reader:     ");
     //GPUJPEG_TIMER_START();
