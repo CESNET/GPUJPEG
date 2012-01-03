@@ -214,13 +214,11 @@ gpujpeg_reader_read_sof0(struct gpujpeg_decoder* decoder, uint8_t** image)
             fprintf(stderr, "Error: SOF0 marker component %d id should be %d but %d was presented!\n", comp, comp + 1, index);
             return -1;
         }
+        
         int sampling = (int)gpujpeg_reader_read_byte(*image);
-        int sampling_h = (sampling >> 4) & 15;
-        int sampling_v = sampling & 15;
-        if ( sampling_h != 1 || sampling_v != 1 ) {
-            fprintf(stderr, "Error: SOF0 marker component %d sampling factor %dx%d is not supported!\n", comp, sampling_h, sampling_v);
-            return -1;
-        }
+        decoder->reader->param.sampling_factor[comp].horizontal = (sampling >> 4) & 15;
+        decoder->reader->param.sampling_factor[comp].vertical = (sampling >> 4) & 15;
+        
         int table_index = (int)gpujpeg_reader_read_byte(*image);
         if ( comp == 0 && table_index != 0 ) {
             fprintf(stderr, "Error: SOF0 marker component Y should have quantization table index 0 but %d was presented!\n", table_index);

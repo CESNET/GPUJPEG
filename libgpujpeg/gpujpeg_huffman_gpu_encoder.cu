@@ -314,7 +314,6 @@ gpujpeg_huffman_encoder_encode_kernel(
                 // For all vertical 8x8 blocks
                 for ( int y = 0; y < component->sampling_factor.vertical; y++ ) {
                     // Compute base row data index
-                    //assert((component->mcu_count_x * component->mcu_size_x) == component->data_width);
                     int data_index_row = data_index_base + y * (component->mcu_count_x * component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
                     // For all horizontal 8x8 blocks
                     for ( int x = 0; x < component->sampling_factor.horizontal; x++ ) {
@@ -352,12 +351,10 @@ gpujpeg_huffman_encoder_encode_kernel(
                         
     // Output restart marker
     int restart_marker = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index & 0x7);
-    //printf("%d,%d: marker 0x%X\n", comp_index, segment_index, restart_marker);
     gpujpeg_huffman_gpu_encoder_marker(data_compressed, restart_marker);
                 
     // Set compressed size
     segment->data_compressed_size = data_compressed - data_compressed_start;
-    //printf("%d,%d: byte count %d (%d)\n", comp_index, segment_index, segment->data_compressed_size, segment->data_compressed_index);
 }
 
 /** Documented at declaration */

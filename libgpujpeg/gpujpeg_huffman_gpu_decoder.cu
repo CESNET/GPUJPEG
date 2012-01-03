@@ -362,7 +362,6 @@ gpujpeg_huffman_decoder_decode_kernel(
                 // For all vertical 8x8 blocks
                 for ( int y = 0; y < component->sampling_factor.vertical; y++ ) {
                     // Compute base row data index
-                    //assert((component->mcu_count_x * component->mcu_size_x) == component->data_width);
                     int data_index_row = data_index_base + y * (component->mcu_count_x * component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
                     // For all horizontal 8x8 blocks
                     for ( int x = 0; x < component->sampling_factor.horizontal; x++ ) {

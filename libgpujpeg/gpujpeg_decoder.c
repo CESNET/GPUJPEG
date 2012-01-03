@@ -174,33 +174,33 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     
     // Perform IDCT and dequantization
     for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
-        uint8_t* d_data_comp = &coder->d_data[comp * coder->data_width * coder->data_height];
-        int16_t* d_data_quantized_comp = &coder->d_data_quantized[comp * coder->data_width * coder->data_height];
-        
+        // Get component
+        struct gpujpeg_component* component = &coder->component[comp];
+                
         // Determine table type
         enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
         
-        //gpujpeg_component_print16(decoder, d_data_quantized_comp);
+        //gpujpeg_component_print16(component, component->d_data_quantized);
         
-        cudaMemset(d_data_comp, 0, coder->param_image.width * coder->param_image.height * sizeof(uint8_t));
+        cudaMemset(component->d_data, 0, component->data_size * sizeof(uint8_t));
         
         //Perform inverse DCT
         NppiSize inv_roi;
-        inv_roi.width = coder->data_width * GPUJPEG_BLOCK_SIZE;
-        inv_roi.height = coder->data_height / GPUJPEG_BLOCK_SIZE;
+        inv_roi.width = component->data_width * GPUJPEG_BLOCK_SIZE;
+        inv_roi.height = component->data_height / GPUJPEG_BLOCK_SIZE;
         assert(GPUJPEG_BLOCK_SIZE == 8);
         NppStatus status = nppiDCTQuantInv8x8LS_JPEG_16s8u_C1R(
-            d_data_quantized_comp, 
-            coder->data_width * GPUJPEG_BLOCK_SIZE * sizeof(int16_t), 
-            d_data_comp, 
-            coder->data_width * sizeof(uint8_t), 
+            component->d_data_quantized, 
+            component->data_width * GPUJPEG_BLOCK_SIZE * sizeof(int16_t), 
+            component->d_data, 
+            component->data_width * sizeof(uint8_t), 
             decoder->table_quantization[type].d_table, 
             inv_roi
         );
         if ( status != 0 )
             printf("Error %d\n", status);
             
-        //gpujpeg_decoder_print8(decoder, d_data_comp);
+        //gpujpeg_component_print8(component, component->d_data);
     }
     
     //GPUJPEG_TIMER_STOP_PRINT("-DCT & Quantization:");
