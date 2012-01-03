@@ -1,0 +1,15 @@
+2012-01-03
+----------
+Changes:
+-Added interleaved mode (optionally)
+-Added subsampling (optionally) - better performance when used 
+ (because of smaller amount of encoded/decoded data)
+
+2011-12-07
+----------
+First public release of gpujpeg library and console 
+application.
+Features:
+-Baseline JPEG, non-interleaved mode on CUDA-enabled GPUs
+-Performance - realtime HD and 4K encoding/decoding on NVIDIA GTX 580
+-Using CUDA and NPP library
