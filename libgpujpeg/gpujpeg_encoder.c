@@ -34,6 +34,11 @@
 #include "gpujpeg_format_type.h"
 #include "gpujpeg_util.h"
 
+#ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
+/** Huffman tables in constant memory */
+struct gpujpeg_table_huffman_encoder (*gpujpeg_encoder_table_huffman)[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
+#endif
+
 /** Documented at declaration */
 struct gpujpeg_encoder*
 gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image)
@@ -94,6 +99,23 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
         }
     }
 	gpujpeg_cuda_check_error("Encoder table init");
+    
+#ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
+    // Copy huffman tables to constant memory
+    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+        for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
+            int index = (comp_type * GPUJPEG_HUFFMAN_TYPE_COUNT + huff_type);
+            cudaMemcpyToSymbol(
+                (char*)gpujpeg_encoder_table_huffman, 
+                &encoder->table_huffman[comp_type][huff_type], 
+                sizeof(struct gpujpeg_table_huffman_encoder), 
+                index * sizeof(struct gpujpeg_table_huffman_encoder), 
+                cudaMemcpyHostToDevice
+            );
+        }
+    }
+    gpujpeg_cuda_check_error("Encoder copy huffman tables to constant memory");
+#endif
     
     // Init huffman encoder
     if ( gpujpeg_huffman_gpu_encoder_init() != 0 )
@@ -182,7 +204,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         }
     }
     // Perform huffman coding on GPU (when restart interval is set)
-    else {
+    else {    
         // Perform huffman coding
         if ( gpujpeg_huffman_gpu_encoder_encode(encoder) != 0 ) {
             fprintf(stderr, "Huffman encoder on GPU failed!\n");
@@ -223,7 +245,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
                 // Write scan data
                 for ( int index = 0; index < coder->component[comp].segment_count; index++ ) {
                     struct gpujpeg_segment* segment = &coder->segment[segment_index];
-                    
+                
                     // Copy compressed data to writer
                     memcpy(
                         encoder->writer->buffer_current, 

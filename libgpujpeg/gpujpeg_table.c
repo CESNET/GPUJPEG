@@ -247,9 +247,11 @@ gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, 
     }
     gpujpeg_table_huffman_encoder_compute(table);
     
+#ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
     // Copy table to device memory
     if ( cudaSuccess != cudaMemcpy(d_table, table, sizeof(struct gpujpeg_table_huffman_encoder), cudaMemcpyHostToDevice) )
         return -1;
+#endif
         
     return 0;
 }
@@ -350,6 +352,8 @@ gpujpeg_table_huffman_decoder_compute(struct gpujpeg_table_huffman_decoder* tabl
 		}
 	}
     
+#ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
     // Copy table to device memory
     cudaMemcpy(d_table, table, sizeof(struct gpujpeg_table_huffman_decoder), cudaMemcpyHostToDevice);
+#endif
 }

@@ -28,6 +28,8 @@
 
 # Shared/Static library?
 SHARED_LIBRARY ?= 1
+# Use constant memory for huffman coder tables?
+HUFFMAN_CODER_TABLES_IN_CONSTANT ?= 1
 # CUDA install path
 CUDA_INSTALL_PATH ?= /usr/local/cuda
 
@@ -68,6 +70,11 @@ NVCCFLAGS += $(COMMONFLAGS) \
 	-gencode arch=compute_11,code=sm_11
 # Linker flags
 LDFLAGS += -shared
+
+# Other Flags
+ifeq ($(HUFFMAN_CODER_TABLES_IN_CONSTANT),1)
+    COMMONFLAGS += -DGPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
+endif
 
 # Do 32bit vs. 64bit setup
 LBITS := $(shell getconf LONG_BIT)

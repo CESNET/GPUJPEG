@@ -31,6 +31,13 @@
 #include "gpujpeg_format_type.h"
 #include "gpujpeg_util.h"
 
+#ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
+/** Allocate huffman tables in constant memory */
+__constant__ struct gpujpeg_table_huffman_decoder gpujpeg_huffman_gpu_decoder_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
+/** Pass huffman tables to encoder */
+extern struct gpujpeg_table_huffman_decoder (*gpujpeg_decoder_table_huffman)[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT] = &gpujpeg_huffman_gpu_decoder_table_huffman;
+#endif
+
 /** Natural order in constant memory */
 __constant__ int gpujpeg_huffman_gpu_decoder_order_natural[64];
 
@@ -290,13 +297,23 @@ gpujpeg_huffman_decoder_decode_kernel(
     struct gpujpeg_segment* d_segment,
     int comp_count,
     int segment_count, 
-    uint8_t* d_data_compressed,
-    struct gpujpeg_table_huffman_decoder* d_table_y_dc,
-    struct gpujpeg_table_huffman_decoder* d_table_y_ac,
-    struct gpujpeg_table_huffman_decoder* d_table_cbcr_dc,
-    struct gpujpeg_table_huffman_decoder* d_table_cbcr_ac
+    uint8_t* d_data_compressed
+#ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
+    ,struct gpujpeg_table_huffman_decoder* d_table_y_dc
+    ,struct gpujpeg_table_huffman_decoder* d_table_y_ac
+    ,struct gpujpeg_table_huffman_decoder* d_table_cbcr_dc
+    ,struct gpujpeg_table_huffman_decoder* d_table_cbcr_ac
+#endif
 )
 {
+#ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
+    // Get huffman tables from constant memory
+    struct gpujpeg_table_huffman_decoder* d_table_y_dc = &gpujpeg_huffman_gpu_decoder_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
+    struct gpujpeg_table_huffman_decoder* d_table_y_ac = &gpujpeg_huffman_gpu_decoder_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
+    struct gpujpeg_table_huffman_decoder* d_table_cbcr_dc = &gpujpeg_huffman_gpu_decoder_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
+    struct gpujpeg_table_huffman_decoder* d_table_cbcr_ac = &gpujpeg_huffman_gpu_decoder_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
+#endif
+    
     int segment_index = blockIdx.x * blockDim.x + threadIdx.x;
     if ( segment_index >= segment_count )
         return;
@@ -400,7 +417,7 @@ gpujpeg_huffman_gpu_decoder_init()
 {
     // Copy natural order to constant device memory
     cudaMemcpyToSymbol(
-        "gpujpeg_huffman_gpu_decoder_order_natural",
+        gpujpeg_huffman_gpu_decoder_order_natural,
         gpujpeg_order_natural, 
         64 * sizeof(int),
         0,
@@ -433,11 +450,13 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
         coder->d_segment, 
         comp_count,
         coder->segment_count,
-        coder->d_data_compressed,
-        decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC],
-        decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC],
-        decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC],
-        decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC]
+        coder->d_data_compressed
+    #ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
+        ,decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC]
+        ,decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC]
+        ,decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC]
+        ,decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC]
+    #endif
     );
     cudaError cuerr = cudaThreadSynchronize();
     if ( cuerr != cudaSuccess ) {
