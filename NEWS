@@ -2,7 +2,7 @@
 ----------
 Changes:
 -Added option to libgpujpeg Makefile for moving gpu huffman coder tables into constant memory
--Option is default set to true and makes better performance
+-Option is default set to true and makes better performance on older GPUs
 
 2012-01-03
 ----------
