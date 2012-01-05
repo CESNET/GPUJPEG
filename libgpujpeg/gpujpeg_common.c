@@ -61,11 +61,11 @@ gpujpeg_init_device(int device_id, int verbose)
     }
 
     if ( verbose == 1 ) {
-        int cuda_driver_version = NULL;
+        int cuda_driver_version = 0;
         cudaDriverGetVersion(&cuda_driver_version);
         printf("CUDA driver version:   %d.%d\n", cuda_driver_version / 1000, (cuda_driver_version % 100) / 10);
         
-        int cuda_runtime_version = NULL;
+        int cuda_runtime_version = 0;
         cudaRuntimeGetVersion(&cuda_runtime_version);
         printf("CUDA runtime version:  %d.%d\n", cuda_runtime_version / 1000, (cuda_runtime_version % 100) / 10);
         
