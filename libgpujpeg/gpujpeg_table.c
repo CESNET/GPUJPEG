@@ -69,7 +69,7 @@ gpujpeg_table_quantization_set_default(uint8_t* table_raw, enum gpujpeg_componen
     else if ( type == GPUJPEG_COMPONENT_CHROMINANCE )
         table_default = gpujpeg_table_default_quantization_chrominance;
     else
-        return -1;
+        assert(0);
     memcpy(table_raw, table_default, 64 * sizeof(uint8_t));
 }
 
