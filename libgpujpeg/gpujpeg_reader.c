@@ -172,7 +172,7 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image)
     }
 
     for ( int i = 0; i < 64; i++ ) {
-        table->table_raw[gpujpeg_order_natural[i]] = gpujpeg_reader_read_byte(*image);
+        table->table_raw[i] = gpujpeg_reader_read_byte(*image);
     }
     
     // Prepare quantization table for read raw table

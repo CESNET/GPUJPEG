@@ -29,15 +29,14 @@
  
 #include "gpujpeg_common.h"
 #include "gpujpeg_util.h"
+#include <npp.h>
 
 /** Documented at declaration */
 int
 gpujpeg_init_device(int device_id, int verbose)
 {
     int dev_count;
-
     cudaGetDeviceCount(&dev_count);
-
     if ( dev_count == 0 ) {
         fprintf(stderr, "No CUDA enabled device\n");
         return -1;
@@ -61,8 +60,21 @@ gpujpeg_init_device(int device_id, int verbose)
         return -1;
     }
 
-    if ( verbose == 1 )
-        fprintf(stderr, "Setting device %d: %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
+    if ( verbose == 1 ) {
+        int cuda_driver_version = NULL;
+        cudaDriverGetVersion(&cuda_driver_version);
+        printf("CUDA driver version:   %d.%d\n", cuda_driver_version / 1000, (cuda_driver_version % 100) / 10);
+        
+        int cuda_runtime_version = NULL;
+        cudaRuntimeGetVersion(&cuda_runtime_version);
+        printf("CUDA runtime version:  %d.%d\n", cuda_runtime_version / 1000, (cuda_runtime_version % 100) / 10);
+        
+        const NppLibraryVersion* npp_version = nppGetLibVersion();
+        printf("NPP version:           %d.%d\n", npp_version->major, npp_version->minor);
+        
+        printf("Using Device #%d:       %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
+    }
+    
     cudaSetDevice(device_id);
 
     return 0;

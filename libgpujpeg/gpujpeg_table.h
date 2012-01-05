@@ -32,7 +32,25 @@
 
 #include "gpujpeg_type.h"
 
-/** JPEG natural order from zigzag order */
+/**
+ * JPEG natural order from zigzag order
+ * 
+ * More info:
+ *   0 in zig-zag is 0 in natural-order (gpujpeg_order_natural[0] == 0)
+ *   1 in zig-zag is 1 in natural-order (gpujpeg_order_natural[1] == 1)
+ *   2 in zig-zag is 8 in natural-order (gpujpeg_order_natural[2] == 8)
+ *   3 in zig-zag is 16 in natural-order (gpujpeg_order_natural[0] == 16)
+ *   ...
+ * 
+ * Example:
+ * 
+ *   natural order           zig-zag
+ * 
+ *   4096 5461 6554 ...      4096 5461 5461 4681 5461 6554 ...
+ *   5461 5461 ...       
+ *   4681 ...
+ *   ...                 
+ */
 static const int gpujpeg_order_natural[64] = {
      0,  1,  8, 16,  9,  2,  3, 10,
     17, 24, 32, 25, 18, 11,  4,  5,

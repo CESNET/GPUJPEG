@@ -138,10 +138,10 @@ gpujpeg_writer_write_dqt(struct gpujpeg_encoder* encoder, enum gpujpeg_component
     // Table changed from default with quality
 	uint8_t* dqt = encoder->table_quantization[type].table_raw;
     
-    // Emit table
+    // Emit table in zig-zag order
 	unsigned char qval;
 	for ( int i = 0; i < 64; i++ )  {
-        unsigned char qval = (unsigned char)((char)(dqt[gpujpeg_order_natural[i]]));
+        unsigned char qval = (unsigned char)((char)(dqt[i]));
 		gpujpeg_writer_emit_byte(encoder->writer, qval);
     }
 }
