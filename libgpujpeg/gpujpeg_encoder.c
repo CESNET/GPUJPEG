@@ -33,6 +33,7 @@
 #include "gpujpeg_huffman_gpu_encoder.h"
 #include "gpujpeg_format_type.h"
 #include "gpujpeg_util.h"
+#include <npp.h>
 
 #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
 /** Huffman tables in constant memory */

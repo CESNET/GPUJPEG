@@ -37,7 +37,6 @@
 #include <strings.h>
 #include <assert.h>
 #include <cuda_runtime.h>
-#include <npp.h>
 
 // Timer
 #define GPUJPEG_TIMER_INIT() \

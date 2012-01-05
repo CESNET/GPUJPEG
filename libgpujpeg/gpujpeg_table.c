@@ -29,13 +29,56 @@
  
 #include "gpujpeg_table.h"
 #include "gpujpeg_util.h"
+#include <npp.h>
+
+/** Default Quantization Table for Y component */
+static uint8_t gpujpeg_table_default_quantization_luminance[] = { 
+    16, 11, 10, 16, 24, 40, 51, 61, 
+    12, 12, 14, 19, 26, 58, 60, 55, 
+    14, 13, 16, 24, 40, 57, 69, 56, 
+    14, 17, 22, 29, 51, 87, 80, 62, 
+    18, 22, 37, 56, 68, 109, 103, 77, 
+    24, 35, 55, 64, 81, 104, 113, 92, 
+    49, 64, 78, 87, 103, 121, 120, 101, 
+    72, 92, 95, 98, 112, 100, 103, 99
+};
+/** Default Quantization Table for Cb or Cr component */
+static uint8_t gpujpeg_table_default_quantization_chrominance[] = { 
+    17, 18, 24, 47, 99, 99, 99, 99, 
+    18, 21, 26, 66, 99, 99, 99, 99, 
+    24, 26, 56, 99, 99, 99, 99, 99, 
+    47, 66, 99, 99, 99, 99, 99, 99, 
+    99, 99, 99, 99, 99, 99, 99, 99, 
+    99, 99, 99, 99, 99, 99, 99, 99, 
+    99, 99, 99, 99, 99, 99, 99, 99, 
+    99, 99, 99, 99, 99, 99, 99, 99
+};
+
+/**
+ * Set default quantization table
+ * 
+ * @param table_raw  Table buffer
+ * @param type  Quantization table type
+ */
+void
+gpujpeg_table_quantization_set_default(uint8_t* table_raw, enum gpujpeg_component_type type)
+{
+    uint8_t* table_default = NULL;
+    if ( type == GPUJPEG_COMPONENT_LUMINANCE )
+        table_default = gpujpeg_table_default_quantization_luminance;
+    else if ( type == GPUJPEG_COMPONENT_CHROMINANCE )
+        table_default = gpujpeg_table_default_quantization_chrominance;
+    else
+        return -1;
+    memcpy(table_raw, table_default, 64 * sizeof(uint8_t));
+}
 
 /** Documented at declaration */
 int
 gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality)
 {
     // Setup raw table
-    nppiSetDefaultQuantTable(table->table_raw, (int)type);
+    gpujpeg_table_quantization_set_default(table->table_raw, type);
     
     // Init raw table
     nppiQuantFwdRawTableInit_JPEG_8u(table->table_raw, quality);
@@ -55,7 +98,7 @@ int
 gpujpeg_table_quantization_decoder_init(struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality)
 {
     // Setup raw table
-    nppiSetDefaultQuantTable(table->table_raw, (int)type);
+    gpujpeg_table_quantization_set_default(table->table_raw, type);
     
     // Init raw table
     nppiQuantFwdRawTableInit_JPEG_8u(table->table_raw, quality);
@@ -104,21 +147,21 @@ gpujpeg_table_quantization_print(struct gpujpeg_table_quantization* table)
     }
 }
 
-/** Huffman Table  DC for Y component */
+/** Huffman Table DC for Y component */
 static unsigned char gpujpeg_table_huffman_y_dc_bits[17] = {
     0, 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 
 };
 static unsigned char gpujpeg_table_huffman_y_dc_value[] = { 
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 
 };
-/** Huffman Table  DC for Cb or Cr component */
+/** Huffman Table DC for Cb or Cr component */
 static unsigned char gpujpeg_table_huffman_cbcr_dc_bits[17] = { 
     0, 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 
 };
 static unsigned char gpujpeg_table_huffman_cbcr_dc_value[] = { 
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 
 };
-/** Huffman Table  AC for Y component */
+/** Huffman Table AC for Y component */
 static unsigned char gpujpeg_table_huffman_y_ac_bits[17] = { 
     0, 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 0x7d 
 };
