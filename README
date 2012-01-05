@@ -133,10 +133,12 @@ USAGE:
         
     Next you have to initialize CUDA device by calling:
       
-      gpujpeg_init_device(device_id, 0);
+      if ( gpujpeg_init_device(device_id, 0) )
+          return -1;
         
-    where first parameters is CUDA device id and second parameter is flag if 
-    verbose output should be used (0 or 1). Next step is to create encoder:
+    where first parameters is CUDA device (e.g. device_id = 0) id and second 
+    parameter is flag if verbose output should be used (0 or 1). Next step 
+    is to create encoder:
     
       struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&param, 
           &param_image);
@@ -184,7 +186,8 @@ USAGE:
     We only have to initialize CUDA device if we haven't initialized it yet and 
     create decoder:
         
-      gpujpeg_init_device(device_id, 0);
+      if ( gpujpeg_init_device(device_id, 0) )
+          return -1;
         
       struct gpujpeg_decoder* decoder = gpujpeg_decoder_create();
       if ( decoder == NULL )

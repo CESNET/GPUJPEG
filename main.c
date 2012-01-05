@@ -157,8 +157,8 @@ main(int argc, char *argv[])
             return -1;
         }
     }
-	argc -= optind;
-	argv += optind;
+    argc -= optind;
+    argv += optind;
     
     // Source image and target image must be presented
     if ( argc < 2 ) {
@@ -183,7 +183,8 @@ main(int argc, char *argv[])
     }
     
     // Init device
-    gpujpeg_init_device(device_id, 1);
+    if ( gpujpeg_init_device(device_id, 1) != 0 )
+        return -1;
     
     // Adjust restart interval (when chroma subsampling and interleaving is enabled and restart interval is not changed)
     if ( restart_interval_default == 1 && chroma_subsampled == 1 && param.interleaved == 1 ) {
@@ -352,5 +353,5 @@ main(int argc, char *argv[])
         gpujpeg_decoder_destroy(decoder);
     }
     
-	return 0;
+    return 0;
 }

@@ -39,26 +39,30 @@ gpujpeg_init_device(int device_id, int verbose)
     cudaGetDeviceCount(&dev_count);
 
     if ( dev_count == 0 ) {
-        printf("No CUDA enabled device\n");
+        fprintf(stderr, "No CUDA enabled device\n");
         return -1;
     }
 
     if ( device_id < 0 || device_id >= dev_count ) {
-        printf("Selected device %d is out of bound. Devices on your system are in range %d - %d\n",
-               device_id, 0, dev_count - 1);
+        fprintf(stderr, "Selected device %d is out of bound. Devices on your system are in range %d - %d\n",
+            device_id, 0, dev_count - 1);
         return -1;
     }
 
     struct cudaDeviceProp devProp;
-    cudaGetDeviceProperties(&devProp, device_id);
+    if ( cudaSuccess != cudaGetDeviceProperties(&devProp, device_id) ) {
+        fprintf(stderr, "Can't get CUDA device properties!\n"
+            "Do you have proper driver for CUDA installed?\n");
+        return -1;
+    }
 
     if ( devProp.major < 1 ) {
-        printf("Device %d does not support CUDA\n", device_id);
+        fprintf(stderr, "Device %d does not support CUDA\n", device_id);
         return -1;
     }
 
     if ( verbose == 1 )
-        printf("Setting device %d: %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
+        fprintf(stderr, "Setting device %d: %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
     cudaSetDevice(device_id);
 
     return 0;
@@ -262,7 +266,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_quantized, coder->data_size * sizeof(int16_t)) ) 
         result = 0;
-	gpujpeg_cuda_check_error("Coder data allocation");
+    gpujpeg_cuda_check_error("Coder data allocation");
     
     // Set data buffer to color components
     uint8_t* d_comp_data = coder->d_data;
@@ -400,7 +404,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         result = 0;   
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_compressed, max_compressed_data_size * sizeof(uint8_t)) ) 
         result = 0;   
-	gpujpeg_cuda_check_error("Coder data compressed allocation");
+    gpujpeg_cuda_check_error("Coder data compressed allocation");
      
     return 0;
 }
@@ -453,11 +457,11 @@ int
 gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size)
 {
     FILE* file;
-	file = fopen(filename, "rb");
-	if ( !file ) {
-		fprintf(stderr, "Failed open %s for reading!\n", filename);
-		return -1;
-	}
+    file = fopen(filename, "rb");
+    if ( !file ) {
+        fprintf(stderr, "Failed open %s for reading!\n", filename);
+        return -1;
+    }
 
     if ( *image_size == 0 ) {
         fseek(file, 0, SEEK_END);
@@ -482,11 +486,11 @@ int
 gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
 {
     FILE* file;
-	file = fopen(filename, "wb");
-	if ( !file ) {
-		fprintf(stderr, "Failed open %s for writing!\n", filename);
-		return -1;
-	}
+    file = fopen(filename, "wb");
+    if ( !file ) {
+        fprintf(stderr, "Failed open %s for writing!\n", filename);
+        return -1;
+    }
     
     if ( image_size != fwrite(image, sizeof(uint8_t), image_size, file) ) {
         fprintf(stderr, "Failed to write image data [%d bytes] to file %s!\n", image_size, filename);
