@@ -47,9 +47,9 @@
  * Check CUDA error
  */
 #define cudaCheckError() { \
-    enum cudaError err = cudaThreadSynchronize(); \
+    enum cudaError err = cudaGetLastError(); \
     if ( cudaSuccess != err) { \
-        fprintf(stderr, "cudaThreadSynchronize() Driver API error in file '%s' in line %i : %s.\n", \
+        fprintf(stderr, "CUDA error in file '%s' in line %i : %s.\n", \
                 __FILE__, __LINE__, cudaGetErrorString(err) ); \
         exit(-1); \
     } \

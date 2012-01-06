@@ -33,7 +33,7 @@
 
 /** Documented at declaration */
 int
-gpujpeg_init_device(int device_id, int verbose)
+gpujpeg_init_device(int device_id, int flags)
 {
     int dev_count;
     cudaGetDeviceCount(&dev_count);
@@ -59,8 +59,13 @@ gpujpeg_init_device(int device_id, int verbose)
         fprintf(stderr, "Device %d does not support CUDA\n", device_id);
         return -1;
     }
+    
+    if ( flags & GPUJPEG_OPENGL_INTEROPERABILITY ) {
+        cudaGLSetGLDevice(device_id);
+        gpujpeg_cuda_check_error("Enabling OpenGL interoperability");
+    }
 
-    if ( verbose == 1 ) {
+    if ( flags & GPUJPEG_VERBOSE ) {
         int cuda_driver_version = 0;
         cudaDriverGetVersion(&cuda_driver_version);
         printf("CUDA driver version:   %d.%d\n", cuda_driver_version / 1000, (cuda_driver_version % 100) / 10);

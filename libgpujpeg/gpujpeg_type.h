@@ -32,9 +32,14 @@
 
 #include <stdint.h>
 
+/** Contants */
 #define GPUJPEG_BLOCK_SIZE                  8
 #define GPUJPEG_MAX_COMPONENT_COUNT         3
 #define GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE   (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE * 2)
+
+/** Flags */
+#define GPUJPEG_VERBOSE                     1
+#define GPUJPEG_OPENGL_INTEROPERABILITY     2
 
 /**
  * Color spaces for JPEG codec

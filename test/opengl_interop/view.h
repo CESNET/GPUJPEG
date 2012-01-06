@@ -96,21 +96,30 @@ void
 view_destroy(struct view* view);
 
 /**
- * Run view by GLUT
- * 
- * @param view
- * @return void
- */
-int
-view_glut(struct view*);
-
-/**
  * Run view by GLX
  * 
  * @param view
  * @return void
  */
 int
-view_glx(struct view*);
+view_glx(struct view* view);
+
+/**
+ * Attach OpenGL context
+ * 
+ * @param view
+ * @return void
+ */
+void
+view_opengl_attach(struct view* view);
+
+/**
+ * Detach OpenGL context
+ * 
+ * @param view
+ * @return void
+ */
+void
+view_opengl_detach(struct view* view);
 
 #endif // TEST_OPENGL_INTEROP_VIEW_H

@@ -41,12 +41,15 @@ struct gpujpeg_table_huffman_decoder (*gpujpeg_decoder_table_huffman)[GPUJPEG_CO
 
 /** Documented at declaration */
 void
-gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* decoder_output)
+gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* output)
 {
-    decoder_output->type = GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER;
-    decoder_output->data = NULL;
-    decoder_output->data_size = 0;
-    decoder_output->texture_pbo_resource = NULL;
+    output->type = GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER;
+    output->data = NULL;
+    output->data_size = 0;
+    output->texture_pbo_resource = NULL;
+    output->texture_callback_param = NULL;
+    output->texture_callback_attach_opengl = NULL;
+    output->texture_callback_detach_opengl = NULL;
 }
 
 /** Documented at declaration */
@@ -273,6 +276,12 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         
     } else if ( output->type == GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE ) {
         assert(output->texture_pbo_resource != NULL);
+        assert((output->texture_callback_attach_opengl == NULL && output->texture_callback_detach_opengl == NULL) || 
+               (output->texture_callback_attach_opengl != NULL && output->texture_callback_detach_opengl != NULL));
+        
+        // Attach OpenGL context by callback
+        if ( output->texture_callback_attach_opengl != NULL )
+            output->texture_callback_attach_opengl(output->texture_callback_param);
         
         // Map pixel buffer object to cuda
         cudaGraphicsMapResources(1, &output->texture_pbo_resource, 0);
@@ -291,6 +300,10 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         // Unmap pbo
         cudaGraphicsUnmapResources(1, &output->texture_pbo_resource, 0);
         gpujpeg_cuda_check_error("Decoder unmap texture PBO resource");
+        
+        // Dettach OpenGL context by callback
+        if ( output->texture_callback_detach_opengl != NULL )
+            output->texture_callback_detach_opengl(output->texture_callback_param);
     } else {
         // Unknown output type
         assert(0);

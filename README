@@ -137,8 +137,8 @@ USAGE:
           return -1;
         
     where first parameters is CUDA device (e.g. device_id = 0) id and second 
-    parameter is flag if verbose output should be used (0 or 1). Next step 
-    is to create encoder:
+    parameter is flag if verbose output should be used (0 or GPUJPEG_VERBOSE). 
+    Next step is to create encoder:
     
       struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&param, 
           &param_image);
@@ -236,16 +236,16 @@ USAGE:
                &image_size) != 0 )
           return -1;
     
-      uint8_t* image_decompressed = NULL;
-      int image_decompressed_size = 0;
+      struct gpujpeg_decoder_output decoder_output;
+      gpujpeg_decoder_output_set_default(&decoder_output);
       if ( gpujpeg_decoder_decode(decoder, image, image_size, 
-               &image_decompressed, &image_decompressed_size) != 0 )
+               &decoder_output) != 0 )
           return -1;
             
     Now we can save decoded raw image data to file and perform cleanup:
             
-      if ( gpujpeg_image_save_to_file("output_image.rgb", image_decompressed, 
-               image_decompressed_size) != 0 )
+      if ( gpujpeg_image_save_to_file("output_image.rgb", decoder_output.data, 
+               decoder_output.data_size) != 0 )
           return -1;
         
       gpujpeg_image_destroy(image);

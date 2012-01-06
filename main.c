@@ -183,7 +183,7 @@ main(int argc, char *argv[])
     }
     
     // Init device
-    if ( gpujpeg_init_device(device_id, 1) != 0 )
+    if ( gpujpeg_init_device(device_id, GPUJPEG_VERBOSE) != 0 )
         return -1;
     
     // Adjust restart interval (when chroma subsampling and interleaving is enabled and restart interval is not changed)
@@ -327,8 +327,6 @@ main(int argc, char *argv[])
             // Prepare decoder output buffer
             struct gpujpeg_decoder_output decoder_output;
             gpujpeg_decoder_output_set_default(&decoder_output);
-            //decoder_output.type = GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER;
-            //cudaMallocHost((void**)&decoder_output.data, 1920 * 1080 * 3);
             
             // Decode image
             if ( gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output) != 0 ) {

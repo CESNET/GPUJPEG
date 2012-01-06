@@ -60,8 +60,30 @@ struct gpujpeg_decoder_output
     // Compressed data size
     int data_size;
     
-    // Texture PBO resource
+    // Texture PBO resource (used as target for saving decoder output when you want
+    // to save decoder output into OpenGL texture)
     struct cudaGraphicsResource* texture_pbo_resource;
+    // Texture callbacks parameter
+    void * texture_callback_param;
+    // Texture callback for attaching OpenGL context (by default not used)
+    void (*texture_callback_attach_opengl)(void* param);
+    // Texture callback for detaching OpenGL context (by default not used)
+    void (*texture_callback_detach_opengl)(void* param);
+    // If you develop multi-threaded application where one thread use CUDA
+    // for JPEG decoding and other thread use OpenGL for displaying results
+    // from JPEG decoder, when a image is decoded you must detach OpenGL context
+    // from displaying thread and attach it to compressing thread (inside
+    // code of texture_callback_attach_opengl which is automatically invoked 
+    // by decoder), decoder then is able to copy data from GPU memory used 
+    // for compressing to GPU memory used by OpenGL texture for displaying, 
+    // then decoder call the second callback and you have to detach OpenGL context 
+    // from compressing thread and attach it to displaying thread (inside code of
+    // texture_callback_detach_opengl).
+    //
+    // If you develop single-thread application where the only thread use CUDA
+    // for compressing and OpenGL for displaying you don't have to implement
+    // these callbacks because OpenGL context is already attached to thread
+    // that use CUDA for JPEG decoding.
 };
 
 /**

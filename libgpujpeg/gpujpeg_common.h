@@ -37,11 +37,12 @@
  * Init CUDA device
  * 
  * @param device_id  CUDA device id (starting at 0)
- * @param verbose  Flag if device info should be printed out (0 or 1)
+ * @param flags  Flags, e.g. if device info should be printed out (GPUJPEG_VERBOSE) or 
+ *               enable OpenGL interoperability (GPUJPEG_OPENGL_INTEROPERABILITY)
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_init_device(int device_id, int verbose);
+gpujpeg_init_device(int device_id, int flags);
 
 /**
  * JPEG parameters

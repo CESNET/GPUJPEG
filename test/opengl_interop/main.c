@@ -33,7 +33,7 @@
 #include <pthread.h>
 #include <cuda.h>
 
-//#define TEST_OPENGL_INTEROP_MULTI_THREAD
+#define TEST_OPENGL_INTEROP_MULTI_THREAD
 
 /**
  * Transfer type
@@ -42,6 +42,11 @@ enum transfer_type {
     TRANSFER_HOST = 0,
     TRANSFER_DEVICE = 1
 };
+
+/** OpenGL context state in view thread */
+#define OPENGL_CONTEXT_ATTACHED  1
+#define OPENGL_CONTEXT_DETACHED  2
+#define OPENGL_CONTEXT_REQUEST   4
 
 /**
  * Application structure that hold all common variables
@@ -56,12 +61,14 @@ struct application {
     struct image* image;
     // Mutex
     pthread_mutex_t mutex;
-    // CUDA context
-    volatile CUcontext cuda_context;
     // Tranfer type
     enum transfer_type transfer_type;
     // Flag if image thread should quit
     int quit;
+    // Flag if view has detached OpenGL context
+    volatile int opengl_context;
+    // New image
+    volatile int new_image;
     
     // OpenGL parameters
     unsigned int texture_id;
@@ -84,17 +91,57 @@ thread_view_run(void* arg)
 {
     struct application* app = (struct application*)arg;
     
+#ifndef TEST_OPENGL_INTEROP_MULTI_THREAD
+    gpujpeg_init_device(0, GPUJPEG_OPENGL_INTEROPERABILITY);
+#endif
+    
     // Run through GLX
     view_glx(app->view);
-    
-    // Run through GLUT
-    //view_glut(app->view);
     
     // Quit image thread
     app->quit = 1;
     
     return 0;
 }
+
+void
+thread_image_attach_opengl(void * param)
+{
+    struct application* app = (struct application*)param;
+    
+    pthread_mutex_lock(&app->mutex);
+    app->opengl_context |= OPENGL_CONTEXT_REQUEST;
+    pthread_mutex_unlock(&app->mutex);
+    
+    while ( 1 ) {
+        if ( app->opengl_context & OPENGL_CONTEXT_DETACHED )
+            break;
+        usleep(1000);
+        if ( app->quit == 1 )
+            pthread_exit(0);
+    }
+    view_opengl_attach(app->view);
+};
+
+void
+thread_image_detach_opengl(void * param)
+{
+    struct application* app = (struct application*)param;
+    
+    view_opengl_detach(app->view);
+    
+    pthread_mutex_lock(&app->mutex);
+    app->opengl_context |= OPENGL_CONTEXT_REQUEST;
+    pthread_mutex_unlock(&app->mutex);
+    
+    while ( 1 ) {
+        if ( app->opengl_context & OPENGL_CONTEXT_ATTACHED )
+            break;
+        usleep(1000);
+        if ( app->quit == 1 )
+            pthread_exit(0);
+    }
+};
 
 /**
  * On init callback for view.
@@ -142,12 +189,17 @@ view_on_init(void* param)
     assert(gpujpeg_decoder_init(app->decoder, &param_coder, &param_image) == 0);
     
     // Init JPEG decoder output
+    gpujpeg_decoder_output_set_default(&app->decoder_output);
     if ( app->transfer_type == TRANSFER_DEVICE ) {
         app->decoder_output.type = GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE;
         app->decoder_output.texture_pbo_resource = app->pbo_res;
-    } else {
-        gpujpeg_decoder_output_set_default(&app->decoder_output);
     }
+#ifdef TEST_OPENGL_INTEROP_MULTI_THREAD
+    // Set texture callbacks
+    app->decoder_output.texture_callback_param = (void*)app;
+    app->decoder_output.texture_callback_attach_opengl = &thread_image_attach_opengl;
+    app->decoder_output.texture_callback_detach_opengl = &thread_image_detach_opengl;
+#endif
 }
 
 /**
@@ -191,6 +243,8 @@ image_generate(struct application* app)
     // Decode image
     gpujpeg_decoder_decode(app->decoder, image_compressed, image_compressed_size, &app->decoder_output);
     
+    app->new_image = 1;
+    
     TIMER_STOP_PRINT("Image: ImageDecode");
 }
 
@@ -204,21 +258,38 @@ view_on_render(void* param)
     struct application* app = (struct application*)param;
     
 #ifdef TEST_OPENGL_INTEROP_MULTI_THREAD
-    // If CUDA context is not filled, it means new image is not ready
-    if ( app->cuda_context == NULL )
-        return;
-#endif
-    TIMER_INIT();
-    TIMER_START();
-        
-    pthread_mutex_lock(&app->mutex);
-        
-#ifdef TEST_OPENGL_INTEROP_MULTI_THREAD
-    assert(cuCtxPushCurrent(app->cuda_context) == CUDA_SUCCESS);
-#else
-    image_generate(app);
+    if  ( app->opengl_context & OPENGL_CONTEXT_ATTACHED && app->opengl_context & OPENGL_CONTEXT_REQUEST ) {
+        pthread_mutex_lock(&app->mutex);
+        view_opengl_detach(app->view);
+        app->opengl_context = OPENGL_CONTEXT_DETACHED;
+        pthread_mutex_unlock(&app->mutex);
+    }
+    // If OpenGL context is detach we can't render
+    while ( app->opengl_context & OPENGL_CONTEXT_DETACHED ) {
+        if  ( app->opengl_context & OPENGL_CONTEXT_REQUEST ) {
+            pthread_mutex_lock(&app->mutex);
+            view_opengl_attach(app->view);
+            app->opengl_context = OPENGL_CONTEXT_ATTACHED;
+            pthread_mutex_unlock(&app->mutex);
+        }
+        usleep(1000);
+    }
+    
 #endif
 
+#ifndef TEST_OPENGL_INTEROP_MULTI_THREAD
+    image_generate(app);
+    app->new_image = 1;
+#endif
+
+    TIMER_INIT();
+    TIMER_START();
+
+    // Load image only when is new
+    if ( app->new_image == 0 )
+        return;
+    app->new_image = 0;
+    
     if ( app->decoder_output.type == GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE ) {
         // Set data to texture from pbo
         glBindTexture(GL_TEXTURE_2D, app->texture_id);
@@ -234,14 +305,6 @@ view_on_render(void* param)
     
     view_set_texture(app->view, app->texture_id);
         
-#ifdef TEST_OPENGL_INTEROP_MULTI_THREAD
-    assert(cuCtxPopCurrent((CUcontext*)&app->cuda_context) == CUDA_SUCCESS);
-#endif
-        
-    app->cuda_context = NULL;
-    
-    pthread_mutex_unlock(&app->mutex);
-        
     TIMER_STOP_PRINT("View: ImageLoad");
 }
 
@@ -253,6 +316,8 @@ void*
 thread_image_run(void* arg)
 {
     struct application* app = (struct application*)arg;
+    
+    gpujpeg_init_device(0, GPUJPEG_OPENGL_INTEROPERABILITY);
 
     // Wait until work thread is ready to render image
     while ( app->image == NULL ) {
@@ -265,22 +330,6 @@ thread_image_run(void* arg)
         usleep(30000);
         
         image_generate(app);
-        
-        pthread_mutex_lock(&app->mutex);
-        
-        CUcontext cuda_context;
-        assert(cuCtxPopCurrent(&cuda_context) == CUDA_SUCCESS);
-        app->cuda_context = cuda_context;
-        
-        pthread_mutex_unlock(&app->mutex);
-        
-        while ( app->quit == 0 ) {
-            if ( app->cuda_context == NULL )
-                break;
-            usleep(1000);
-        }
-        
-        assert(cuCtxPushCurrent(cuda_context) == CUDA_SUCCESS);
     }
     
     return 0;
@@ -297,9 +346,10 @@ main(int argc, char **argv)
     assert(app.view != NULL);
     app.image = NULL;
     assert(pthread_mutex_init(&app.mutex, NULL) == 0);
-    app.cuda_context = NULL;
     app.transfer_type = TRANSFER_DEVICE;
     app.quit = 0;
+    app.opengl_context = OPENGL_CONTEXT_ATTACHED;
+    app.new_image = 0;
     
     // Set view callbacks
     view_set_on_init(app.view, &view_on_init, (void*)&app);

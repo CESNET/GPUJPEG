@@ -106,9 +106,7 @@ view_destroy(struct view* view)
 
 void
 view_init(struct view* view)
-{
-    cudaGLSetGLDevice(0);
-    
+{    
     view->texture_id = 0;
     
     glEnable(GL_TEXTURE_2D);
@@ -280,9 +278,7 @@ view_glx(struct view* view)
     XStoreName(view->glx_display, view->glx_window, "OpenGL and CUDA interoperability");
     XMapWindow(view->glx_display, view->glx_window);
     
-    // Set OpenGL context
-    glXMakeCurrent(view->glx_display, view->glx_window, view->glx_context);
-    
+    view_opengl_attach(view);
     view_init(view);
     
     while ( 1 ) {
@@ -297,9 +293,24 @@ view_glx(struct view* view)
         }
     }
     
+    view_opengl_detach(view);
+    
     // Cleanup
-    glXMakeCurrent(view->glx_display, None, NULL);
     glXDestroyContext(view->glx_display, view->glx_context);
     XDestroyWindow(view->glx_display, view->glx_window);
     XCloseDisplay(view->glx_display);
+}
+
+/** Documented at declaration */
+void
+view_opengl_attach(struct view* view)
+{
+    glXMakeCurrent(view->glx_display, view->glx_window, view->glx_context);
+}
+
+/** Documented at declaration */
+void
+view_opengl_detach(struct view* view)
+{
+    glXMakeCurrent(view->glx_display, None, NULL);
 }
