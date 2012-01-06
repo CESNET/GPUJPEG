@@ -1,6 +1,5 @@
 #
 # Copyright (c) 2011, CESNET z.s.p.o
-# Copyright (c) 2011, Silicon Genome, LLC.
 #
 # All rights reserved.
 #
@@ -100,7 +99,6 @@ else
 		@printf "@\n" >> $(TARGET).sh
 		@chmod a+x $(TARGET).sh
 endif
-
 
 # Build gpujpeg library
 libgpujpeg/libgpujpeg.build:

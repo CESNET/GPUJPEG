@@ -29,6 +29,7 @@
 #include "view.h"
 #include "image.h"
 #include "util.h"
+#include "../../libgpujpeg/gpujpeg.h"
 #include <pthread.h>
 #include <cuda.h>
 
@@ -67,6 +68,11 @@ struct application {
     unsigned int pbo_id;
     // CUDA parameters
     struct cudaGraphicsResource* pbo_res;
+    
+    // JPEG
+    struct gpujpeg_encoder* encoder;
+    struct gpujpeg_decoder* decoder;
+    struct gpujpeg_decoder_output decoder_output;
 };
 
 /**
@@ -119,6 +125,73 @@ view_on_init(void* param)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
+    // Init JPEG params
+    struct gpujpeg_parameters param_coder;
+    gpujpeg_set_default_parameters(&param_coder);
+    struct gpujpeg_image_parameters param_image;
+    gpujpeg_image_set_default_parameters(&param_image);
+    param_image.width = app->width;
+    param_image.height = app->height;
+    
+    // Init JPEG encoder and decoder
+    app->encoder = gpujpeg_encoder_create(&param_coder, &param_image);
+    assert(app->encoder != NULL);
+    app->decoder = gpujpeg_decoder_create();
+    assert(app->decoder != NULL);
+    assert(gpujpeg_decoder_init(app->decoder, &param_coder, &param_image) == 0);
+    
+    // Init JPEG decoder output
+    if ( app->transfer_type == TRANSFER_DEVICE ) {
+        app->decoder_output.type = GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE;
+        app->decoder_output.texture_pbo_resource = app->pbo_res;
+    } else {
+        gpujpeg_decoder_output_set_default(&app->decoder_output);
+    }
+}
+
+/**
+ * Generate new image, encode it with JPEG and decode it into OpenGL texture
+ * 
+ * @param app
+ * @return void
+ */
+void
+image_generate(struct application* app)
+{
+    static int max = 100;
+    static int change = 10;
+    
+    printf("Image: ImageRender Started\n");
+        
+    TIMER_INIT();
+    TIMER_START();
+    
+    // Render new image
+    max += change;
+    if ( max < 0 || max > 255 ) {
+        change = -change;
+        max += change;
+    }
+    image_render(app->image, max);
+        
+    TIMER_STOP_PRINT("Image: ImageRendered");
+    TIMER_START();
+    
+    // Encode image
+    uint8_t* image_compressed = NULL;
+    int image_compressed_size = 0;
+    // Copy data to host memory
+    cudaMemcpy(app->image->data, app->image->d_data, app->width * app->height * 3 * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+    assert(gpujpeg_encoder_encode(app->encoder, app->image->data, &image_compressed, &image_compressed_size) == 0);
+    
+    TIMER_STOP_PRINT("Image: ImageEncode");
+    TIMER_START();
+    
+    // Decode image
+    gpujpeg_decoder_decode(app->decoder, image_compressed, image_compressed_size, &app->decoder_output);
+    
+    TIMER_STOP_PRINT("Image: ImageDecode");
 }
 
 /**
@@ -145,43 +218,20 @@ view_on_render(void* param)
 #else
     image_generate(app);
 #endif
-        
-    // Set texture data through host memory
-    if ( app->transfer_type == TRANSFER_HOST ) {
-        // Copy data to host memory
-        cudaMemcpy(app->image->data, app->image->d_data, app->width * app->height * 3 * sizeof(uint8_t), cudaMemcpyDeviceToHost);
-            
-        // Set texture data from host memory
-        glBindTexture(GL_TEXTURE_2D, app->texture_id);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, app->width, app->height, 0, GL_RGB, GL_UNSIGNED_BYTE, app->image->data);
-    } 
-    // Set texture data through device memory
-    else if ( app->transfer_type == TRANSFER_DEVICE ) {
-        // Map pixel buffer object to cuda
-        cudaGraphicsMapResources(1, &app->pbo_res, 0);
-        cudaCheckError();
-         
-        // Get device data pointer to pixel buffer object data
-        uint8_t* d_data = NULL;
-        size_t data_size; 
-        cudaGraphicsResourceGetMappedPointer((void **)&d_data, &data_size, app->pbo_res);
-        cudaCheckError();
-        assert(data_size == (app->width * app->height * 3));
-            
-        // Copy texture data from device memory to pixel buffer object device data
-        cudaMemcpy(d_data, app->image->d_data, app->width * app->height * 3 * sizeof(uint8_t), cudaMemcpyDeviceToDevice);
-            
-        // Unmap pbo
-        cudaGraphicsUnmapResources(1, &app->pbo_res, 0);
-        cudaCheckError();
-            
+
+    if ( app->decoder_output.type == GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE ) {
         // Set data to texture from pbo
         glBindTexture(GL_TEXTURE_2D, app->texture_id);
         glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, app->pbo_id);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, app->width, app->height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
         glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+    } else {
+        // Set texture data from host memory
+        glBindTexture(GL_TEXTURE_2D, app->texture_id);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, app->width, app->height, 0, GL_RGB, GL_UNSIGNED_BYTE, app->decoder_output.data);
     }
     glFinish();
+    
     view_set_texture(app->view, app->texture_id);
         
 #ifdef TEST_OPENGL_INTEROP_MULTI_THREAD
@@ -193,34 +243,6 @@ view_on_render(void* param)
     pthread_mutex_unlock(&app->mutex);
         
     TIMER_STOP_PRINT("View: ImageLoad");
-}
-
-void
-image_generate(struct application* app)
-{
-    static int max = 0;
-    static int change = 10;
-    
-    printf("Image: ImageRender Started\n");
-        
-    TIMER_INIT();
-    TIMER_START();
-    
-    // Render new image
-    max += change;
-    if ( max < 0 || max > 255 ) {
-        change = -change;
-        max += change;
-    }
-    image_render(app->image, max);
-        
-    TIMER_STOP_PRINT("Image: ImageRendered");
-        
-    TIMER_START();
-    TIMER_STOP_PRINT("Image: ImageEncode");
-        
-    TIMER_START();
-    TIMER_STOP_PRINT("Image: ImageDecode");
 }
 
 /**
@@ -269,8 +291,8 @@ main(int argc, char **argv)
 {    
     // Create application
     struct application app;
-    app.width = 4096;
-    app.height = 2160;
+    app.width = 1920;
+    app.height = 1080;
     app.view = view_create(app.width, app.height, 1280, 720);
     assert(app.view != NULL);
     app.image = NULL;
@@ -304,6 +326,8 @@ main(int argc, char **argv)
     image_destroy(app.image);
     view_destroy(app.view);
     pthread_mutex_destroy(&app.mutex);
+    gpujpeg_encoder_destroy(app.encoder);
+    gpujpeg_decoder_destroy(app.decoder);
     
     return 0;
 }

@@ -38,6 +38,7 @@
 #include <pthread.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <unistd.h>
 #include <GL/gl.h>
 #include <GL/glut.h>
 #include <GL/glx.h>

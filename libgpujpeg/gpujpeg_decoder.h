@@ -42,7 +42,7 @@ enum gpujpeg_decoder_output_type {
     GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER,
     // Decoder will use custom output buffer
     GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER,
-    // Decoder will use OpenGL Texture as output buffer
+    // Decoder will use OpenGL Texture PBO Resource as output buffer
     GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE,
 };
 
@@ -60,8 +60,8 @@ struct gpujpeg_decoder_output
     // Compressed data size
     int data_size;
     
-    // Texture ID
-    int texture_id;
+    // Texture PBO resource
+    struct cudaGraphicsResource* texture_pbo_resource;
 };
 
 /**

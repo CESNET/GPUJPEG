@@ -46,6 +46,7 @@ gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* decoder_output
     decoder_output->type = GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER;
     decoder_output->data = NULL;
     decoder_output->data_size = 0;
+    decoder_output->texture_pbo_resource = NULL;
 }
 
 /** Documented at declaration */
@@ -251,19 +252,45 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         
     //GPUJPEG_TIMER_STOP_PRINT("-Postprocessing:    ");
     
-    cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
-    
     // Set decompressed image size
     output->data_size = coder->data_raw_size * sizeof(uint8_t);
     
     // Set decompressed image
     if ( output->type == GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER ) {
+        
+        // Copy decompressed image to host memory
+        cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+        
+        // Set output to internal buffer
         output->data = coder->data_raw;
+        
     } else if ( output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER ) {
-        // Do nothing coder->data_raw is same as output->data
+        
+        // Copy decompressed image to host memory
+        cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+        
+        // Do nothing more because coder->data_raw is already same as output->data
+        
     } else if ( output->type == GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE ) {
-        // TODO:
-        assert(0);
+        assert(output->texture_pbo_resource != NULL);
+        
+        // Map pixel buffer object to cuda
+        cudaGraphicsMapResources(1, &output->texture_pbo_resource, 0);
+        gpujpeg_cuda_check_error("Decoder map texture PBO resource");
+         
+        // Get device data pointer to pixel buffer object data
+        uint8_t* d_data = NULL;
+        size_t data_size; 
+        cudaGraphicsResourceGetMappedPointer((void **)&d_data, &data_size, output->texture_pbo_resource);
+        gpujpeg_cuda_check_error("Decoder get device pointer for texture PBO resource");
+        assert(data_size == (coder->data_raw_size));
+            
+        // Copy decompressed image to texture pixel buffer object device data
+        cudaMemcpy(d_data, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice);
+            
+        // Unmap pbo
+        cudaGraphicsUnmapResources(1, &output->texture_pbo_resource, 0);
+        gpujpeg_cuda_check_error("Decoder unmap texture PBO resource");
     } else {
         // Unknown output type
         assert(0);
