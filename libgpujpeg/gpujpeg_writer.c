@@ -28,7 +28,6 @@
  */
  
 #include "gpujpeg_writer.h"
-#include "gpujpeg_format_type.h"
 #include "gpujpeg_encoder.h"
 #include "gpujpeg_util.h"
 

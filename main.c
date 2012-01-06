@@ -324,10 +324,14 @@ main(int argc, char *argv[])
             GPUJPEG_TIMER_STOP_PRINT("Load Image:         ");
             GPUJPEG_TIMER_START();
                 
-            // Encode image
-            uint8_t* image_decompressed = NULL;
-            int image_decompressed_size = 0;
-            if ( gpujpeg_decoder_decode(decoder, image, image_size, &image_decompressed, &image_decompressed_size) != 0 ) {
+            // Prepare decoder output buffer
+            struct gpujpeg_decoder_output decoder_output;
+            gpujpeg_decoder_output_set_default(&decoder_output);
+            //decoder_output.type = GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER;
+            //cudaMallocHost((void**)&decoder_output.data, 1920 * 1080 * 3);
+            
+            // Decode image
+            if ( gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output) != 0 ) {
                 fprintf(stderr, "Failed to decode image [%s]!\n", argv[index]);
                 return -1;
             }
@@ -336,14 +340,14 @@ main(int argc, char *argv[])
             GPUJPEG_TIMER_START();
             
             // Save image
-            if ( gpujpeg_image_save_to_file(output, image_decompressed, image_decompressed_size) != 0 ) {
+            if ( gpujpeg_image_save_to_file(output, decoder_output.data, decoder_output.data_size) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
                 return -1;
             }
             
             GPUJPEG_TIMER_STOP_PRINT("Save Image:         ");
             
-            printf("Decompressed Size:   %d bytes [%s]\n", image_decompressed_size, output);
+            printf("Decompressed Size:   %d bytes [%s]\n", decoder_output.data_size, output);
             
             // Destroy image
             gpujpeg_image_destroy(image);

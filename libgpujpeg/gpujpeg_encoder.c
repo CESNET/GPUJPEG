@@ -31,7 +31,6 @@
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_huffman_cpu_encoder.h"
 #include "gpujpeg_huffman_gpu_encoder.h"
-#include "gpujpeg_format_type.h"
 #include "gpujpeg_util.h"
 #include <npp.h>
 

@@ -481,7 +481,8 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
         rewind(file);
     }
     
-    uint8_t* data = (uint8_t*)malloc(*image_size * sizeof(uint8_t));
+    uint8_t* data = NULL;
+    cudaMallocHost((void**)&data, *image_size * sizeof(uint8_t));
     if ( *image_size != fread(data, sizeof(uint8_t), *image_size, file) ) {
         fprintf(stderr, "Failed to load image data [%d bytes] from file %s!\n", *image_size, filename);
         return -1;
@@ -517,5 +518,5 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
 int
 gpujpeg_image_destroy(uint8_t* image)
 {
-    free(image);
+    cudaFreeHost(image);
 }

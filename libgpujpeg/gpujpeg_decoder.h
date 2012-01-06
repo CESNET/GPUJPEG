@@ -35,10 +35,49 @@
 #include "gpujpeg_reader.h"
 
 /**
+ * Decoder output type
+ */
+enum gpujpeg_decoder_output_type {
+    // Decoder will use it's internal output buffer
+    GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER,
+    // Decoder will use custom output buffer
+    GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER,
+    // Decoder will use OpenGL Texture as output buffer
+    GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE,
+};
+
+/**
+ * Decoder output structure
+ */
+struct gpujpeg_decoder_output
+{
+    // Output type
+    enum gpujpeg_decoder_output_type type;
+    
+    // Compressed data
+    uint8_t* data;
+    
+    // Compressed data size
+    int data_size;
+    
+    // Texture ID
+    int texture_id;
+};
+
+/**
+ * Set default parameters to decoder output structure
+ * 
+ * @param decoder_output  Decoder output structure
+ * @return void
+ */
+void
+gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* decoder_output);
+
+/**
  * JPEG decoder structure
  */
 struct gpujpeg_decoder
-{  
+{
     // JPEG coder structure
     struct gpujpeg_coder coder;
     
@@ -86,7 +125,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size);
+gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, struct gpujpeg_decoder_output* output);
 
 /**
  * Destory JPEG decoder

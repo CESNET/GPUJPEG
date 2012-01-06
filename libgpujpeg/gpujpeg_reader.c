@@ -29,7 +29,6 @@
  
 #include "gpujpeg_reader.h"
 #include "gpujpeg_decoder.h"
-#include "gpujpeg_format_type.h"
 #include "gpujpeg_util.h"
 
 /** Documented at declaration */

@@ -40,6 +40,15 @@ struct gpujpeg_table_huffman_decoder (*gpujpeg_decoder_table_huffman)[GPUJPEG_CO
 #endif
 
 /** Documented at declaration */
+void
+gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* decoder_output)
+{
+    decoder_output->type = GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER;
+    decoder_output->data = NULL;
+    decoder_output->data_size = 0;
+}
+
+/** Documented at declaration */
 struct gpujpeg_decoder*
 gpujpeg_decoder_create()
 {    
@@ -127,13 +136,19 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
 
 /** Documented at declaration */
 int
-gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, uint8_t** image_decompressed, int* image_decompressed_size)
+gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, struct gpujpeg_decoder_output* output)
 {
     //GPUJPEG_TIMER_INIT();
     //GPUJPEG_TIMER_START();
     
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
+    
+    // Set custom output buffer
+    if ( output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER ) {
+        assert(output->data != NULL);
+        coder->data_raw = output->data;
+    }
     
     // Read JPEG image data
     if ( gpujpeg_reader_read_image(decoder, image, image_size) != 0 ) {
@@ -238,9 +253,21 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     
     cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
     
+    // Set decompressed image size
+    output->data_size = coder->data_raw_size * sizeof(uint8_t);
+    
     // Set decompressed image
-    *image_decompressed = coder->data_raw;
-    *image_decompressed_size = coder->data_raw_size * sizeof(uint8_t);
+    if ( output->type == GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER ) {
+        output->data = coder->data_raw;
+    } else if ( output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER ) {
+        // Do nothing coder->data_raw is same as output->data
+    } else if ( output->type == GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE ) {
+        // TODO:
+        assert(0);
+    } else {
+        // Unknown output type
+        assert(0);
+    }
     
     return 0;
 }

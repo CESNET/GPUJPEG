@@ -2,5 +2,6 @@ gpujpeg
 gpujpeg.sh
 libgpujpeg/libgpujpeg.so
 libgpujpeg/libgpujpeg.a
+test/opengl_interop/opengl_interop
 *.o
 *.rgb
