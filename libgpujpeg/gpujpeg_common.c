@@ -42,6 +42,13 @@ gpujpeg_get_devices_info()
         fprintf(stderr, "cudaGetDeviceCount FAILED CUDA Driver and Runtime version may be mismatched.\n");
         exit(-1);
     }
+    
+    if ( devices_info.device_count > GPUJPEG_MAX_DEVICE_COUNT ) {
+        fprintf(stderr, "Warning: There are available more CUDA devices (%d) than maximum count (%d).\n",
+            devices_info.device_count, GPUJPEG_MAX_DEVICE_COUNT);
+        fprintf(stderr, "Warning: Using maximum count (%d).\n", GPUJPEG_MAX_DEVICE_COUNT);
+        devices_info.device_count = GPUJPEG_MAX_DEVICE_COUNT;
+    }
 
     for ( int device_id = 0; device_id < devices_info.device_count; device_id++ ) {
         struct cudaDeviceProp device_properties;
