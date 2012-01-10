@@ -47,6 +47,7 @@ print_help()
         "   -e, --encode                encode images\n"
         "   -d, --decode                decode images\n"
         "   -D, --device                cuda device id (default 0)\n"
+        "       --device-list           list cuda devices\n"
     );
 }
 
@@ -65,6 +66,7 @@ main(int argc, char *argv[])
         {"encode",             no_argument,       0, 'e'},
         {"decode",             no_argument,       0, 'd'},
         {"device",             required_argument, 0, 'D'},
+        {"device-list",        no_argument,       0,  2 },
         0
     };
 
@@ -138,6 +140,9 @@ main(int argc, char *argv[])
             gpujpeg_parameters_chroma_subsampling(&param);
             chroma_subsampled = 1;
             break;
+        case 2:
+            gpujpeg_print_devices_info();
+            return 0;
         case 'i':
             param.interleaved = 1;
             break;

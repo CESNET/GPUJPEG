@@ -30,6 +30,66 @@
 #include "gpujpeg_common.h"
 #include "gpujpeg_util.h"
 #include <npp.h>
+#include <cuda_gl_interop.h>
+
+/** Documented at declaration */
+struct gpujpeg_devices_info
+gpujpeg_get_devices_info()
+{
+    struct gpujpeg_devices_info devices_info;
+    
+    if ( cudaGetDeviceCount(&devices_info.device_count) != cudaSuccess ) {
+        fprintf(stderr, "cudaGetDeviceCount FAILED CUDA Driver and Runtime version may be mismatched.\n");
+        exit(-1);
+    }
+
+    for ( int device_id = 0; device_id < devices_info.device_count; device_id++ ) {
+        struct cudaDeviceProp device_properties;
+        cudaGetDeviceProperties(&device_properties, device_id);
+        
+        struct gpujpeg_device_info* device_info = &devices_info.device[device_id];
+        
+        device_info->id = device_id;
+        strncpy(device_info->name, device_properties.name, 255);
+        device_info->cc_major = device_properties.major;
+        device_info->cc_minor = device_properties.minor;
+        device_info->global_memory = device_properties.totalGlobalMem;
+        device_info->constant_memory = device_properties.totalConstMem;
+        device_info->shared_memory = device_properties.sharedMemPerBlock;
+        device_info->register_count = device_properties.regsPerBlock;
+#if CUDART_VERSION >= 2000
+        device_info->multiprocessor_count = device_properties.multiProcessorCount;
+#endif
+    }
+    
+    return devices_info;
+}
+
+/** Documented at declaration */
+void
+gpujpeg_print_devices_info()
+{
+    struct gpujpeg_devices_info devices_info = gpujpeg_get_devices_info();
+    if ( devices_info.device_count == 0 ) {
+        printf("There is no device supporting CUDA.\n");
+        return;
+    } else if ( devices_info.device_count == 1 ) {
+        printf("There is 1 device supporting CUDA:\n");
+    } else {
+        printf("There are %d devices supporting CUDA:\n", devices_info.device_count);
+    }
+    
+    for ( int device_id = 0; device_id < devices_info.device_count; device_id++ ) {
+        struct gpujpeg_device_info* device_info = &devices_info.device[device_id];
+        printf("\nDevice #%d: \"%s\"\n", device_info->id, device_info->name);
+        printf("  Compute capability: %d.%d\n", device_info->cc_major, device_info->cc_minor);
+        printf("  Total amount of global memory: %lu kB\n", device_info->global_memory / 1024);
+        printf("  Total amount of constant memory: %lu kB\n", device_info->constant_memory / 1024); 
+        printf("  Total amount of shared memory per block: %lu kB\n", device_info->shared_memory / 1024);
+        printf("  Total number of registers available per block: %d\n", device_info->register_count);
+        printf("  Multiprocessors: %d\n", device_info->multiprocessor_count);
+    }
+}
 
 /** Documented at declaration */
 int

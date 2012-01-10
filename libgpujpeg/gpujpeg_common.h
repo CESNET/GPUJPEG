@@ -33,6 +33,57 @@
 #include <stdint.h>
 #include "gpujpeg_type.h"
 
+/** Maximum number of devices for get device info */
+#define GPUJPEG_MAX_DEVICE_COUNT 10
+
+/** Device info for one device */
+struct gpujpeg_device_info
+{
+    // Device id
+    int id;
+    // Device name
+    char name[255];
+    // Compute capability major version
+    int cc_major;
+    // Compute capability minor version
+    int cc_minor;
+    // Amount of global memory
+    long global_memory;
+    // Amount of constant memory
+    int constant_memory;
+    // Amount of shared memory
+    int shared_memory;
+    // Number of registers per block
+    int register_count;
+    // Number of multiprocessors
+    int multiprocessor_count;
+};
+
+/** Device info for all devices */
+struct gpujpeg_devices_info
+{
+    // Number of devices
+    int device_count;
+    // Device info for each
+    struct gpujpeg_device_info device[GPUJPEG_MAX_DEVICE_COUNT];
+};
+
+/**
+ * Get information about available devices
+ * 
+ * @return devices info
+ */
+struct gpujpeg_devices_info
+gpujpeg_get_devices_info();
+
+/**
+ * Print information about available devices
+ * 
+ * @return void
+ */
+void
+gpujpeg_print_devices_info();
+
 /**
  * Init CUDA device
  * 
