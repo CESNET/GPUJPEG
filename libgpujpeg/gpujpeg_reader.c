@@ -216,7 +216,7 @@ gpujpeg_reader_read_sof0(struct gpujpeg_decoder* decoder, uint8_t** image)
         
         int sampling = (int)gpujpeg_reader_read_byte(*image);
         decoder->reader->param.sampling_factor[comp].horizontal = (sampling >> 4) & 15;
-        decoder->reader->param.sampling_factor[comp].vertical = (sampling >> 4) & 15;
+        decoder->reader->param.sampling_factor[comp].vertical = (sampling) & 15;
         
         int table_index = (int)gpujpeg_reader_read_byte(*image);
         if ( comp == 0 && table_index != 0 ) {
