@@ -378,6 +378,12 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
         return -1;
     }
     
+    // We must init decoder before data is loaded into it
+    if ( decoder->reader->comp_count == 0 ) {
+        // Init decoder
+        gpujpeg_decoder_init(decoder, &decoder->reader->param, &decoder->reader->param_image);
+    }
+    
     // Check maximum component count
     decoder->reader->comp_count += comp_count;
     if ( decoder->reader->comp_count > decoder->reader->param_image.comp_count ) {
@@ -422,14 +428,14 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     struct gpujpeg_reader_scan* scan = &decoder->reader->scan[scan_index];
     decoder->reader->scan_count++;
     // Scan segments begin at the end of previous scan segments or from zero index
-    scan->segment_index = decoder->coder.segment_count;
+    scan->segment_index = decoder->reader->segment_count;
     scan->segment_count = 0;
     
     // Get first segment in scan
     struct gpujpeg_segment* segment = &decoder->coder.segment[scan->segment_index];
     segment->scan_index = scan_index;
     segment->scan_segment_index = scan->segment_count;
-    segment->data_compressed_index = decoder->coder.data_compressed_size;
+    segment->data_compressed_index = decoder->reader->data_compressed_size;
     scan->segment_count++;
     
     // Read scan data
@@ -438,8 +444,8 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     do {
         byte_previous = byte;
         byte = gpujpeg_reader_read_byte(*image);
-        decoder->coder.data_compressed[decoder->coder.data_compressed_size] = byte;
-        decoder->coder.data_compressed_size++;        
+        decoder->coder.data_compressed[decoder->reader->data_compressed_size] = byte;
+        decoder->reader->data_compressed_size++;        
         
         // Check markers
         if ( byte_previous == 0xFF ) {
@@ -449,28 +455,28 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
             }
             // Check restart marker
             else if ( byte >= GPUJPEG_MARKER_RST0 && byte <= GPUJPEG_MARKER_RST7 ) {
-                decoder->coder.data_compressed_size -= 2;
+                decoder->reader->data_compressed_size -= 2;
                 
                 // Set segment byte count
-                segment->data_compressed_size = decoder->coder.data_compressed_size - segment->data_compressed_index;
+                segment->data_compressed_size = decoder->reader->data_compressed_size - segment->data_compressed_index;
                 
                 // Start new segment in scan
                 segment = &decoder->coder.segment[scan->segment_index + scan->segment_count];
                 segment->scan_index = scan_index;
                 segment->scan_segment_index = scan->segment_count;
-                segment->data_compressed_index = decoder->coder.data_compressed_size;
+                segment->data_compressed_index = decoder->reader->data_compressed_size;
                 scan->segment_count++;    
             }
             // Check scan end
             else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {                
                 *image -= 2;
-                decoder->coder.data_compressed_size -= 2;
+                decoder->reader->data_compressed_size -= 2;
                 
                 // Set segment byte count
-                segment->data_compressed_size = decoder->coder.data_compressed_size - segment->data_compressed_index;
+                segment->data_compressed_size = decoder->reader->data_compressed_size - segment->data_compressed_index;
                 
                 // Add scan segment count to decoder segment count
-                decoder->coder.segment_count += scan->segment_count;
+                decoder->reader->segment_count += scan->segment_count;
                 
                 return 0;
             } else {
@@ -494,6 +500,8 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     decoder->reader->param_image = decoder->coder.param_image;
     decoder->reader->comp_count = 0;
     decoder->reader->scan_count = 0;
+    decoder->reader->segment_count = 0;
+    decoder->reader->data_compressed_size = 0;
     
     // Get image end
     uint8_t* image_end = image + image_size;
@@ -506,7 +514,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     }
         
     int eoi_presented = 0;
-    int inited = 0;
     while ( eoi_presented == 0 ) {
         // Read marker
         int marker = gpujpeg_reader_read_marker(&image);
@@ -598,17 +605,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
 
         case GPUJPEG_MARKER_SOS:
-            // We must init decoder before data is loaded into it
-            if ( inited == 0) {
-                // Init decoder
-                gpujpeg_decoder_init(decoder, &decoder->reader->param, &decoder->reader->param_image);
-                
-                // Reset decoder parameters
-                decoder->coder.segment_count = 0;  // Total segment count for all scans
-                decoder->coder.data_compressed_size = 0; // Total byte count for all scans
-                
-                inited = 1;
-            }
             if ( gpujpeg_reader_read_sos(decoder, &image, image_end) != 0 )
                 return -1;
             break;
@@ -634,6 +630,18 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     // Check EOI marker
     if ( eoi_presented == 0 ) {
         fprintf(stderr, "Error: JPEG data should end with EOI marker!\n");
+        return -1;
+    }
+    
+    // Set decoder parameters
+    decoder->segment_count = decoder->reader->segment_count;
+    decoder->data_compressed_size = decoder->reader->data_compressed_size;
+    
+    //decoder->segment_count += 100;
+    
+    if ( decoder->segment_count > decoder->coder.segment_count ) {
+        fprintf(stderr, "Error: Decoder can't decode image that has segment count %d (maximum segment count for specified parameters is %d)!\n",
+            decoder->segment_count, decoder->coder.segment_count);
         return -1;
     }
     
