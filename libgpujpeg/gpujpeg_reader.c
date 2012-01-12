@@ -494,8 +494,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     decoder->reader->param_image = decoder->coder.param_image;
     decoder->reader->comp_count = 0;
     decoder->reader->scan_count = 0;
-    decoder->coder.segment_count = 0;  // Total segment count for all scans
-    decoder->coder.data_compressed_size = 0; // Total byte count for all scans
     
     // Get image end
     uint8_t* image_end = image + image_size;
@@ -508,6 +506,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     }
         
     int eoi_presented = 0;
+    int inited = 0;
     while ( eoi_presented == 0 ) {
         // Read marker
         int marker = gpujpeg_reader_read_marker(&image);
@@ -599,6 +598,17 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
 
         case GPUJPEG_MARKER_SOS:
+            // We must init decoder before data is loaded into it
+            if ( inited == 0) {
+                // Init decoder
+                gpujpeg_decoder_init(decoder, &decoder->reader->param, &decoder->reader->param_image);
+                
+                // Reset decoder parameters
+                decoder->coder.segment_count = 0;  // Total segment count for all scans
+                decoder->coder.data_compressed_size = 0; // Total byte count for all scans
+                
+                inited = 1;
+            }
             if ( gpujpeg_reader_read_sos(decoder, &image, image_end) != 0 )
                 return -1;
             break;
@@ -626,9 +636,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         fprintf(stderr, "Error: JPEG data should end with EOI marker!\n");
         return -1;
     }
-    
-    // Init decoder
-    gpujpeg_decoder_init(decoder, &decoder->reader->param, &decoder->reader->param_image);
     
     return 0;
 }

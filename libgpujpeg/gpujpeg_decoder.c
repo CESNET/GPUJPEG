@@ -65,6 +65,11 @@ gpujpeg_decoder_create()
     
     // Set parameters
     memset(decoder, 0, sizeof(struct gpujpeg_decoder));
+    gpujpeg_set_default_parameters(&coder->param);
+    gpujpeg_image_set_default_parameters(&coder->param_image);
+    coder->param_image.comp_count = 0;
+    coder->param_image.width = 0;
+    coder->param_image.height = 0;
     
     int result = 1;
     
