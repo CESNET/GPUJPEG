@@ -172,7 +172,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     // Perform huffman decoding on CPU (when restart interval is not set)
     if ( coder->param.restart_interval == 0 ) {
         if ( gpujpeg_huffman_cpu_decoder_decode(decoder) != 0 ) {
-            fprintf(stderr, "Huffman decoder failed!\n", index);
+            fprintf(stderr, "Huffman decoder failed!\n");
             return -1;
         }
         // Copy quantized data to device memory from cpu memory

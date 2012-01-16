@@ -299,6 +299,8 @@ view_glx(struct view* view)
     glXDestroyContext(view->glx_display, view->glx_context);
     XDestroyWindow(view->glx_display, view->glx_window);
     XCloseDisplay(view->glx_display);
+
+    return 0;
 }
 
 /** Documented at declaration */

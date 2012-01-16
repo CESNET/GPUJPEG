@@ -258,7 +258,7 @@ view_on_render(void* param)
     struct application* app = (struct application*)param;
     
 #ifdef TEST_OPENGL_INTEROP_MULTI_THREAD
-    if  ( app->opengl_context & OPENGL_CONTEXT_ATTACHED && app->opengl_context & OPENGL_CONTEXT_REQUEST ) {
+    if  ( (app->opengl_context & OPENGL_CONTEXT_ATTACHED) && (app->opengl_context & OPENGL_CONTEXT_REQUEST) ) {
         pthread_mutex_lock(&app->mutex);
         view_opengl_detach(app->view);
         app->opengl_context = OPENGL_CONTEXT_DETACHED;

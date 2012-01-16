@@ -70,4 +70,12 @@
 #define gpujpeg_div_and_round_up(value, div) \
     (((value % div) != 0) ? (value / div + 1) : (value / div))
 
+// CUDA C++ extension for Eclipse CDT
+#ifdef __CDT_PARSER__
+struct { int x; int y; int z; } threadIdx;
+struct { int x; int y; int z; } blockIdx;
+struct { int x; int y; int z; } blockDim;
+struct { int x; int y; int z; } gridDim;
+#endif
+
 #endif // GPUJPEG_UTIL_H

@@ -176,9 +176,9 @@ main(int argc, char *argv[])
     if ( encode == 0 && decode == 0 ) {
         enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(argv[0]);
         enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(argv[1]);
-        if ( input_format & GPUJPEG_IMAGE_FILE_RAW && output_format == GPUJPEG_IMAGE_FILE_JPEG ) {
+        if ( (input_format & GPUJPEG_IMAGE_FILE_RAW) && output_format == GPUJPEG_IMAGE_FILE_JPEG ) {
             encode = 1;
-        } else if ( input_format == GPUJPEG_IMAGE_FILE_JPEG && output_format & GPUJPEG_IMAGE_FILE_RAW ) {
+        } else if ( input_format == GPUJPEG_IMAGE_FILE_JPEG && (output_format & GPUJPEG_IMAGE_FILE_RAW) ) {
             decode = 1;
         } else {
             fprintf(stderr, "Action can't be recognized for specified images!\n");
@@ -280,12 +280,12 @@ main(int argc, char *argv[])
         }
         
         // Init decoder if image size is filled
-        /*if ( param_image.width != 0 && param_image.height != 0 ) {
+        if ( param_image.width != 0 && param_image.height != 0 ) {
             if ( gpujpeg_decoder_init(decoder, &param, &param_image) != 0 ) {
                 fprintf(stderr, "Failed to preinitialize decoder!\n");
                 return -1;
             }
-        }*/
+        }
         
         // Decode images
         for ( int index = 0; index < argc; index += 2 ) {

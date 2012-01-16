@@ -509,7 +509,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image);
     if ( marker_soi != GPUJPEG_MARKER_SOI ) {
-        fprintf(stderr, "Error: JPEG data should begin with SOI marker, but marker %s was found!\n", gpujpeg_marker_name(marker_soi));
+        fprintf(stderr, "Error: JPEG data should begin with SOI marker, but marker %s was found!\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker_soi));
         return -1;
     }
         
@@ -540,7 +540,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         case GPUJPEG_MARKER_APP13:
         case GPUJPEG_MARKER_APP14:
         case GPUJPEG_MARKER_APP15:
-            fprintf(stderr, "Warning: JPEG data contains not supported %s marker\n", gpujpeg_marker_name(marker));
+            fprintf(stderr, "Warning: JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
             gpujpeg_reader_skip_marker_content(&image);
             break;
             
@@ -556,7 +556,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
         case GPUJPEG_MARKER_SOF1:
             // Extended sequential with Huffman coder
-            fprintf(stderr, "Warning: Reading SOF1 as it was SOF0 marker (should work but verify it)!\n", gpujpeg_marker_name(marker));
+            fprintf(stderr, "Warning: Reading SOF1 as it was SOF0 marker (should work but verify it)!\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
             if ( gpujpeg_reader_read_sof0(decoder, &image) != 0 )
                 return -1;
             break;
@@ -616,12 +616,12 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         case GPUJPEG_MARKER_COM:
         case GPUJPEG_MARKER_DAC:
         case GPUJPEG_MARKER_DNL:
-            fprintf(stderr, "Warning: JPEG data contains not supported %s marker\n", gpujpeg_marker_name(marker));
+            fprintf(stderr, "Warning: JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
             gpujpeg_reader_skip_marker_content(&image);
             break;
             
         default:   
-            fprintf(stderr, "Error: JPEG data contains not supported %s marker!\n", gpujpeg_marker_name(marker));
+            fprintf(stderr, "Error: JPEG data contains not supported %s marker!\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
             gpujpeg_reader_skip_marker_content(&image);
             return -1;
         }

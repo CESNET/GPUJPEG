@@ -85,7 +85,7 @@ gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table
     
     // Fix NPP bug before version 4.1 [http://forums.nvidia.com/index.php?showtopic=191896]
     const NppLibraryVersion* npp_version = nppGetLibVersion();
-    if ( npp_version->major < 4 || npp_version->major == 4 && npp_version->minor == 0 ) {
+    if ( npp_version->major < 4 || (npp_version->major == 4 && npp_version->minor == 0) ) {
         for ( int i = 0; i < 64; i++ ) {
             table->table[gpujpeg_order_natural[i]] = ((1 << 15) / (double)table->table_raw[i]) + 0.5;
         }
@@ -113,7 +113,7 @@ gpujpeg_table_quantization_decoder_init(struct gpujpeg_table_quantization* table
     
     // Fix NPP bug before version 4.1 [http://forums.nvidia.com/index.php?showtopic=191896]
     const NppLibraryVersion* npp_version = nppGetLibVersion();
-    if ( npp_version->major < 4 || npp_version->major == 4 && npp_version->minor == 0 ) {
+    if ( npp_version->major < 4 || (npp_version->major == 4 && npp_version->minor == 0) ) {
         for ( int i = 0; i < 64; i++ ) {
             table->table[gpujpeg_order_natural[i]] = table->table_raw[i];
         }
@@ -134,7 +134,7 @@ gpujpeg_table_quantization_decoder_compute(struct gpujpeg_table_quantization* ta
 {
     // Fix NPP bug before version 4.1 [http://forums.nvidia.com/index.php?showtopic=191896]
     const NppLibraryVersion* npp_version = nppGetLibVersion();
-    if ( npp_version->major < 4 || npp_version->major == 4 && npp_version->minor == 0 ) {
+    if ( npp_version->major < 4 || (npp_version->major == 4 && npp_version->minor == 0) ) {
         for ( int i = 0; i < 64; i++ ) {
             table->table[gpujpeg_order_natural[i]] = table->table_raw[i];
         }

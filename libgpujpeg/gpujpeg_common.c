@@ -591,4 +591,6 @@ int
 gpujpeg_image_destroy(uint8_t* image)
 {
     cudaFreeHost(image);
+
+    return 0;
 }
