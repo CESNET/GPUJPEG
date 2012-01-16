@@ -84,7 +84,7 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
                 result = 0;
         }
     }
-	gpujpeg_cuda_check_error("Encoder table allocation");
+    gpujpeg_cuda_check_error("Encoder table allocation");
     
     // Init quantization tables for encoder
     for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -98,7 +98,7 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
                 result = 0;
         }
     }
-	gpujpeg_cuda_check_error("Encoder table init");
+    gpujpeg_cuda_check_error("Encoder table init");
     
 #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
     // Copy huffman tables to constant memory
@@ -176,7 +176,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
             fwd_roi
         );
         if ( status != 0 ) {
-            fprintf(stderr, "Forward DCT failed for component at index %d [error %d]!\n", comp, status);		
+            fprintf(stderr, "[GPUJPEG] [Error] Forward DCT failed for component at index %d [error %d]!\n", comp, status);
             return -1;
         }
         
@@ -199,7 +199,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         
         // Perform huffman coding
         if ( gpujpeg_huffman_cpu_encoder_encode(encoder) != 0 ) {
-            fprintf(stderr, "Huffman encoder on CPU failed!\n");
+            fprintf(stderr, "[GPUJPEG] [Error] Huffman encoder on CPU failed!\n");
             return -1;
         }
     }
@@ -207,7 +207,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
     else {    
         // Perform huffman coding
         if ( gpujpeg_huffman_gpu_encoder_encode(encoder) != 0 ) {
-            fprintf(stderr, "Huffman encoder on GPU failed!\n");
+            fprintf(stderr, "[GPUJPEG] [Error] Huffman encoder on GPU failed!\n");
             return -1;
         }
         

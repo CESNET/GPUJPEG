@@ -60,7 +60,7 @@
     { \
         cudaError_t err = cudaGetLastError(); \
         if( cudaSuccess != err) { \
-            fprintf(stderr, "%s (line %i): %s: %s.\n", \
+            fprintf(stderr, "[GPUJPEG] [Error] %s (line %i): %s: %s.\n", \
                 __FILE__, __LINE__, msg, cudaGetErrorString( err) ); \
             exit(-1); \
         } \

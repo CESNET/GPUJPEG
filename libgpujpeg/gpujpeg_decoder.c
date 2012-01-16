@@ -130,7 +130,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
     
     // For now we can't reinitialize decoder, we can only do first initialization
     if ( coder->param_image.width != 0 || coder->param_image.height != 0 || coder->param_image.comp_count != 0 ) {
-        fprintf(stderr, "Can't reinitialize decoder, implement if needed!\n");
+        fprintf(stderr, "[GPUJPEG] [Error] Can't reinitialize decoder, implement if needed!\n");
         return -1;
     }
     
@@ -162,7 +162,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     
     // Read JPEG image data
     if ( gpujpeg_reader_read_image(decoder, image, image_size) != 0 ) {
-        fprintf(stderr, "Decoder failed when decoding image data!\n");
+        fprintf(stderr, "[GPUJPEG] [Error] Decoder failed when decoding image data!\n");
         return -1;
     }
     
@@ -172,7 +172,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     // Perform huffman decoding on CPU (when restart interval is not set)
     if ( coder->param.restart_interval == 0 ) {
         if ( gpujpeg_huffman_cpu_decoder_decode(decoder) != 0 ) {
-            fprintf(stderr, "Huffman decoder failed!\n");
+            fprintf(stderr, "[GPUJPEG] [Error] Huffman decoder failed!\n");
             return -1;
         }
         // Copy quantized data to device memory from cpu memory
@@ -213,7 +213,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         
         // Perform huffman decoding
         if ( gpujpeg_huffman_gpu_decoder_decode(decoder) != 0 ) {
-            fprintf(stderr, "Huffman decoder on GPU failed!\n");
+            fprintf(stderr, "[GPUJPEG] [Error] Huffman decoder on GPU failed!\n");
             return -1;
         }
     }

@@ -133,7 +133,7 @@ view_render(struct view* view)
         glEnd();
     }
     
-	glFlush();
+    glFlush();
     glFinish();
 }
 
@@ -249,7 +249,7 @@ view_glx(struct view* view)
         None
     };
     XVisualInfo* visual = glXChooseVisual(view->glx_display, DefaultScreen(view->glx_display), attributes);
-	if ( visual == NULL ) {
+    if ( visual == NULL ) {
         fprintf(stderr, "Failed to choose visual!\n");
         pthread_exit(0);
     }
@@ -265,8 +265,8 @@ view_glx(struct view* view)
     Colormap colormap = XCreateColormap(view->glx_display, RootWindow(view->glx_display, visual->screen), visual->visual, AllocNone);
     XSetWindowAttributes swa;
     swa.colormap = colormap;
-	swa.border_pixel = 0;
-	swa.event_mask = KeyPressMask;
+    swa.border_pixel = 0;
+    swa.event_mask = KeyPressMask;
     view->glx_window = XCreateWindow(
         view->glx_display, 
         RootWindow(view->glx_display, visual->screen), 
