@@ -197,8 +197,9 @@ main(int argc, char *argv[])
         return -1;
     
     // Adjust restart interval (when chroma subsampling and interleaving is enabled and restart interval is not changed)
-    if ( restart_interval_default == 1 && chroma_subsampled == 1 && param.interleaved == 1 && param.verbose ) {
-        printf("Auto-adjusting restart interval to 2 for better performance!\n");
+    if ( restart_interval_default == 1 && chroma_subsampled == 1 && param.interleaved == 1 ) {
+        if ( param.verbose )
+            printf("Auto-adjusting restart interval to 2 for better performance!\n");
         param.restart_interval = 2;
     }
     
