@@ -158,6 +158,7 @@ gpujpeg_init_device(int device_id, int flags)
 void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
 {
+    param->verbose = 0;
     param->quality = 75;
     param->restart_interval = 8;
     param->interleaved = 0;
@@ -255,6 +256,8 @@ int
 gpujpeg_coder_init(struct gpujpeg_coder* coder)
 {
     int result = 1;
+    
+    coder->preprocessor = NULL;
     
     // Allocate color components
     cudaMallocHost((void**)&coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component));

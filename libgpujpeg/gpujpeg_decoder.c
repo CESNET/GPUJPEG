@@ -140,6 +140,12 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
     // Initialize coder
     if ( gpujpeg_coder_init(coder) != 0 )
         return -1;
+        
+    // Init postprocessor
+    if ( gpujpeg_preprocessor_decoder_init(decoder) != 0 ) {
+        fprintf(stderr, "Failed to init postprocessor!");
+        return -1;
+    }
     
     return 0;
 }
@@ -148,11 +154,14 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
 int
 gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, struct gpujpeg_decoder_output* output)
 {
-    //GPUJPEG_TIMER_INIT();
-    //GPUJPEG_TIMER_START();
+    GPUJPEG_TIMER_INIT();
     
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
+    
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_START();
+    }
     
     // Set custom output buffer
     if ( output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER ) {
@@ -166,8 +175,10 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         return -1;
     }
     
-    //GPUJPEG_TIMER_STOP_PRINT("-Stream Reader:     ");
-    //GPUJPEG_TIMER_START();
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_STOP_PRINT("-Stream Reader:     ");
+        GPUJPEG_TIMER_START();
+    }
     
     // Perform huffman decoding on CPU (when restart interval is not set)
     if ( coder->param.restart_interval == 0 ) {
@@ -218,8 +229,10 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         }
     }
     
-    //GPUJPEG_TIMER_STOP_PRINT("-Huffman Decoder:   ");
-    //GPUJPEG_TIMER_START();
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_STOP_PRINT("-Huffman Decoder:   ");
+        GPUJPEG_TIMER_START();
+    }
     
     // Perform IDCT and dequantization
     for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
@@ -252,14 +265,18 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         //gpujpeg_component_print8(component, component->d_data);
     }
     
-    //GPUJPEG_TIMER_STOP_PRINT("-DCT & Quantization:");
-    //GPUJPEG_TIMER_START();
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_STOP_PRINT("-DCT & Quantization:");
+        GPUJPEG_TIMER_START();
+    }
     
     // Preprocessing
     if ( gpujpeg_preprocessor_decode(decoder) != 0 )
         return -1;
         
-    //GPUJPEG_TIMER_STOP_PRINT("-Postprocessing:    ");
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_STOP_PRINT("-Postprocessing:    ");
+    }
     
     // Set decompressed image size
     output->data_size = coder->data_raw_size * sizeof(uint8_t);

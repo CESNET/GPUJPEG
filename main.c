@@ -37,6 +37,7 @@ print_help()
     printf(
         "gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
         "   -h, --help                  print help\n"
+        "   -v, --verbose               verbose output\n"
         "   -s, --size                  set raw image size in pixels, e.g. 1920x1080\n"
         "   -f, --sampling-factor       set raw image sampling factor, e.g. 4:2:2\n"
         "   -c, --colorspace            set raw image colorspace, e.g. rgb, yuv, ycbcr-jpeg\n"
@@ -56,6 +57,7 @@ main(int argc, char *argv[])
 {       
     struct option longopts[] = {
         {"help",               no_argument,       0, 'h'},
+        {"verbose",            no_argument,       0, 'v'},
         {"size",               required_argument, 0, 's'},
         {"sampling-factor",    required_argument, 0, 'f'},
         {"colorspace",         required_argument, 0, 'c'},
@@ -91,11 +93,14 @@ main(int argc, char *argv[])
     char ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "hs:q:r:ed", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "hvs:q:r:ed", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'h':
             print_help();
             return 0;
+        case 'v':
+            param.verbose = 1;
+            break;
         case 's':
             param_image.width = atoi(optarg);
             pos = strstr(optarg, "x");
@@ -192,7 +197,7 @@ main(int argc, char *argv[])
         return -1;
     
     // Adjust restart interval (when chroma subsampling and interleaving is enabled and restart interval is not changed)
-    if ( restart_interval_default == 1 && chroma_subsampled == 1 && param.interleaved == 1 ) {
+    if ( restart_interval_default == 1 && chroma_subsampled == 1 && param.interleaved == 1 && param.verbose ) {
         printf("Auto-adjusting restart interval to 2 for better performance!\n");
         param.restart_interval = 2;
     }

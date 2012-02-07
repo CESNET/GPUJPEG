@@ -71,6 +71,12 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
     // Initialize coder
     if ( gpujpeg_coder_init(coder) != 0 )
         result = 0;
+        
+    // Init preprocessor
+    if ( gpujpeg_preprocessor_encoder_init(encoder) != 0 ) {
+        fprintf(stderr, "Failed to init preprocessor!");
+        result = 0;
+    }
      
     // Allocate quantization tables in device memory
     for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -133,16 +139,24 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
 int
 gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t** image_compressed, int* image_compressed_size)
 {    
-    //GPUJPEG_TIMER_INIT();
-    //GPUJPEG_TIMER_START();
+    GPUJPEG_TIMER_INIT();
     
     // Get coder
     struct gpujpeg_coder* coder = &encoder->coder;
+    
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_START();
+    }
     
     // Copy image to device memory
     if ( cudaSuccess != cudaMemcpy(coder->d_data_raw, image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) )
         return -1;
     
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_STOP_PRINT("-Copy:              ");
+        GPUJPEG_TIMER_START();
+    }
+
     //gpujpeg_table_print(encoder->table[JPEG_COMPONENT_LUMINANCE]);
     //gpujpeg_table_print(encoder->table[JPEG_COMPONENT_CHROMINANCE]);
     
@@ -150,8 +164,10 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
     if ( gpujpeg_preprocessor_encode(encoder) != 0 )
         return -1;
         
-    //GPUJPEG_TIMER_STOP_PRINT("-Preprocessing:     ");
-    //GPUJPEG_TIMER_START();
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_STOP_PRINT("-Preprocessing:     ");
+        GPUJPEG_TIMER_START();
+    }
         
     // Perform DCT and quantization
     for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {        
@@ -189,8 +205,10 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
     // Write header
     gpujpeg_writer_write_header(encoder);
     
-    //GPUJPEG_TIMER_STOP_PRINT("-DCT & Quantization:");
-    //GPUJPEG_TIMER_START();
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_STOP_PRINT("-DCT & Quantization:");
+        GPUJPEG_TIMER_START();
+    }
     
     // Perform huffman coding on CPU (when restart interval is not set)
     if ( coder->param.restart_interval == 0 ) {
@@ -264,7 +282,9 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
     }
     gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_EOI);
     
-    //GPUJPEG_TIMER_STOP_PRINT("-Huffman Encoder:   ");
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_STOP_PRINT("-Huffman Encoder:   ");
+    }
     
     // Set compressed image
     *image_compressed = encoder->writer->buffer;

@@ -27,6 +27,8 @@
 
 # Use shared/static libgpujpeg library?
 SHARED_LIBRARY ?= 1
+# Debug
+DEBUG ?= 0
 # CUDA install path
 CUDA_INSTALL_PATH ?= /usr/local/cuda
 
