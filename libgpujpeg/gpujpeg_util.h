@@ -70,6 +70,9 @@
 #define gpujpeg_div_and_round_up(value, div) \
     (((value % div) != 0) ? (value / div + 1) : (value / div))
 
+// CUDA maximum grid size
+#define GPUJPEG_CUDA_MAXIMUM_GRID_SIZE 65535
+
 // CUDA C++ extension for Eclipse CDT
 #ifdef __CDT_PARSER__
 struct { int x; int y; int z; } threadIdx;

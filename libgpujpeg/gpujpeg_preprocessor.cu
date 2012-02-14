@@ -218,7 +218,7 @@ __global__ void
 gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width, int image_height)
 {
     int x  = threadIdx.x;
-    int gX = blockDim.x * blockIdx.x;
+    int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
             
     // Load to shared
     __shared__ unsigned char s_data[RGB_8BIT_THREADS * 3];
@@ -262,7 +262,7 @@ __global__ void
 gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width, int image_height)
 {
     int x  = threadIdx.x;
-    int gX = blockDim.x * blockIdx.x;
+    int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
         
     // Load to shared
     __shared__ unsigned char s_data[RGB_8BIT_THREADS * 2];
@@ -421,6 +421,10 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder* encoder)
     dim3 threads (RGB_8BIT_THREADS);
     dim3 grid (alignedSize / (RGB_8BIT_THREADS * unitSize));
     assert(alignedSize % (RGB_8BIT_THREADS * unitSize) == 0);
+    if ( grid.x > GPUJPEG_CUDA_MAXIMUM_GRID_SIZE ) {
+        grid.y = gpujpeg_div_and_round_up(grid.x, GPUJPEG_CUDA_MAXIMUM_GRID_SIZE);
+        grid.x = GPUJPEG_CUDA_MAXIMUM_GRID_SIZE;
+    }
 
     // Run kernel
     struct gpujpeg_preprocessor_data data;
@@ -438,11 +442,8 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder* encoder)
         image_width,
         image_height
     );
-    cudaError cuerr = cudaThreadSynchronize();
-    if ( cuerr != cudaSuccess ) {
-        fprintf(stderr, "Preprocessor encoding failed: %s!\n", cudaGetErrorString(cuerr));
-        return -1;
-    }
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Preprocessor encoding failed");
         
     return 0;
 }
@@ -514,7 +515,7 @@ __global__ void
 gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(struct gpujpeg_preprocessor_data data, uint8_t* d_data_raw, int image_width, int image_height)
 {
     int x  = threadIdx.x;
-    int gX = blockDim.x * blockIdx.x;
+    int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
     int image_position = gX + x;
     if ( image_position >= (image_width * image_height) )
         return;
@@ -550,7 +551,7 @@ __global__ void
 gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data data, uint8_t* d_data_raw, int image_width, int image_height)
 {
     int x  = threadIdx.x;
-    int gX = blockDim.x * blockIdx.x;
+    int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
     int image_position = gX + x;
     if ( image_position >= (image_width * image_height) )
         return;
@@ -695,6 +696,10 @@ gpujpeg_preprocessor_decode(struct gpujpeg_decoder* decoder)
     dim3 threads (RGB_8BIT_THREADS);
     dim3 grid (alignedSize / (RGB_8BIT_THREADS * unitSize));
     assert(alignedSize % (RGB_8BIT_THREADS * unitSize) == 0);
+    if ( grid.x > GPUJPEG_CUDA_MAXIMUM_GRID_SIZE ) {
+        grid.y = gpujpeg_div_and_round_up(grid.x, GPUJPEG_CUDA_MAXIMUM_GRID_SIZE);
+        grid.x = GPUJPEG_CUDA_MAXIMUM_GRID_SIZE;
+    }
 
     // Run kernel
     struct gpujpeg_preprocessor_data data;
@@ -712,11 +717,8 @@ gpujpeg_preprocessor_decode(struct gpujpeg_decoder* decoder)
         image_width,
         image_height
     );
-    cudaError cuerr = cudaThreadSynchronize();
-    if ( cuerr != cudaSuccess ) {
-        fprintf(stderr, "Preprocessing decoding failed: %s!\n", cudaGetErrorString(cuerr));
-        return -1;
-    }
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Preprocessor encoding failed");
     
     return 0;
 }
