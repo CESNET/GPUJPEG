@@ -245,7 +245,8 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            GPUJPEG_TIMER_STOP_PRINT("Load Image:         ");
+            GPUJPEG_TIMER_STOP();
+            printf("Load Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
             GPUJPEG_TIMER_START();
                 
             // Encode image
@@ -256,7 +257,19 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            GPUJPEG_TIMER_STOP_PRINT("Encode Image:       ");
+            GPUJPEG_TIMER_STOP();
+            float duration = GPUJPEG_TIMER_DURATION();
+            if ( param.verbose ) {
+                printf(" -Copy To Device:    %10.2f ms\n", encoder->coder.duration_memory_to);
+                printf(" -Preprocessing:     %10.2f ms\n", encoder->coder.duration_preprocessor);
+                printf(" -DCT & Quantization:%10.2f ms\n", encoder->coder.duration_dct_quantization);
+                printf(" -Huffman Encoder:   %10.2f ms\n", encoder->coder.duration_huffman_coder);
+                printf(" -Copy From Device:  %10.2f ms\n", encoder->coder.duration_memory_from);
+                printf(" -Stream Formatter:  %10.2f ms\n", encoder->coder.duration_stream);
+            }
+            printf("Encode Image GPU:    %10.2f ms (only in-GPU processing)\n", encoder->coder.duration_in_gpu);
+            printf("Encode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - encoder->coder.duration_memory_to - encoder->coder.duration_memory_from);
+            printf("Encode Image:        %10.2f ms\n", duration);
             GPUJPEG_TIMER_START();
             
             // Save image
@@ -265,9 +278,9 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            GPUJPEG_TIMER_STOP_PRINT("Save Image:         ");
-            
-            printf("Compressed Size:     %d bytes [%s]\n", image_compressed_size, output);
+            GPUJPEG_TIMER_STOP();
+            printf("Save Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
+            printf("Compressed Size:     %10.d bytes [%s]\n", image_compressed_size, output);
             
             // Destroy image
             gpujpeg_image_destroy(image);
@@ -332,7 +345,8 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            GPUJPEG_TIMER_STOP_PRINT("Load Image:         ");
+            GPUJPEG_TIMER_STOP();
+            printf("Load Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
             GPUJPEG_TIMER_START();
                 
             // Prepare decoder output buffer
@@ -345,8 +359,20 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            GPUJPEG_TIMER_STOP_PRINT("Decode Image:       ");
-            GPUJPEG_TIMER_START();
+            GPUJPEG_TIMER_STOP();
+            float duration = GPUJPEG_TIMER_DURATION();
+            if ( param.verbose ) {
+                printf(" -Stream Reader:     %10.2f ms\n", decoder->coder.duration_stream);
+                printf(" -Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
+                printf(" -Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
+                printf(" -DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
+                printf(" -Preprocessing:     %10.2f ms\n", decoder->coder.duration_preprocessor);
+                printf(" -Copy From Device:  %10.2f ms\n", decoder->coder.duration_memory_from);
+             }
+             printf("Decode Image GPU:    %10.2f ms (only in-GPU processing)\n", decoder->coder.duration_in_gpu);
+             printf("Decode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - decoder->coder.duration_memory_to - decoder->coder.duration_memory_from);
+             printf("Decode Image:        %10.2f ms\n", duration);
+             GPUJPEG_TIMER_START();
             
             // Save image
             if ( gpujpeg_image_save_to_file(output, decoder_output.data, decoder_output.data_size) != 0 ) {
@@ -354,9 +380,9 @@ main(int argc, char *argv[])
                 return -1;
             }
             
-            GPUJPEG_TIMER_STOP_PRINT("Save Image:         ");
-            
-            printf("Decompressed Size:   %d bytes [%s]\n", decoder_output.data_size, output);
+            GPUJPEG_TIMER_STOP();
+            printf("Save Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
+            printf("Decompressed Size:   %10.d bytes [%s]\n", decoder_output.data_size, output);
             
             // Destroy image
             gpujpeg_image_destroy(image);
