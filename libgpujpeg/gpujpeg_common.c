@@ -344,38 +344,6 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     coder->data_width = gpujpeg_div_and_round_up(coder->param_image.width, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
     coder->data_height = gpujpeg_div_and_round_up(coder->param_image.height, GPUJPEG_BLOCK_SIZE) * GPUJPEG_BLOCK_SIZE;
     
-    // Allocate data buffers for all color components
-    if ( cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t)) ) 
-        return -1;
-    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t)) ) 
-        result = 0;
-    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data, coder->data_size * sizeof(uint8_t)) ) 
-        result = 0;
-    if ( cudaSuccess != cudaMallocHost((void**)&coder->data_quantized, coder->data_size * sizeof(int16_t)) ) 
-        result = 0;
-    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_quantized, coder->data_size * sizeof(int16_t)) ) 
-        result = 0;
-    gpujpeg_cuda_check_error("Coder data allocation");
-    
-    // Set data buffer to color components
-    uint8_t* d_comp_data = coder->d_data;
-    int16_t* d_comp_data_quantized = coder->d_data_quantized;
-    int16_t* comp_data_quantized = coder->data_quantized;
-    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
-        struct gpujpeg_component* component = &coder->component[comp];
-        component->d_data = d_comp_data;
-        component->d_data_quantized = d_comp_data_quantized;
-        component->data_quantized = comp_data_quantized;
-        d_comp_data += component->data_width * component->data_height;
-        d_comp_data_quantized += component->data_width * component->data_height;
-        comp_data_quantized += component->data_width * component->data_height;
-    }
-    
-    // Copy components to device memory
-    if ( cudaSuccess != cudaMemcpy(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice) )
-        result = 0;
-    gpujpeg_cuda_check_error("Coder component copy");
-    
     // Compute MCU size, MCU count, segment count and compressed data allocation size
     coder->mcu_count = 0;
     coder->mcu_size = 0;
@@ -484,6 +452,62 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     // Copy segments to device memory
     if ( cudaSuccess != cudaMemcpy(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice) )
         result = 0;
+
+    // Print allocation info
+    if ( coder->param.verbose ) {
+    	int structures_size = 0;
+    	structures_size += coder->segment_count * sizeof(struct gpujpeg_segment);
+    	structures_size += coder->param_image.comp_count * sizeof(struct gpujpeg_component);
+    	int total_size = 0;
+    	total_size += structures_size;
+    	total_size += coder->data_raw_size;
+    	total_size += coder->data_size;
+    	total_size += coder->data_size * 2;
+    	total_size += coder->data_compressed_size;
+
+        printf("\nAllocation Info:\n");
+        printf("    Segment Count:            %d\n", coder->segment_count);
+        printf("    Allocated Data Size:      %dx%d\n", coder->data_width, coder->data_height);
+        printf("    Raw Buffer Size:          %d MB\n", coder->data_raw_size / (1024 * 1024));
+        printf("    Preprocessor Buffer Size: %d MB\n", coder->data_size / (1024 * 1024));
+        printf("    DCT Buffer Size:          %d MB\n", 2 * coder->data_size / (1024 * 1024));
+        printf("    Compressed Buffer Size:   %d MB\n", coder->data_compressed_size / (1024 * 1024));
+        printf("    Structures Size:          %d kB\n", structures_size / (1024));
+        printf("    Total GPU Memory Size:    %d MB\n", total_size / (1024 * 1024));
+        printf("");
+    }
+
+    // Allocate data buffers for all color components
+    if ( cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t)) )
+        return -1;
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t)) )
+        result = 0;
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data, coder->data_size * sizeof(uint8_t)) )
+        result = 0;
+    if ( cudaSuccess != cudaMallocHost((void**)&coder->data_quantized, coder->data_size * sizeof(int16_t)) )
+        result = 0;
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_quantized, coder->data_size * sizeof(int16_t)) )
+         result = 0;
+    gpujpeg_cuda_check_error("Coder data allocation");
+
+    // Set data buffer to color components
+    uint8_t* d_comp_data = coder->d_data;
+    int16_t* d_comp_data_quantized = coder->d_data_quantized;
+    int16_t* comp_data_quantized = coder->data_quantized;
+    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
+    	struct gpujpeg_component* component = &coder->component[comp];
+        component->d_data = d_comp_data;
+        component->d_data_quantized = d_comp_data_quantized;
+        component->data_quantized = comp_data_quantized;
+        d_comp_data += component->data_width * component->data_height;
+        d_comp_data_quantized += component->data_width * component->data_height;
+        comp_data_quantized += component->data_width * component->data_height;
+     }
+
+    // Copy components to device memory
+    if ( cudaSuccess != cudaMemcpy(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice) )
+        result = 0;
+    gpujpeg_cuda_check_error("Coder component copy");
         
     // Allocate compressed data
     int max_compressed_data_size = coder->data_compressed_size;

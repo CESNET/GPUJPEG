@@ -140,6 +140,7 @@ int
 gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t** image_compressed, int* image_compressed_size)
 {    
     GPUJPEG_TIMER_INIT();
+    GPUJPEG_CUSTOM_TIMER_INIT(gpu);
     
     // Get coder
     struct gpujpeg_coder* coder = &encoder->coder;
@@ -153,8 +154,9 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         return -1;
     
     if ( coder->param.verbose ) {
-        GPUJPEG_TIMER_STOP_PRINT("-Copy:              ");
+        GPUJPEG_TIMER_STOP_PRINT("-Copy To Device:    ");
         GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_START(gpu);
     }
 
     //gpujpeg_table_print(encoder->table[JPEG_COMPONENT_LUMINANCE]);
@@ -284,6 +286,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
     
     if ( coder->param.verbose ) {
         GPUJPEG_TIMER_STOP_PRINT("-Huffman Encoder:   ");
+        GPUJPEG_CUSTOM_TIMER_STOP_PRINT(gpu, "-Total Without Copy:");
     }
     
     // Set compressed image

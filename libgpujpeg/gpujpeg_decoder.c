@@ -155,12 +155,14 @@ int
 gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, struct gpujpeg_decoder_output* output)
 {
     GPUJPEG_TIMER_INIT();
+    GPUJPEG_CUSTOM_TIMER_INIT(gpu);
     
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
     
     if ( coder->param.verbose ) {
         GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_START(gpu);
     }
     
     // Set custom output buffer
@@ -276,6 +278,8 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         
     if ( coder->param.verbose ) {
         GPUJPEG_TIMER_STOP_PRINT("-Postprocessing:    ");
+        GPUJPEG_CUSTOM_TIMER_STOP_PRINT(gpu, "-Total Without Copy:");
+        GPUJPEG_TIMER_START();
     }
     
     // Set decompressed image size
@@ -332,6 +336,10 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         assert(0);
     }
     
+    if ( coder->param.verbose ) {
+        GPUJPEG_TIMER_STOP_PRINT("-Copy From Device:  ");
+    }
+
     return 0;
 }
 
