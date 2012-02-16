@@ -366,7 +366,7 @@ main(int argc, char *argv[])
                 printf(" -Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
                 printf(" -Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
                 printf(" -DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
-                printf(" -Preprocessing:     %10.2f ms\n", decoder->coder.duration_preprocessor);
+                printf(" -Postprocessing:    %10.2f ms\n", decoder->coder.duration_preprocessor);
                 printf(" -Copy From Device:  %10.2f ms\n", decoder->coder.duration_memory_from);
              }
              printf("Decode Image GPU:    %10.2f ms (only in-GPU processing)\n", decoder->coder.duration_in_gpu);
