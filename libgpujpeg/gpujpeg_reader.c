@@ -41,7 +41,7 @@ gpujpeg_reader_create()
     reader->comp_count = 0;
     reader->scan_count = 0;
     reader->segment_count = 0;
-    reader->segment_info = NULL;
+    reader->segment_info_count = 0;
     reader->segment_info_size = 0;
     
     return reader;
@@ -377,10 +377,12 @@ gpujpeg_reader_read_segment_info(struct gpujpeg_decoder* decoder, uint8_t** imag
         return -1;
     }
 
-    decoder->reader->segment_info = *image;
-    decoder->reader->segment_info_size = length - 3;
+    int data_size = length - 3;
+    decoder->reader->segment_info[decoder->reader->segment_info_count] = *image;
+    decoder->reader->segment_info_count++;
+    decoder->reader->segment_info_size += data_size;
 
-    *image += decoder->reader->segment_info_size;
+    *image += data_size;
 
     return 0;
 }
@@ -518,19 +520,24 @@ gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder
     int segment_count = decoder->reader->segment_info_size / 4 - 1;
 
     // Read first record from segment info, which means beginning of the first segment
-    int scan_start = (decoder->reader->segment_info[0] << 24)
-        + (decoder->reader->segment_info[1] << 16)
-        + (decoder->reader->segment_info[2] << 8)
-        + (decoder->reader->segment_info[3] << 0);
-    int segment_info_position = 4;
+    int scan_start = (decoder->reader->segment_info[0][0] << 24)
+        + (decoder->reader->segment_info[0][1] << 16)
+        + (decoder->reader->segment_info[0][2] << 8)
+        + (decoder->reader->segment_info[0][3] << 0);
 
     // Read all segments from segment info
     for ( int segment_index = 0; segment_index < segment_count; segment_index++ ) {
+        // Determine header index
+        int header_index = ((segment_index + 1) * 4) / GPUJPEG_MAX_HEADER_SIZE;
+
+        // Determine header data index
+        int header_data_index = ((segment_index + 1) * 4) % GPUJPEG_MAX_HEADER_SIZE;
+
         // Determine segment ending in the scan
-        int scan_end = (decoder->reader->segment_info[segment_info_position + 0] << 24)
-            + (decoder->reader->segment_info[segment_info_position + 1] << 16)
-            + (decoder->reader->segment_info[segment_info_position + 2] << 8)
-            + (decoder->reader->segment_info[segment_info_position + 3] << 0);
+        int scan_end = (decoder->reader->segment_info[header_index][header_data_index + 0] << 24)
+            + (decoder->reader->segment_info[header_index][header_data_index + 1] << 16)
+            + (decoder->reader->segment_info[header_index][header_data_index + 2] << 8)
+            + (decoder->reader->segment_info[header_index][header_data_index + 3] << 0);
 
         // Setup segment
         struct gpujpeg_segment* segment = &decoder->coder.segment[scan->segment_index + segment_index];
@@ -546,7 +553,6 @@ gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder
 
         // Move info for next segment
         scan_start = scan_end;
-        segment_info_position += 4;
     }
 
     // Set segment count in the scan
@@ -565,7 +571,7 @@ gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder
     decoder->reader->data_compressed_size += scan_start;
 
     // Reset segment info, for next scan it has to be loaded again from other header
-    decoder->reader->segment_info = NULL;
+    decoder->reader->segment_info_count = 0;
     decoder->reader->segment_info_size = 0;
 
     return 0;
@@ -658,7 +664,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     scan->segment_count = 0;
 
     // Read scan content
-    if ( decoder->reader->segment_info != NULL ) {
+    if ( decoder->reader->segment_info_count > 0 ) {
         // Read scan content by segment info contained in special header
         if ( gpujpeg_reader_read_scan_content_by_segment_info(decoder, image, image_end, scan, scan_index) != 0 )
             return -1;
@@ -682,6 +688,8 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     decoder->reader->scan_count = 0;
     decoder->reader->segment_count = 0;
     decoder->reader->data_compressed_size = 0;
+    decoder->reader->segment_info_count = 0;
+    decoder->reader->segment_info_size = 0;
     
     // Get image end
     uint8_t* image_end = image + image_size;

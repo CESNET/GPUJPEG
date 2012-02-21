@@ -33,13 +33,19 @@
 #include <stdint.h>
 
 /** Contants */
-#define GPUJPEG_BLOCK_SIZE                  8
-#define GPUJPEG_MAX_COMPONENT_COUNT         3
-#define GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE   (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE * 2)
+#define GPUJPEG_BLOCK_SIZE                      8
+#define GPUJPEG_MAX_COMPONENT_COUNT             3
+#define GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE       (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE * 2)
+
+/** Maximum JPEG header size (MUST be divisible by 4!!!) */
+#define GPUJPEG_MAX_HEADER_SIZE                 (65536 - 100)
 
 /** Flags */
-#define GPUJPEG_VERBOSE                     1
-#define GPUJPEG_OPENGL_INTEROPERABILITY     2
+#define GPUJPEG_VERBOSE                         1
+#define GPUJPEG_OPENGL_INTEROPERABILITY         2
+
+/** Maximum number of segment info header in stream */
+#define GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT  20
 
 /**
  * Color spaces for JPEG codec
