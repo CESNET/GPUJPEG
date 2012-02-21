@@ -90,7 +90,7 @@ enum gpujpeg_huffman_type {
 /** 
  * JPEG marker codes 
  */
-enum gpujpeg_marker_code {		
+enum gpujpeg_marker_code {        
     GPUJPEG_MARKER_SOF0  = 0xc0,
     GPUJPEG_MARKER_SOF1  = 0xc1,
     GPUJPEG_MARKER_SOF2  = 0xc2,

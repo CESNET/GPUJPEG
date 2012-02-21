@@ -205,8 +205,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         
         // If restart interval is 0 then the GPU processing is in the end (even huffman coder will be performed on CPU)
         if ( coder->param.restart_interval == 0 ) {
-        	GPUJPEG_CUSTOM_TIMER_STOP(in_gpu);
-        	coder->duration_in_gpu = GPUJPEG_CUSTOM_TIMER_DURATION(in_gpu);
+            GPUJPEG_CUSTOM_TIMER_STOP(in_gpu);
+            coder->duration_in_gpu = GPUJPEG_CUSTOM_TIMER_DURATION(in_gpu);
         }
 
         //gpujpeg_component_print16(&coder->component[comp], coder->component[comp].d_data_quantized);
@@ -270,7 +270,9 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
         if ( coder->param.interleaved == 1 ) {
             // Write scan header (only one scan is written, that contains all color components data)
             gpujpeg_writer_write_scan_header(encoder, 0);
+
             // Write scan data
+            gpujpeg_writer_write_segment_info(encoder);
             for ( int segment_index = 0; segment_index < coder->segment_count; segment_index++ ) {
                 struct gpujpeg_segment* segment = &coder->segment[segment_index];
                     
@@ -282,6 +284,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
                 );
                 encoder->writer->buffer_current += segment->data_compressed_size;
                 //printf("Compressed data %d bytes\n", segment->data_compressed_size);
+
+                gpujpeg_writer_write_segment_info(encoder);
             }
             // Remove last restart marker in scan (is not needed)
             encoder->writer->buffer_current -= 2;
@@ -292,6 +296,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
                 // Write scan header
                 gpujpeg_writer_write_scan_header(encoder, comp);
                 // Write scan data
+                gpujpeg_writer_write_segment_info(encoder);
                 for ( int index = 0; index < coder->component[comp].segment_count; index++ ) {
                     struct gpujpeg_segment* segment = &coder->segment[segment_index];
                 
@@ -304,6 +309,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
                     encoder->writer->buffer_current += segment->data_compressed_size;
                     //printf("Compressed data %d bytes\n", segment->data_compressed_size);
                     
+                    gpujpeg_writer_write_segment_info(encoder);
+
                     segment_index++;
                 }
                 // Remove last restart marker in scan (is not needed)

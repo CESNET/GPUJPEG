@@ -63,7 +63,7 @@ gpujpeg_huffman_gpu_decoder_decode_fill_bit_buffer(int & get_bits, int & get_buf
 
             // If it's 0xFF, check and discard stuffed zero byte
             if ( uc == 0xFF ) {
-            	while ( uc == 0xFF ) {
+                while ( uc == 0xFF ) {
                     //printf("read byte %X 0x%X\n", (int)data, (unsigned char)*data);
                     uc = *data++;
                     data_size--;

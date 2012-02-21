@@ -459,35 +459,35 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
                 // Check expected marker
                 uint8_t expected_marker = (previous_marker < GPUJPEG_MARKER_RST7) ? (previous_marker + 1) : GPUJPEG_MARKER_RST0;
                 if ( expected_marker != byte ) {
-                	fprintf(stderr, "[GPUJPEG] [Error] Expected marker 0x%X but 0x%X was presented!\n", expected_marker, byte);
+                    fprintf(stderr, "[GPUJPEG] [Error] Expected marker 0x%X but 0x%X was presented!\n", expected_marker, byte);
 
-                	// Skip bytes to expected marker
-                	int found_expected_marker = 0;
-                	int skip_count = 0;
-                	byte_previous = byte;
-                	while ( *image < image_end ) {
-                		skip_count++;
-                		byte = gpujpeg_reader_read_byte(*image);
-                		if ( byte_previous == 0xFF ) {
-                			// Expected marker was found so notify about it
-                			if ( byte == expected_marker ) {
-                				fprintf(stderr, "[GPUJPEG] [Recovery] Skipping %d bytes of data until marker 0x%X was found!\n", skip_count, expected_marker, byte);
-                				found_expected_marker = 1;
-                				break;
-                			} else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {
-                				// Go back last marker (will be read again by main read cycle)
-                				*image -= 2;
-                				break;
-                			}
-                		}
-                		byte_previous = byte;
-                	}
+                    // Skip bytes to expected marker
+                    int found_expected_marker = 0;
+                    int skip_count = 0;
+                    byte_previous = byte;
+                    while ( *image < image_end ) {
+                        skip_count++;
+                        byte = gpujpeg_reader_read_byte(*image);
+                        if ( byte_previous == 0xFF ) {
+                            // Expected marker was found so notify about it
+                            if ( byte == expected_marker ) {
+                                fprintf(stderr, "[GPUJPEG] [Recovery] Skipping %d bytes of data until marker 0x%X was found!\n", skip_count, expected_marker, byte);
+                                found_expected_marker = 1;
+                                break;
+                            } else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {
+                                // Go back last marker (will be read again by main read cycle)
+                                *image -= 2;
+                                break;
+                            }
+                        }
+                        byte_previous = byte;
+                    }
 
-                	// If expected marker was not found to end of stream
-                	if ( found_expected_marker == 0 ) {
-                		fprintf(stderr, "[GPUJPEG] [Error] No marker 0x%X was found until end of current scan!\n", expected_marker);
-                		continue;
-                	}
+                    // If expected marker was not found to end of stream
+                    if ( found_expected_marker == 0 ) {
+                        fprintf(stderr, "[GPUJPEG] [Error] No marker 0x%X was found until end of current scan!\n", expected_marker);
+                        continue;
+                    }
                 }
                 // Set previous marker
                 previous_marker = byte;

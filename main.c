@@ -43,8 +43,9 @@ print_help()
         "   -c, --colorspace            set raw image colorspace, e.g. rgb, yuv, ycbcr-jpeg\n"
         "   -q, --quality               set quality level 0-100 (default 75)\n"
         "   -r, --restart               set restart interval (default 8)\n"
-        "       --chroma-subsampling    use chroma subsampling\n"
-        "   -i  --interleaving          flag if use interleaved stream for encoding\n"
+        "       --segment               use segment info in stream for fast decoding\n"
+        "       --subsampled            use chroma subsampling\n"
+        "   -i  --interleaved           flag if use interleaved stream for encoding\n"
         "   -e, --encode                encode images\n"
         "   -d, --decode                decode images\n"
         "   -D, --device                cuda device id (default 0)\n"
@@ -63,12 +64,13 @@ main(int argc, char *argv[])
         {"colorspace",         required_argument, 0, 'c'},
         {"quality",            required_argument, 0, 'q'},
         {"restart",            required_argument, 0, 'r'},
-        {"chroma-subsampling", no_argument,       0,  1 },
-        {"interleaving",       no_argument,       0, 'i'},
+        {"segment",            optional_argument, 0,  1 },
+        {"subsampled",         optional_argument, 0,  2 },
+        {"interleaved",        optional_argument, 0, 'i'},
         {"encode",             no_argument,       0, 'e'},
         {"decode",             no_argument,       0, 'd'},
         {"device",             required_argument, 0, 'D'},
-        {"device-list",        no_argument,       0,  2 },
+        {"device-list",        no_argument,       0,  3 },
         0
     };
 
@@ -142,14 +144,23 @@ main(int argc, char *argv[])
             restart_interval_default = 0;
             break;
         case 1:
+            if ( optarg == NULL || strcmp(optarg, "true") == 0 || atoi(optarg) )
+                param.segment_info = 1;
+            else
+                param.segment_info = 0;
+            break;
+        case 2:
             gpujpeg_parameters_chroma_subsampling(&param);
             chroma_subsampled = 1;
             break;
-        case 2:
+        case 3:
             gpujpeg_print_devices_info();
             return 0;
         case 'i':
-            param.interleaved = 1;
+            if ( optarg == NULL || strcmp(optarg, "true") == 0 || atoi(optarg) )
+                param.interleaved = 1;
+            else
+                param.interleaved = 0;
             break;
         case 'e':
             encode = 1;

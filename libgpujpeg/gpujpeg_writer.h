@@ -42,6 +42,12 @@ struct gpujpeg_writer
     uint8_t* buffer;
     // Output buffer current position
     uint8_t* buffer_current;
+    // Segment info buffer
+    uint8_t* segment_info;
+    // Index info segment info buffer
+    int segment_info_index;
+    // Segment info position in scan
+    uint8_t* segment_info_position;
 };
 
 /**
@@ -106,6 +112,15 @@ gpujpeg_writer_destroy(struct gpujpeg_writer* writer);
  */
 void
 gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder);
+
+/**
+ * Write segment info for current position in write buffer
+ *
+ * @param encoder  Encoder structure
+ * @return void
+ */
+void
+gpujpeg_writer_write_segment_info(struct gpujpeg_encoder* encoder);
 
 /**
  * Write scan header for one component

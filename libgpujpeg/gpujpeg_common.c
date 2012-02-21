@@ -162,6 +162,7 @@ gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
     param->quality = 75;
     param->restart_interval = 8;
     param->interleaved = 0;
+    param->segment_info = 0;
     for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ ) {
         param->sampling_factor[comp].horizontal = 1;
         param->sampling_factor[comp].vertical = 1;
@@ -455,15 +456,15 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
 
     // Print allocation info
     if ( coder->param.verbose ) {
-    	int structures_size = 0;
-    	structures_size += coder->segment_count * sizeof(struct gpujpeg_segment);
-    	structures_size += coder->param_image.comp_count * sizeof(struct gpujpeg_component);
-    	int total_size = 0;
-    	total_size += structures_size;
-    	total_size += coder->data_raw_size;
-    	total_size += coder->data_size;
-    	total_size += coder->data_size * 2;
-    	total_size += coder->data_compressed_size;
+        int structures_size = 0;
+        structures_size += coder->segment_count * sizeof(struct gpujpeg_segment);
+        structures_size += coder->param_image.comp_count * sizeof(struct gpujpeg_component);
+        int total_size = 0;
+        total_size += structures_size;
+        total_size += coder->data_raw_size;
+        total_size += coder->data_size;
+        total_size += coder->data_size * 2;
+        total_size += coder->data_compressed_size;
 
         printf("\nAllocation Info:\n");
         printf("    Segment Count:            %d\n", coder->segment_count);
@@ -495,7 +496,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     int16_t* d_comp_data_quantized = coder->d_data_quantized;
     int16_t* comp_data_quantized = coder->data_quantized;
     for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
-    	struct gpujpeg_component* component = &coder->component[comp];
+        struct gpujpeg_component* component = &coder->component[comp];
         component->d_data = d_comp_data;
         component->d_data_quantized = d_comp_data_quantized;
         component->data_quantized = comp_data_quantized;

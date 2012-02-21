@@ -61,7 +61,7 @@
 #define GPUJPEG_TIMER_STOP() GPUJPEG_CUSTOM_TIMER_STOP(def)
 #define GPUJPEG_TIMER_DURATION() GPUJPEG_CUSTOM_TIMER_DURATION(def)
 #define GPUJPEG_TIMER_STOP_PRINT(text) GPUJPEG_CUSTOM_TIMER_STOP_PRINT(def, text)
-	
+    
 // CUDA check error
 #define gpujpeg_cuda_check_error(msg) \
     { \

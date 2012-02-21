@@ -45,6 +45,10 @@ gpujpeg_writer_create(struct gpujpeg_encoder* encoder)
     writer->buffer = malloc(buffer_size * sizeof(uint8_t));
     if ( writer->buffer == NULL )
         return NULL;
+    writer->buffer_current = NULL;
+    writer->segment_info = NULL;
+    writer->segment_info_index = 0;
+    writer->segment_info_position = 0;
     
     return writer;
 }
@@ -280,8 +284,63 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 
 /** Documented at declaration */
 void
+gpujpeg_writer_write_segment_info(struct gpujpeg_encoder* encoder)
+{
+    if ( encoder->coder.param.segment_info ) {
+        if ( encoder->writer->segment_info_position == 0 ) {
+            encoder->writer->segment_info_position = encoder->writer->buffer_current;
+        }
+        // Get segment position in scan
+        int position = encoder->writer->buffer_current - encoder->writer->segment_info_position;
+
+        // Save segment position into segment info data
+        encoder->writer->segment_info[encoder->writer->segment_info_index + 0] = (uint8_t)(((position) >> 24) & 0xFF);
+        encoder->writer->segment_info[encoder->writer->segment_info_index + 1] = (uint8_t)(((position) >> 16) & 0xFF);
+        encoder->writer->segment_info[encoder->writer->segment_info_index + 2] = (uint8_t)(((position) >> 8) & 0xFF);
+        encoder->writer->segment_info[encoder->writer->segment_info_index + 3] = (uint8_t)(((position) >> 0) & 0xFF);
+
+        // Increase segment info index
+        encoder->writer->segment_info_index += 4;
+    }
+}
+
+/** Documented at declaration */
+void
 gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int scan_index)
-{        
+{
+    // Write custom application header containing info about scan segments
+    if ( encoder->coder.param.segment_info && encoder->coder.param.restart_interval > 0 ) {
+        gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_SEGMENT_INFO);
+
+        // Get segment count in scan
+        int segment_count = 0;
+        if ( encoder->coder.param.interleaved == 1 ) {
+            // Get segment count for all components
+            segment_count = encoder->coder.segment_count;
+        } else {
+            // Component index
+            int comp_index = scan_index;
+            // Get segment count for one component
+            segment_count = encoder->coder.component[comp_index].segment_count;
+        }
+
+        // Calculate header data size
+        int header_data_size = (segment_count + 1) * 4;
+
+        // Write custom application header
+        gpujpeg_writer_emit_2byte(encoder->writer, 3 + header_data_size);
+        gpujpeg_writer_emit_byte(encoder->writer, scan_index);
+
+        // Set pointer to current segment info data block, where segment positions will be placed
+        encoder->writer->segment_info = encoder->writer->buffer_current;
+        encoder->writer->segment_info_index = 0;
+        encoder->writer->segment_info_position = 0;
+
+        // Prepare size for segment info data
+        encoder->writer->buffer_current += header_data_size;
+    }
+
+    // Begin scan header
     gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_SOS);
     
     if ( encoder->coder.param.interleaved == 1 ) {
