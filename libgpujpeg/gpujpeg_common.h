@@ -53,9 +53,9 @@ struct gpujpeg_device_info
     // Amount of global memory
     long global_memory;
     // Amount of constant memory
-    int constant_memory;
+    long constant_memory;
     // Amount of shared memory
-    int shared_memory;
+    long shared_memory;
     // Number of registers per block
     int register_count;
     // Number of multiprocessors
