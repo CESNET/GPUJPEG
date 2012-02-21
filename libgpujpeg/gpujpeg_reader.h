@@ -67,6 +67,12 @@ struct gpujpeg_reader
     
     // Total readed size
     int data_compressed_size;
+
+    // Segment info
+    uint8_t* segment_info;
+
+    // Segment info size
+    int segment_info_size;
 };
 
 /**

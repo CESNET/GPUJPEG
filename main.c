@@ -43,7 +43,7 @@ print_help()
         "   -c, --colorspace            set raw image colorspace, e.g. rgb, yuv, ycbcr-jpeg\n"
         "   -q, --quality               set quality level 0-100 (default 75)\n"
         "   -r, --restart               set restart interval (default 8)\n"
-        "       --segment               use segment info in stream for fast decoding\n"
+        "       --segment-info          use segment info in stream for fast decoding\n"
         "       --subsampled            use chroma subsampling\n"
         "   -i  --interleaved           flag if use interleaved stream for encoding\n"
         "   -e, --encode                encode images\n"
@@ -64,7 +64,7 @@ main(int argc, char *argv[])
         {"colorspace",         required_argument, 0, 'c'},
         {"quality",            required_argument, 0, 'q'},
         {"restart",            required_argument, 0, 'r'},
-        {"segment",            optional_argument, 0,  1 },
+        {"segment-info",       optional_argument, 0,  1 },
         {"subsampled",         optional_argument, 0,  2 },
         {"interleaved",        optional_argument, 0, 'i'},
         {"encode",             no_argument,       0, 'e'},

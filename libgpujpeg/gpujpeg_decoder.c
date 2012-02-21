@@ -281,8 +281,9 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
             decoder->table_quantization[type].d_table, 
             inv_roi
         );
-        if ( status != 0 )
-            printf("Error %d\n", status);
+        if ( status != 0 ) {
+            fprintf(stderr, "[GPUJPEG] [Error] Inverse DCT failed (error %d)!\n", status);
+        }
             
         //gpujpeg_component_print8(component, component->d_data);
     }

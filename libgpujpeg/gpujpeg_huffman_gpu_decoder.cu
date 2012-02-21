@@ -459,10 +459,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     #endif
     );
     cudaError cuerr = cudaThreadSynchronize();
-    if ( cuerr != cudaSuccess ) {
-        fprintf(stderr, "Huffman decoding failed: %s!\n", cudaGetErrorString(cuerr));
-        return -1;
-    }
+    gpujpeg_cuda_check_error("Huffman decoding failed");
     
     return 0;
 }

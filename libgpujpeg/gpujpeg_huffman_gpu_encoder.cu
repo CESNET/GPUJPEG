@@ -420,11 +420,8 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
         ,encoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC]
     #endif
     );
-    cudaError cuerr = cudaThreadSynchronize();
-    if ( cuerr != cudaSuccess ) {
-        fprintf(stderr, "Huffman encoding failed: %s!\n", cudaGetErrorString(cuerr));
-        return -1;
-    }
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Huffman encoding failed");
     
     return 0;
 }
