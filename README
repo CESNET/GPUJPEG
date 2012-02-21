@@ -304,9 +304,9 @@ USAGE:
       --restart=8
           Set restart interval for encoder, number of MCUs between 
           restart markers
-      --chroma-subsampling
+      --subsampled
           Produce chroma subsampled JPEG stream
-      --interleaving
+      --interleaved
           Produce interleaved stream
       --encode
           Encode images
