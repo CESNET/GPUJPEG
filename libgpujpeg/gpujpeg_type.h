@@ -45,7 +45,7 @@
 #define GPUJPEG_OPENGL_INTEROPERABILITY         2
 
 /** Maximum number of segment info header in stream */
-#define GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT  20
+#define GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT   100
 
 /**
  * Color spaces for JPEG codec
