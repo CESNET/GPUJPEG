@@ -30,6 +30,8 @@
 #include "gpujpeg_huffman_gpu_encoder.h"
 #include "gpujpeg_util.h"
 
+#define THREAD_BLOCK_SIZE 48
+
 #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
 /** Allocate huffman tables in constant memory */
 __constant__ struct gpujpeg_table_huffman_encoder gpujpeg_huffman_gpu_encoder_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
@@ -155,9 +157,16 @@ __device__ int
 gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, int16_t* data, uint8_t* & data_compressed, 
     struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
+    // Load block to shared memory
+    __shared__ int16_t s_data[64 * THREAD_BLOCK_SIZE];
+    for ( int i = 0; i < 16; i++ ) {
+        ((double*)s_data)[16 * threadIdx.x + i] = ((double*)data)[i];
+    }
+    int data_start = 64 * threadIdx.x;
+
     // Encode the DC coefficient difference per section F.1.2.1
-    int temp = data[0] - dc;
-    dc = data[0];
+    int temp = s_data[data_start + 0] - dc;
+    dc = s_data[data_start + 0];
 
     int temp2 = temp;
     if ( temp < 0 ) {
@@ -190,7 +199,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
     int r = 0;
     for ( int k = 1; k < 64; k++ ) 
     {
-        if ( (temp = data[gpujpeg_huffman_gpu_encoder_order_natural[k]]) == 0 ) {
+        if ( (temp = s_data[data_start + gpujpeg_huffman_gpu_encoder_order_natural[k]]) == 0 ) {
             r++;
         }
         else {
@@ -405,7 +414,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
             
     // Run kernel
-    dim3 thread(32);
+    dim3 thread(THREAD_BLOCK_SIZE);
     dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, thread.x));
     gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
         coder->d_component, 

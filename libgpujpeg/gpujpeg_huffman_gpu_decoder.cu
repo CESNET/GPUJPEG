@@ -30,6 +30,7 @@
 #include "gpujpeg_huffman_gpu_decoder.h"
 #include "gpujpeg_util.h"
 
+#define THREAD_BLOCK_SIZE 32
 
 #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
 /** Allocate huffman tables in constant memory */
@@ -231,6 +232,13 @@ __device__ inline int
 gpujpeg_huffman_gpu_decoder_decode_block(int & get_bits, int & get_buff, int & dc, uint8_t* & data, int & data_size, int16_t* data_output, 
     struct gpujpeg_table_huffman_decoder* table_dc, struct gpujpeg_table_huffman_decoder* table_ac)
 {
+    // Prepare block in shared memory
+    __shared__ int16_t s_data_output[64 * THREAD_BLOCK_SIZE];
+    int data_output_start = 64 * threadIdx.x;
+    for ( int i = 0; i < 16; i++ ) {
+        ((int64_t*)s_data_output)[THREAD_BLOCK_SIZE * i + threadIdx.x] = 0;
+    }
+
     // Section F.2.2.1: decode the DC coefficient difference
     // get dc category number, s
     int s = gpujpeg_huffman_gpu_decoder_get_category(get_bits, get_buff, data, data_size, table_dc);
@@ -246,7 +254,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(int & get_bits, int & get_buff, int & d
     dc = s;
 
     // Output the DC coefficient (assumes gpujpeg_natural_order[0] = 0)
-    data_output[0] = s;
+    s_data_output[data_output_start + 0] = s;
     
     // Section F.2.2.2: decode the AC coefficients
     // Since zeroes are skipped, output area must be cleared beforehand
@@ -265,7 +273,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(int & get_bits, int & get_buff, int & d
             //    s: ac value
             s = gpujpeg_huffman_gpu_decoder_value_from_category(s, r);
 
-            data_output[gpujpeg_huffman_gpu_decoder_order_natural[k]] = s;            
+            s_data_output[data_output_start + gpujpeg_huffman_gpu_decoder_order_natural[k]] = s;
         } else {
             // s = 0, means ac value is 0 ? Only if r = 15.  
             //means all the left ac are zero
@@ -283,6 +291,11 @@ gpujpeg_huffman_gpu_decoder_decode_block(int & get_bits, int & get_buff, int & d
         printf("\n");
     }*/
     
+    // Save block from shared memory to global memory
+    for ( int i = 0; i < 16; i++ ) {
+        ((double*)data_output)[i] = ((double*)s_data_output)[16 * threadIdx.x + i];
+    }
+
     return 0;
 }
 
@@ -443,7 +456,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     
     // Run kernel
-    dim3 thread(32);
+    dim3 thread(THREAD_BLOCK_SIZE);
     dim3 grid(gpujpeg_div_and_round_up(decoder->segment_count, thread.x));
     gpujpeg_huffman_decoder_decode_kernel<<<grid, thread>>>(
         coder->d_component, 
