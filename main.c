@@ -40,7 +40,8 @@ print_help()
         "   -v, --verbose               verbose output\n"
         "   -s, --size                  set raw image size in pixels, e.g. 1920x1080\n"
         "   -f, --sampling-factor       set raw image sampling factor, e.g. 4:2:2\n"
-        "   -c, --colorspace            set raw image colorspace, e.g. rgb, yuv, ycbcr-jpeg\n"
+        "   -c, --colorspace            set raw image colorspace, e.g. rgb, yuv,\n"
+        "                               ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
         "   -q, --quality               set quality level 0-100 (default 75)\n"
         "   -r, --restart               set restart interval (default 8)\n"
         "       --segment-info          use segment info in stream for fast decoding\n"
@@ -116,9 +117,13 @@ main(int argc, char *argv[])
             if ( strcmp(optarg, "rgb") == 0 )
                 param_image.color_space = GPUJPEG_RGB;
             else if ( strcmp(optarg, "yuv") == 0 )
-                param_image.color_space = GPUJPEG_YCBCR_ITU_R;
+                param_image.color_space = GPUJPEG_YUV;
             else if ( strcmp(optarg, "ycbcr-jpeg") == 0 )
-                param_image.color_space = GPUJPEG_YCBCR_JPEG;
+                param_image.color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+            else if ( strcmp(optarg, "ycbcr-bt601") == 0 )
+                param_image.color_space = GPUJPEG_YCBCR_BT601;
+            else if ( strcmp(optarg, "ycbcr-bt709") == 0 )
+                param_image.color_space = GPUJPEG_YCBCR_BT709;
             else
                 fprintf(stderr, "Colorspace '%s' is not available!\n", optarg);
             break;
@@ -216,7 +221,7 @@ main(int argc, char *argv[])
     
     // Detect color spalce
     if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV && param_image.color_space == GPUJPEG_RGB )
-        param_image.color_space = GPUJPEG_YCBCR_ITU_R;
+        param_image.color_space = GPUJPEG_YUV;
     
     if ( encode == 1 ) {    
         // Create encoder
@@ -324,7 +329,7 @@ main(int argc, char *argv[])
             const char* output = argv[index + 1];
             if ( encode == 1 ) {
                 static char buffer_output[255];
-                if ( param_image.color_space == GPUJPEG_YCBCR_ITU_R )
+                if ( param_image.color_space != GPUJPEG_RGB )
                     sprintf(buffer_output, "%s.decoded.yuv", output);
                 else
                     sprintf(buffer_output, "%s.decoded.rgb", output);

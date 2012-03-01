@@ -52,8 +52,10 @@
  */
 enum gpujpeg_color_space {
     GPUJPEG_RGB = 1,
-    GPUJPEG_YCBCR_ITU_R = 2,
-    GPUJPEG_YCBCR_JPEG = 3,
+    GPUJPEG_YCBCR_BT601 = 2,
+    GPUJPEG_YCBCR_BT601_256LVLS = 3,
+    GPUJPEG_YCBCR_BT709 = 4,
+    GPUJPEG_YUV = GPUJPEG_YCBCR_BT709
 };
 
 /**

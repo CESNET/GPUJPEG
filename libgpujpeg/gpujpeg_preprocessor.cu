@@ -31,6 +31,16 @@
 #include "gpujpeg_util.h"
 
 /**
+ * Clip [0,255] range
+ */
+inline __device__ float gpujpeg_clamp(float value)
+{
+    value = (value >= 0.0f) ? value : 0.0f;
+    value = (value <= 255.0) ? value : 255.0f;
+    return value;
+}
+
+/**
  * Color space transformation
  *
  * @param color_space_from
@@ -55,67 +65,140 @@ struct gpujpeg_color_transform<color_space, color_space> {
     }
 };
 
-/** Specialization [color_space_from = GPUJPEG_RGB, color_space_to = GPUJPEG_YCBCR_JPEG] */
+/** Specialization [color_space_from = GPUJPEG_RGB, color_space_to = GPUJPEG_YCBCR_BT601] */
 template<>
-struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_JPEG> {
-    /** RGB -> YCbCr transform (8 bit) */
-    static __device__ void 
+struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601> {
+    /** RGB -> YCbCr (ITU-R Recommendation BT.601) transform (8 bit) */
+    static __device__ void
     perform(float & c1, float & c2, float & c3) {
-        float r1 = 0.299f * c1 + 0.587f * c2 + 0.114f * c3;
-        float r2 = -0.1687f * c1 - 0.3313f * c2 + 0.5f * c3 + 128.0f;
-        float r3 = 0.5f * c1 - 0.4187f * c2 - 0.0813f * c3 + 128.0f;
+        // Source: http://www.equasys.de/colorconversion.html
+        float r1 =  0.257000f * c1 + 0.504000f * c2 + 0.098000f * c3 + 16.0f;
+        float r2 = -0.148000f * c1 - 0.291000f * c2 + 0.439000f * c3 + 128.0f;
+        float r3 =  0.439000f * c1 - 0.368000f * c2 - 0.071000f * c3 + 128.0f;
         c1 = r1;
         c2 = r2;
         c3 = r3;
     }
 };
-
-/** Specialization [color_space_from = GPUJPEG_YCBCR_ITU_R, color_space_to = GPUJPEG_YCBCR_JPEG] */
+/** Specialization [color_space_from = GPUJPEG_YCBCR_BT601, color_space_to = GPUJPEG_RGB] */
 template<>
-struct gpujpeg_color_transform<GPUJPEG_YCBCR_ITU_R, GPUJPEG_YCBCR_JPEG> {
-    /** YUV -> YCbCr transform (8 bit) */
-    static __device__ void 
+struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_RGB> {
+    /** YCbCr (ITU-R Recommendation BT.601) -> RGB transform (8 bit) */
+    static __device__ void
     perform(float & c1, float & c2, float & c3) {
-        c1 -= 16;
-        // Check minimum value 0
-        c1 = (c1 >= 0.0f) ? c1 : 0.0f;
+        // Source: http://www.equasys.de/colorconversion.html
+        float r1 = c1 - 16.0f;
+        float r2 = c2 - 128.0f;
+        float r3 = c3 - 128.0f;
+        c1 = gpujpeg_clamp(1.164000f * r1 + 0.000000f * r2 + 1.596000f * r3);
+        c2 = gpujpeg_clamp(1.164000f * r1 - 0.392000f * r2 - 0.813000f * r3);
+        c3 = gpujpeg_clamp(1.164000f * r1 + 2.017000f * r2 + 0.000000f * r3);
     }
 };
 
-/** Specialization [color_space_from = GPUJPEG_YCBCR_JPEG, color_space_to = GPUJPEG_RGB] */
+/** Specialization [color_space_from = GPUJPEG_RGB, color_space_to = GPUJPEG_YCBCR_BT601_256LVLS] */
 template<>
-struct gpujpeg_color_transform<GPUJPEG_YCBCR_JPEG, GPUJPEG_RGB> {
-    /** YCbCr -> RGB transform (8 bit) */
+struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS> {
+    /** RGB -> YCbCr (ITU-R Recommendation BT.601 with 256 levels) transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
-        // Update values
+        // Source: http://www.ecma-international.org/publications/files/ECMA-TR/TR-098.pdf, page 3
+        float r1 =  0.299000f * c1 + 0.587000f * c2 + 0.114000f * c3;
+        float r2 = -0.168736f * c1 - 0.331264f * c2 + 0.500000f * c3 + 128.0f;
+        float r3 =  0.500000f * c1 - 0.418688f * c2 - 0.081312f * c3 + 128.0f;
+        c1 = r1;
+        c2 = r2;
+        c3 = r3;
+    }
+};
+/** Specialization [color_space_from = GPUJPEG_YCBCR_BT601_256LVLS, color_space_to = GPUJPEG_RGB] */
+template<>
+struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB> {
+    /** YCbCr (ITU-R Recommendation BT.601 with 256 levels) -> RGB transform (8 bit) */
+    static __device__ void
+    perform(float & c1, float & c2, float & c3) {
+        // Source: http://www.ecma-international.org/publications/files/ECMA-TR/TR-098.pdf, page 4
         float r1 = c1 - 0.0f;
         float r2 = c2 - 128.0f;
         float r3 = c3 - 128.0f;
-        // Perfomr YCbCr -> RGB conversion
-        c1 = (1.0f * r1 + 0.0f * r2 + 1.402f * r3);
-        c2 = (1.0f * r1 - 0.344136f * r2 - 0.714136f * r3);
-        c3 = (1.0f * r1 + 1.772f * r2 + 0.0f * r3);
-        // Check minimum value 0
-        c1 = (c1 >= 0.0f) ? c1 : 0.0f;
-        c2 = (c2 >= 0.0f) ? c2 : 0.0f;
-        c3 = (c3 >= 0.0f) ? c3 : 0.0f;
-        // Check maximum value 255
-        c1 = (c1 <= 255.0) ? c1 : 255.0f;
-        c2 = (c2 <= 255.0) ? c2 : 255.0f;
-        c3 = (c3 <= 255.0) ? c3 : 255.0f;    
+        c1 = gpujpeg_clamp(1.000000f * r1 + 0.000000f * r2 + 1.402000f * r3);
+        c2 = gpujpeg_clamp(1.000000f * r1 - 0.344136f * r2 - 0.714136f * r3);
+        c3 = gpujpeg_clamp(1.000000f * r1 + 1.772000f * r2 + 0.000000f * r3);
     }
 };
 
-/** Specialization [color_space_from = GPUJPEG_YCBCR_JPEG, color_space_to = GPUJPEG_YCBCR_ITU_R] */
+/** Specialization [color_space_from = GPUJPEG_RGB, color_space_to = GPUJPEG_YCBCR_BT709] */
 template<>
-struct gpujpeg_color_transform<GPUJPEG_YCBCR_JPEG, GPUJPEG_YCBCR_ITU_R> {
-    /** YCbCr -> YUV transform (8 bit) */
+struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709> {
+    /** RGB -> YCbCr (ITU-R Recommendation BT.709) transform (8 bit) */
+    static __device__ void
+    perform(float & c1, float & c2, float & c3) {
+        // Source: http://www.equasys.de/colorconversion.html
+        float r1 =  0.183000f * c1 + 0.614000f * c2 + 0.062000f * c3 + 16.0f;
+        float r2 = -0.101000f * c1 - 0.339000f * c2 + 0.439000f * c3 + 128.0f;
+        float r3 =  0.439000f * c1 - 0.399000f * c2 - 0.040000f * c3 + 128.0f;
+        c1 = r1;
+        c2 = r2;
+        c3 = r3;
+    }
+};
+/** Specialization [color_space_from = GPUJPEG_YCBCR_BT709, color_space_to = GPUJPEG_RGB] */
+template<>
+struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_RGB> {
+    /** YCbCr (ITU-R Recommendation BT.709) -> RGB transform (8 bit) */
+    static __device__ void
+    perform(float & c1, float & c2, float & c3) {
+        // Source: http://www.equasys.de/colorconversion.html
+        float r1 = c1 - 16.0f;
+        float r2 = c2 - 128.0f;
+        float r3 = c3 - 128.0f;
+        c1 = gpujpeg_clamp(1.164000f * r1 + 0.000000f * r2 + 1.793000f * r3);
+        c2 = gpujpeg_clamp(1.164000f * r1 - 0.213000f * r2 - 0.533000f * r3);
+        c3 = gpujpeg_clamp(1.164000f * r1 + 2.112000f * r2 + 0.000000f * r3);
+    }
+};
+
+/** Specialization [color_space_from = GPUJPEG_YCBCR_BT601, color_space_to = GPUJPEG_YCBCR_BT601_256LVLS] */
+template<>
+struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_YCBCR_BT601_256LVLS> {
+    /** YCbCr (ITU-R Recommendation BT.709) -> YCbCr (ITU-R Recommendation BT.601 with 256 levels) transform (8 bit) */
     static __device__ void 
     perform(float & c1, float & c2, float & c3) {
-        c1 += 16;
-        // Check maximum value 255
-        c1 = (c1 <= 255.0) ? c1 : 255.0f;
+        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_RGB>::perform(c1,c2,c3);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS>::perform(c1,c2,c3);
+
+    }
+};
+/** Specialization [color_space_from = GPUJPEG_YCBCR_BT601_256LVLS, color_space_to = GPUJPEG_YCBCR_BT601] */
+template<>
+struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_YCBCR_BT601> {
+    /** YCbCr (ITU-R Recommendation BT.601 with 256 levels) -> YCbCr (ITU-R Recommendation BT.709) transform (8 bit) */
+    static __device__ void 
+    perform(float & c1, float & c2, float & c3) {
+        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB>::perform(c1,c2,c3);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601>::perform(c1,c2,c3);
+    }
+};
+
+/** Specialization [color_space_from = GPUJPEG_YCBCR_BT709, color_space_to = GPUJPEG_YCBCR_BT601_256LVLS] */
+template<>
+struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_YCBCR_BT601_256LVLS> {
+    /** YCbCr (ITU-R Recommendation BT.709) -> YCbCr (ITU-R Recommendation BT.601 with 256 levels) transform (8 bit) */
+    static __device__ void
+    perform(float & c1, float & c2, float & c3) {
+        gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_RGB>::perform(c1,c2,c3);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS>::perform(c1,c2,c3);
+
+    }
+};
+/** Specialization [color_space_from = GPUJPEG_YCBCR_BT601_256LVLS, color_space_to = GPUJPEG_YCBCR_ITU_R] */
+template<>
+struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_YCBCR_BT709> {
+    /** YCbCr (ITU-R Recommendation BT.601 with 256 levels) -> YCbCr (ITU-R Recommendation BT.709) transform (8 bit) */
+    static __device__ void
+    perform(float & c1, float & c2, float & c3) {
+        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB>::perform(c1,c2,c3);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709>::perform(c1,c2,c3);
     }
 };
 
@@ -236,7 +319,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     float r3 = (float)(s_data[offset + 2]);
 
     // Color transform
-    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR_JPEG>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR_BT601_256LVLS>::perform(r1, r2, r3);
     
     // Position
     int image_position = gX + x;
@@ -287,7 +370,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     }
     
     // Color transform
-    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR_JPEG>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR_BT601_256LVLS>::perform(r1, r2, r3);
     
     // Position
     int image_position = gX + x;
@@ -350,22 +433,32 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_encoder* encoder)
         assert(coder->param_image.sampling_factor == GPUJPEG_4_4_4);
         RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_RGB);
     } 
-    // YCbCr ITU-R color space
-    else if ( coder->param_image.color_space == GPUJPEG_YCBCR_ITU_R ) {
+    // YCbCr color space
+    else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT601 ) {
         if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
-            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_YCBCR_ITU_R);
+            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_YCBCR_BT601);
         } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
-            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_YCBCR_ITU_R);
+            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_YCBCR_BT601);
         } else {
             assert(false);
         }
     } 
-    // YCbCr JPEG color space
-    else if ( coder->param_image.color_space == GPUJPEG_YCBCR_JPEG ) {
+    // YCbCr color space
+    else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT601_256LVLS ) {
         if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
-            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_YCBCR_JPEG);
+            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_YCBCR_BT601_256LVLS);
         } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
-            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_YCBCR_JPEG);
+            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_YCBCR_BT601_256LVLS);
+        } else {
+            assert(false);
+        }
+    }
+    // YCbCr color space
+    else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT709 ) {
+        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_YCBCR_BT709);
+        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_YCBCR_BT709);
         } else {
             assert(false);
         }
@@ -531,13 +624,13 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     gpujpeg_preprocessor_comp_to_raw_load<s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform(r3, image_position_x, image_position_y, data.comp[2]);
     
     // Color transform
-    gpujpeg_color_transform<GPUJPEG_YCBCR_JPEG, color_space>::perform(r1, r2, r3);
+    gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, color_space>::perform(r1, r2, r3);
     
     // Save
     image_position = image_position * 3;
-    d_data_raw[image_position + 0] = (uint8_t)r1;
-    d_data_raw[image_position + 1] = (uint8_t)r2;
-    d_data_raw[image_position + 2] = (uint8_t)r3;
+    d_data_raw[image_position + 0] = (uint8_t)round(r1);
+    d_data_raw[image_position + 1] = (uint8_t)round(r2);
+    d_data_raw[image_position + 2] = (uint8_t)round(r3);
 }
 
 /** Specialization [sampling factor is 4:2:2] */
@@ -567,15 +660,15 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     gpujpeg_preprocessor_comp_to_raw_load<s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform(r3, image_position_x, image_position_y, data.comp[2]);
     
     // Color transform
-    gpujpeg_color_transform<GPUJPEG_YCBCR_JPEG, color_space>::perform(r1, r2, r3);
+    gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, color_space>::perform(r1, r2, r3);
     
     // Save
     image_position = image_position * 2;
-    d_data_raw[image_position + 1] = (uint8_t)r1;
+    d_data_raw[image_position + 1] = (uint8_t)round(r1);
     if ( (image_position_x % 2) == 0 )
-        d_data_raw[image_position + 0] = (uint8_t)r2;
+        d_data_raw[image_position + 0] = (uint8_t)round(r2);
     else
-        d_data_raw[image_position + 0] = (uint8_t)r3;
+        d_data_raw[image_position + 0] = (uint8_t)round(r3);
 }
 
 /**
@@ -626,22 +719,32 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_decoder* decoder)
         assert(coder->param_image.sampling_factor == GPUJPEG_4_4_4);
         RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_RGB);
     } 
-    // YCbCr ITU-R color space
-    else if ( coder->param_image.color_space == GPUJPEG_YCBCR_ITU_R ) {
+    // YCbCr color space
+    else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT601 ) {
         if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
-            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_YCBCR_ITU_R)
+            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_YCBCR_BT601)
         } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
-            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_YCBCR_ITU_R)
+            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_YCBCR_BT601)
         } else {
             assert(false);
         }
     }
-    // YCbCr JPEG color space
-    else if ( coder->param_image.color_space == GPUJPEG_YCBCR_JPEG ) {
+    // YCbCr color space
+    else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT601_256LVLS ) {
         if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
-            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_YCBCR_JPEG)
+            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_YCBCR_BT601_256LVLS)
         } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
-            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_YCBCR_JPEG)
+            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_YCBCR_BT601_256LVLS)
+        } else {
+            assert(false);
+        }
+    }
+    // YCbCr color space
+    else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT709 ) {
+        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_YCBCR_BT709)
+        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_YCBCR_BT709)
         } else {
             assert(false);
         }
