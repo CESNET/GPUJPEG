@@ -157,17 +157,20 @@ __device__ int
 gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, int16_t* data, uint8_t* & data_compressed, 
     struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
+    typedef uint64_t loading_t;
+    const int loading_iteration_count = 64 * 2 / sizeof(loading_t);
+    
     // Load block to shared memory
     __shared__ int16_t s_data[64 * THREAD_BLOCK_SIZE];
-    for ( int i = 0; i < 16; i++ ) {
-        ((double*)s_data)[16 * threadIdx.x + i] = ((double*)data)[i];
+    for ( int i = 0; i < loading_iteration_count; i++ ) {
+        ((loading_t*)s_data)[loading_iteration_count * threadIdx.x + i] = ((loading_t*)data)[i];
     }
     int data_start = 64 * threadIdx.x;
 
     // Encode the DC coefficient difference per section F.1.2.1
     int temp = s_data[data_start + 0] - dc;
     dc = s_data[data_start + 0];
-
+    
     int temp2 = temp;
     if ( temp < 0 ) {
         // Temp is abs value of input
@@ -184,12 +187,12 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
         temp >>= 1;
     }
 
-    //    Write category number
+    // Write category number
     if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_dc->code[nbits], d_table_dc->size[nbits], put_value, put_bits, data_compressed) != 0 ) {
         return -1;
     }
 
-    //    Write category offset (EmitBits rejects calls with size 0)
+    // Write category offset (EmitBits rejects calls with size 0)
     if ( nbits ) {
         if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
             return -1;
@@ -199,7 +202,8 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
     int r = 0;
     for ( int k = 1; k < 64; k++ ) 
     {
-        if ( (temp = s_data[data_start + gpujpeg_huffman_gpu_encoder_order_natural[k]]) == 0 ) {
+        temp = s_data[data_start + gpujpeg_huffman_gpu_encoder_order_natural[k]];
+        if ( temp == 0 ) {
             r++;
         }
         else {
