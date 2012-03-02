@@ -31,6 +31,7 @@
 #include "gpujpeg_util.h"
 #include <npp.h>
 #include <cuda_gl_interop.h>
+#include <math.h>
 
 /** Documented at declaration */
 struct gpujpeg_devices_info
@@ -623,4 +624,122 @@ gpujpeg_image_destroy(uint8_t* image)
     cudaFreeHost(image);
 
     return 0;
+}
+
+/** Documented at declaration */
+void
+gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujpeg_sampling_factor sampling_factor)
+{
+    // Load image
+    int image_size = 0;
+    uint8_t* image = NULL;
+    if ( gpujpeg_image_load_from_file(filename, &image, &image_size) != 0 ) {
+        fprintf(stderr, "Failed to load image [%s]!\n", filename);
+        return;
+    }
+
+    int c_min[3] = {256, 256, 256};
+    int c_max[3] = {0, 0, 0};
+
+    if ( sampling_factor == GPUJPEG_4_4_4 ) {
+        uint8_t* in_ptr = image;
+        for ( int i = 0; i < width * height; i++ ) {
+            for ( int c = 0; c < 3; c++ ) {
+                if ( in_ptr[c] < c_min[c] )
+                    c_min[c] = in_ptr[c];
+                if ( in_ptr[c] > c_max[c] )
+                    c_max[c] = in_ptr[c];
+            }
+            in_ptr += 3;
+        }
+    } else if ( sampling_factor == GPUJPEG_4_2_2 ) {
+        uint8_t* in_ptr = image;
+        for ( int i = 0; i < width * height; i++ ) {
+            if ( in_ptr[1] < c_min[0] )
+                c_min[0] = in_ptr[1];
+            if ( in_ptr[1] > c_max[0] )
+                c_max[0] = in_ptr[1];
+            if ( i % 2 == 1 ) {
+                if ( in_ptr[0] < c_min[1] )
+                    c_min[1] = in_ptr[0];
+                if ( in_ptr[0] > c_max[1] )
+                    c_max[1] = in_ptr[0];
+            } else {
+                if ( in_ptr[0] < c_min[2] )
+                    c_min[2] = in_ptr[0];
+                if ( in_ptr[0] > c_max[2] )
+                    c_max[2] = in_ptr[0];
+            }
+
+            in_ptr += 2;
+        }
+    } else {
+        assert(0);
+    }
+
+    printf("Image Samples Range:\n");
+    for ( int c = 0; c < 3; c++ ) {
+        printf("Component %d: %d - %d\n", c + 1, c_min[c], c_max[c]);
+    }
+
+    // Destroy image
+    gpujpeg_image_destroy(image);
+}
+
+/** Documented at declaration */
+void
+gpujpeg_image_scale_sampling_factor(const char* input, const char* output, int width, int height,
+        enum gpujpeg_sampling_factor sampling_factor_from, enum gpujpeg_sampling_factor sampling_factor_to)
+{
+    assert(sampling_factor_from != sampling_factor_to);
+
+    struct gpujpeg_image_parameters param_image;
+    gpujpeg_image_set_default_parameters(&param_image);
+    param_image.width = width;
+    param_image.height = height;
+    param_image.sampling_factor = sampling_factor_from;
+
+    // Load image
+    int image_size = gpujpeg_image_calculate_size(&param_image);
+    uint8_t* image = NULL;
+    if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
+        fprintf(stderr, "Failed to load image [%s]!\n", input);
+        return;
+    }
+
+    param_image.sampling_factor = sampling_factor_to;
+
+    int image_output_size = gpujpeg_image_calculate_size(&param_image);
+    uint8_t* image_output = malloc(image_output_size);
+    assert(image_output != NULL);
+
+    if ( sampling_factor_from == GPUJPEG_4_2_2 && sampling_factor_to == GPUJPEG_4_4_4) {
+        uint8_t* in_ptr = image;
+        uint8_t* out_ptr = image_output;
+        for ( int i = 0; i < param_image.width * param_image.height * 2; i += 4 ) {
+            *(out_ptr++) = in_ptr[0];
+            *(out_ptr++) = in_ptr[1];
+            *(out_ptr++) = in_ptr[2];
+            *(out_ptr++) = in_ptr[0];
+            *(out_ptr++) = in_ptr[3];
+            *(out_ptr++) = in_ptr[2];
+            in_ptr += 4;
+        }
+    } else if ( sampling_factor_from == GPUJPEG_4_4_4 && sampling_factor_to == GPUJPEG_4_2_2) {
+        uint8_t* in_ptr = image;
+        uint8_t* out_ptr = image_output;
+        for ( int i = 0; i < param_image.width * param_image.height * 3; i += 6 ) {
+            *(out_ptr++) = round(((double)in_ptr[0] +  in_ptr[3]) / 2);
+            *(out_ptr++) = in_ptr[1];
+            *(out_ptr++) = round(((double)in_ptr[2] +  in_ptr[5]) / 2);
+            *(out_ptr++) = in_ptr[4];
+            in_ptr += 6;
+        }
+    }
+
+    // Save image
+    if ( gpujpeg_image_save_to_file(output, image_output, image_output_size) != 0 ) {
+        fprintf(stderr, "Failed to save image [%s]!\n", output);
+        return;
+    }
 }

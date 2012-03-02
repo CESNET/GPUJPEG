@@ -51,6 +51,8 @@ print_help()
         "   -d, --decode                decode images\n"
         "   -D, --device                cuda device id (default 0)\n"
         "       --device-list           list cuda devices\n"
+        "       --scale-sampling-factor scale sampling factor from input to output image\n"
+        "       --sample-range          show samples range for image\n"
     );
 }
 
@@ -58,20 +60,22 @@ int
 main(int argc, char *argv[])
 {       
     struct option longopts[] = {
-        {"help",               no_argument,       0, 'h'},
-        {"verbose",            no_argument,       0, 'v'},
-        {"size",               required_argument, 0, 's'},
-        {"sampling-factor",    required_argument, 0, 'f'},
-        {"colorspace",         required_argument, 0, 'c'},
-        {"quality",            required_argument, 0, 'q'},
-        {"restart",            required_argument, 0, 'r'},
-        {"segment-info",       optional_argument, 0,  1 },
-        {"subsampled",         optional_argument, 0,  2 },
-        {"interleaved",        optional_argument, 0, 'i'},
-        {"encode",             no_argument,       0, 'e'},
-        {"decode",             no_argument,       0, 'd'},
-        {"device",             required_argument, 0, 'D'},
-        {"device-list",        no_argument,       0,  3 },
+        {"help",                    no_argument,       0, 'h'},
+        {"verbose",                 no_argument,       0, 'v'},
+        {"size",                    required_argument, 0, 's'},
+        {"sampling-factor",         required_argument, 0, 'f'},
+        {"colorspace",              required_argument, 0, 'c'},
+        {"quality",                 required_argument, 0, 'q'},
+        {"restart",                 required_argument, 0, 'r'},
+        {"segment-info",            optional_argument, 0,  1 },
+        {"subsampled",              optional_argument, 0,  2 },
+        {"interleaved",             optional_argument, 0, 'i'},
+        {"encode",                  no_argument,       0, 'e'},
+        {"decode",                  no_argument,       0, 'd'},
+        {"device",                  required_argument, 0, 'D'},
+        {"device-list",             no_argument,       0,  3 },
+        {"scale-sampling-factor",   required_argument, 0,  4 },
+        {"sample-range",            no_argument,       0,  5 },
         0
     };
 
@@ -87,6 +91,8 @@ main(int argc, char *argv[])
     int encode = 0;
     int decode = 0;
     int device_id = 0;
+    int sample_range = 0;
+    int scale_sampling_factor = 0;
     
     // Flags
     int restart_interval_default = 1;
@@ -176,6 +182,17 @@ main(int argc, char *argv[])
         case 'D':
             device_id = atoi(optarg);
             break;
+        case 4:
+            if ( strcmp(optarg, "4:4:4") == 0 )
+                scale_sampling_factor = GPUJPEG_4_4_4;
+            else if ( strcmp(optarg, "4:2:2") == 0 )
+                scale_sampling_factor = GPUJPEG_4_2_2;
+            else
+                fprintf(stderr, "Sampling factor '%s' is not available!\n", optarg);
+            break;
+        case 5:
+            sample_range = 1;
+            break;
         case '?':
             return -1;
         default:
@@ -186,6 +203,15 @@ main(int argc, char *argv[])
     argc -= optind;
     argv += optind;
     
+    // Show info about image samples range
+    if ( sample_range == 1 ) {
+        // For each image
+        for ( int index = 0; index < argc; index++ ) {
+            gpujpeg_image_range_info(argv[index], param_image.width, param_image.height, param_image.sampling_factor);
+        }
+        return 0;
+    }
+
     // Source image and target image must be presented
     if ( argc < 2 ) {
         fprintf(stderr, "Please supply source and destination image filename!\n");
@@ -193,6 +219,23 @@ main(int argc, char *argv[])
         return -1;
     }
     
+    // Scale sampling factor
+    if ( scale_sampling_factor != 0 ) {
+        // Encode images
+        for ( int index = 0; index < argc; index += 2 ) {
+            // Get and check input and output image
+            const char* input = argv[index];
+            const char* output = argv[index + 1];
+            enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
+            enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
+            assert(input_format == output_format);
+
+            gpujpeg_image_scale_sampling_factor(input, output, param_image.width, param_image.height,
+                    param_image.sampling_factor, scale_sampling_factor);
+        }
+        return 0;
+    }
+
     // Detect action if none is specified
     if ( encode == 0 && decode == 0 ) {
         enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(argv[0]);
@@ -407,6 +450,6 @@ main(int argc, char *argv[])
         // Destroy decoder
         gpujpeg_decoder_destroy(decoder);
     }
-    
+
     return 0;
 }

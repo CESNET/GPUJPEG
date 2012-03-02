@@ -413,4 +413,27 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
 int
 gpujpeg_image_destroy(uint8_t* image);
 
+/**
+ * Print range info for image samples
+ *
+ * @param filename
+ * @param width
+ * @param height
+ * @param sampling_factor
+ */
+void
+gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujpeg_sampling_factor sampling_factor);
+
+/**
+ * Print range info for image samples
+ *
+ * @param filename
+ * @param width
+ * @param height
+ * @param sampling_factor
+ */
+void
+gpujpeg_image_scale_sampling_factor(const char* input, const char* output, int width, int height,
+        enum gpujpeg_sampling_factor sampling_factor_from, enum gpujpeg_sampling_factor sampling_factor_to);
+
 #endif // GPUJPEG_COMMON_H
