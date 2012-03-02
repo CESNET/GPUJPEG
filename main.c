@@ -363,8 +363,11 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Failed to preinitialize decoder!\n");
                 return -1;
             }
+        } else {
+            decoder->coder.param_image.color_space = param_image.color_space;
+            decoder->coder.param_image.sampling_factor = param_image.sampling_factor;
         }
-        
+
         // Decode images
         for ( int index = 0; index < argc; index += 2 ) {
             // Get and check input and output image
