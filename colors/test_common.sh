@@ -8,9 +8,12 @@ DIR=`dirname $0`
 # EXTENSION = image extension, e.g. "yuv"
 # MODE      = image arguments for gpujpeg, e.g. "--colorspace=yuv --sampling-factor=4:2:2" 
 
-# Create an image from source in specified mode
+IMAGE=image_bt709_422.yuv
+#IMAGE=camera_bt709_422.yuv
+
+# Create an image from source in specified mode ()
 $DIR/../gpujpeg.sh --size=1920x1080 --colorspace=ycbcr-bt709 --sampling-factor=4:2:2 \
-    --convert $MODE $DIR/image_bt709_422.yuv $DIR/$NAME.$EXTENSION
+    --convert $MODE $DIR/$IMAGE $DIR/$NAME.$EXTENSION
 
 # Encode and Decode the image
 $DIR/../gpujpeg.sh --size 1920x1080 $MODE \
