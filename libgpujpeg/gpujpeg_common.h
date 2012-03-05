@@ -425,15 +425,15 @@ void
 gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujpeg_sampling_factor sampling_factor);
 
 /**
- * Print range info for image samples
+ * Convert image
  *
+ * @param input
  * @param filename
- * @param width
- * @param height
- * @param sampling_factor
+ * @param param_image_from
+ * @param param_image_to
  */
 void
-gpujpeg_image_scale_sampling_factor(const char* input, const char* output, int width, int height,
-        enum gpujpeg_sampling_factor sampling_factor_from, enum gpujpeg_sampling_factor sampling_factor_to);
+gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_image_parameters param_image_from,
+        struct gpujpeg_image_parameters param_image_to);
 
 #endif // GPUJPEG_COMMON_H

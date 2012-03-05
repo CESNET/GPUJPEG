@@ -73,7 +73,7 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
         result = 0;
         
     // Init preprocessor
-    if ( gpujpeg_preprocessor_encoder_init(encoder) != 0 ) {
+    if ( gpujpeg_preprocessor_encoder_init(&encoder->coder) != 0 ) {
         fprintf(stderr, "Failed to init preprocessor!");
         result = 0;
     }
@@ -169,7 +169,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
     GPUJPEG_CUSTOM_TIMER_START(in_gpu);
 
     // Preprocessing
-    if ( gpujpeg_preprocessor_encode(encoder) != 0 )
+    if ( gpujpeg_preprocessor_encode(&encoder->coder) != 0 )
         return -1;
         
     GPUJPEG_TIMER_STOP();

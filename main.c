@@ -36,23 +36,27 @@ print_help()
 {
     printf(
         "gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
-        "   -h, --help                  print help\n"
-        "   -v, --verbose               verbose output\n"
-        "   -s, --size                  set raw image size in pixels, e.g. 1920x1080\n"
-        "   -f, --sampling-factor       set raw image sampling factor, e.g. 4:2:2\n"
-        "   -c, --colorspace            set raw image colorspace, e.g. rgb, yuv,\n"
-        "                               ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
-        "   -q, --quality               set quality level 0-100 (default 75)\n"
-        "   -r, --restart               set restart interval (default 8)\n"
-        "       --segment-info          use segment info in stream for fast decoding\n"
-        "       --subsampled            use chroma subsampling\n"
-        "   -i  --interleaved           flag if use interleaved stream for encoding\n"
-        "   -e, --encode                encode images\n"
-        "   -d, --decode                decode images\n"
-        "   -D, --device                cuda device id (default 0)\n"
-        "       --device-list           list cuda devices\n"
-        "       --scale-sampling-factor scale sampling factor from input to output image\n"
-        "       --sample-range          show samples range for image\n"
+        "   -h, --help             print help\n"
+        "   -v, --verbose          verbose output\n"
+        "   -D, --device           set cuda device id (default 0)\n"
+        "       --device-list      list cuda devices\n"
+        "\n"
+        "   -s, --size             set input image size in pixels, e.g. 1920x1080\n"
+        "   -f, --sampling-factor  set input/output image sampling factor, e.g. 4:2:2\n"
+        "   -c, --colorspace       set input/output image colorspace, e.g. rgb, yuv,\n"
+        "                          ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
+        "\n"
+        "   -q, --quality          set JPEG encoder quality level 0-100 (default 75)\n"
+        "   -r, --restart          set JPEG encoder restart interval (default 8)\n"
+        "       --subsampled       set JPEG encoder to use chroma subsampling\n"
+        "   -i  --interleaved      set JPEG encoder to use interleaved stream\n"
+        "       --segment-info     set JPEG encoder to use segment info in stream\n"
+        "                          for fast decoding\n"
+        "\n"
+        "   -e, --encode           perform JPEG encoding\n"
+        "   -d, --decode           perform JPEG decoding\n"
+        "       --convert          scale sampling factor from input to output image\n"
+        "       --component-range  show samples range for each component in image\n"
     );
 }
 
@@ -62,6 +66,8 @@ main(int argc, char *argv[])
     struct option longopts[] = {
         {"help",                    no_argument,       0, 'h'},
         {"verbose",                 no_argument,       0, 'v'},
+        {"device",                  required_argument, 0, 'D'},
+        {"device-list",             no_argument,       0,  3 },
         {"size",                    required_argument, 0, 's'},
         {"sampling-factor",         required_argument, 0, 'f'},
         {"colorspace",              required_argument, 0, 'c'},
@@ -72,10 +78,8 @@ main(int argc, char *argv[])
         {"interleaved",             optional_argument, 0, 'i'},
         {"encode",                  no_argument,       0, 'e'},
         {"decode",                  no_argument,       0, 'd'},
-        {"device",                  required_argument, 0, 'D'},
-        {"device-list",             no_argument,       0,  3 },
-        {"scale-sampling-factor",   required_argument, 0,  4 },
-        {"sample-range",            no_argument,       0,  5 },
+        {"convert",                 no_argument,       0,  4 },
+        {"component-range",         no_argument,       0,  5 },
         0
     };
 
@@ -87,12 +91,16 @@ main(int argc, char *argv[])
     struct gpujpeg_image_parameters param_image;
     gpujpeg_image_set_default_parameters(&param_image);
     
+    // Original image parameters in conversion
+    struct gpujpeg_image_parameters param_image_original;
+    gpujpeg_image_set_default_parameters(&param_image_original);
+
     // Other parameters
+    int device_id = 0;
     int encode = 0;
     int decode = 0;
-    int device_id = 0;
-    int sample_range = 0;
-    int scale_sampling_factor = 0;
+    int convert = 0;
+    int component_range = 0;
     
     // Flags
     int restart_interval_default = 1;
@@ -183,15 +191,11 @@ main(int argc, char *argv[])
             device_id = atoi(optarg);
             break;
         case 4:
-            if ( strcmp(optarg, "4:4:4") == 0 )
-                scale_sampling_factor = GPUJPEG_4_4_4;
-            else if ( strcmp(optarg, "4:2:2") == 0 )
-                scale_sampling_factor = GPUJPEG_4_2_2;
-            else
-                fprintf(stderr, "Sampling factor '%s' is not available!\n", optarg);
+            convert = 1;
+            memcpy(&param_image_original, &param_image, sizeof(struct gpujpeg_image_parameters));
             break;
         case 5:
-            sample_range = 1;
+            component_range = 1;
             break;
         case '?':
             return -1;
@@ -204,7 +208,7 @@ main(int argc, char *argv[])
     argv += optind;
     
     // Show info about image samples range
-    if ( sample_range == 1 ) {
+    if ( component_range == 1 ) {
         // For each image
         for ( int index = 0; index < argc; index++ ) {
             gpujpeg_image_range_info(argv[index], param_image.width, param_image.height, param_image.sampling_factor);
@@ -219,19 +223,15 @@ main(int argc, char *argv[])
         return -1;
     }
     
-    // Scale sampling factor
-    if ( scale_sampling_factor != 0 ) {
+    // Convert
+    if ( convert == 1 ) {
         // Encode images
         for ( int index = 0; index < argc; index += 2 ) {
-            // Get and check input and output image
+            // Get input and output image
             const char* input = argv[index];
             const char* output = argv[index + 1];
-            enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
-            enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
-            assert(input_format == output_format);
-
-            gpujpeg_image_scale_sampling_factor(input, output, param_image.width, param_image.height,
-                    param_image.sampling_factor, scale_sampling_factor);
+            // Perform conversion
+            gpujpeg_image_convert(input, output, param_image_original, param_image);
         }
         return 0;
     }

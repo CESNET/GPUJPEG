@@ -131,7 +131,7 @@ gpujpeg_common.c.o: gpujpeg_common.c gpujpeg_common.h
 gpujpeg_encoder.c.o: gpujpeg_encoder.c gpujpeg_encoder.h
 gpujpeg_decoder.c.o: gpujpeg_decoder.c gpujpeg_decoder.h
 gpujpeg_table.c.o: gpujpeg_table.c gpujpeg_table.h
-gpujpeg_preprocessor.cu.o: gpujpeg_preprocessor.cu gpujpeg_preprocessor.h
+gpujpeg_preprocessor.cu.o: gpujpeg_preprocessor.cu gpujpeg_preprocessor.h gpujpeg_colorspace.h
 gpujpeg_huffman_cpu_encoder.c.o: gpujpeg_huffman_cpu_encoder.c gpujpeg_huffman_cpu_encoder.h
 gpujpeg_huffman_gpu_encoder.cu.o: gpujpeg_huffman_gpu_encoder.cu gpujpeg_huffman_gpu_encoder.h
 gpujpeg_huffman_cpu_decoder.c.o: gpujpeg_huffman_cpu_decoder.c gpujpeg_huffman_cpu_decoder.h

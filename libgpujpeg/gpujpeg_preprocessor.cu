@@ -227,11 +227,8 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
  * @return kernel
  */
 gpujpeg_preprocessor_encode_kernel
-gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_encoder* encoder)
+gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
 {
-    // Get coder
-    struct gpujpeg_coder* coder = &encoder->coder;
-    
     gpujpeg_preprocessor_sampling_factor_t sampling_factor = gpujpeg_preprocessor_make_sampling_factor(
         coder->sampling_factor.horizontal / coder->component[0].sampling_factor.horizontal,
         coder->sampling_factor.vertical / coder->component[0].sampling_factor.vertical,
@@ -326,21 +323,18 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_encoder* encoder)
 
 /** Documented at declaration */
 int
-gpujpeg_preprocessor_encoder_init(struct gpujpeg_encoder* encoder)
+gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
 {
-    encoder->coder.preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel(encoder);
-    if ( encoder->coder.preprocessor == NULL )
+    coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel(coder);
+    if ( coder->preprocessor == NULL )
         return -1;
     return 0;
 }
 
 /** Documented at declaration */
 int
-gpujpeg_preprocessor_encode(struct gpujpeg_encoder* encoder)
+gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder)
 {    
-    // Get coder
-    struct gpujpeg_coder* coder = &encoder->coder;
-    
     cudaMemset(coder->d_data, 0, coder->data_size * sizeof(uint8_t));
 
     // Select kernel
@@ -534,11 +528,8 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data d
  * @return kernel
  */
 gpujpeg_preprocessor_decode_kernel
-gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_decoder* decoder)
+gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 {
-    // Get coder
-    struct gpujpeg_coder* coder = &decoder->coder;
-    
     gpujpeg_preprocessor_sampling_factor_t sampling_factor = gpujpeg_preprocessor_make_sampling_factor(
         coder->sampling_factor.horizontal / coder->component[0].sampling_factor.horizontal,
         coder->sampling_factor.vertical / coder->component[0].sampling_factor.vertical,
@@ -633,21 +624,18 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_decoder* decoder)
 
 /** Documented at declaration */
 int
-gpujpeg_preprocessor_decoder_init(struct gpujpeg_decoder* decoder)
+gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
-    decoder->coder.preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel(decoder);
-    if ( decoder->coder.preprocessor == NULL )
+    coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel(coder);
+    if ( coder->preprocessor == NULL )
         return -1;
     return 0;
 }
 
 /** Documented at declaration */
 int
-gpujpeg_preprocessor_decode(struct gpujpeg_decoder* decoder)
+gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder)
 {
-    // Get coder
-    struct gpujpeg_coder* coder = &decoder->coder;
-    
     cudaMemset(coder->d_data_raw, 0, coder->data_raw_size * sizeof(uint8_t));
     
     // Select kernel

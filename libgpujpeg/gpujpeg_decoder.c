@@ -142,7 +142,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
         return -1;
         
     // Init postprocessor
-    if ( gpujpeg_preprocessor_decoder_init(decoder) != 0 ) {
+    if ( gpujpeg_preprocessor_decoder_init(&decoder->coder) != 0 ) {
         fprintf(stderr, "Failed to init postprocessor!");
         return -1;
     }
@@ -293,7 +293,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     GPUJPEG_TIMER_START();
     
     // Preprocessing
-    if ( gpujpeg_preprocessor_decode(decoder) != 0 )
+    if ( gpujpeg_preprocessor_decode(&decoder->coder) != 0 )
         return -1;
 
     GPUJPEG_CUSTOM_TIMER_STOP(in_gpu);

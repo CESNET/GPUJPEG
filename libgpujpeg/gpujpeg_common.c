@@ -29,6 +29,7 @@
  
 #include "gpujpeg_common.h"
 #include "gpujpeg_util.h"
+#include "gpujpeg_preprocessor.h"
 #include <npp.h>
 #include <cuda_gl_interop.h>
 #include <math.h>
@@ -688,58 +689,52 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
 
 /** Documented at declaration */
 void
-gpujpeg_image_scale_sampling_factor(const char* input, const char* output, int width, int height,
-        enum gpujpeg_sampling_factor sampling_factor_from, enum gpujpeg_sampling_factor sampling_factor_to)
+gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_image_parameters param_image_from,
+        struct gpujpeg_image_parameters param_image_to)
 {
-    assert(sampling_factor_from != sampling_factor_to);
-
-    struct gpujpeg_image_parameters param_image;
-    gpujpeg_image_set_default_parameters(&param_image);
-    param_image.width = width;
-    param_image.height = height;
-    param_image.sampling_factor = sampling_factor_from;
+    assert(param_image_from.width == param_image_to.width);
+    assert(param_image_from.height == param_image_to.height);
+    assert(param_image_from.comp_count == param_image_to.comp_count);
 
     // Load image
-    int image_size = gpujpeg_image_calculate_size(&param_image);
+    int image_size = gpujpeg_image_calculate_size(&param_image_from);
     uint8_t* image = NULL;
     if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
         fprintf(stderr, "Failed to load image [%s]!\n", input);
         return;
     }
 
-    param_image.sampling_factor = sampling_factor_to;
+    struct gpujpeg_coder coder;
+    gpujpeg_set_default_parameters(&coder.param);
 
-    int image_output_size = gpujpeg_image_calculate_size(&param_image);
-    uint8_t* image_output = malloc(image_output_size);
-    assert(image_output != NULL);
+    // Initialize coder and preprocessor
+    coder.param_image = param_image_from;
+    assert(gpujpeg_coder_init(&coder) == 0);
+    assert(gpujpeg_preprocessor_encoder_init(&coder) == 0);
+    // Perform preprocessor
+    assert(cudaMemcpy(coder.d_data_raw, image, coder.data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
+    assert(gpujpeg_preprocessor_encode(&coder) == 0);
+    // Save preprocessor result
+    uint8_t* buffer = NULL;
+    assert(cudaMallocHost((void**)&buffer, coder.data_size * sizeof(uint8_t)) == cudaSuccess);
+    assert(buffer != NULL);
+    assert(cudaMemcpy(buffer, coder.d_data, coder.data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
+    // Deinitialize decoder
+    gpujpeg_coder_deinit(&coder);
 
-    if ( sampling_factor_from == GPUJPEG_4_2_2 && sampling_factor_to == GPUJPEG_4_4_4) {
-        uint8_t* in_ptr = image;
-        uint8_t* out_ptr = image_output;
-        for ( int i = 0; i < param_image.width * param_image.height * 2; i += 4 ) {
-            *(out_ptr++) = in_ptr[0];
-            *(out_ptr++) = in_ptr[1];
-            *(out_ptr++) = in_ptr[2];
-            *(out_ptr++) = in_ptr[0];
-            *(out_ptr++) = in_ptr[3];
-            *(out_ptr++) = in_ptr[2];
-            in_ptr += 4;
-        }
-    } else if ( sampling_factor_from == GPUJPEG_4_4_4 && sampling_factor_to == GPUJPEG_4_2_2) {
-        uint8_t* in_ptr = image;
-        uint8_t* out_ptr = image_output;
-        for ( int i = 0; i < param_image.width * param_image.height * 3; i += 6 ) {
-            *(out_ptr++) = round(((double)in_ptr[0] +  in_ptr[3]) / 2);
-            *(out_ptr++) = in_ptr[1];
-            *(out_ptr++) = round(((double)in_ptr[2] +  in_ptr[5]) / 2);
-            *(out_ptr++) = in_ptr[4];
-            in_ptr += 6;
-        }
-    }
-
-    // Save image
-    if ( gpujpeg_image_save_to_file(output, image_output, image_output_size) != 0 ) {
+    // Initialize coder and postprocessor
+    coder.param_image = param_image_to;
+    assert(gpujpeg_coder_init(&coder) == 0);
+    assert(gpujpeg_preprocessor_decoder_init(&coder) == 0);
+    // Perform postprocessor
+    assert(cudaMemcpy(coder.d_data, buffer, coder.data_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
+    assert(gpujpeg_preprocessor_decode(&coder) == 0);
+    // Save preprocessor result
+    assert(cudaMemcpy(coder.data_raw, coder.d_data_raw, coder.data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
+    if ( gpujpeg_image_save_to_file(output, coder.data_raw, coder.data_raw_size) != 0 ) {
         fprintf(stderr, "Failed to save image [%s]!\n", output);
         return;
     }
+    // Deinitialize decoder
+    gpujpeg_coder_deinit(&coder);
 }
