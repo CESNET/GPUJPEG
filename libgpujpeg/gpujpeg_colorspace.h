@@ -134,9 +134,9 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709> {
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
         // Source: http://www.equasys.de/colorconversion.html
-        float r1 =  0.183000f * c1 + 0.614000f * c2 + 0.062000f * c3 + 16.0f;
-        float r2 = -0.101000f * c1 - 0.339000f * c2 + 0.439000f * c3 + 128.0f;
-        float r3 =  0.439000f * c1 - 0.399000f * c2 - 0.040000f * c3 + 128.0f;
+        float r1 =  0.182600f * c1 + 0.614200f * c2 + 0.062000f * c3 + 16.0f;
+        float r2 = -0.100600f * c1 - 0.338600f * c2 + 0.439200f * c3 + 128.0f;
+        float r3 =  0.439200f * c1 - 0.398900f * c2 - 0.040300f * c3 + 128.0f;
         c1 = r1;
         c2 = r2;
         c3 = r3;
@@ -258,8 +258,7 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_YUV> {
 /**
  * Color components load order
  *
- * @param color_space_from
- * @param color_space_to
+ * @param color_space
  */
 template<enum gpujpeg_color_space color_space>
 struct gpujpeg_color_order
@@ -322,6 +321,23 @@ struct gpujpeg_color_order<GPUJPEG_YUV>
     static __device__ void
     perform_store(float & c1, float & c2, float & c3) {
         float tmp = c1; c1 = c2; c2 = tmp;
+    }
+};
+
+/**
+ * Color components rounding
+ *
+ * @param color_space
+ */
+template<enum gpujpeg_color_space color_space>
+struct gpujpeg_color_round
+{
+    /** Rounding */
+    static __device__ void
+    perform(float & c1, float & c2, float & c3) {
+        c1 = round(c1);
+        c2 = round(c2);
+        c3 = round(c3);
     }
 };
 

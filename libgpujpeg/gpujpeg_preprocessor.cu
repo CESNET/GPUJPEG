@@ -393,7 +393,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder)
  * @param position_y
  * @param comp
  */
- template<
+template<
     uint8_t s_samp_factor_h = GPUJPEG_DYNAMIC,
     uint8_t s_samp_factor_v = GPUJPEG_DYNAMIC
 >
@@ -470,14 +470,17 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     // Color transform
     gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, color_space>::perform(r1, r2, r3);
     
+    // Round
+    gpujpeg_color_round<color_space>::perform(r1, r2, r3);
+
     // Store Order
     gpujpeg_color_order<color_space>::perform_store(r1, r2, r3);
 
     // Save
     image_position = image_position * 3;
-    d_data_raw[image_position + 0] = (uint8_t)round(r1);
-    d_data_raw[image_position + 1] = (uint8_t)round(r2);
-    d_data_raw[image_position + 2] = (uint8_t)round(r3);
+    d_data_raw[image_position + 0] = (uint8_t)r1;
+    d_data_raw[image_position + 1] = (uint8_t)r2;
+    d_data_raw[image_position + 2] = (uint8_t)r3;
 }
 
 /** Specialization [sampling factor is 4:2:2] */
@@ -509,16 +512,19 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     // Color transform
     gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, color_space>::perform(r1, r2, r3);
     
+    // Round
+    gpujpeg_color_round<color_space>::perform(r1, r2, r3);
+
     // Store Order
     gpujpeg_color_order<color_space>::perform_store(r1, r2, r3);
 
     // Save
     image_position = image_position * 2;
-    d_data_raw[image_position + 1] = (uint8_t)round(r2);
+    d_data_raw[image_position + 1] = (uint8_t)r2;
     if ( (image_position_x % 2) == 0 )
-        d_data_raw[image_position + 0] = (uint8_t)round(r1);
+        d_data_raw[image_position + 0] = (uint8_t)r1;
     else
-        d_data_raw[image_position + 0] = (uint8_t)round(r3);
+        d_data_raw[image_position + 0] = (uint8_t)r3;
 }
 
 /**
