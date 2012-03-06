@@ -60,25 +60,19 @@ inline __device__ float gpujpeg_clamp(float value)
  * @param bit_depth
  */
 template<int bit_depth>
-__device__ void
-gpujpeg_color_transform_to(float & c1, float & c2, float & c3, const double matrix[9], int base1, int base2, int base3)
+inline __device__ void
+gpujpeg_color_transform_to(float & c1, float & c2, float & c3, const int matrix[9], int base1, int base2, int base3)
 {
     // Prepare integer constants
-    const int max = pow(2.0, bit_depth);
     const int middle = pow(2.0, bit_depth - 1);
-    const int matrix_int[] = {
-        round(matrix[0] * max), round(matrix[1] * max), round(matrix[2] * max),
-        round(matrix[3] * max), round(matrix[4] * max), round(matrix[5] * max),
-        round(matrix[6] * max), round(matrix[7] * max), round(matrix[8] * max),
-    };
 
     // Perform color transform
     int r1 = c1;
     int r2 = c2;
     int r3 = c3;
-    c1 = ((matrix_int[0] * r1 + matrix_int[1] * r2 + matrix_int[2] * r3 + middle) >> bit_depth) + base1;
-    c2 = ((matrix_int[3] * r1 + matrix_int[4] * r2 + matrix_int[5] * r3 + middle) >> bit_depth) + base2;
-    c3 = ((matrix_int[6] * r1 + matrix_int[7] * r2 + matrix_int[8] * r3 + middle) >> bit_depth) + base3;
+    c1 = ((matrix[0] * r1 + matrix[1] * r2 + matrix[2] * r3 + middle) >> bit_depth) + base1;
+    c2 = ((matrix[3] * r1 + matrix[4] * r2 + matrix[5] * r3 + middle) >> bit_depth) + base2;
+    c3 = ((matrix[6] * r1 + matrix[7] * r2 + matrix[8] * r3 + middle) >> bit_depth) + base3;
 }
 
 /**
@@ -87,25 +81,73 @@ gpujpeg_color_transform_to(float & c1, float & c2, float & c3, const double matr
  * @param bit_depth
  */
 template<int bit_depth>
-__device__ void
-gpujpeg_color_transform_from(float & c1, float & c2, float & c3, const double matrix[9], int base1, int base2, int base3)
+inline __device__ void
+gpujpeg_color_transform_from(float & c1, float & c2, float & c3, const int matrix[9], int base1, int base2, int base3)
 {
     // Prepare integer constants
-    const int max = pow(2.0, bit_depth);
     const int middle = pow(2.0, bit_depth - 1);
-    const int matrix_int[] = {
-        round(matrix[0] * max), round(matrix[1] * max), round(matrix[2] * max),
-        round(matrix[3] * max), round(matrix[4] * max), round(matrix[5] * max),
-        round(matrix[6] * max), round(matrix[7] * max), round(matrix[8] * max),
-    };
 
     // Perform color transform
     int r1 = c1 - base1;
     int r2 = c2 - base2;
     int r3 = c3 - base3;
-    c1 = gpujpeg_clamp((matrix_int[0] * r1 + matrix_int[1] * r2 + matrix_int[2] * r3 + middle) >> bit_depth);
-    c2 = gpujpeg_clamp((matrix_int[3] * r1 + matrix_int[4] * r2 + matrix_int[5] * r3 + middle) >> bit_depth);
-    c3 = gpujpeg_clamp((matrix_int[6] * r1 + matrix_int[7] * r2 + matrix_int[8] * r3 + middle) >> bit_depth);
+    c1 = gpujpeg_clamp((matrix[0] * r1 + matrix[1] * r2 + matrix[2] * r3 + middle) >> bit_depth);
+    c2 = gpujpeg_clamp((matrix[3] * r1 + matrix[4] * r2 + matrix[5] * r3 + middle) >> bit_depth);
+    c3 = gpujpeg_clamp((matrix[6] * r1 + matrix[7] * r2 + matrix[8] * r3 + middle) >> bit_depth);
+}
+
+/**
+ * Transform to color space by matrix (version used for retreiving integer matrix values)
+ *
+ * @param bit_depth
+ */
+template<int bit_depth>
+inline __device__ void
+gpujpeg_color_transform_to(float & c1, float & c2, float & c3, const double matrix[9], int base1, int base2, int base3)
+{
+    // Prepare integer matrix
+    const int max = pow(2.0, bit_depth);
+    const int matrix_int[] = {
+        round(matrix[0] * max), round(matrix[1] * max), round(matrix[2] * max),
+        round(matrix[3] * max), round(matrix[4] * max), round(matrix[5] * max),
+        round(matrix[6] * max), round(matrix[7] * max), round(matrix[8] * max),
+    };
+#if __CUDA_ARCH__ >= 200
+    if ( threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0 && blockIdx.y == 0 ) {
+        for ( int i = 0; i < 9; i++ )
+            printf("%s%d", i > 0 ? ", " : "", matrix_int[i]);
+        printf("\n");
+    }
+#endif
+    // Perform transformation
+    gpujpeg_color_transform_to<bit_depth>(c1, c2, c3, matrix_int, base1, base2, base3);
+}
+
+/**
+ * Transform from color space by matrix (version used for retreiving integer matrix values)
+ *
+ * @param bit_depth
+ */
+template<int bit_depth>
+inline __device__ void
+gpujpeg_color_transform_from(float & c1, float & c2, float & c3, const double matrix[9], int base1, int base2, int base3)
+{
+    // Prepare integer matrix
+    const int max = pow(2.0, bit_depth);
+    const int matrix_int[] = {
+        round(matrix[0] * max), round(matrix[1] * max), round(matrix[2] * max),
+        round(matrix[3] * max), round(matrix[4] * max), round(matrix[5] * max),
+        round(matrix[6] * max), round(matrix[7] * max), round(matrix[8] * max),
+    };
+#if __CUDA_ARCH__ >= 200
+    if ( threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0 && blockIdx.y == 0 ) {
+        for ( int i = 0; i < 9; i++ )
+            printf("%s%d", i > 0 ? ", " : "", matrix_int[i]);
+        printf("\n");
+    }
+#endif
+    // Perform transformation
+    gpujpeg_color_transform_from<bit_depth>(c1, c2, c3, matrix_int, base1, base2, base3);
 }
 
 /**
@@ -174,11 +216,12 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601> {
     perform(float & c1, float & c2, float & c3) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YCBCR_BT601, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
-        const double matrix[] = {
+        /*const double matrix[] = {
               0.257000,  0.504000,  0.098000,
              -0.148000, -0.291000,  0.439000,
               0.439000, -0.368000, -0.071000
-        };
+        };*/
+        const int matrix[] = {66, 129, 25, -38, -74, 112, 112, -94, -18};
         gpujpeg_color_transform_to<8>(c1, c2, c3, matrix, 16, 128, 128);
     }
 };
@@ -190,11 +233,12 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_RGB> {
     perform(float & c1, float & c2, float & c3) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YCBCR_BT601, GPUJPEG_RGB, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
-        const double matrix[] = {
+        /*const double matrix[] = {
              1.164000,  0.000000,  1.596000,
              1.164000, -0.392000, -0.813000,
              1.164000,  2.017000,  0.000000
-        };
+        };*/
+        const int matrix[] = {298, 0, 409, 298, -100, -208, 298, 516, 0};
         gpujpeg_color_transform_from<8>(c1, c2, c3, matrix, 16, 128, 128);
     }
 };
@@ -207,11 +251,12 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS> {
     perform(float & c1, float & c2, float & c3) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS, "Transformation");
         // Source: http://www.ecma-international.org/publications/files/ECMA-TR/TR-098.pdf, page 3
-        const double matrix[] = {
+        /*const double matrix[] = {
              0.299000,  0.587000,  0.114000,
             -0.168700, -0.331300,  0.500000,
              0.500000, -0.418700, -0.081300
-        };
+        };*/
+        const int matrix[] = {77, 150, 29, -43, -85, 128, 128, -107, -21};
         gpujpeg_color_transform_to<8>(c1, c2, c3, matrix, 0, 128, 128);
     }
 };
@@ -223,11 +268,12 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB> {
     perform(float & c1, float & c2, float & c3) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB, "Transformation");
         // Source: http://www.ecma-international.org/publications/files/ECMA-TR/TR-098.pdf, page 4
-        const double matrix[] = {
+        /*const double matrix[] = {
             1.000000,  0.000000,  1.402000,
             1.000000, -0.344140, -0.714140,
             1.000000,  1.772000,  0.000000
-        };
+        };*/
+        const int matrix[] = {256, 0, 359, 256, -88, -183, 256, 454, 0};
         gpujpeg_color_transform_from<8>(c1, c2, c3, matrix, 0, 128, 128);
     }
 };
@@ -240,11 +286,12 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709> {
     perform(float & c1, float & c2, float & c3) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YCBCR_BT709, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
-        const double matrix[] = {
+        /*const double matrix[] = {
               0.183000,  0.614000,  0.062000,
              -0.101000, -0.339000,  0.439000,
               0.439000, -0.399000, -0.040000
-        };
+        };*/
+        const int matrix[] = {47, 157, 16, -26, -87, 112, 112, -102, -10};
         gpujpeg_color_transform_to<8>(c1, c2, c3, matrix, 16, 128, 128);
     }
 };
@@ -256,11 +303,12 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_RGB> {
     perform(float & c1, float & c2, float & c3) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YCBCR_BT709, GPUJPEG_RGB, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
-        const double matrix[] = {
+        /*const double matrix[] = {
              1.164000,  0.000000,  1.793000,
              1.164000, -0.213000, -0.533000,
              1.164000,  2.112000,  0.000000
-        };
+        };*/
+        const int matrix[] = {298, 0, 459, 298, -55, -136, 298, 541, 0};
         gpujpeg_color_transform_from<8>(c1, c2, c3, matrix, 16, 128, 128);
     }
 };
@@ -272,11 +320,12 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YUV> {
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YUV, "Transformation");
-        const double matrix[] = {
+        /*const double matrix[] = {
               0.299000,  0.587000,  0.114000,
              -0.147400, -0.289500,  0.436900,
               0.615000, -0.515000, -0.100000
-        };
+        };*/
+        const int matrix[] = {77, 150, 29, -38, -74, 112, 157, -132, -26};
         gpujpeg_color_transform_to<8>(c1, c2, c3, matrix, 0, 128, 128);
     }
 };
@@ -287,11 +336,12 @@ struct gpujpeg_color_transform<GPUJPEG_YUV, GPUJPEG_RGB> {
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YUV, GPUJPEG_RGB, "Transformation");
-        const double matrix[] = {
+        /*const double matrix[] = {
              1.000000,  0.000000,  1.140000,
              1.000000, -0.395000, -0.581000,
              1.000000,  2.032000,  0.000000
-        };
+        };*/
+        const int matrix[] = {256, 0, 292, 256, -101, -149, 256, 520, 0};
         gpujpeg_color_transform_from<8>(c1, c2, c3, matrix, 0, 128, 128);
     }
 };
