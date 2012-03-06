@@ -706,11 +706,11 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     }
 
     struct gpujpeg_coder coder;
+    gpujpeg_set_default_parameters(&coder.param);
+    coder.param.color_space_internal = GPUJPEG_RGB;
 
     // Initialize coder and preprocessor
-    gpujpeg_set_default_parameters(&coder.param);
     coder.param_image = param_image_from;
-    coder.param.color_space_internal = param_image_to.color_space;
     assert(gpujpeg_coder_init(&coder) == 0);
     assert(gpujpeg_preprocessor_encoder_init(&coder) == 0);
     // Perform preprocessor
@@ -725,10 +725,7 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     gpujpeg_coder_deinit(&coder);
 
     // Initialize coder and postprocessor
-    gpujpeg_set_default_parameters(&coder.param);
     coder.param_image = param_image_to;
-    coder.param_image.color_space = param_image_to.color_space;
-    coder.param.color_space_internal = param_image_to.color_space;
     assert(gpujpeg_coder_init(&coder) == 0);
     assert(gpujpeg_preprocessor_decoder_init(&coder) == 0);
     // Perform postprocessor

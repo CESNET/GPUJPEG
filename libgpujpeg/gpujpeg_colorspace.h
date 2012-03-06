@@ -33,6 +33,18 @@
 #include "gpujpeg_type.h"
 
 /**
+ * Color transfor debug info
+ */
+#if __CUDA_ARCH__ >= 200
+#define GPUJPEG_COLOR_TRANSFORM_DEBUG(FROM, TO, MESSAGE) /*\
+    if ( blockIdx.x == 0 && blockIdx.y == 0 && threadIdx.x == 0 && threadIdx.y == 0 ) { \
+        printf("Color Transform %s -> %s (%s)\n", gpujpeg_color_space_get_name(FROM), gpujpeg_color_space_get_name(TO), MESSAGE); \
+    }*/
+#else
+    #define GPUJPEG_COLOR_TRANSFORM_DEBUG(FROM, TO, MESSAGE)
+#endif
+
+/**
  * Clip [0,255] range
  */
 inline __device__ float gpujpeg_clamp(float value)
@@ -88,9 +100,9 @@ gpujpeg_color_transform_from(float & c1, float & c2, float & c3, const double ma
     };
 
     // Perform color transform
-    int r1 = c1 - base1 - 100;
-    int r2 = c2 - base2 - 100;
-    int r3 = c3 - base3 - 100;
+    int r1 = c1 - base1;
+    int r2 = c2 - base2;
+    int r3 = c3 - base3;
     c1 = gpujpeg_clamp((matrix_int[0] * r1 + matrix_int[1] * r2 + matrix_int[2] * r3 + middle) >> bit_depth);
     c2 = gpujpeg_clamp((matrix_int[3] * r1 + matrix_int[4] * r2 + matrix_int[5] * r3 + middle) >> bit_depth);
     c3 = gpujpeg_clamp((matrix_int[6] * r1 + matrix_int[7] * r2 + matrix_int[8] * r3 + middle) >> bit_depth);
@@ -107,6 +119,7 @@ struct gpujpeg_color_transform
 {
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(color_space_from, color_space_to, "Undefined");
         assert(false);
     }
 };
@@ -117,6 +130,7 @@ struct gpujpeg_color_transform<color_space, color_space> {
     /** None transform */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(color_space, color_space, "Do nothing");
         // Same color space thus do nothing
     }
 };
@@ -127,6 +141,7 @@ struct gpujpeg_color_transform<GPUJPEG_NONE, color_space> {
     /** None transform */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_NONE, color_space, "Do nothing");
         // None color space thus do nothing
     }
 };
@@ -136,6 +151,7 @@ struct gpujpeg_color_transform<color_space, GPUJPEG_NONE> {
     /** None transform */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(color_space, GPUJPEG_NONE, "Do nothing");
         // None color space thus do nothing
     }
 };
@@ -145,6 +161,7 @@ struct gpujpeg_color_transform<GPUJPEG_NONE, GPUJPEG_NONE> {
     /** None transform */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_NONE, GPUJPEG_NONE, "Do nothing");
         // None color space thus do nothing
     }
 };
@@ -155,6 +172,7 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601> {
     /** RGB -> YCbCr (ITU-R Recommendation BT.601) transform (8 bit) */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YCBCR_BT601, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
         const double matrix[] = {
               0.257000,  0.504000,  0.098000,
@@ -170,6 +188,7 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_RGB> {
     /** YCbCr (ITU-R Recommendation BT.601) -> RGB transform (8 bit) */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YCBCR_BT601, GPUJPEG_RGB, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
         const double matrix[] = {
              1.164000,  0.000000,  1.596000,
@@ -186,6 +205,7 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS> {
     /** RGB -> YCbCr (ITU-R Recommendation BT.601 with 256 levels) transform (8 bit) */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS, "Transformation");
         // Source: http://www.ecma-international.org/publications/files/ECMA-TR/TR-098.pdf, page 3
         const double matrix[] = {
              0.299000,  0.587000,  0.114000,
@@ -201,6 +221,7 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB> {
     /** YCbCr (ITU-R Recommendation BT.601 with 256 levels) -> RGB transform (8 bit) */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB, "Transformation");
         // Source: http://www.ecma-international.org/publications/files/ECMA-TR/TR-098.pdf, page 4
         const double matrix[] = {
             1.000000,  0.000000,  1.402000,
@@ -217,6 +238,7 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709> {
     /** RGB -> YCbCr (ITU-R Recommendation BT.709) transform (8 bit) */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YCBCR_BT709, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
         const double matrix[] = {
               0.183000,  0.614000,  0.062000,
@@ -232,6 +254,7 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_RGB> {
     /** YCbCr (ITU-R Recommendation BT.709) -> RGB transform (8 bit) */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YCBCR_BT709, GPUJPEG_RGB, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
         const double matrix[] = {
              1.164000,  0.000000,  1.793000,
@@ -248,6 +271,7 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YUV> {
     /** RGB -> YUV transform (8 bit) */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YUV, "Transformation");
         const double matrix[] = {
               0.299000,  0.587000,  0.114000,
              -0.147400, -0.289500,  0.436900,
@@ -262,6 +286,7 @@ struct gpujpeg_color_transform<GPUJPEG_YUV, GPUJPEG_RGB> {
     /** YUV -> RGB transform (8 bit) */
     static __device__ void
     perform(float & c1, float & c2, float & c3) {
+        GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YUV, GPUJPEG_RGB, "Transformation");
         const double matrix[] = {
              1.000000,  0.000000,  1.140000,
              1.000000, -0.395000, -0.581000,

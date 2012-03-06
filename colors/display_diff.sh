@@ -13,6 +13,7 @@ convert -depth 8 -size $((1920/2))x1080 \
      $DIR/_tmp_left.rgb -depth 8 -size $((1920/2))x1080 \
      $DIR/_tmp_right.rgb +append $DIR/_tmp_diff.rgb
      
-display -equalize -depth 8 -size 1920x1080 $DIR/_tmp_diff.rgb
+display -depth 8 -size 1920x1080 $DIR/_tmp_diff.rgb
+#-equalize 
 
 rm -f $DIR/_tmp_left.rgb $DIR/_tmp_right.rgb $DIR/_tmp_diff.rgb

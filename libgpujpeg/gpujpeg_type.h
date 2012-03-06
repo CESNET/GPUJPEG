@@ -31,6 +31,7 @@
 #define GPUJPEG_TYPE_H
 
 #include <stdint.h>
+#include <cuda_runtime.h>
 
 /** Contants */
 #define GPUJPEG_BLOCK_SIZE                      8
@@ -59,6 +60,32 @@ enum gpujpeg_color_space {
     GPUJPEG_YCBCR = GPUJPEG_YCBCR_BT709,
     GPUJPEG_YUV = 5
 };
+
+/**
+ * Get color space name
+ *
+ * @param color_space
+ */
+static inline __device__ __host__ const char*
+gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
+{
+    switch ( color_space ) {
+    case GPUJPEG_NONE:
+        return "None";
+    case GPUJPEG_RGB:
+        return "RGB";
+    case GPUJPEG_YUV:
+        return "YUV";
+    case GPUJPEG_YCBCR_BT601:
+        return "YCbCr BT.601";
+    case GPUJPEG_YCBCR_BT601_256LVLS:
+        return "YCbCr BT.601 256 Levels";
+    case GPUJPEG_YCBCR_BT709:
+        return "YCbCr BT.709";
+    default:
+        return "Unknown";
+    }
+}
 
 /**
  * Sampling factor for image data

@@ -337,19 +337,13 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
 {
-    /*if ( coder->param.color_space_internal == GPUJPEG_NONE ) {
+    if ( coder->param.color_space_internal == GPUJPEG_NONE ) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_NONE>(coder);
     } else if ( coder->param.color_space_internal == GPUJPEG_RGB ) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_RGB>(coder);
-    } else if ( coder->param.color_space_internal == GPUJPEG_YUV ) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YUV>(coder);
-    } else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601 ) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601>(coder);
-    } else */if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS ) {
+    } else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS ) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
-    } /*else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT709 ) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT709>(coder);
-    } */else {
+    } else {
         assert(false);
     }
     if ( coder->preprocessor == NULL )
@@ -665,19 +659,13 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
-    /*if ( coder->param.color_space_internal == GPUJPEG_NONE ) {
+    if ( coder->param.color_space_internal == GPUJPEG_NONE ) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_NONE>(coder);
     } else if ( coder->param.color_space_internal == GPUJPEG_RGB ) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_RGB>(coder);
-    } else if ( coder->param.color_space_internal == GPUJPEG_YUV ) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YUV>(coder);
-    } else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601 ) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT601>(coder);
-    } else */if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS ) {
+    } else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS ) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
-    } /*else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT709 ) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT709>(coder);
-    } */else {
+    } else {
         assert(false);
     }
     if ( coder->preprocessor == NULL )
