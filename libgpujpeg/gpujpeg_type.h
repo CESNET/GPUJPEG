@@ -51,11 +51,13 @@
  * Color spaces for JPEG codec
  */
 enum gpujpeg_color_space {
+    GPUJPEG_NONE = 0,
     GPUJPEG_RGB = 1,
     GPUJPEG_YCBCR_BT601 = 2,
     GPUJPEG_YCBCR_BT601_256LVLS = 3,
     GPUJPEG_YCBCR_BT709 = 4,
-    GPUJPEG_YUV
+    GPUJPEG_YCBCR = GPUJPEG_YCBCR_BT709,
+    GPUJPEG_YUV = 5
 };
 
 /**

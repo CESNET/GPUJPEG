@@ -44,7 +44,7 @@ print_help()
         "   -s, --size             set input image size in pixels, e.g. 1920x1080\n"
         "   -f, --sampling-factor  set input/output image sampling factor, e.g. 4:2:2\n"
         "   -c, --colorspace       set input/output image colorspace, e.g. rgb, yuv,\n"
-        "                          ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
+        "                          ycbcr, ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
         "\n"
         "   -q, --quality          set JPEG encoder quality level 0-100 (default 75)\n"
         "   -r, --restart          set JPEG encoder restart interval (default 8)\n"
@@ -128,10 +128,14 @@ main(int argc, char *argv[])
             param_image.height = atoi(pos + 1);
             break;
         case 'c':
-            if ( strcmp(optarg, "rgb") == 0 )
+            if ( strcmp(optarg, "none") == 0 )
+                param_image.color_space = GPUJPEG_NONE;
+            else if ( strcmp(optarg, "rgb") == 0 )
                 param_image.color_space = GPUJPEG_RGB;
             else if ( strcmp(optarg, "yuv") == 0 )
                 param_image.color_space = GPUJPEG_YUV;
+            else if ( strcmp(optarg, "ycbcr") == 0 )
+                param_image.color_space = GPUJPEG_YCBCR;
             else if ( strcmp(optarg, "ycbcr-jpeg") == 0 )
                 param_image.color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             else if ( strcmp(optarg, "ycbcr-bt601") == 0 )

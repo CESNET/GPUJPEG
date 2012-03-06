@@ -122,6 +122,9 @@ struct gpujpeg_parameters
 
     // Sampling factors for each color component
     struct gpujpeg_component_sampling_factor sampling_factor[GPUJPEG_MAX_COMPONENT_COUNT];
+
+    // JPEG stream internal color space
+    enum gpujpeg_color_space color_space_internal;
 };
 
 /**

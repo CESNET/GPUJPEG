@@ -121,6 +121,7 @@ typedef void (*gpujpeg_preprocessor_encode_kernel)(struct gpujpeg_preprocessor_d
  
 /** Specialization [sampling factor is 4:4:4] */
 template<
+    enum gpujpeg_color_space color_space_internal,
     enum gpujpeg_color_space color_space,
     uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
     uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
@@ -151,7 +152,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     gpujpeg_color_order<color_space>::perform_load(r1, r2, r3);
 
     // Color transform
-    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR_BT601_256LVLS>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space, color_space_internal>::perform(r1, r2, r3);
     
     // Position
     int image_position = gX + x;
@@ -168,6 +169,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
 
 /** Specialization [sampling factor is 4:2:2] */
 template<
+    enum gpujpeg_color_space color_space_internal,
     enum gpujpeg_color_space color_space,
     uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
     uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
@@ -205,7 +207,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     gpujpeg_color_order<color_space>::perform_load(r1, r2, r3);
     
     // Color transform
-    gpujpeg_color_transform<color_space, GPUJPEG_YCBCR_BT601_256LVLS>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space, color_space_internal>::perform(r1, r2, r3);
     
     // Position
     int image_position = gX + x;
@@ -226,6 +228,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
  * @param encoder
  * @return kernel
  */
+template<enum gpujpeg_color_space color_space_internal>
 gpujpeg_preprocessor_encode_kernel
 gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
 {
@@ -245,7 +248,7 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
         if ( coder->param.verbose ) { \
             printf("Using faster kernel for preprocessor (precompiled %dx%d, %dx%d, %dx%d).\n", max_h / P1, max_v / P2, max_h / P3, max_v / P4, max_h / P5, max_v / P6); \
         } \
-        return &KERNEL<COLOR, P1, P2, P3, P4, P5, P6>; \
+        return &KERNEL<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6>; \
     } 
 #define RETURN_KERNEL(KERNEL, COLOR) \
     RETURN_KERNEL_IF(KERNEL, COLOR, 1, 1, 1, 1, 1, 1) \
@@ -257,11 +260,20 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
         if ( coder->param.verbose ) { \
             printf("Using slower kernel for preprocessor (dynamic %dx%d, %dx%d, %dx%d).\n", coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical, coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical, coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical); \
         } \
-        return &KERNEL<COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
+        return &KERNEL<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
     } \
 
-    // RGB color space
-    if ( coder->param_image.color_space == GPUJPEG_RGB ) {
+    // None color space
+    if ( coder->param_image.color_space == GPUJPEG_NONE ) {
+        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_NONE);
+        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+            RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_NONE);
+        } else {
+            assert(false);
+        }
+    }// RGB color space
+    else if ( coder->param_image.color_space == GPUJPEG_RGB ) {
         if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_RGB);
         } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
@@ -325,7 +337,21 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
 {
-    coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel(coder);
+    /*if ( coder->param.color_space_internal == GPUJPEG_NONE ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_NONE>(coder);
+    } else if ( coder->param.color_space_internal == GPUJPEG_RGB ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_RGB>(coder);
+    } else if ( coder->param.color_space_internal == GPUJPEG_YUV ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YUV>(coder);
+    } else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601 ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601>(coder);
+    } else */if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
+    } /*else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT709 ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT709>(coder);
+    } */else {
+        assert(false);
+    }
     if ( coder->preprocessor == NULL )
         return -1;
     return 0;
@@ -443,6 +469,7 @@ typedef void (*gpujpeg_preprocessor_decode_kernel)(struct gpujpeg_preprocessor_d
 
 /** Specialization [sampling factor is 4:4:4] */
 template<
+    enum gpujpeg_color_space color_space_internal,
     enum gpujpeg_color_space color_space,
     uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
     uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
@@ -468,23 +495,21 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     gpujpeg_preprocessor_comp_to_raw_load<s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform(r3, image_position_x, image_position_y, data.comp[2]);
     
     // Color transform
-    gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, color_space>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space_internal, color_space>::perform(r1, r2, r3);
     
-    // Round
-    gpujpeg_color_round<color_space>::perform(r1, r2, r3);
-
     // Store Order
     gpujpeg_color_order<color_space>::perform_store(r1, r2, r3);
 
     // Save
     image_position = image_position * 3;
-    d_data_raw[image_position + 0] = (uint8_t)r1;
-    d_data_raw[image_position + 1] = (uint8_t)r2;
-    d_data_raw[image_position + 2] = (uint8_t)r3;
+    d_data_raw[image_position + 0] = (uint8_t)round(r1);
+    d_data_raw[image_position + 1] = (uint8_t)round(r2);
+    d_data_raw[image_position + 2] = (uint8_t)round(r3);
 }
 
 /** Specialization [sampling factor is 4:2:2] */
 template<
+    enum gpujpeg_color_space color_space_internal,
     enum gpujpeg_color_space color_space,
     uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
     uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
@@ -510,21 +535,18 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     gpujpeg_preprocessor_comp_to_raw_load<s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform(r3, image_position_x, image_position_y, data.comp[2]);
     
     // Color transform
-    gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, color_space>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space_internal, color_space>::perform(r1, r2, r3);
     
-    // Round
-    gpujpeg_color_round<color_space>::perform(r1, r2, r3);
-
     // Store Order
     gpujpeg_color_order<color_space>::perform_store(r1, r2, r3);
 
     // Save
     image_position = image_position * 2;
-    d_data_raw[image_position + 1] = (uint8_t)r2;
+    d_data_raw[image_position + 1] = (uint8_t)round(r2);
     if ( (image_position_x % 2) == 0 )
-        d_data_raw[image_position + 0] = (uint8_t)r1;
+        d_data_raw[image_position + 0] = (uint8_t)round(r1);
     else
-        d_data_raw[image_position + 0] = (uint8_t)r3;
+        d_data_raw[image_position + 0] = (uint8_t)round(r3);
 }
 
 /**
@@ -533,6 +555,7 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data d
  * @param decoder
  * @return kernel
  */
+template<enum gpujpeg_color_space color_space_internal>
 gpujpeg_preprocessor_decode_kernel
 gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 {
@@ -552,7 +575,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         if ( coder->param.verbose ) { \
             printf("Using faster kernel for postprocessor (precompiled %dx%d, %dx%d, %dx%d).\n", max_h / P1, max_v / P2, max_h / P3, max_v / P4, max_h / P5, max_v / P6); \
         } \
-        return &KERNEL<COLOR, P1, P2, P3, P4, P5, P6>; \
+        return &KERNEL<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6>; \
     } 
 #define RETURN_KERNEL(KERNEL, COLOR) \
     RETURN_KERNEL_IF(KERNEL, COLOR, 1, 1, 1, 1, 1, 1) \
@@ -564,11 +587,21 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         if ( coder->param.verbose ) { \
             printf("Using slower kernel for postprocessor (dynamic %dx%d, %dx%d, %dx%d).\n", coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical, coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical, coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical); \
         } \
-        return &KERNEL<COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
+        return &KERNEL<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
     } \
     
+    // None color space
+    if ( coder->param_image.color_space == GPUJPEG_NONE ) {
+        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_NONE)
+        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+            RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_NONE)
+        } else {
+            assert(false);
+        }
+    } 
     // RGB color space
-    if ( coder->param_image.color_space == GPUJPEG_RGB ) {
+    else if ( coder->param_image.color_space == GPUJPEG_RGB ) {
         if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_RGB)
         } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
@@ -576,7 +609,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         } else {
             assert(false);
         }
-    } 
+    }
     // YCbCr color space
     else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT601 ) {
         if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
@@ -632,7 +665,21 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
-    coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel(coder);
+    /*if ( coder->param.color_space_internal == GPUJPEG_NONE ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_NONE>(coder);
+    } else if ( coder->param.color_space_internal == GPUJPEG_RGB ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_RGB>(coder);
+    } else if ( coder->param.color_space_internal == GPUJPEG_YUV ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YUV>(coder);
+    } else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601 ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT601>(coder);
+    } else */if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
+    } /*else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT709 ) {
+        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT709>(coder);
+    } */else {
+        assert(false);
+    }
     if ( coder->preprocessor == NULL )
         return -1;
     return 0;
