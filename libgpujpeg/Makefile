@@ -44,6 +44,7 @@ endif
 # C files
 CFILES := \
     gpujpeg_common.c \
+    gpujpeg_dct.c \
     gpujpeg_encoder.c \
     gpujpeg_decoder.c \
     gpujpeg_table.c \

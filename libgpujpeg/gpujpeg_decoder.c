@@ -28,6 +28,7 @@
  */
  
 #include "gpujpeg_decoder.h"
+#include "gpujpeg_dct.h"
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_huffman_cpu_decoder.h"
 #include "gpujpeg_huffman_gpu_decoder.h"
@@ -257,7 +258,8 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     }
     
     // Perform IDCT and dequantization
-    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
+    //gpujpeg_idct(decoder);
+    /**/for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
         // Get component
         struct gpujpeg_component* component = &coder->component[comp];
                 
@@ -286,7 +288,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         }
             
         //gpujpeg_component_print8(component, component->d_data);
-    }
+    }/**/
     
     GPUJPEG_TIMER_STOP();
     coder->duration_dct_quantization = GPUJPEG_TIMER_DURATION();

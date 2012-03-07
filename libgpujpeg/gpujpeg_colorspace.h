@@ -33,7 +33,7 @@
 #include "gpujpeg_type.h"
 
 /**
- * Color transfor debug info
+ * Color transform debug info
  */
 #if __CUDA_ARCH__ >= 200
 #define GPUJPEG_COLOR_TRANSFORM_DEBUG(FROM, TO, MESSAGE) /*\
@@ -47,10 +47,10 @@
 /**
  * Clip [0,255] range
  */
-inline __device__ float gpujpeg_clamp(float value)
+inline __device__ int gpujpeg_clamp(int value)
 {
-    value = (value >= 0.0f) ? value : 0.0f;
-    value = (value <= 255.0f) ? value : 255.0f;
+    value = (value >= 0) ? value : 0;
+    value = (value <= 255) ? value : 255;
     return value;
 }
 
@@ -67,12 +67,12 @@ gpujpeg_color_transform_to(float & c1, float & c2, float & c3, const int matrix[
     const int middle = pow(2.0, bit_depth - 1);
 
     // Perform color transform
-    int r1 = c1;
-    int r2 = c2;
-    int r3 = c3;
-    c1 = ((matrix[0] * r1 + matrix[1] * r2 + matrix[2] * r3 + middle) >> bit_depth) + base1;
-    c2 = ((matrix[3] * r1 + matrix[4] * r2 + matrix[5] * r3 + middle) >> bit_depth) + base2;
-    c3 = ((matrix[6] * r1 + matrix[7] * r2 + matrix[8] * r3 + middle) >> bit_depth) + base3;
+    int r1 = (int)c1 * 256 / 255;
+    int r2 = (int)c2 * 256 / 255;
+    int r3 = (int)c3 * 256 / 255;
+    c1 = gpujpeg_clamp(((matrix[0] * r1 + matrix[1] * r2 + matrix[2] * r3 + middle) >> bit_depth) + base1);
+    c2 = gpujpeg_clamp(((matrix[3] * r1 + matrix[4] * r2 + matrix[5] * r3 + middle) >> bit_depth) + base2);
+    c3 = gpujpeg_clamp(((matrix[6] * r1 + matrix[7] * r2 + matrix[8] * r3 + middle) >> bit_depth) + base3);
 }
 
 /**
@@ -88,9 +88,9 @@ gpujpeg_color_transform_from(float & c1, float & c2, float & c3, const int matri
     const int middle = pow(2.0, bit_depth - 1);
 
     // Perform color transform
-    int r1 = c1 - base1;
-    int r2 = c2 - base2;
-    int r3 = c3 - base3;
+    int r1 = ((int)c1 - base1) * 256 / 255;
+    int r2 = ((int)c2 - base2) * 256 / 255;
+    int r3 = ((int)c3 - base3) * 256 / 255;
     c1 = gpujpeg_clamp((matrix[0] * r1 + matrix[1] * r2 + matrix[2] * r3 + middle) >> bit_depth);
     c2 = gpujpeg_clamp((matrix[3] * r1 + matrix[4] * r2 + matrix[5] * r3 + middle) >> bit_depth);
     c3 = gpujpeg_clamp((matrix[6] * r1 + matrix[7] * r2 + matrix[8] * r3 + middle) >> bit_depth);
@@ -287,9 +287,9 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709> {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YCBCR_BT709, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
         /*const double matrix[] = {
-              0.183000,  0.614000,  0.062000,
-             -0.101000, -0.339000,  0.439000,
-              0.439000, -0.399000, -0.040000
+              0.182586,  0.614231,  0.062007,
+             -0.100644, -0.338572,  0.439216,
+              0.439216, -0.398942, -0.040274
         };*/
         const int matrix[] = {47, 157, 16, -26, -87, 112, 112, -102, -10};
         gpujpeg_color_transform_to<8>(c1, c2, c3, matrix, 16, 128, 128);
@@ -304,9 +304,9 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_RGB> {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YCBCR_BT709, GPUJPEG_RGB, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
         /*const double matrix[] = {
-             1.164000,  0.000000,  1.793000,
-             1.164000, -0.213000, -0.533000,
-             1.164000,  2.112000,  0.000000
+             1.164384,  0.000000,  1.792741,
+             1.164384, -0.213249, -0.532909,
+             1.164384,  2.112402,  0.000000
         };*/
         const int matrix[] = {298, 0, 459, 298, -55, -136, 298, 541, 0};
         gpujpeg_color_transform_from<8>(c1, c2, c3, matrix, 16, 128, 128);
