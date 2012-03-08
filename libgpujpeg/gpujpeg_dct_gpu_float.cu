@@ -27,18 +27,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUJPEG_DCT_H
-#define GPUJPEG_DCT_H
+#include "gpujpeg_dct_gpu_float.h"
+#include "gpujpeg_util.h"
 
-#include "gpujpeg_encoder.h"
-#include "gpujpeg_decoder.h"
-
-/**
- * Peform inverse DCT
- *
- * @param decoder
- */
+/** Documented at declaration */
 void
-gpujpeg_idct(struct gpujpeg_decoder* decoder);
-
-#endif // GPUJPEG_DCT_H
+gpujpeg_idct_gpu_float(struct gpujpeg_decoder* decoder)
+{
+}

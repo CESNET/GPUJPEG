@@ -35,6 +35,7 @@
 
 /** Contants */
 #define GPUJPEG_BLOCK_SIZE                      8
+#define GPUJPEG_BLOCK_SQUARED_SIZE              64
 #define GPUJPEG_MAX_COMPONENT_COUNT             3
 #define GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE       (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE * 2)
 

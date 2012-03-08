@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "gpujpeg_dct.h"
+#include "gpujpeg_dct_cpu.h"
 #include "gpujpeg_util.h"
 
 #define W1 2841 // 2048*sqrt(2)*cos(1*pi/16)
@@ -52,7 +52,7 @@ static int16_t* iclp;
  *        c[1..7] = 128*sqrt(2)
  */
 void
-gpujpeg_idct_perform_row(int16_t* blk)
+gpujpeg_idct_cpu_perform_row(int16_t* blk)
 {
     int x0, x1, x2, x3, x4, x5, x6, x7, x8;
 
@@ -116,7 +116,7 @@ gpujpeg_idct_perform_row(int16_t* blk)
  *        c[1..7] = (1/1024)*sqrt(2)
  */
 void
-gpujpeg_idct_perform_column(int16_t* blk)
+gpujpeg_idct_cpu_perform_column(int16_t* blk)
 {
     int x0, x1, x2, x3, x4, x5, x6, x7, x8;
 
@@ -174,7 +174,7 @@ gpujpeg_idct_perform_column(int16_t* blk)
  *
  * @param block
  */
-void gpujpeg_idct_perform(int16_t* block, int16_t* table)
+void gpujpeg_idct_cpu_perform(int16_t* block, int16_t* table)
 {
     for ( int i = 0; i < 64; i++ ) {
         int pos = i;
@@ -182,16 +182,16 @@ void gpujpeg_idct_perform(int16_t* block, int16_t* table)
     }
 
     for ( int i = 0; i < 8; i++ )
-        gpujpeg_idct_perform_row(block + 8 * i);
+        gpujpeg_idct_cpu_perform_row(block + 8 * i);
 
     for ( int i = 0; i < 8; i++ )
-        gpujpeg_idct_perform_column(block + i);
+        gpujpeg_idct_cpu_perform_column(block + i);
 }
 
 /**
  * Init inverse DCT
  */
-void gpujpeg_idct_init()
+void gpujpeg_idct_cpu_init()
 {
     iclp = iclip + 512;
     for ( int i = -512; i < 512; i++ )
@@ -200,9 +200,9 @@ void gpujpeg_idct_init()
 
 /** Documented at declaration */
 void
-gpujpeg_idct(struct gpujpeg_decoder* decoder)
+gpujpeg_idct_cpu(struct gpujpeg_decoder* decoder)
 {
-    gpujpeg_idct_init();
+    gpujpeg_idct_cpu_init();
 
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
@@ -224,7 +224,7 @@ gpujpeg_idct(struct gpujpeg_decoder* decoder)
         for ( int y = 0; y < height; y++ ) {
             for ( int x = 0; x < width; x++ ) {
                 int index = y * width + x;
-                gpujpeg_idct_perform(
+                gpujpeg_idct_cpu_perform(
                     &component->data_quantized[index * 64],
                     decoder->table_quantization[type].table
                 );
