@@ -425,7 +425,7 @@ __constant__ uint16_t gpujpeg_dct_gpu_quantization_table[64];
  */
 __global__ void
 gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, int source_stride,
-                           int16_t* output, int output_stride, uint16_t* quantization_table)
+                       int16_t* output, int output_stride, uint16_t* quantization_table)
 {
 // For pre-fermi GPUs, quantization table in constant memory is faster
 #if __CUDA_ARCH__ < 200
@@ -452,25 +452,28 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     int source_y = IMUL(block_y, GPUJPEG_BLOCK_SIZE);
     source += IMAD(source_y, source_stride, source_x);
 
+    // Load data to shared memory memory
+    if ( block_x < block_count_x && block_y < block_count_y ) {
+        
 // For pre-fermi GPUs, loading from global memory by 4 bytes is faster
 #if __CUDA_ARCH__ < 200
-    __shared__ uint8_t block_byte[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
-    uint8_t* block_byte_ptr = block_byte + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
-    if ( threadIdx.x % 4 == 0 ) {
-        #pragma unroll
-        for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
-            ((uint32_t*)block_byte_ptr)[i * (GPUJPEG_DCT_THREAD_BLOCK_STRIDE / 4)] = ((uint32_t*)source)[i * (source_stride / 4)];
-    }
-    source = block_byte_ptr;
-    source_stride = GPUJPEG_DCT_THREAD_BLOCK_STRIDE;
+        __shared__ uint8_t block_byte[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
+        uint8_t* block_byte_ptr = block_byte + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
+        if ( threadIdx.x % 4 == 0 ) {
+            #pragma unroll
+            for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
+                ((uint32_t*)block_byte_ptr)[i * (GPUJPEG_DCT_THREAD_BLOCK_STRIDE / 4)] = ((uint32_t*)source)[i * (source_stride / 4)];
+        }
+        source = block_byte_ptr;
+        source_stride = GPUJPEG_DCT_THREAD_BLOCK_STRIDE;
 #endif
     
-    // Load data to shared memory memory
-    #pragma unroll
-    for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-        int16_t coefficient = (int16_t)(source[i * source_stride]);
-        coefficient -= 128;
-        block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient;
+        #pragma unroll
+        for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
+            int16_t coefficient = (int16_t)(source[i * source_stride]);
+            coefficient -= 128;
+            block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient;
+        }
     }
 
     // Perform DCT
@@ -530,7 +533,7 @@ __constant__ uint16_t gpujpeg_idct_gpu_quantization_table[64];
  */
 __global__ void
 gpujpeg_idct_gpu_kernel(int block_count_x, int block_count_y, int16_t* source, int source_stride,
-                            uint8_t* output, int output_stride, uint16_t* quantization_table)
+                        uint8_t* output, int output_stride, uint16_t* quantization_table)
 {
 // For pre-fermi GPUs, quantization table in constant memory is faster
 #if __CUDA_ARCH__ < 200
@@ -558,11 +561,13 @@ gpujpeg_idct_gpu_kernel(int block_count_x, int block_count_y, int16_t* source, i
     source += IMAD(source_y, source_stride, source_x);
 
     // Load data to shared memory, only half of threads in each cell performs data moving (each thread moves 2 shorts)
-    int16_t* block_load_ptr = block_ptr + threadIdx.x; // Shortcut for "IMAD(..., threadIdx.x * 2)"
-    if ( threadIdx.x < (GPUJPEG_BLOCK_SIZE / 2) ) {
-        #pragma unroll
-        for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
-            ((int*)block_load_ptr)[i * (GPUJPEG_DCT_THREAD_BLOCK_STRIDE / 2)] = ((int*)source)[i * (GPUJPEG_BLOCK_SIZE / 2)];
+    if ( block_x < block_count_x && block_y < block_count_y ) {
+        int16_t* block_load_ptr = block_ptr + threadIdx.x; // Shortcut for "IMAD(..., threadIdx.x * 2)"
+        if ( threadIdx.x < (GPUJPEG_BLOCK_SIZE / 2) ) {
+            #pragma unroll
+            for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
+                ((int*)block_load_ptr)[i * (GPUJPEG_DCT_THREAD_BLOCK_STRIDE / 2)] = ((int*)source)[i * (GPUJPEG_BLOCK_SIZE / 2)];
+        }
     }
     __syncthreads();
 
