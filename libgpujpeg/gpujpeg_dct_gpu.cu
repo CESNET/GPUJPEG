@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "gpujpeg_dct_gpu_int.h"
+#include "gpujpeg_dct_gpu.h"
 #include "gpujpeg_util.h"
 
 /*
@@ -56,7 +56,7 @@
 #define GPUJPEG_DCT_THREAD_BLOCK_HEIGHT (GPUJPEG_BLOCK_SIZE * GPUJPEG_DCT_BLOCK_COUNT_Y)
 
 // Stride of shared memory buffer (short kernel)
-#define GPUJPEG_DCT_THREAD_BLOCK_STRIDE (GPUJPEG_DCT_THREAD_BLOCK_WIDTH + 2)
+#define GPUJPEG_DCT_THREAD_BLOCK_STRIDE (GPUJPEG_DCT_THREAD_BLOCK_WIDTH + 4)
 
 #define IMAD(a, b, c) ( ((a) * (b)) + (c) )
 #define IMUL(a, b) ((a) * (b))
@@ -115,7 +115,7 @@ unfixo(int x)
  * @return None
  */
 __device__ void
-gpujpeg_dct_gpu_int_kernel_inplace(int16_t* SrcDst, int Stride)
+gpujpeg_dct_gpu_kernel_inplace(int16_t* SrcDst, int Stride)
 {
     int in0, in1, in2, in3, in4, in5, in6, in7;
     int tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
@@ -193,7 +193,7 @@ gpujpeg_dct_gpu_int_kernel_inplace(int16_t* SrcDst, int Stride)
  * @return None
  */
 __device__ void
-gpujpeg_dct_gpu_int_kernel_inplace(uint32_t* V8)
+gpujpeg_dct_gpu_kernel_inplace(uint32_t* V8)
 {
     int in0, in1, in2, in3, in4, in5, in6, in7;
     int tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
@@ -265,7 +265,7 @@ gpujpeg_dct_gpu_int_kernel_inplace(uint32_t* V8)
  * @return None
  */
 __device__ void
-gpujpeg_idct_gpu_int_kernel_inplace(int16_t* SrcDst, int Stride)
+gpujpeg_idct_gpu_kernel_inplace(int16_t* SrcDst, int Stride)
 {
     int in0, in1, in2, in3, in4, in5, in6, in7;
     int tmp10, tmp11, tmp12, tmp13;
@@ -342,7 +342,7 @@ gpujpeg_idct_gpu_int_kernel_inplace(int16_t* SrcDst, int Stride)
  * @return None
  */
 __device__ void
-gpujpeg_idct_gpu_int_kernel_inplace(uint32_t* V8)
+gpujpeg_idct_gpu_kernel_inplace(uint32_t* V8)
 {
     int in0, in1, in2, in3, in4, in5, in6, in7;
     int tmp10, tmp11, tmp12, tmp13;
@@ -406,6 +406,9 @@ gpujpeg_idct_gpu_int_kernel_inplace(uint32_t* V8)
     V8[3] = sh3.hInt;
 }
 
+/** Quantization table */
+__constant__ uint16_t gpujpeg_dct_gpu_quantization_table[64];
+
 /**
  * Performs 8x8 block-wise Forward Discrete Cosine Transform of the given
  * image plane and outputs result to the array of coefficients. Short implementation.
@@ -421,9 +424,14 @@ gpujpeg_idct_gpu_int_kernel_inplace(uint32_t* V8)
  * @return None
  */
 __global__ void
-gpujpeg_dct_gpu_int_kernel(int block_count_x, int block_count_y, uint8_t* source, int source_stride,
-                           int16_t* output, int output_stride, uint16_t* table)
+gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, int source_stride,
+                           int16_t* output, int output_stride, uint16_t* quantization_table)
 {
+// For pre-fermi GPUs, quantization table in constant memory is faster
+#if __CUDA_ARCH__ < 200
+    quantization_table = gpujpeg_dct_gpu_quantization_table;
+#endif
+    
     // Shared data
     __shared__ int16_t block[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
 
@@ -440,28 +448,41 @@ gpujpeg_dct_gpu_int_kernel(int block_count_x, int block_count_y, uint8_t* source
     int16_t* block_ptr = block + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
 
     // Determine position in source buffer and apply it
-    int source_x = IMAD(blockIdx.x, GPUJPEG_DCT_THREAD_BLOCK_WIDTH, thread_x);
-    int source_y = IMAD(blockIdx.y, GPUJPEG_DCT_THREAD_BLOCK_HEIGHT, thread_y);
+    int source_x = IMAD(block_x, GPUJPEG_BLOCK_SIZE, threadIdx.x);
+    int source_y = IMUL(block_y, GPUJPEG_BLOCK_SIZE);
     source += IMAD(source_y, source_stride, source_x);
 
+// For pre-fermi GPUs, loading from global memory by 4 bytes is faster
+#if __CUDA_ARCH__ < 200
+    __shared__ uint8_t block_byte[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
+    uint8_t* block_byte_ptr = block_byte + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
+    if ( threadIdx.x % 4 == 0 ) {
+        #pragma unroll
+        for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
+            ((uint32_t*)block_byte_ptr)[i * (GPUJPEG_DCT_THREAD_BLOCK_STRIDE / 4)] = ((uint32_t*)source)[i * (source_stride / 4)];
+    }
+    source = block_byte_ptr;
+    source_stride = GPUJPEG_DCT_THREAD_BLOCK_STRIDE;
+#endif
+    
     // Load data to shared memory memory
     #pragma unroll
     for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-        int16_t coefficient = (int16_t)source[i * source_stride];
+        int16_t coefficient = (int16_t)(source[i * source_stride]);
         coefficient -= 128;
         block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient;
     }
 
     // Perform DCT
     __syncthreads();
-    gpujpeg_dct_gpu_int_kernel_inplace(block + thread_y * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + thread_x_permutated, GPUJPEG_DCT_THREAD_BLOCK_STRIDE);
+    gpujpeg_dct_gpu_kernel_inplace(block + thread_y * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + thread_x_permutated, GPUJPEG_DCT_THREAD_BLOCK_STRIDE);
     __syncthreads();
-    gpujpeg_dct_gpu_int_kernel_inplace((uint32_t*)(block + (thread_y + threadIdx.x) * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + threadIdx.y * GPUJPEG_BLOCK_SIZE));
+    gpujpeg_dct_gpu_kernel_inplace((uint32_t*)(block + (thread_y + threadIdx.x) * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + threadIdx.y * GPUJPEG_BLOCK_SIZE));
     __syncthreads();
 
     // Quantization
     for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-        uint16_t quantization = table[i * GPUJPEG_BLOCK_SIZE + threadIdx.x];
+        uint16_t quantization = quantization_table[i * GPUJPEG_BLOCK_SIZE + threadIdx.x];
         int coefficient = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
 
         if ( coefficient < 0 ) {
@@ -490,6 +511,9 @@ gpujpeg_dct_gpu_int_kernel(int block_count_x, int block_count_y, uint8_t* source
     }
 }
 
+/** Quantization table */
+__constant__ uint16_t gpujpeg_idct_gpu_quantization_table[64];
+
 /**
  * Performs 8x8 block-wise Inverse Discrete Cosine Transform of the given
  * image plane and outputs result to the array of coefficients. Short implementation.
@@ -505,9 +529,14 @@ gpujpeg_dct_gpu_int_kernel(int block_count_x, int block_count_y, uint8_t* source
  * @return None
  */
 __global__ void
-gpujpeg_idct_gpu_int_kernel(int block_count_x, int block_count_y, int16_t* source, int source_stride,
-                            uint8_t* output, int output_stride, uint16_t* table)
+gpujpeg_idct_gpu_kernel(int block_count_x, int block_count_y, int16_t* source, int source_stride,
+                            uint8_t* output, int output_stride, uint16_t* quantization_table)
 {
+// For pre-fermi GPUs, quantization table in constant memory is faster
+#if __CUDA_ARCH__ < 200
+    quantization_table = gpujpeg_idct_gpu_quantization_table;
+#endif
+    
     // Shared data
     __shared__ int16_t block[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
 
@@ -523,9 +552,9 @@ gpujpeg_idct_gpu_int_kernel(int block_count_x, int block_count_y, int16_t* sourc
     // Determine position into shared buffer
     int16_t* block_ptr = block + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
 
-    // Determine position in source buffer and apply it
-    int source_x = IMAD(IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y), GPUJPEG_BLOCK_SQUARED_SIZE, threadIdx.x * 2);
-    int source_y = IMAD(blockIdx.y, GPUJPEG_DCT_BLOCK_COUNT_Y, threadIdx.z);
+    // Determine position in source buffer and apply it    
+    int source_x = IMAD(block_x, GPUJPEG_BLOCK_SQUARED_SIZE, threadIdx.x * 2);
+    int source_y = block_y;
     source += IMAD(source_y, source_stride, source_x);
 
     // Load data to shared memory, only half of threads in each cell performs data moving (each thread moves 2 shorts)
@@ -539,7 +568,7 @@ gpujpeg_idct_gpu_int_kernel(int block_count_x, int block_count_y, int16_t* sourc
 
     // Quantization
     for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-        int16_t quantization = table[i * GPUJPEG_BLOCK_SIZE + threadIdx.x];
+        int16_t quantization = quantization_table[i * GPUJPEG_BLOCK_SIZE + threadIdx.x];
         int16_t coefficient = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
 
         coefficient = coefficient * quantization;
@@ -549,15 +578,25 @@ gpujpeg_idct_gpu_int_kernel(int block_count_x, int block_count_y, int16_t* sourc
 
     // Perform IDCT
     __syncthreads();
-    gpujpeg_idct_gpu_int_kernel_inplace(block + thread_y * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + thread_x_permutated, GPUJPEG_DCT_THREAD_BLOCK_STRIDE);
+    gpujpeg_idct_gpu_kernel_inplace(block + thread_y * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + thread_x_permutated, GPUJPEG_DCT_THREAD_BLOCK_STRIDE);
     __syncthreads();
-    gpujpeg_idct_gpu_int_kernel_inplace((uint32_t*)(block + (thread_y + threadIdx.x) * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + threadIdx.y * GPUJPEG_BLOCK_SIZE));
+    gpujpeg_idct_gpu_kernel_inplace((uint32_t*)(block + (thread_y + threadIdx.x) * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + threadIdx.y * GPUJPEG_BLOCK_SIZE));
     __syncthreads();
 
      // Determine position in output buffer and apply it
     int output_x = IMAD(blockIdx.x, GPUJPEG_DCT_THREAD_BLOCK_WIDTH, thread_x);
     int output_y = IMAD(blockIdx.y, GPUJPEG_DCT_THREAD_BLOCK_HEIGHT, thread_y);
     output += IMAD(output_y, output_stride, output_x);
+
+// For pre-fermi GPUs, storing to global memory by 4 bytes is faster
+#if __CUDA_ARCH__ < 200
+    __shared__ uint8_t block_byte[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
+    uint8_t* block_byte_ptr = block_byte + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
+    uint8_t* __output = output;
+    int __output_stride = output_stride;
+    output = block_byte_ptr;
+    output_stride = GPUJPEG_DCT_THREAD_BLOCK_STRIDE;
+#endif
 
     // Store data to global memory
     if ( block_x < block_count_x && block_y < block_count_y ) {
@@ -571,12 +610,21 @@ gpujpeg_idct_gpu_int_kernel(int block_count_x, int block_count_y, int16_t* sourc
                 coefficient = 0;
             output[i * output_stride] = (uint8_t)coefficient;
         }
+        
+// For pre-fermi GPUs, storing to global memory by 4 bytes is faster
+#if __CUDA_ARCH__ < 200
+        if ( threadIdx.x % 4 == 0 ) {
+            #pragma unroll
+            for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
+                ((uint32_t*)__output)[i * (__output_stride / 4)] = ((uint32_t*)block_byte_ptr)[i * (GPUJPEG_DCT_THREAD_BLOCK_STRIDE / 4)];
+        }
+#endif
     }
 }
 
 /** Documented at declaration */
 void
-gpujpeg_dct_gpu_int(struct gpujpeg_encoder* encoder)
+gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
 {
     // Get coder
     struct gpujpeg_coder* coder = &encoder->coder;
@@ -595,8 +643,21 @@ gpujpeg_dct_gpu_int(struct gpujpeg_encoder* encoder)
 
         int block_count_x = roi_width / GPUJPEG_BLOCK_SIZE;
         int block_count_y = roi_height / GPUJPEG_BLOCK_SIZE;
+        
+        // Get quantization table
+        uint16_t* d_quantization_table = encoder->table_quantization[type].d_table;
+        
+        // Copy quantization table to constant memory
+        cudaMemcpyToSymbol(
+            (const char*)gpujpeg_dct_gpu_quantization_table,
+            d_quantization_table, 
+            64 * sizeof(uint16_t),
+            0,
+            cudaMemcpyDeviceToDevice
+        );
+        gpujpeg_cuda_check_error("Copy DCT quantization table to constant memory");
 
-        // Perform block-wise IDCT processing
+        // Perform block-wise DCT processing
         dim3 dct_grid(
             gpujpeg_div_and_round_up(block_count_x, GPUJPEG_DCT_BLOCK_COUNT_X),
             gpujpeg_div_and_round_up(block_count_y, GPUJPEG_DCT_BLOCK_COUNT_Y),
@@ -607,14 +668,14 @@ gpujpeg_dct_gpu_int(struct gpujpeg_encoder* encoder)
             GPUJPEG_DCT_BLOCK_COUNT_X,
             GPUJPEG_DCT_BLOCK_COUNT_Y
         );
-        gpujpeg_dct_gpu_int_kernel<<<dct_grid, dct_block>>>(
+        gpujpeg_dct_gpu_kernel<<<dct_grid, dct_block>>>(
             block_count_x,
             block_count_y,
             component->d_data,
             component->data_width,
             component->d_data_quantized,
             component->data_width * GPUJPEG_BLOCK_SIZE,
-            encoder->table_quantization[type].d_table
+            d_quantization_table
         );
         cudaThreadSynchronize();
         gpujpeg_cuda_check_error("Forward Integer DCT failed");
@@ -623,7 +684,7 @@ gpujpeg_dct_gpu_int(struct gpujpeg_encoder* encoder)
 
 /** Documented at declaration */
 void
-gpujpeg_idct_gpu_int(struct gpujpeg_decoder* decoder)
+gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
 {
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
@@ -642,6 +703,19 @@ gpujpeg_idct_gpu_int(struct gpujpeg_decoder* decoder)
 
         int block_count_x = roi_width / GPUJPEG_BLOCK_SIZE;
         int block_count_y = roi_height / GPUJPEG_BLOCK_SIZE;
+        
+        // Get quantization table
+        uint16_t* d_quantization_table = decoder->table_quantization[type].d_table;
+        
+        // Copy quantization table to constant memory
+        cudaMemcpyToSymbol(
+            (const char*)gpujpeg_idct_gpu_quantization_table,
+            d_quantization_table, 
+            64 * sizeof(uint16_t),
+            0,
+            cudaMemcpyDeviceToDevice
+        );
+        gpujpeg_cuda_check_error("Copy IDCT quantization table to constant memory");
 
         // Perform block-wise IDCT processing
         dim3 dct_grid(
@@ -654,14 +728,14 @@ gpujpeg_idct_gpu_int(struct gpujpeg_decoder* decoder)
             GPUJPEG_DCT_BLOCK_COUNT_X,
             GPUJPEG_DCT_BLOCK_COUNT_Y
         );
-        gpujpeg_idct_gpu_int_kernel<<<dct_grid, dct_block>>>(
+        gpujpeg_idct_gpu_kernel<<<dct_grid, dct_block>>>(
             block_count_x,
             block_count_y,
             component->d_data_quantized,
             component->data_width * GPUJPEG_BLOCK_SIZE,
             component->d_data,
             component->data_width,
-            decoder->table_quantization[type].d_table
+            d_quantization_table
         );
         cudaThreadSynchronize();
         gpujpeg_cuda_check_error("Inverse Integer DCT failed");

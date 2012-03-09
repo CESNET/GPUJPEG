@@ -30,8 +30,7 @@
 #include "gpujpeg_encoder.h"
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_dct_cpu.h"
-#include "gpujpeg_dct_gpu_float.h"
-#include "gpujpeg_dct_gpu_int.h"
+#include "gpujpeg_dct_gpu.h"
 #include "gpujpeg_huffman_cpu_encoder.h"
 #include "gpujpeg_huffman_gpu_encoder.h"
 #include "gpujpeg_util.h"
@@ -179,9 +178,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
     coder->duration_preprocessor = GPUJPEG_TIMER_DURATION();
     GPUJPEG_TIMER_START();
         
-    // Perform DCT and quantization
-    //gpujpeg_dct_gpu_int(encoder);
-    /**/
+#ifdef GPUJPEG_DCT_FROM_NPP
+    // Perform DCT and quantization (implementation from NPP)
     for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
         // Get component
         struct gpujpeg_component* component = &coder->component[comp];
@@ -216,7 +214,10 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t*
 
         //gpujpeg_component_print16(&coder->component[comp], coder->component[comp].d_data_quantized);
     }
-    /**/
+#else
+    // Perform DCT and quantization (own CUDA implementation)
+    gpujpeg_dct_gpu(encoder);
+#endif
 
     // Initialize writer output buffer current position
     encoder->writer->buffer_current = encoder->writer->buffer;

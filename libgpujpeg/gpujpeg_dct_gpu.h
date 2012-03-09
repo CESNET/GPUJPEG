@@ -27,11 +27,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "gpujpeg_dct_gpu_float.h"
-#include "gpujpeg_util.h"
+#ifndef GPUJPEG_DCT_GPU_H
+#define GPUJPEG_DCT_GPU_H
 
-/** Documented at declaration */
+#include "gpujpeg_encoder.h"
+#include "gpujpeg_decoder.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * Peform forward DCT on GPU in integers
+ *
+ * @param decoder
+ */
 void
-gpujpeg_idct_gpu_float(struct gpujpeg_decoder* decoder)
-{
+gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder);
+
+/**
+ * Peform inverse DCT on GPU in integers
+ *
+ * @param decoder
+ */
+void
+gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif // GPUJPEG_DCT_GPU_H

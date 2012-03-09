@@ -30,6 +30,10 @@
 SHARED_LIBRARY ?= 1
 # Use constant memory for huffman coder tables?
 HUFFMAN_CODER_TABLES_IN_CONSTANT ?= 1
+# Use DCT from NPP library (is faster but causes color change)
+# If set to 0, own implementation is used, it doesn't cause color change
+# but for non-fermi GPUs it is slower
+DCT_FROM_NPP ?= 1
 # Debug
 DEBUG ?= 0
 # CUDA install path
@@ -54,8 +58,7 @@ CFILES := \
     gpujpeg_reader.c
 # CUDA files
 CUFILES := \
-    gpujpeg_dct_gpu_float.cu \
-    gpujpeg_dct_gpu_int.cu \
+    gpujpeg_dct_gpu.cu \
     gpujpeg_preprocessor.cu \
     gpujpeg_huffman_gpu_encoder.cu \
     gpujpeg_huffman_gpu_decoder.cu
@@ -84,6 +87,9 @@ endif
 # Other Flags
 ifeq ($(HUFFMAN_CODER_TABLES_IN_CONSTANT),1)
     COMMONFLAGS += -DGPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
+endif
+ifeq ($(DCT_FROM_NPP),1)
+    COMMONFLAGS += -DGPUJPEG_DCT_FROM_NPP
 endif
 
 # Do 32bit vs. 64bit setup
@@ -136,8 +142,7 @@ gpujpeg_decoder.c.o: gpujpeg_decoder.c gpujpeg_decoder.h
 gpujpeg_table.c.o: gpujpeg_table.c gpujpeg_table.h
 gpujpeg_preprocessor.cu.o: gpujpeg_preprocessor.cu gpujpeg_preprocessor.h gpujpeg_colorspace.h
 gpujpeg_dct_cpu.c.o: gpujpeg_dct_cpu.c gpujpeg_dct_cpu.h
-gpujpeg_dct_gpu_float.cu.o: gpujpeg_dct_gpu_float.cu gpujpeg_dct_gpu_float.h
-gpujpeg_dct_gpu_int.cu.o: gpujpeg_dct_gpu_int.cu gpujpeg_dct_gpu_int.h
+gpujpeg_dct_gpu.cu.o: gpujpeg_dct_gpu.cu gpujpeg_dct_gpu.h
 gpujpeg_huffman_cpu_encoder.c.o: gpujpeg_huffman_cpu_encoder.c gpujpeg_huffman_cpu_encoder.h
 gpujpeg_huffman_gpu_encoder.cu.o: gpujpeg_huffman_gpu_encoder.cu gpujpeg_huffman_gpu_encoder.h
 gpujpeg_huffman_cpu_decoder.c.o: gpujpeg_huffman_cpu_decoder.c gpujpeg_huffman_cpu_decoder.h
