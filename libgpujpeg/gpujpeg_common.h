@@ -99,17 +99,19 @@ int
 gpujpeg_init_device(int device_id, int flags);
 
 /**
- * JPEG parameters
+ * JPEG parameters. This structure should not be initialized only be hand,
+ * but at first gpujpeg_set_default_parameters should be call and then
+ * some parameters could be changed.
  */
 struct gpujpeg_parameters
 {
-    // Verbose output
+    // Verbose output - show more information, collects duration of each phase, etc.
     int verbose;
     
     // Encoder quality level (0-100)
     int quality;
     
-    // Restart interval
+    // Restart interval (0 means that restart interval is disabled and CPU huffman coder is used)
     int restart_interval;
     
     // Flag which determines if interleaved format of JPEG stream should be used, "1" = only
@@ -117,13 +119,18 @@ struct gpujpeg_parameters
     // or "0" = one scan for each color component (e.g. Y Y Y ..., Cb Cb Cb ..., Cr Cr Cr ...)
     int interleaved;
     
-    // Use segment info in stream for fast decoding
+    // Use segment info in stream for fast decoding. The segment info is placed into special
+    // application headers and contains indexes to beginnings of segments in the stream, so
+    // the decoder don't have to parse the stream byte-by-byte but he can only read the
+    // segment info and start decoding. The segment info is presented for each scan, and thus
+    // the best result is achieved when it is used in combination with "interleaved = 1" settings.
     int segment_info;
 
     // Sampling factors for each color component
     struct gpujpeg_component_sampling_factor sampling_factor[GPUJPEG_MAX_COMPONENT_COUNT];
 
-    // JPEG stream internal color space
+    // Color space that is used inside JPEG stream = that is carried in JPEG format = to
+    // which are input data converted (default value is JPEG YCbCr)
     enum gpujpeg_color_space color_space_internal;
 };
 
@@ -145,7 +152,12 @@ gpujpeg_set_default_parameters(struct gpujpeg_parameters* param);
 void
 gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param);
 
-/** Image parameters */
+/**
+ * Image parameters. This structure should not be initialized only be hand,
+ * but at first gpujpeg_image_set_default_parameters should be call and then
+ * some parameters could be changed.
+ *
+ */
 struct gpujpeg_image_parameters {
     // Image data width
     int width;
@@ -438,5 +450,32 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
 void
 gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_image_parameters param_image_from,
         struct gpujpeg_image_parameters param_image_to);
+
+/**
+ * Init OpenGL context
+ *
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_opengl_init();
+
+/**
+ * Create OpenGL texture
+ *
+ * @param width
+ * @param height
+ * @param data
+ * @return nonzero texture id if succeeds, otherwise 0
+ */
+int
+gpujpeg_opengl_texture_create(int width, int height, uint8_t* data);
+
+/**
+ * Destroy OpenGL texture
+ *
+ * @param texture_id
+ */
+void
+gpujpeg_opengl_texture_destroy(int texture_id);
 
 #endif // GPUJPEG_COMMON_H

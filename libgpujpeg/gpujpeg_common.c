@@ -33,6 +33,7 @@
 #include <npp.h>
 #include <cuda_gl_interop.h>
 #include <math.h>
+#include <GL/glx.h>
 
 /** Documented at declaration */
 struct gpujpeg_devices_info
@@ -152,6 +153,21 @@ gpujpeg_init_device(int device_id, int flags)
     }
     
     cudaSetDevice(device_id);
+    gpujpeg_cuda_check_error("Set CUDA device");
+
+    // Test by simple copying that the device is ready
+    uint8_t data[] = {8};
+    uint8_t* d_data = NULL;
+    cudaMalloc((void**)&d_data, 1);
+    cudaMemcpy(d_data, data, 1, cudaMemcpyHostToDevice);
+    cudaFree(d_data);
+    cudaError_t error = cudaGetLastError();
+    if ( cudaSuccess != error ) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to initialize CUDA device.\n");
+        if ( flags & GPUJPEG_OPENGL_INTEROPERABILITY )
+            fprintf(stderr, "[GPUJPEG] [Info]  OpenGL interoperability is used, is OpenGL context available?\n");
+        return -1;
+    }
 
     return 0;
 }
@@ -636,7 +652,7 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
     int image_size = 0;
     uint8_t* image = NULL;
     if ( gpujpeg_image_load_from_file(filename, &image, &image_size) != 0 ) {
-        fprintf(stderr, "Failed to load image [%s]!\n", filename);
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to load image [%s]!\n", filename);
         return;
     }
 
@@ -701,7 +717,7 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     int image_size = gpujpeg_image_calculate_size(&param_image_from);
     uint8_t* image = NULL;
     if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
-        fprintf(stderr, "Failed to load image [%s]!\n", input);
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to load image [%s]!\n", input);
         return;
     }
 
@@ -734,9 +750,99 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     // Save preprocessor result
     assert(cudaMemcpy(coder.data_raw, coder.d_data_raw, coder.data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
     if ( gpujpeg_image_save_to_file(output, coder.data_raw, coder.data_raw_size) != 0 ) {
-        fprintf(stderr, "Failed to save image [%s]!\n", output);
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to save image [%s]!\n", output);
         return;
     }
     // Deinitialize decoder
     gpujpeg_coder_deinit(&coder);
+}
+
+/** Documented at declaration */
+int
+gpujpeg_opengl_init()
+{
+#ifdef GPUJPEG_USE_OPENGL
+    // Open display
+    Display* glx_display = XOpenDisplay(0);
+    if ( glx_display == NULL ) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to open X display!\n");
+        return -1;
+    }
+
+    // Choose visual
+    static int attributes[] = {
+        GLX_RGBA,
+        GLX_DOUBLEBUFFER,
+        GLX_RED_SIZE,   1,
+        GLX_GREEN_SIZE, 1,
+        GLX_BLUE_SIZE,  1,
+        None
+    };
+    XVisualInfo* visual = glXChooseVisual(glx_display, DefaultScreen(glx_display), attributes);
+    if ( visual == NULL ) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to choose visual!\n");
+        return -1;
+    }
+
+    // Create OpenGL context
+    GLXContext glx_context = glXCreateContext(glx_display, visual, 0, GL_TRUE);
+    if ( glx_context == NULL ) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to create OpenGL context!\n");
+        return -1;
+    }
+
+    // Create window
+    Colormap colormap = XCreateColormap(glx_display, RootWindow(glx_display, visual->screen), visual->visual, AllocNone);
+    XSetWindowAttributes swa;
+    swa.colormap = colormap;
+    swa.border_pixel = 0;
+    Window glx_window = XCreateWindow(
+        glx_display,
+        RootWindow(glx_display, visual->screen),
+        0, 0, 640, 480,
+        0, visual->depth, InputOutput, visual->visual,
+        CWBorderPixel | CWColormap | CWEventMask,
+        &swa
+    );
+    // Do not map window to display to keep it hidden
+    //XMapWindow(glx_display, glx_window);
+
+    glXMakeCurrent(glx_display, glx_window, glx_context);
+#else
+    GPUJPEG_EXIT_MISSING_OPENGL();
+#endif
+    return 0;
+}
+
+/** Documented at declaration */
+int
+gpujpeg_opengl_texture_create(int width, int height, uint8_t* data)
+{
+    int texture_id = 0;
+
+#ifdef GPUJPEG_USE_OPENGL
+    glGenTextures(1, &texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glBindTexture(GL_TEXTURE_2D, 0);
+#else
+    GPUJPEG_EXIT_MISSING_OPENGL();
+#endif
+
+    return texture_id;
+}
+
+/** Documented at declaration */
+void
+gpujpeg_opengl_texture_destroy(int texture_id)
+{
+#ifdef GPUJPEG_USE_OPENGL
+    glDeleteTextures(1, &texture_id);
+#else
+    GPUJPEG_EXIT_MISSING_OPENGL();
+#endif
 }

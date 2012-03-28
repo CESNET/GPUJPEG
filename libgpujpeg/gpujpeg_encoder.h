@@ -35,6 +35,65 @@
 #include "gpujpeg_writer.h"
 
 /**
+ * Encoder input type
+ */
+enum gpujpeg_encoder_input_type {
+    // Encoder will use custom input buffer
+    GPUJPEG_ENCODER_INPUT_IMAGE,
+    // Encoder will use OpenGL Texture PBO Resource as input buffer
+    GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE,
+};
+
+/**
+ * Encoder input structure
+ */
+struct gpujpeg_encoder_input
+{
+    // Output type
+    enum gpujpeg_encoder_input_type type;
+
+    // Image data
+    uint8_t* image;
+
+    // Texture id
+    int texture_id;
+    // Texture pbo id
+    int texture_pbo_id;
+    // Texture PBO resource (used as target for saving decoder output when you want
+    // to save decoder output into OpenGL texture)
+    struct cudaGraphicsResource* texture_pbo_resource;
+};
+
+/**
+ * Set encoder input to image data
+ *
+ * @param encoder_input  Encoder input structure
+ * @param image  Input image data
+ * @return void
+ */
+void
+gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* image);
+
+/**
+ * Set encoder input to OpenGL texture
+ *
+ * @param encoder_input  Encoder input structure
+ * @param texture_id  OpenGL texture id
+ * @return void
+ */
+void
+gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, int texture_id);
+
+/**
+ * Clear allocated resources for encoder input
+ *
+ * @param encoder_input  Encoder input structure
+ * @return void
+ */
+void
+gpujpeg_encoder_input_clear(struct gpujpeg_encoder_input* input);
+
+/**
  * JPEG encoder structure
  */
 struct gpujpeg_encoder
@@ -74,7 +133,7 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, uint8_t* image, uint8_t** image_compressed, int* image_compressed_size);
+gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, int* image_compressed_size);
 
 /**
  * Destory JPEG encoder

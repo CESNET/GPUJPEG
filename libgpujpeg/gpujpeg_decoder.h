@@ -71,7 +71,7 @@ struct gpujpeg_decoder_output
     void (*texture_callback_detach_opengl)(void* param);
     // If you develop multi-threaded application where one thread use CUDA
     // for JPEG decoding and other thread use OpenGL for displaying results
-    // from JPEG decoder, when a image is decoded you must detach OpenGL context
+    // from JPEG decoder, when an image is decoded you must detach OpenGL context
     // from displaying thread and attach it to compressing thread (inside
     // code of texture_callback_attach_opengl which is automatically invoked 
     // by decoder), decoder then is able to copy data from GPU memory used 
@@ -93,7 +93,7 @@ struct gpujpeg_decoder_output
  * @return void
  */
 void
-gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* decoder_output);
+gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* output);
 
 /**
  * JPEG decoder structure

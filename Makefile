@@ -27,6 +27,8 @@
 
 # Use shared/static libgpujpeg library?
 SHARED_LIBRARY ?= 1
+# Flag if use OpenGL
+USE_OPENGL ?= 1
 # Debug
 DEBUG ?= 0
 # CUDA install path
@@ -62,6 +64,10 @@ else
         LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib
     endif
     LDFLAGS += -lcudart -lnpp libgpujpeg/libgpujpeg.a
+    #Other flags
+    ifeq ($(USE_OPENGL),1)
+        LDFLAGS += -lGLEW
+    endif 
 endif
 
 # Build
@@ -104,7 +110,7 @@ endif
 
 # Build gpujpeg library
 libgpujpeg/libgpujpeg.build:
-	@cd libgpujpeg; make SHARED_LIBRARY=$(SHARED_LIBRARY)
+	@cd libgpujpeg; make SHARED_LIBRARY=$(SHARED_LIBRARY) USE_OPENGL=$(USE_OPENGL)
     
 # Pattern rule for compiling C files
 %.c.o: %.c 

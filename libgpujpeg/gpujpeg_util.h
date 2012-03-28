@@ -88,4 +88,9 @@ struct { int x; int y; int z; } blockDim;
 struct { int x; int y; int z; } gridDim;
 #endif
 
+// OpenGL missing error
+#define GPUJPEG_EXIT_MISSING_OPENGL() \
+    fprintf(stderr, "[GPUJPEG] [Error] Can't use OpenGL. The codec was compiled without OpenGL!\n"); \
+    exit(-1); \
+
 #endif // GPUJPEG_UTIL_H
