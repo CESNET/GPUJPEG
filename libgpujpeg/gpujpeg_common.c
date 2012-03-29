@@ -31,13 +31,13 @@
 #include "gpujpeg_util.h"
 #include "gpujpeg_preprocessor.h"
 #include <npp.h>
-#include <cuda_gl_interop.h>
 #include <math.h>
-#include <GL/glx.h>
-
 #ifdef GPUJPEG_USE_OPENGL
+    #define GL_GLEXT_PROTOTYPES
     #include <GL/gl.h>
+    #include <GL/glx.h>
 #endif
+#include <cuda_gl_interop.h>
 
 /** Documented at declaration */
 struct gpujpeg_devices_info
