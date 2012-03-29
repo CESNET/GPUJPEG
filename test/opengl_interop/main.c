@@ -72,9 +72,7 @@ struct application {
     
     // OpenGL parameters
     unsigned int texture_id;
-    unsigned int pbo_id;
-    // CUDA parameters
-    struct cudaGraphicsResource* pbo_res;
+    struct gpujpeg_opengl_texture* texture;
     
     // JPEG
     struct gpujpeg_encoder* encoder;
@@ -155,16 +153,6 @@ view_on_init(void* param)
     app->image = image_create(app->width, app->height);
     assert(app->image != NULL);
     
-    // Create PBO
-    glGenBuffers(1, &app->pbo_id);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, app->pbo_id);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, app->width * app->height * 3 * sizeof(uint8_t), NULL, GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-    
-    // Create CUDA PBO Resource
-    cudaGraphicsGLRegisterBuffer(&app->pbo_res, app->pbo_id, cudaGraphicsMapFlagsNone);
-    cudaCheckError(); 
-    
     // Create texture
     glGenTextures(1, &app->texture_id);
     glBindTexture(GL_TEXTURE_2D, app->texture_id);
@@ -172,6 +160,8 @@ view_on_init(void* param)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, app->width, app->height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glBindTexture(GL_TEXTURE_2D, 0);
     
     // Init JPEG params
     struct gpujpeg_parameters param_coder;
@@ -188,17 +178,21 @@ view_on_init(void* param)
     assert(app->decoder != NULL);
     assert(gpujpeg_decoder_init(app->decoder, &param_coder, &param_image) == 0);
     
+    // Init JPEG texture
+    app->texture = gpujpeg_opengl_texture_register(app->texture_id, GPUJPEG_OPENGL_TEXTURE_WRITE);
+    assert(app->texture != NULL);
+
     // Init JPEG decoder output
-    gpujpeg_decoder_output_set_default(&app->decoder_output);
     if ( app->transfer_type == TRANSFER_DEVICE ) {
-        app->decoder_output.type = GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE;
-        app->decoder_output.texture_pbo_resource = app->pbo_res;
+        gpujpeg_decoder_output_set_texture(&app->decoder_output, app->texture);
+    } else {
+        gpujpeg_decoder_output_set_default(&app->decoder_output);
     }
 #ifdef TEST_OPENGL_INTEROP_MULTI_THREAD
     // Set texture callbacks
-    app->decoder_output.texture_callback_param = (void*)app;
-    app->decoder_output.texture_callback_attach_opengl = &thread_image_attach_opengl;
-    app->decoder_output.texture_callback_detach_opengl = &thread_image_detach_opengl;
+    app->texture->texture_callback_param = (void*)app;
+    app->texture->texture_callback_attach_opengl = &thread_image_attach_opengl;
+    app->texture->texture_callback_detach_opengl = &thread_image_detach_opengl;
 #endif
 }
 
@@ -235,7 +229,9 @@ image_generate(struct application* app)
     int image_compressed_size = 0;
     // Copy data to host memory
     cudaMemcpy(app->image->data, app->image->d_data, app->width * app->height * 3 * sizeof(uint8_t), cudaMemcpyDeviceToHost);
-    assert(gpujpeg_encoder_encode(app->encoder, app->image->data, &image_compressed, &image_compressed_size) == 0);
+    struct gpujpeg_encoder_input input;
+    gpujpeg_encoder_input_set_image(&input, app->image->data);
+    assert(gpujpeg_encoder_encode(app->encoder, &input, &image_compressed, &image_compressed_size) == 0);
     
     TIMER_STOP_PRINT("Image: ImageEncode");
     TIMER_START();
@@ -291,11 +287,7 @@ view_on_render(void* param)
     app->new_image = 0;
     
     if ( app->decoder_output.type == GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE ) {
-        // Set data to texture from pbo
-        glBindTexture(GL_TEXTURE_2D, app->texture_id);
-        glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, app->pbo_id);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, app->width, app->height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-        glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+        // Do nothing texture is already updated
     } else {
         // Set texture data from host memory
         glBindTexture(GL_TEXTURE_2D, app->texture_id);

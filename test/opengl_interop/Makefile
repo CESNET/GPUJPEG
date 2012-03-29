@@ -66,7 +66,7 @@ ifeq ($(SHARED_LIBRARY),1)
 else
     LDFLAGS += -lcudart -lnpp ../../libgpujpeg/libgpujpeg.a
 endif
-LDFLAGS += -lcuda -lcudart -lglut -lGLU -lGLEW -lpthread 
+LDFLAGS += -lcuda -lcudart -lglut -lGLU -lGLEW -lGL -lpthread 
 
 # Build
 build: $(TARGET) $(TARGET).sh
@@ -109,7 +109,7 @@ endif
     
 # Build gpujpeg library
 ../../libgpujpeg/libgpujpeg.build:
-	@cd ../../libgpujpeg; make SHARED_LIBRARY=$(SHARED_LIBRARY)
+	@cd ../../libgpujpeg; make SHARED_LIBRARY=$(SHARED_LIBRARY) USE_OPENGL=1
     
 # Set suffix for CUDA files
 .SUFFIXES: .cu

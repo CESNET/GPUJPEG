@@ -160,9 +160,12 @@ USAGE:
     Next step is to encode uncompressed image data to JPEG compressed data 
     by encoder:
     
+      struct gpujpeg_encoder_input encoder_input;
+      gpujpeg_encoder_input_set_image(&encoder_input, image);
+    
       uint8_t* image_compressed = NULL;
       int image_compressed_size = 0;
-      if ( gpujpeg_encoder_encode(encoder, image, &image_compressed, 
+      if ( gpujpeg_encoder_encode(encoder, &encoder_input, &image_compressed, 
                &image_compressed_size) != 0 )
           return -1;
             

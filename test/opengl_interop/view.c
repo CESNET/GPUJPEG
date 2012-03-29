@@ -125,12 +125,14 @@ view_render(struct view* view)
         view->on_render(view->on_render_param);
     
     if ( view->texture_id != 0 ) {
+        glBindTexture(GL_TEXTURE_2D, view->texture_id);
         glBegin(GL_QUADS);
         glTexCoord2f(0.0, 0.0); glVertex2f(-1.0, 1.0);
         glTexCoord2f(1.0, 0.0); glVertex2f(1.0, 1.0);
         glTexCoord2f(1.0, 1.0); glVertex2f(1.0, -1.0);
         glTexCoord2f(0.0, 1.0); glVertex2f(-1.0, -1.0);
         glEnd();
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
     
     glFlush();

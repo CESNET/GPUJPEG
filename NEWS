@@ -1,3 +1,24 @@
+2012-03-29
+----------
+Changes:
+-Optionally the encoder input or decoder output can be loaded/store
+ from/to OpenGL texture.
+
+2012-03-09
+----------
+Changes:
+-Refactored color spaces transformations, added new color spaces
+-Added new implementation of DCT/IDCT on CUDA, it is slightly slower
+ than the NPP implementation, but the new IDCT doesn't cause color space 
+ change. It can be turned on by Makefile option. By default is NPP 
+ version used.
+
+2012-02-24
+----------
+Changes:
+-Slightly improved performance of encoder.
+-Correction of segment info for large images
+
 2012-02-21
 ----------
 Changes:
