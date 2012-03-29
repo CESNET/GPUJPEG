@@ -363,6 +363,8 @@ struct gpujpeg_coder
     // Operation durations
     float duration_memory_to;
     float duration_memory_from;
+    float duration_memory_map;
+    float duration_memory_unmap;
     float duration_preprocessor;
     float duration_dct_quantization;
     float duration_huffman_coder;
@@ -471,11 +473,126 @@ int
 gpujpeg_opengl_texture_create(int width, int height, uint8_t* data);
 
 /**
+ * Set data to OpenGL texture
+ *
+ * @param texture_id
+ * @param data
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_opengl_texture_set_data(int texture_id, uint8_t* data);
+
+/**
+ * Get data from OpenGL texture
+ *
+ * @param texture_id
+ * @param data
+ * @param data_size
+ * @return 0 data if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_opengl_texture_get_data(int texture_id, uint8_t* data, int* data_size);
+
+/**
  * Destroy OpenGL texture
  *
  * @param texture_id
  */
 void
 gpujpeg_opengl_texture_destroy(int texture_id);
+
+/**
+ * Registered OpenGL texture type
+ */
+enum gpujpeg_opengl_texture_type
+{
+    GPUJPEG_OPENGL_TEXTURE_READ = 1,
+    GPUJPEG_OPENGL_TEXTURE_WRITE = 2
+};
+
+/**
+ * Represents OpenGL texture that is registered to CUDA,
+ * thus the device pointer can be acquired.
+ */
+struct gpujpeg_opengl_texture
+{
+    // Texture id
+    int texture_id;
+    // Texture type
+    enum gpujpeg_opengl_texture_type texture_type;
+    // Texture width
+    int texture_width;
+    // Texture height
+    int texture_height;
+    // Texture pixel buffer object type
+    int texture_pbo_type;
+    // Texture pixel buffer object id
+    int texture_pbo_id;
+    // Texture PBO resource for CUDA
+    struct cudaGraphicsResource* texture_pbo_resource;
+
+    // Texture callbacks parameter
+    void * texture_callback_param;
+    // Texture callback for attaching OpenGL context (by default not used)
+    void (*texture_callback_attach_opengl)(void* param);
+    // Texture callback for detaching OpenGL context (by default not used)
+    void (*texture_callback_detach_opengl)(void* param);
+    // If you develop multi-threaded application where one thread use CUDA
+    // for JPEG decoding and other thread use OpenGL for displaying results
+    // from JPEG decoder, when an image is decoded you must detach OpenGL context
+    // from displaying thread and attach it to compressing thread (inside
+    // code of texture_callback_attach_opengl which is automatically invoked
+    // by decoder), decoder then is able to copy data from GPU memory used
+    // for compressing to GPU memory used by OpenGL texture for displaying,
+    // then decoder call the second callback and you have to detach OpenGL context
+    // from compressing thread and attach it to displaying thread (inside code of
+    // texture_callback_detach_opengl).
+    //
+    // If you develop single-thread application where the only thread use CUDA
+    // for compressing and OpenGL for displaying you don't have to implement
+    // these callbacks because OpenGL context is already attached to thread
+    // that use CUDA for JPEG decoding.
+};
+
+/**
+ * Register OpenGL texture to CUDA
+ *
+ * @param texture_id
+ * @return allocated registred texture structure
+ */
+struct gpujpeg_opengl_texture*
+gpujpeg_opengl_texture_register(int texture_id, enum gpujpeg_opengl_texture_type texture_type);
+
+/**
+ * Unregister OpenGL texture from CUDA. Deallocated given
+ * structure.
+ *
+ * @param texture
+ */
+void
+gpujpeg_opengl_texture_unregister(struct gpujpeg_opengl_texture* texture);
+
+/**
+ * Map registered OpenGL texture to CUDA and return
+ * device pointer to the texture data
+ *
+ * @param texture
+ * @param data_size  Data size in returned buffer
+ * @param copy_from_texture  Specifies whether memory copy from texture
+ *                           should be performed
+ */
+uint8_t*
+gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_size);
+
+/**
+ * Unmap registered OpenGL texture from CUDA and the device
+ * pointer is no longer useable.
+ *
+ * @param texture
+ * @param copy_to_texture  Specifies whether memoryc copy to texture
+ *                         should be performed
+ */
+void
+gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture);
 
 #endif // GPUJPEG_COMMON_H

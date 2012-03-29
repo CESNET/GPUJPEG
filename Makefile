@@ -28,7 +28,7 @@
 # Use shared/static libgpujpeg library?
 SHARED_LIBRARY ?= 1
 # Flag if use OpenGL
-USE_OPENGL ?= 1
+USE_OPENGL ?= 0
 # Debug
 DEBUG ?= 0
 # CUDA install path

@@ -48,10 +48,16 @@ gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* output)
     output->type = GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER;
     output->data = NULL;
     output->data_size = 0;
-    output->texture_pbo_resource = NULL;
-    output->texture_callback_param = NULL;
-    output->texture_callback_attach_opengl = NULL;
-    output->texture_callback_detach_opengl = NULL;
+    output->texture = NULL;
+}
+
+void
+gpujpeg_decoder_output_set_texture(struct gpujpeg_decoder_output* output, struct gpujpeg_opengl_texture* texture)
+{
+    output->type = GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE;
+    output->data = NULL;
+    output->data_size = 0;
+    output->texture = texture;
 }
 
 /** Documented at declaration */
@@ -160,13 +166,15 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     struct gpujpeg_coder* coder = &decoder->coder;
     
     // Reset durations
-    coder->duration_memory_to = 0.0f;
-    coder->duration_memory_from = 0.0f;
-    coder->duration_preprocessor = 0.0f;
-    coder->duration_dct_quantization = 0.0f;
-    coder->duration_huffman_coder = 0.0f;
-    coder->duration_stream = 0.0f;
-    coder->duration_in_gpu = 0.0f;
+    coder->duration_memory_to = 0.0;
+    coder->duration_memory_from = 0.0;
+    coder->duration_memory_map = 0.0;
+    coder->duration_memory_unmap = 0.0;
+    coder->duration_preprocessor = 0.0;
+    coder->duration_dct_quantization = 0.0;
+    coder->duration_huffman_coder = 0.0;
+    coder->duration_stream = 0.0;
+    coder->duration_in_gpu = 0.0;
 
     GPUJPEG_TIMER_INIT();
     GPUJPEG_TIMER_START();
@@ -311,64 +319,62 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
 
     GPUJPEG_TIMER_STOP();
     coder->duration_preprocessor = GPUJPEG_TIMER_DURATION();
-    GPUJPEG_TIMER_START();
     
     // Set decompressed image size
     output->data_size = coder->data_raw_size * sizeof(uint8_t);
     
     // Set decompressed image
     if ( output->type == GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER ) {
-        
+        GPUJPEG_TIMER_START();
+
         // Copy decompressed image to host memory
         cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
         
+        GPUJPEG_TIMER_STOP();
+        coder->duration_memory_from = GPUJPEG_TIMER_DURATION();
+
         // Set output to internal buffer
         output->data = coder->data_raw;
-        
     } else if ( output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER ) {
+        GPUJPEG_TIMER_START();
         
         // Copy decompressed image to host memory
         cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
         
+        GPUJPEG_TIMER_STOP();
+        coder->duration_memory_from = GPUJPEG_TIMER_DURATION();
+
         // Do nothing more because coder->data_raw is already same as output->data
-        
     } else if ( output->type == GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE ) {
-        assert(output->texture_pbo_resource != NULL);
-        assert((output->texture_callback_attach_opengl == NULL && output->texture_callback_detach_opengl == NULL) || 
-               (output->texture_callback_attach_opengl != NULL && output->texture_callback_detach_opengl != NULL));
-        
-        // Attach OpenGL context by callback
-        if ( output->texture_callback_attach_opengl != NULL )
-            output->texture_callback_attach_opengl(output->texture_callback_param);
-        
-        // Map pixel buffer object to cuda
-        cudaGraphicsMapResources(1, &output->texture_pbo_resource, 0);
-        gpujpeg_cuda_check_error("Decoder map texture PBO resource");
-         
-        // Get device data pointer to pixel buffer object data
-        uint8_t* d_data = NULL;
-        size_t data_size; 
-        cudaGraphicsResourceGetMappedPointer((void **)&d_data, &data_size, output->texture_pbo_resource);
-        gpujpeg_cuda_check_error("Decoder get device pointer for texture PBO resource");
-        assert(data_size == (coder->data_raw_size));
+        GPUJPEG_TIMER_START();
+
+        // Map OpenGL texture
+        int data_size = 0;
+        uint8_t* d_data = gpujpeg_opengl_texture_map(output->texture, &data_size);
+        assert(data_size == coder->data_raw_size);
+
+        GPUJPEG_TIMER_STOP();
+        coder->duration_memory_map = GPUJPEG_TIMER_DURATION();
+
+        GPUJPEG_TIMER_START();
             
         // Copy decompressed image to texture pixel buffer object device data
         cudaMemcpy(d_data, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice);
+
+        GPUJPEG_TIMER_STOP();
+        coder->duration_memory_from = GPUJPEG_TIMER_DURATION();
+
+        GPUJPEG_TIMER_START();
             
-        // Unmap pbo
-        cudaGraphicsUnmapResources(1, &output->texture_pbo_resource, 0);
-        gpujpeg_cuda_check_error("Decoder unmap texture PBO resource");
-        
-        // Dettach OpenGL context by callback
-        if ( output->texture_callback_detach_opengl != NULL )
-            output->texture_callback_detach_opengl(output->texture_callback_param);
+        // Unmap OpenGL texture
+        gpujpeg_opengl_texture_unmap(output->texture);
+
+        GPUJPEG_TIMER_STOP();
+        coder->duration_memory_unmap = GPUJPEG_TIMER_DURATION();
     } else {
         // Unknown output type
         assert(0);
     }
-    
-    GPUJPEG_TIMER_STOP();
-    coder->duration_memory_from = GPUJPEG_TIMER_DURATION();
 
     return 0;
 }

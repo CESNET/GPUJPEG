@@ -55,13 +55,8 @@ struct gpujpeg_encoder_input
     // Image data
     uint8_t* image;
 
-    // Texture id
-    int texture_id;
-    // Texture pbo id
-    int texture_pbo_id;
-    // Texture PBO resource (used as target for saving decoder output when you want
-    // to save decoder output into OpenGL texture)
-    struct cudaGraphicsResource* texture_pbo_resource;
+    // Registered OpenGL Texture
+    struct gpujpeg_opengl_texture* texture;
 };
 
 /**
@@ -82,16 +77,7 @@ gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* im
  * @return void
  */
 void
-gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, int texture_id);
-
-/**
- * Clear allocated resources for encoder input
- *
- * @param encoder_input  Encoder input structure
- * @return void
- */
-void
-gpujpeg_encoder_input_clear(struct gpujpeg_encoder_input* input);
+gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gpujpeg_opengl_texture* texture);
 
 /**
  * JPEG encoder structure

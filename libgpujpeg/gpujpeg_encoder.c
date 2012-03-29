@@ -36,10 +36,6 @@
 #include "gpujpeg_util.h"
 #include <npp.h>
 
-#ifdef GPUJPEG_USE_OPENGL
-    #include <GL/gl.h>
-#endif
-
 #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
 /** Huffman tables in constant memory */
 struct gpujpeg_table_huffman_encoder (*gpujpeg_encoder_table_huffman)[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
@@ -51,52 +47,16 @@ gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* im
 {
     input->type = GPUJPEG_ENCODER_INPUT_IMAGE;
     input->image = image;
-    input->texture_id = 0;
-    input->texture_pbo_id = 0;
-    input->texture_pbo_resource = NULL;
+    input->texture = NULL;
 }
 
 /** Documented at declaration */
 void
-gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, int texture_id)
+gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gpujpeg_opengl_texture* texture)
 {
     input->type = GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE;
     input->image = NULL;
-    input->texture_id = texture_id;
-    input->texture_pbo_id = 0;
-    input->texture_pbo_resource = NULL;
-
-#ifdef GPUJPEG_USE_OPENGL
-
-    int width = 0;
-    int height = 0;
-    glBindTexture(GL_TEXTURE_2D, texture_id);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    printf("%d %d\n", width, height);
-    return;
-
-    // Create PBO
-    glGenBuffers(1, &input->texture_pbo_id);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, input->texture_pbo_id);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, width * height * 3 * sizeof(uint8_t), NULL, GL_STREAM_DRAW);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-
-    // Create CUDA PBO Resource
-    cudaGraphicsGLRegisterBuffer(&input->texture_pbo_resource, input->texture_pbo_id, cudaGraphicsMapFlagsNone);
-    gpujpeg_cuda_check_error("Register OpenGL buffer");
-#else
-    GPUJPEG_EXIT_MISSING_OPENGL();
-#endif
-}
-
-/** Documented at declaration */
-void
-gpujpeg_encoder_input_clear(struct gpujpeg_encoder_input* input)
-{
-    // TODO: Deallocate
+    input->texture = texture;
 }
 
 /** Documented at declaration */
@@ -203,32 +163,62 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
     struct gpujpeg_coder* coder = &encoder->coder;
     
     // Reset durations
-    coder->duration_memory_to = 0.0f;
-    coder->duration_memory_from = 0.0f;
-    coder->duration_preprocessor = 0.0f;
-    coder->duration_dct_quantization = 0.0f;
-    coder->duration_huffman_coder = 0.0f;
-    coder->duration_stream = 0.0f;
-    coder->duration_in_gpu = 0.0f;
+    coder->duration_memory_to = 0.0;
+    coder->duration_memory_from = 0.0;
+    coder->duration_memory_map = 0.0;
+    coder->duration_memory_unmap = 0.0;
+    coder->duration_preprocessor = 0.0;
+    coder->duration_dct_quantization = 0.0;
+    coder->duration_huffman_coder = 0.0;
+    coder->duration_stream = 0.0;
+    coder->duration_in_gpu = 0.0;
 
     GPUJPEG_TIMER_INIT();
-    GPUJPEG_TIMER_START();
     
     // Load input image
     if ( input->type == GPUJPEG_ENCODER_INPUT_IMAGE ) {
+        GPUJPEG_TIMER_START();
+
         // Copy image to device memory
         if ( cudaSuccess != cudaMemcpy(coder->d_data_raw, input->image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) )
             return -1;
-    } else if ( input->type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE ) {
-        // TODO: load it from opengl
-        cudaMemset(coder->d_data_raw, 0, coder->data_raw_size * sizeof(uint8_t));
+
+        GPUJPEG_TIMER_STOP();
+        coder->duration_memory_to = GPUJPEG_TIMER_DURATION();
+    } else
+    if ( input->type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE ) {
+        assert(input->texture != NULL);
+
+        GPUJPEG_TIMER_START();
+
+        // Map texture to CUDA
+        int data_size = 0;
+        uint8_t* d_data = gpujpeg_opengl_texture_map(input->texture, &data_size);
+        assert(data_size == (coder->data_raw_size));
+
+        GPUJPEG_TIMER_STOP();
+        coder->duration_memory_map = GPUJPEG_TIMER_DURATION();
+
+        GPUJPEG_TIMER_START();
+
+        // Copy image data from texture pixel buffer object to device data
+        cudaMemcpy(coder->d_data_raw, d_data, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice);
+
+        GPUJPEG_TIMER_STOP();
+        coder->duration_memory_to = GPUJPEG_TIMER_DURATION();
+
+        GPUJPEG_TIMER_START();
+
+        // Unmap texture from CUDA
+        gpujpeg_opengl_texture_unmap(input->texture);
+
+        GPUJPEG_TIMER_STOP();
+        coder->duration_memory_unmap = GPUJPEG_TIMER_DURATION();
     } else {
         // Unknown output type
         assert(0);
     }
     
-    GPUJPEG_TIMER_STOP();
-    coder->duration_memory_to = GPUJPEG_TIMER_DURATION();
     GPUJPEG_TIMER_START();
 
     //gpujpeg_table_print(encoder->table[JPEG_COMPONENT_LUMINANCE]);
