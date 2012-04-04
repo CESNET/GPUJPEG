@@ -51,6 +51,16 @@ gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* output)
     output->texture = NULL;
 }
 
+/** Documented at declaration */
+void
+gpujpeg_decoder_output_set_custom(struct gpujpeg_decoder_output* output, uint8_t* custom_buffer)
+{
+    output->type = GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER;
+    output->data = custom_buffer;
+    output->data_size = 0;
+}
+
+/** Documented at declaration */
 void
 gpujpeg_decoder_output_set_texture(struct gpujpeg_decoder_output* output, struct gpujpeg_opengl_texture* texture)
 {
@@ -178,12 +188,6 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
 
     GPUJPEG_TIMER_INIT();
     GPUJPEG_TIMER_START();
-    
-    // Set custom output buffer
-    if ( output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER ) {
-        assert(output->data != NULL);
-        coder->data_raw = output->data;
-    }
     
     // Read JPEG image data
     if ( gpujpeg_reader_read_image(decoder, image, image_size) != 0 ) {
@@ -338,13 +342,13 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     } else if ( output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER ) {
         GPUJPEG_TIMER_START();
         
+        assert(output->data != NULL);
+
         // Copy decompressed image to host memory
-        cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+        cudaMemcpy(output->data, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
         
         GPUJPEG_TIMER_STOP();
         coder->duration_memory_from = GPUJPEG_TIMER_DURATION();
-
-        // Do nothing more because coder->data_raw is already same as output->data
     } else if ( output->type == GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE ) {
         GPUJPEG_TIMER_START();
 

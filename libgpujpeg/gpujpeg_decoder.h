@@ -74,6 +74,16 @@ void
 gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* output);
 
 /**
+ * Setup decoder output to custom buffer
+ *
+ * @param output        Decoder output structure
+ * @param custom_buffer Custom buffer
+ * @return void
+ */
+void
+gpujpeg_decoder_output_set_custom(struct gpujpeg_decoder_output* output, uint8_t* custom_buffer);
+
+/**
  * Set decoder output to OpenGL texture
  *
  * @param output  Decoder output structure

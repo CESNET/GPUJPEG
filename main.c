@@ -484,7 +484,6 @@ main(int argc, char *argv[])
                 gpujpeg_decoder_output_set_default(&decoder_output);
             }
 
-
             GPUJPEG_TIMER_START();
                 
             // Decode image

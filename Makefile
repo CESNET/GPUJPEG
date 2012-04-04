@@ -110,7 +110,7 @@ endif
 
 # Build gpujpeg library
 libgpujpeg/libgpujpeg.build:
-	@cd libgpujpeg; make SHARED_LIBRARY=$(SHARED_LIBRARY) USE_OPENGL=$(USE_OPENGL)
+	@cd libgpujpeg; make DEBUG=$(DEBUG) SHARED_LIBRARY=$(SHARED_LIBRARY) USE_OPENGL=$(USE_OPENGL)
     
 # Pattern rule for compiling C files
 %.c.o: %.c 
