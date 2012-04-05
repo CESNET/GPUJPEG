@@ -56,9 +56,11 @@ print_help()
         "   -e, --encode           perform JPEG encoding\n"
         "   -d, --decode           perform JPEG decoding\n"
         "       --convert          convert input image to output image (change\n"
-        "                          color space or/and sampling factor)\n"
+        "                          color space and/or sampling factor)\n"
         "       --component-range  show samples range for each component in image\n"
         "\n"
+        "   -n  --iterate          perform encoding/decoding in specified number of\n"
+        "                          iterations for each image\n"
         "   -o  --use-opengl       use an OpenGL texture as input/output\n"
     );
 }
@@ -88,6 +90,7 @@ main(int argc, char *argv[])
         {"decode",                  no_argument,       0, 'd'},
         {"convert",                 no_argument,       0,  OPTION_CONVERT },
         {"component-range",         no_argument,       0,  OPTION_COMPONENT_RANGE },
+        {"iterate",                 required_argument, 0,  'n' },
         {"use-opengl",              no_argument,       0,  'o' },
         0
     };
@@ -110,6 +113,7 @@ main(int argc, char *argv[])
     int decode = 0;
     int convert = 0;
     int component_range = 0;
+    int iterate = 1;
     int use_opengl = 0;
     
     // Flags
@@ -210,6 +214,9 @@ main(int argc, char *argv[])
             break;
         case OPTION_COMPONENT_RANGE:
             component_range = 1;
+            break;
+        case 'n':
+            iterate = atoi(optarg);
             break;
         case 'o':
             use_opengl = 1;
@@ -349,33 +356,42 @@ main(int argc, char *argv[])
                 gpujpeg_encoder_input_set_image(&encoder_input, image);
             }
 
-            GPUJPEG_TIMER_START();
-
             // Encode image
             uint8_t* image_compressed = NULL;
             int image_compressed_size = 0;
-            if ( gpujpeg_encoder_encode(encoder, &encoder_input, &image_compressed, &image_compressed_size) != 0 ) {
-                fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
-                return -1;
-            }
-            
-            GPUJPEG_TIMER_STOP();
-            float duration = GPUJPEG_TIMER_DURATION();
-            if ( param.verbose ) {
-                printf(" -Copy To Device:    %10.2f ms\n", encoder->coder.duration_memory_to);
-                if ( encoder->coder.duration_memory_map != 0.0 && encoder->coder.duration_memory_unmap != 0.0 ) {
-                    printf(" -OpenGL Memory Map: %10.2f ms\n", encoder->coder.duration_memory_map);
-                    printf(" -OpenGL Memory Unmap:%9.2f ms\n", encoder->coder.duration_memory_unmap);
+            for ( int iteration = 0; iteration < iterate; iteration++ ) {
+                if ( iterate > 1 ) {
+                    printf("\nIteration #%d:\n", iteration + 1);
                 }
-                printf(" -Preprocessing:     %10.2f ms\n", encoder->coder.duration_preprocessor);
-                printf(" -DCT & Quantization:%10.2f ms\n", encoder->coder.duration_dct_quantization);
-                printf(" -Huffman Encoder:   %10.2f ms\n", encoder->coder.duration_huffman_coder);
-                printf(" -Copy From Device:  %10.2f ms\n", encoder->coder.duration_memory_from);
-                printf(" -Stream Formatter:  %10.2f ms\n", encoder->coder.duration_stream);
+
+                GPUJPEG_TIMER_START();
+
+                if ( gpujpeg_encoder_encode(encoder, &encoder_input, &image_compressed, &image_compressed_size) != 0 ) {
+                    fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
+                    return -1;
+                }
+
+                GPUJPEG_TIMER_STOP();
+                float duration = GPUJPEG_TIMER_DURATION();
+                if ( param.verbose ) {
+                    printf(" -Copy To Device:    %10.2f ms\n", encoder->coder.duration_memory_to);
+                    if ( encoder->coder.duration_memory_map != 0.0 && encoder->coder.duration_memory_unmap != 0.0 ) {
+                        printf(" -OpenGL Memory Map: %10.2f ms\n", encoder->coder.duration_memory_map);
+                        printf(" -OpenGL Memory Unmap:%9.2f ms\n", encoder->coder.duration_memory_unmap);
+                    }
+                    printf(" -Preprocessing:     %10.2f ms\n", encoder->coder.duration_preprocessor);
+                    printf(" -DCT & Quantization:%10.2f ms\n", encoder->coder.duration_dct_quantization);
+                    printf(" -Huffman Encoder:   %10.2f ms\n", encoder->coder.duration_huffman_coder);
+                    printf(" -Copy From Device:  %10.2f ms\n", encoder->coder.duration_memory_from);
+                    printf(" -Stream Formatter:  %10.2f ms\n", encoder->coder.duration_stream);
+                }
+                printf("Encode Image GPU:    %10.2f ms (only in-GPU processing)\n", encoder->coder.duration_in_gpu);
+                printf("Encode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - encoder->coder.duration_memory_to - encoder->coder.duration_memory_from);
+                printf("Encode Image:        %10.2f ms\n", duration);
             }
-            printf("Encode Image GPU:    %10.2f ms (only in-GPU processing)\n", encoder->coder.duration_in_gpu);
-            printf("Encode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - encoder->coder.duration_memory_to - encoder->coder.duration_memory_from);
-            printf("Encode Image:        %10.2f ms\n", duration);
+            if ( iterate > 1 ) {
+                printf("\n");
+            }
 
             GPUJPEG_TIMER_START();
             
@@ -484,31 +500,40 @@ main(int argc, char *argv[])
                 gpujpeg_decoder_output_set_default(&decoder_output);
             }
 
-            GPUJPEG_TIMER_START();
-                
-            // Decode image
-            if ( gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output) != 0 ) {
-                fprintf(stderr, "Failed to decode image [%s]!\n", argv[index]);
-                return -1;
-            }
-            
-            GPUJPEG_TIMER_STOP();
-            float duration = GPUJPEG_TIMER_DURATION();
-            if ( param.verbose ) {
-                printf(" -Stream Reader:     %10.2f ms\n", decoder->coder.duration_stream);
-                printf(" -Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
-                printf(" -Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
-                printf(" -DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
-                printf(" -Postprocessing:    %10.2f ms\n", decoder->coder.duration_preprocessor);
-                printf(" -Copy From Device:  %10.2f ms\n", decoder->coder.duration_memory_from);
-                if ( decoder->coder.duration_memory_map != 0.0 && decoder->coder.duration_memory_unmap != 0.0 ) {
-                    printf(" -OpenGL Memory Map: %10.2f ms\n", decoder->coder.duration_memory_map);
-                    printf(" -OpenGL Memory Unmap:%9.2f ms\n", decoder->coder.duration_memory_unmap);
+            for ( int iteration = 0; iteration < iterate; iteration++ ) {
+                if ( iterate > 1 ) {
+                    printf("\nIteration #%d:\n", iteration + 1);
                 }
+
+                GPUJPEG_TIMER_START();
+
+                // Decode image
+                if ( gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output) != 0 ) {
+                    fprintf(stderr, "Failed to decode image [%s]!\n", argv[index]);
+                    return -1;
+                }
+
+                GPUJPEG_TIMER_STOP();
+                float duration = GPUJPEG_TIMER_DURATION();
+                if ( param.verbose ) {
+                    printf(" -Stream Reader:     %10.2f ms\n", decoder->coder.duration_stream);
+                    printf(" -Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
+                    printf(" -Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
+                    printf(" -DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
+                    printf(" -Postprocessing:    %10.2f ms\n", decoder->coder.duration_preprocessor);
+                    printf(" -Copy From Device:  %10.2f ms\n", decoder->coder.duration_memory_from);
+                    if ( decoder->coder.duration_memory_map != 0.0 && decoder->coder.duration_memory_unmap != 0.0 ) {
+                        printf(" -OpenGL Memory Map: %10.2f ms\n", decoder->coder.duration_memory_map);
+                        printf(" -OpenGL Memory Unmap:%9.2f ms\n", decoder->coder.duration_memory_unmap);
+                    }
+                }
+                printf("Decode Image GPU:    %10.2f ms (only in-GPU processing)\n", decoder->coder.duration_in_gpu);
+                printf("Decode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - decoder->coder.duration_memory_to - decoder->coder.duration_memory_from);
+                printf("Decode Image:        %10.2f ms\n", duration);
             }
-            printf("Decode Image GPU:    %10.2f ms (only in-GPU processing)\n", decoder->coder.duration_in_gpu);
-            printf("Decode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - decoder->coder.duration_memory_to - decoder->coder.duration_memory_from);
-            printf("Decode Image:        %10.2f ms\n", duration);
+            if ( iterate > 1 ) {
+                printf("\n");
+            }
 
             uint8_t* data = NULL;
             int data_size = 0;
