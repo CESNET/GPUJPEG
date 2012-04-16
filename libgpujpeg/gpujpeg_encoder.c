@@ -152,6 +152,10 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
         return NULL;
     }
     
+    // Timers
+    GPUJPEG_CUSTOM_TIMER_CREATE(encoder->def);
+    GPUJPEG_CUSTOM_TIMER_CREATE(encoder->in_gpu);
+
     return encoder;
 }
 
@@ -172,68 +176,64 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
     coder->duration_huffman_coder = 0.0;
     coder->duration_stream = 0.0;
     coder->duration_in_gpu = 0.0;
-
-    GPUJPEG_TIMER_INIT();
     
     // Load input image
     if ( input->type == GPUJPEG_ENCODER_INPUT_IMAGE ) {
-        GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
         // Copy image to device memory
         if ( cudaSuccess != cudaMemcpy(coder->d_data_raw, input->image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) )
             return -1;
 
-        GPUJPEG_TIMER_STOP();
-        coder->duration_memory_to = GPUJPEG_TIMER_DURATION();
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+        coder->duration_memory_to = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
     } else
     if ( input->type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE ) {
         assert(input->texture != NULL);
 
-        GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
         // Map texture to CUDA
         int data_size = 0;
         uint8_t* d_data = gpujpeg_opengl_texture_map(input->texture, &data_size);
         assert(data_size == (coder->data_raw_size));
 
-        GPUJPEG_TIMER_STOP();
-        coder->duration_memory_map = GPUJPEG_TIMER_DURATION();
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+        coder->duration_memory_map = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
 
-        GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
         // Copy image data from texture pixel buffer object to device data
         cudaMemcpy(coder->d_data_raw, d_data, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice);
 
-        GPUJPEG_TIMER_STOP();
-        coder->duration_memory_to = GPUJPEG_TIMER_DURATION();
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+        coder->duration_memory_to = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
 
-        GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
         // Unmap texture from CUDA
         gpujpeg_opengl_texture_unmap(input->texture);
 
-        GPUJPEG_TIMER_STOP();
-        coder->duration_memory_unmap = GPUJPEG_TIMER_DURATION();
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+        coder->duration_memory_unmap = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
     } else {
         // Unknown output type
         assert(0);
     }
-    
-    GPUJPEG_TIMER_START();
 
     //gpujpeg_table_print(encoder->table[JPEG_COMPONENT_LUMINANCE]);
     //gpujpeg_table_print(encoder->table[JPEG_COMPONENT_CHROMINANCE]);
     
-    GPUJPEG_CUSTOM_TIMER_INIT(in_gpu);
-    GPUJPEG_CUSTOM_TIMER_START(in_gpu);
+    GPUJPEG_CUSTOM_TIMER_START(encoder->in_gpu);
+    GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
     // Preprocessing
     if ( gpujpeg_preprocessor_encode(&encoder->coder) != 0 )
         return -1;
         
-    GPUJPEG_TIMER_STOP();
-    coder->duration_preprocessor = GPUJPEG_TIMER_DURATION();
-    GPUJPEG_TIMER_START();
+    GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+    coder->duration_preprocessor = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
+    GPUJPEG_CUSTOM_TIMER_START(encoder->def);
         
 #ifdef GPUJPEG_DCT_FROM_NPP
     // Perform DCT and quantization (implementation from NPP)
@@ -262,12 +262,6 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
             fprintf(stderr, "[GPUJPEG] [Error] Forward DCT failed for component at index %d [error %d]!\n", comp, status);
             return -1;
         }
-        
-        // If restart interval is 0 then the GPU processing is in the end (even huffman coder will be performed on CPU)
-        if ( coder->param.restart_interval == 0 ) {
-            GPUJPEG_CUSTOM_TIMER_STOP(in_gpu);
-            coder->duration_in_gpu = GPUJPEG_CUSTOM_TIMER_DURATION(in_gpu);
-        }
 
         //gpujpeg_component_print16(&coder->component[comp], coder->component[comp].d_data_quantized);
     }
@@ -276,24 +270,30 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
     gpujpeg_dct_gpu(encoder);
 #endif
 
+    // If restart interval is 0 then the GPU processing is in the end (even huffman coder will be performed on CPU)
+    if ( coder->param.restart_interval == 0 ) {
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->in_gpu);
+        coder->duration_in_gpu = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->in_gpu);
+    }
+
     // Initialize writer output buffer current position
     encoder->writer->buffer_current = encoder->writer->buffer;
     
     // Write header
     gpujpeg_writer_write_header(encoder);
     
-    GPUJPEG_TIMER_STOP();
-    coder->duration_dct_quantization = GPUJPEG_TIMER_DURATION();
-    GPUJPEG_TIMER_START();
-    
+    GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+    coder->duration_dct_quantization = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
+    GPUJPEG_CUSTOM_TIMER_START(encoder->def);
+
     // Perform huffman coding on CPU (when restart interval is not set)
     if ( coder->param.restart_interval == 0 ) {
         // Copy quantized data from device memory to cpu memory
         cudaMemcpy(coder->data_quantized, coder->d_data_quantized, coder->data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
         
-        GPUJPEG_TIMER_STOP();
-        coder->duration_memory_from = GPUJPEG_TIMER_DURATION();
-        GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+        coder->duration_memory_from = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
+        GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
         // Perform huffman coding
         if ( gpujpeg_huffman_cpu_encoder_encode(encoder) != 0 ) {
@@ -301,9 +301,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
             return -1;
         }
 
-        GPUJPEG_TIMER_STOP();
-        coder->duration_huffman_coder = GPUJPEG_TIMER_DURATION();
-        GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+        coder->duration_huffman_coder = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
     }
     // Perform huffman coding on GPU (when restart interval is set)
     else {    
@@ -313,12 +312,12 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
             return -1;
         }
         
-        GPUJPEG_CUSTOM_TIMER_STOP(in_gpu);
-        coder->duration_in_gpu = GPUJPEG_CUSTOM_TIMER_DURATION(in_gpu);
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->in_gpu);
+        coder->duration_in_gpu = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->in_gpu);
 
-        GPUJPEG_TIMER_STOP();
-        coder->duration_huffman_coder = GPUJPEG_TIMER_DURATION();
-        GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+        coder->duration_huffman_coder = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
+        GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
         // Copy compressed data from device memory to cpu memory
         if ( cudaSuccess != cudaMemcpy(coder->data_compressed, coder->d_data_compressed, coder->data_compressed_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
@@ -327,9 +326,9 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
         if ( cudaSuccess != cudaMemcpy(coder->segment, coder->d_segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyDeviceToHost) )
             return -1;
 
-        GPUJPEG_TIMER_STOP();
-        coder->duration_memory_from = GPUJPEG_TIMER_DURATION();
-        GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+        coder->duration_memory_from = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
+        GPUJPEG_CUSTOM_TIMER_START(encoder->def);
             
         if ( coder->param.interleaved == 1 ) {
             // Write scan header (only one scan is written, that contains all color components data)
@@ -384,9 +383,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
             }
         }
 
-        GPUJPEG_TIMER_STOP();
-        coder->duration_stream = GPUJPEG_TIMER_DURATION();
-        GPUJPEG_TIMER_START();
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+        coder->duration_stream = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
     }
     gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_EOI);
     
@@ -403,6 +401,9 @@ gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)
 {
     assert(encoder != NULL);
     
+    GPUJPEG_CUSTOM_TIMER_DESTROY(encoder->def);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(encoder->in_gpu);
+
     if ( gpujpeg_coder_deinit(&encoder->coder) != 0 )
         return -1;
     
@@ -419,7 +420,7 @@ gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)
     
     if ( encoder->writer != NULL )
         gpujpeg_writer_destroy(encoder->writer);
-    
+
     free(encoder);
     
     return 0;
