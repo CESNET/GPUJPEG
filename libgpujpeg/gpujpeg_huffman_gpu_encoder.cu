@@ -416,6 +416,9 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
     if ( coder->param.interleaved == 1 )
         comp_count = coder->param_image.comp_count;
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
+
+    // Configure more shared memory
+    cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel, cudaFuncCachePreferShared);
             
     // Run kernel
     dim3 thread(THREAD_BLOCK_SIZE);

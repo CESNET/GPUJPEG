@@ -33,7 +33,7 @@ HUFFMAN_CODER_TABLES_IN_CONSTANT ?= 1
 # Use DCT from NPP library (is faster but causes color change)
 # If set to 0, own implementation is used, it doesn't cause color change
 # but for non-fermi GPUs it is slower
-DCT_FROM_NPP ?= 1
+DCT_FROM_NPP ?= 0
 # Flag if use OpenGL
 USE_OPENGL ?= 0
 # Debug

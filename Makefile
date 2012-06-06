@@ -26,7 +26,7 @@
 #
 
 # Use shared/static libgpujpeg library?
-SHARED_LIBRARY ?= 1
+SHARED_LIBRARY ?= 0
 # Flag if use OpenGL
 USE_OPENGL ?= 0
 # Debug

@@ -64,7 +64,7 @@ inline __device__ void
 gpujpeg_color_transform_to(float & c1, float & c2, float & c3, const int matrix[9], int base1, int base2, int base3)
 {
     // Prepare integer constants
-    const int middle = pow(2.0, bit_depth - 1);
+    const int middle = 1 << (bit_depth - 1);
 
     // Perform color transform
     int r1 = (int)c1 * 256 / 255;
@@ -85,7 +85,7 @@ inline __device__ void
 gpujpeg_color_transform_from(float & c1, float & c2, float & c3, const int matrix[9], int base1, int base2, int base3)
 {
     // Prepare integer constants
-    const int middle = pow(2.0, bit_depth - 1);
+    const int middle = 1 << (bit_depth - 1);
 
     // Perform color transform
     int r1 = ((int)c1 - base1) * 256 / 255;
@@ -106,7 +106,7 @@ inline __device__ void
 gpujpeg_color_transform_to(float & c1, float & c2, float & c3, const double matrix[9], int base1, int base2, int base3)
 {
     // Prepare integer matrix
-    const int max = pow(2.0, bit_depth);
+    const int max = 1 << bit_depth;
     const int matrix_int[] = {
         round(matrix[0] * max), round(matrix[1] * max), round(matrix[2] * max),
         round(matrix[3] * max), round(matrix[4] * max), round(matrix[5] * max),
@@ -133,7 +133,7 @@ inline __device__ void
 gpujpeg_color_transform_from(float & c1, float & c2, float & c3, const double matrix[9], int base1, int base2, int base3)
 {
     // Prepare integer matrix
-    const int max = pow(2.0, bit_depth);
+    const int max = 1 << bit_depth;
     const int matrix_int[] = {
         round(matrix[0] * max), round(matrix[1] * max), round(matrix[2] * max),
         round(matrix[3] * max), round(matrix[4] * max), round(matrix[5] * max),
