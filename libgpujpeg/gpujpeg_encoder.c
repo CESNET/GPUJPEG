@@ -63,7 +63,7 @@ gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gp
 struct gpujpeg_encoder*
 gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image)
 {
-    assert(param_image->comp_count == 3);
+    assert(param_image->comp_count == 1 || param_image->comp_count == 3);
     assert(param_image->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     assert(param->quality >= 0 && param->quality <= 100);
     assert(param->restart_interval >= 0);
@@ -142,7 +142,7 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
     }
     gpujpeg_cuda_check_error("Encoder copy huffman tables to constant memory");
 #endif
-    
+
     // Init huffman encoder
     if ( gpujpeg_huffman_gpu_encoder_init() != 0 )
         result = 0;

@@ -222,8 +222,14 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
 enum gpujpeg_image_file_format
 gpujpeg_image_get_file_format(const char* filename)
 {
-    static const char *extension[] = { "raw", "rgb", "yuv", "jpg" };
-    static const enum gpujpeg_image_file_format format[] = { GPUJPEG_IMAGE_FILE_RAW, GPUJPEG_IMAGE_FILE_RGB, GPUJPEG_IMAGE_FILE_YUV, GPUJPEG_IMAGE_FILE_JPEG };
+    static const char *extension[] = { "raw", "rgb", "yuv", "r", "jpg" };
+    static const enum gpujpeg_image_file_format format[] = {
+        GPUJPEG_IMAGE_FILE_RAW,
+        GPUJPEG_IMAGE_FILE_RGB,
+        GPUJPEG_IMAGE_FILE_YUV,
+        GPUJPEG_IMAGE_FILE_GRAY,
+        GPUJPEG_IMAGE_FILE_JPEG
+    };
         
     char * ext = strrchr(filename, '.');
     if ( ext == NULL )
@@ -575,12 +581,11 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
 int
 gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
 {
-    assert(param->comp_count == 3);
-    
     int image_size = 0;
     if ( param->sampling_factor == GPUJPEG_4_4_4 ) {
         image_size = param->width * param->height * param->comp_count;
     } else if ( param->sampling_factor == GPUJPEG_4_2_2 ) {
+        assert(param->comp_count == 3);
         int width = gpujpeg_div_and_round_up(param->width, 2) * 2 + 0;
         image_size = (width * param->height) * 2;
     } else {

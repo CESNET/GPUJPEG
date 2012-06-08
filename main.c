@@ -42,6 +42,7 @@ print_help()
         "       --device-list      list cuda devices\n"
         "\n"
         "   -s, --size             set input image size in pixels, e.g. 1920x1080\n"
+        "   -C, --comp-count       set input/output image number of components (1 or 3)\n"
         "   -f, --sampling-factor  set input/output image sampling factor, e.g. 4:2:2\n"
         "   -c, --colorspace       set input/output image colorspace, e.g. rgb, yuv,\n"
         "                          ycbcr, ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
@@ -79,6 +80,7 @@ main(int argc, char *argv[])
         {"device",                  required_argument, 0, 'D'},
         {"device-list",             no_argument,       0,  OPTION_DEVICE_INFO },
         {"size",                    required_argument, 0, 's'},
+        {"comp-count",              required_argument, 0, 'C'},
         {"sampling-factor",         required_argument, 0, 'f'},
         {"colorspace",              required_argument, 0, 'c'},
         {"quality",                 required_argument, 0, 'q'},
@@ -140,6 +142,13 @@ main(int argc, char *argv[])
                 return -1;
             }
             param_image.height = atoi(pos + 1);
+            break;
+        case 'C':
+            param_image.comp_count = atoi(optarg);
+            if ( param_image.comp_count != 1 && param_image.comp_count != 3 ) {
+                fprintf(stderr, "Component count '%d' is not available!\n", optarg);
+                param_image.comp_count = 3;
+            }
             break;
         case 'c':
             if ( strcmp(optarg, "none") == 0 )
@@ -292,9 +301,15 @@ main(int argc, char *argv[])
     }
     
     // Detect color spalce
-    if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV && param_image.color_space == GPUJPEG_RGB )
+    if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV && param_image.color_space == GPUJPEG_RGB ) {
         param_image.color_space = GPUJPEG_YUV;
+    }
     
+    // Detect component count
+    if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_GRAY && param_image.comp_count != 1 ) {
+        param_image.comp_count = 1;
+    }
+
     if ( encode == 1 ) {
         // Create OpenGL texture
         struct gpujpeg_opengl_texture* texture = NULL;
@@ -313,7 +328,7 @@ main(int argc, char *argv[])
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
         }
-        
+
         // Encode images
         for ( int index = 0; index < argc; index += 2 ) {
             // Get and check input and output image
@@ -457,10 +472,16 @@ main(int argc, char *argv[])
             const char* output = argv[index + 1];
             if ( encode == 1 ) {
                 static char buffer_output[255];
-                if ( param_image.color_space != GPUJPEG_RGB )
+                if ( param_image.color_space != GPUJPEG_RGB ) {
                     sprintf(buffer_output, "%s.decoded.yuv", output);
-                else
-                    sprintf(buffer_output, "%s.decoded.rgb", output);
+                }
+                else {
+                    if ( param_image.comp_count == 1 ) {
+                        sprintf(buffer_output, "%s.decoded.r", output);
+                    } else {
+                        sprintf(buffer_output, "%s.decoded.rgb", output);
+                    }
+                }
                 input = output;
                 output = buffer_output;
             }

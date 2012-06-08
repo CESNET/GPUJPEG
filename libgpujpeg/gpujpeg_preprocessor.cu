@@ -337,6 +337,12 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
 {
+    if ( coder->param_image.comp_count == 1 ) {
+        return 0;
+    }
+
+    assert(coder->param_image.comp_count == 3);
+
     if ( coder->param.color_space_internal == GPUJPEG_NONE ) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_NONE>(coder);
     } else if ( coder->param.color_space_internal == GPUJPEG_RGB ) {
@@ -355,6 +361,12 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder)
 {    
+    if ( coder->param_image.comp_count == 1 ) {
+        cudaMemcpy(coder->d_data, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice);
+        return 0;
+    }
+    assert(coder->param_image.comp_count == 3);
+
     cudaMemset(coder->d_data, 0, coder->data_size * sizeof(uint8_t));
 
     // Select kernel
@@ -659,6 +671,12 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
+    if ( coder->param_image.comp_count == 1 ) {
+        return 0;
+    }
+
+    assert(coder->param_image.comp_count == 3);
+
     if ( coder->param.color_space_internal == GPUJPEG_NONE ) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_NONE>(coder);
     } else if ( coder->param.color_space_internal == GPUJPEG_RGB ) {
@@ -677,6 +695,12 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder)
 {
+    if ( coder->param_image.comp_count == 1 ) {
+        cudaMemcpy(coder->d_data_raw, coder->d_data, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice);
+        return 0;
+    }
+    assert(coder->param_image.comp_count == 3);
+
     cudaMemset(coder->d_data_raw, 0, coder->data_raw_size * sizeof(uint8_t));
     
     // Select kernel

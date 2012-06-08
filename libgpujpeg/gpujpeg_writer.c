@@ -269,15 +269,19 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_write_soi(encoder->writer);
     gpujpeg_writer_write_app0(encoder->writer);
     
-    gpujpeg_writer_write_dqt(encoder, GPUJPEG_COMPONENT_LUMINANCE);      
-    gpujpeg_writer_write_dqt(encoder, GPUJPEG_COMPONENT_CHROMINANCE);
+    gpujpeg_writer_write_dqt(encoder, GPUJPEG_COMPONENT_LUMINANCE);
+    if ( encoder->coder.param_image.comp_count > 1 ) {
+        gpujpeg_writer_write_dqt(encoder, GPUJPEG_COMPONENT_CHROMINANCE);
+    }
     
     gpujpeg_writer_write_sof0(encoder);
     
     gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_LUMINANCE, GPUJPEG_HUFFMAN_DC);   // DC table for Y component
     gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_LUMINANCE, GPUJPEG_HUFFMAN_AC);   // AC table for Y component
-    gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_CHROMINANCE, GPUJPEG_HUFFMAN_DC); // DC table for Cb or Cr component
-    gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_CHROMINANCE, GPUJPEG_HUFFMAN_AC); // AC table for Cb or Cr component
+    if ( encoder->coder.param_image.comp_count > 1 ) {
+        gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_CHROMINANCE, GPUJPEG_HUFFMAN_DC); // DC table for Cb or Cr component
+        gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_CHROMINANCE, GPUJPEG_HUFFMAN_AC); // AC table for Cb or Cr component
+    }
     
     gpujpeg_writer_write_dri(encoder);
 }
