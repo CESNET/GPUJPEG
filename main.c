@@ -337,8 +337,10 @@ main(int argc, char *argv[])
             enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
             enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
             if ( (input_format & GPUJPEG_IMAGE_FILE_RAW) == 0 ) {
-                fprintf(stderr, "Encoder input file [%s] should be RGB image (*.rgb)!\n", input);
-                return -1;
+                fprintf(stderr, "[Warning] Encoder input file [%s] should be raw image (*.rgb, *.yuv, *.r)!\n", input);
+                if ( input_format & GPUJPEG_IMAGE_FILE_JPEG ) {
+                    return -1;
+                }
             }
             if ( output_format != GPUJPEG_IMAGE_FILE_JPEG ) {
                 fprintf(stderr, "Encoder output file [%s] should be JPEG image (*.jpg)!\n", output);
@@ -488,12 +490,14 @@ main(int argc, char *argv[])
             enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
             enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
             if ( input_format != GPUJPEG_IMAGE_FILE_JPEG ) {
-                fprintf(stderr, "Encoder input file [%s] should be JPEG image (*.jpg)!\n", input);
+                fprintf(stderr, "Decoder input file [%s] should be JPEG image (*.jpg)!\n", input);
                 return -1;
             }
             if ( (output_format & GPUJPEG_IMAGE_FILE_RAW) == 0 ) {
-                fprintf(stderr, "Encoder output file [%s] should be RGB image (*.rgb)!\n", output);
-                return -1;
+                fprintf(stderr, "[Warning] Decoder output file [%s] should be raw image (*.rgb, *.yuv, *.r)!\n", output);
+                if ( output_format & GPUJPEG_IMAGE_FILE_JPEG ) {
+                    return -1;
+                }
             }
             
             // Decode image
