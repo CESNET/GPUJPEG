@@ -115,6 +115,10 @@ build: $(TARGET)
 # Clean
 clean:
 	rm -f *.o $(TARGET)
+	rm -f *.i *.ii 
+	rm -f *.cudafe1.c *.cudafe1.cpp *.cudafe1.gpu *.cudafe1.stub.c
+	rm -f *.cudafe2.c *.cudafe2.gpu *.cudafe2.stub.c
+	rm -f *.fatbin *.fatbin.c *.ptx *.hash *.cubin *.cu.cpp
 
 # Lists of object files
 COBJS=$(CFILES:.c=.c.o)
