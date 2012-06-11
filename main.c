@@ -146,7 +146,7 @@ main(int argc, char *argv[])
         case 'C':
             param_image.comp_count = atoi(optarg);
             if ( param_image.comp_count != 1 && param_image.comp_count != 3 ) {
-                fprintf(stderr, "Component count '%d' is not available!\n", optarg);
+                fprintf(stderr, "Component count '%s' is not available!\n", optarg);
                 param_image.comp_count = 3;
             }
             break;
