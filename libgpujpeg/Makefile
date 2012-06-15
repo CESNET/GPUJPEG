@@ -70,8 +70,16 @@ CC := gcc -fPIC
 LINK := g++ -fPIC
 NVCC := $(CUDA_INSTALL_PATH)/bin/nvcc -Xcompiler -fPIC
 
+# Debug
+ifeq ($(DEBUG),1)
+    COMMONFLAGS += -g -D_DEBUG -O0
+    NVCCFLAGS += -G
+else
+    COMMONFLAGS += -O2
+endif
+
 # Common flags
-COMMONFLAGS += -I. -I$(CUDA_INSTALL_PATH)/include -O2
+COMMONFLAGS += -I. -I$(CUDA_INSTALL_PATH)/include
 # C flags
 CFLAGS += $(COMMONFLAGS) -std=c99
 # CUDA flags
@@ -80,11 +88,6 @@ NVCCFLAGS += $(COMMONFLAGS) \
 	-gencode arch=compute_11,code=sm_11
 # Linker flags
 LDFLAGS += -shared
-
-# Debug
-ifeq ($(DEBUG),1)
-    COMMONFLAGS += -g -D_DEBUG
-endif    
 
 # Other Flags
 ifeq ($(HUFFMAN_CODER_TABLES_IN_CONSTANT),1)
