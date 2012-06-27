@@ -154,9 +154,10 @@ gpujpeg_huffman_gpu_encoder_emit_left_bits(int & put_value, int & put_bits, uint
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int * block, int * &data_compressed, int * s_in, int * s_out, int &out_size, int *last_dc, int tid,
+gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, int * &data_compressed, int * s_in, int * s_out, int &out_size, int *last_dc, int tid,
                 struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
+#if 0
     typedef uint64_t loading_t;
     const int loading_iteration_count = 64 * 2 / sizeof(loading_t);
     
@@ -247,6 +248,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int * block, int * &data_compressed, in
             return -1;
     }
 
+#endif
     return 0;
 }
 
@@ -278,38 +280,51 @@ gpujpeg_huffman_encoder_encode_kernel(
     struct gpujpeg_table_huffman_encoder* d_table_cbcr_ac = &gpujpeg_huffman_gpu_encoder_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
 #endif
     
-    int segment_index = blockIdx.x * blockDim.x + threadIdx.x;
+    int warpidx  = threadIdx.x >> 5;
+    int warpsnum = 8; // TODO kandidat na nahrazeni konstantou
+    int tid    = threadIdx.x & 31;
+    int out_size = 0;
+
+    __shared__ int s_in_all[64 * 8];
+    __shared__ int s_out_all[192 * 8];
+
+    int * s_in  =  s_in_all + warpidx * 64;
+    int * s_out = s_out_all + warpidx * 192;
+    
+    // Select Segment
+    int segment_index = blockIdx.x * warpsnum + warpidx;
     if ( segment_index >= segment_count )
         return;
     
     struct gpujpeg_segment* segment = &d_segment[segment_index];
     
     // Initialize huffman coder
-    int put_value = 0;
-    int put_bits = 0;
-    int dc[GPUJPEG_MAX_COMPONENT_COUNT];
+    int dc[GPUJPEG_MAX_COMPONENT_COUNT]; //TODO pouze prvni vlakno
     for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ )
         dc[comp] = 0;
     
     // Prepare data pointers
-    uint8_t* data_compressed = &d_data_compressed[segment->data_compressed_index];
-    uint8_t* data_compressed_start = data_compressed;
+    int * data_compressed = (int *)&d_data_compressed[segment->data_compressed_index]; //TODO zmeni datovy typ
+    int * data_compressed_start = data_compressed;
     
     // Non-interleaving mode
     if ( comp_count == 1 ) {
-        int segment_index = segment->scan_segment_index;
+        int segment_index = segment->scan_segment_index; //TODO tento index muze byt jiny nez byl segment_index vyse?
+
+        // Get component for current scan
+        struct gpujpeg_component* component = &d_component[segment->scan_index];
+
+        // Get component data for MCU (first block)
+        int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count) * component->mcu_size];
+        //int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size];
+     
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
-            // Get component for current scan
-            struct gpujpeg_component* component = &d_component[segment->scan_index];
-     
-            // Get component data for MCU
-            int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size];
-            
+
             // Get coder parameters
-            int & component_dc = dc[segment->scan_index];
+            int & last_dc = dc[segment->scan_index]; //TODO tohle by nemel byt problem vytahnout pred for cyklus, kdyz delame pouze jednu komponentu
             
-            // Get huffman tables
+            // Get huffman tables //TODO rovnez vytahnout pred for cyklus
             struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
             struct gpujpeg_table_huffman_encoder* d_table_ac = NULL;
             if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
@@ -321,10 +336,21 @@ gpujpeg_huffman_encoder_encode_kernel(
             }
             
             // Encode 8x8 block
-            if ( gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, component_dc, block, data_compressed, d_table_dc, d_table_ac) != 0 )
+            if (gpujpeg_huffman_gpu_encoder_encode_block(block, 
+                                                         data_compressed, 
+                                                         s_in, 
+                                                         s_out, 
+                                                         out_size, 
+                                                         &last_dc, 
+                                                         tid,
+                                                         d_table_dc, 
+                                                         d_table_ac) != 0 
+                )
                 break;
-        } 
+            block += component->mcu_size;
+        }
     }
+#if 0
     // Interleaving mode
     else {
         int segment_index = segment->scan_segment_index;
@@ -373,17 +399,22 @@ gpujpeg_huffman_encoder_encode_kernel(
             }
         }
     }
-    
+#endif
+
     // Emit left bits
-    if ( put_bits > 0 )
-        gpujpeg_huffman_gpu_encoder_emit_left_bits(put_value, put_bits, data_compressed);
+    //TODO co jsou nase zbyvajici bity
+    //if ( put_bits > 0 )
+    //    gpujpeg_huffman_gpu_encoder_emit_left_bits(put_value, put_bits, data_compressed);
 
     // Output restart marker
-    int restart_marker = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index % 8);
-    gpujpeg_huffman_gpu_encoder_marker(data_compressed, restart_marker);
+    if (tid == 0 ) {
+        int restart_marker = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index % 8);
+        gpujpeg_huffman_gpu_encoder_marker(data_compressed, restart_marker);
                 
-    // Set compressed size
-    segment->data_compressed_size = data_compressed - data_compressed_start;
+        // Set compressed size
+        segment->data_compressed_size = data_compressed - data_compressed_start;
+    }
+    __syncthreads();
 }
 
 /** Documented at declaration */
