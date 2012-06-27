@@ -154,8 +154,8 @@ gpujpeg_huffman_gpu_encoder_emit_left_bits(int & put_value, int & put_bits, uint
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, int16_t* data, uint8_t* & data_compressed, 
-    struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
+gpujpeg_huffman_gpu_encoder_encode_block(int * block, int * &data_compressed, int * s_in, int * s_out, int &out_size, int *last_dc, int tid,
+                struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
     typedef uint64_t loading_t;
     const int loading_iteration_count = 64 * 2 / sizeof(loading_t);
