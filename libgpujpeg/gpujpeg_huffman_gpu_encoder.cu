@@ -179,160 +179,167 @@ __device__ int
 gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, int * &data_compressed, int * s_in, int * s_out, int &out_size, int *last_dc, int tid,
                 struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
-    // each thread loads pair of values (pair after zigzag reordering)
-    const int load_idx = tid * 2;
-    int in_even = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx]];
-    const int in_odd = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx + 1]];
-    
-    // compute count of consecutive zeros before even value
-    // TODO: reimplement after getting it all to work
-    const int zeros_before_even = 0; // TODO implement anyhow (NOTE: first DC coefficient is treated as nonzero)
-    
-    // TODO: set to true if any nonzero value follows thread's even value
-    const bool nonzero_follows = true;
-    
-    // count of consecutive zeros before odd value (either one more than 
-    // even if even is zero or none if even value itself is nonzero)
-    const int zeros_before_odd = in_even ? 0 : zeros_before_even + 1;
-    
-    // pointer to LUT for encoding thread's even value 
-    // (only thread #0 uses DC table, others use AC table)
-    const struct gpujpeg_table_huffman_encoder * d_table_even = d_table_ac;
-    
-    // first thread handles special DC coefficient
     if(0 == tid) {
-        // first thread uses DC table for its even value
-        d_table_even = d_table_dc;
         
-        // update last DC coefficient
-        const int original_in_even = in_even;
-        in_even -= last_dc;
-        last_dc = original_in_even;
-    }
-    
-    // decompose the even value into bit length and one's complement value
-    int even_bit_size = 0, even_code = 0, even_out_size = 0, even_out_bits = in_even;
-    if(in_even || tid == 0) {
-        gpujpeg_huffman_gpu_encoder_decompose(in_even, even_bit_size, even_code);
-    } else if((zeros_before_even & 15) == 15) {
-        even_bit_size = 0xF0;
-    }
-    
-    // encode even value's code if any of following holds:
-    //  - thread index == 0
-    //  - even value is nonzero
-    //  - 16th zero in row
-    if(even_bit_size || tid == 0) {
-        // encode the value itself only if nonzero or in first thread
-        if(in_even || tid == 0) {
-            even_out_size = even_bit_size;
-        }
         
-        // prepend with value's size (or 16 zero code)
-        const int code_idx = (zeros_before_even << 4) + even_bit_size;
-        const int code_size = d_table_even->size[code_idx];
-        even_out_bits <<= code_size;
-        even_out_bits |= d_table_even->code[code_idx];
+        
+        
     }
     
-    
-    
-    // encode odd value - only if 16th zero, or last and zero or nonzero
-    int even_bit_size
-    if()
-    
-    
-    typedef uint64_t loading_t;
-    const int loading_iteration_count = 64 * 2 / sizeof(loading_t);
-    
-    // Load block to shared memory
-    __shared__ int16_t s_data[64 * THREAD_BLOCK_SIZE];
-    for ( int i = 0; i < loading_iteration_count; i++ ) {
-        ((loading_t*)s_data)[loading_iteration_count * threadIdx.x + i] = ((loading_t*)data)[i];
-    }
-    int data_start = 64 * threadIdx.x;
-
-    // Encode the DC coefficient difference per section F.1.2.1
-    int temp = s_data[data_start + 0] - dc;
-    dc = s_data[data_start + 0];
-    
-    int temp2 = temp;
-    if ( temp < 0 ) {
-        // Temp is abs value of input
-        temp = -temp;
-        // For a negative input, want temp2 = bitwise complement of abs(input)
-        // This code assumes we are on a two's complement machine
-        temp2--;
-    }
-
-    // Find the number of bits needed for the magnitude of the coefficient
-    int nbits = 0;
-    while ( temp ) {
-        nbits++;
-        temp >>= 1;
-    }
-
-    // Write category number
-    if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_dc->code[nbits], d_table_dc->size[nbits], put_value, put_bits, data_compressed) != 0 ) {
-        return -1;
-    }
-
-    // Write category offset (EmitBits rejects calls with size 0)
-    if ( nbits ) {
-        if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
-            return -1;
-    }
-    
-    // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
-    int r = 0;
-    for ( int k = 1; k < 64; k++ ) 
-    {
-        temp = s_data[data_start + gpujpeg_huffman_gpu_encoder_order_natural[k]];
-        if ( temp == 0 ) {
-            r++;
-        }
-        else {
-            // If run length > 15, must emit special run-length-16 codes (0xF0)
-            while ( r > 15 ) {
-                if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[0xF0], d_table_ac->size[0xF0], put_value, put_bits, data_compressed) != 0 )
-                    return -1;
-                r -= 16;
-            }
-
-            temp2 = temp;
-            if ( temp < 0 ) {
-                // temp is abs value of input
-                temp = -temp;        
-                // This code assumes we are on a two's complement machine
-                temp2--;
-            }
-
-            // Find the number of bits needed for the magnitude of the coefficient
-            // there must be at least one 1 bit
-            nbits = 1;
-            while ( (temp >>= 1) )
-                nbits++;
-
-            // Emit Huffman symbol for run length / number of bits
-            int i = (r << 4) + nbits;
-            if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[i], d_table_ac->size[i], put_value, put_bits, data_compressed) != 0 )
-                return -1;
-
-            // Write Category offset
-            if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
-                return -1;
-
-            r = 0;
-        }
-    }
-
-    // If all the left coefs were zero, emit an end-of-block code
-    if ( r > 0 ) {
-        if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[0], d_table_ac->size[0], put_value, put_bits, data_compressed) != 0 )
-            return -1;
-    }
-
-    return 0;
+//     // each thread loads pair of values (pair after zigzag reordering)
+//     const int load_idx = tid * 2;
+//     int in_even = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx]];
+//     const int in_odd = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx + 1]];
+//     
+//     // compute count of consecutive zeros before even value
+//     // TODO: reimplement after getting it all to work
+//     const int zeros_before_even = 0; // TODO implement anyhow (NOTE: first DC coefficient is treated as nonzero)
+//     
+//     // TODO: set to true if any nonzero value follows thread's even value
+//     const bool nonzero_follows = true;
+//     
+//     // count of consecutive zeros before odd value (either one more than 
+//     // even if even is zero or none if even value itself is nonzero)
+//     const int zeros_before_odd = in_even ? 0 : zeros_before_even + 1;
+//     
+//     // pointer to LUT for encoding thread's even value 
+//     // (only thread #0 uses DC table, others use AC table)
+//     const struct gpujpeg_table_huffman_encoder * d_table_even = d_table_ac;
+//     
+//     // first thread handles special DC coefficient
+//     if(0 == tid) {
+//         // first thread uses DC table for its even value
+//         d_table_even = d_table_dc;
+//         
+//         // update last DC coefficient
+//         const int original_in_even = in_even;
+//         in_even -= last_dc;
+//         last_dc = original_in_even;
+//     }
+//     
+//     // decompose the even value into bit length and one's complement value
+//     int even_bit_size = 0, even_code = 0, even_out_size = 0, even_out_bits = in_even;
+//     if(in_even || tid == 0) {
+//         gpujpeg_huffman_gpu_encoder_decompose(in_even, even_bit_size, even_code);
+//     } else if((zeros_before_even & 15) == 15) {
+//         even_bit_size = 0xF0;
+//     }
+//     
+//     // encode even value's code if any of following holds:
+//     //  - thread index == 0
+//     //  - even value is nonzero
+//     //  - 16th zero in row
+//     if(even_bit_size || tid == 0) {
+//         // encode the value itself only if nonzero or in first thread
+//         if(in_even || tid == 0) {
+//             even_out_size = even_bit_size;
+//         }
+//         
+//         // prepend with value's size (or 16 zero code)
+//         const int code_idx = (zeros_before_even << 4) + even_bit_size;
+//         const int code_size = d_table_even->size[code_idx];
+//         even_out_bits <<= code_size;
+//         even_out_bits |= d_table_even->code[code_idx];
+//     }
+//     
+//     
+//     
+//     // encode odd value - only if 16th zero, or last and zero or nonzero
+//     int even_bit_size
+//     if()
+//     
+//     
+//     typedef uint64_t loading_t;
+//     const int loading_iteration_count = 64 * 2 / sizeof(loading_t);
+//     
+//     // Load block to shared memory
+//     __shared__ int16_t s_data[64 * THREAD_BLOCK_SIZE];
+//     for ( int i = 0; i < loading_iteration_count; i++ ) {
+//         ((loading_t*)s_data)[loading_iteration_count * threadIdx.x + i] = ((loading_t*)data)[i];
+//     }
+//     int data_start = 64 * threadIdx.x;
+// 
+//     // Encode the DC coefficient difference per section F.1.2.1
+//     int temp = s_data[data_start + 0] - dc;
+//     dc = s_data[data_start + 0];
+//     
+//     int temp2 = temp;
+//     if ( temp < 0 ) {
+//         // Temp is abs value of input
+//         temp = -temp;
+//         // For a negative input, want temp2 = bitwise complement of abs(input)
+//         // This code assumes we are on a two's complement machine
+//         temp2--;
+//     }
+// 
+//     // Find the number of bits needed for the magnitude of the coefficient
+//     int nbits = 0;
+//     while ( temp ) {
+//         nbits++;
+//         temp >>= 1;
+//     }
+// 
+//     // Write category number
+//     if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_dc->code[nbits], d_table_dc->size[nbits], put_value, put_bits, data_compressed) != 0 ) {
+//         return -1;
+//     }
+// 
+//     // Write category offset (EmitBits rejects calls with size 0)
+//     if ( nbits ) {
+//         if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
+//             return -1;
+//     }
+//     
+//     // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
+//     int r = 0;
+//     for ( int k = 1; k < 64; k++ ) 
+//     {
+//         temp = s_data[data_start + gpujpeg_huffman_gpu_encoder_order_natural[k]];
+//         if ( temp == 0 ) {
+//             r++;
+//         }
+//         else {
+//             // If run length > 15, must emit special run-length-16 codes (0xF0)
+//             while ( r > 15 ) {
+//                 if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[0xF0], d_table_ac->size[0xF0], put_value, put_bits, data_compressed) != 0 )
+//                     return -1;
+//                 r -= 16;
+//             }
+// 
+//             temp2 = temp;
+//             if ( temp < 0 ) {
+//                 // temp is abs value of input
+//                 temp = -temp;        
+//                 // This code assumes we are on a two's complement machine
+//                 temp2--;
+//             }
+// 
+//             // Find the number of bits needed for the magnitude of the coefficient
+//             // there must be at least one 1 bit
+//             nbits = 1;
+//             while ( (temp >>= 1) )
+//                 nbits++;
+// 
+//             // Emit Huffman symbol for run length / number of bits
+//             int i = (r << 4) + nbits;
+//             if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[i], d_table_ac->size[i], put_value, put_bits, data_compressed) != 0 )
+//                 return -1;
+// 
+//             // Write Category offset
+//             if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
+//                 return -1;
+// 
+//             r = 0;
+//         }
+//     }
+// 
+//     // If all the left coefs were zero, emit an end-of-block code
+//     if ( r > 0 ) {
+//         if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[0], d_table_ac->size[0], put_value, put_bits, data_compressed) != 0 )
+//             return -1;
+//     }
+// 
+//     return 0;
 }
 
 /**
