@@ -298,17 +298,21 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
                                 + (odd_nonzero_count > even_nonzero_count ? 1 : 0);
     
     
+    // true if any nonzero pixel follows thread's even pixel
+    const unsigned int follow_mask = ~nonzero_mask;
+    const bool nonzero_follows = follow_mask & ((even_nonzero_bitmap >> 1) | odd_nonzero_bitmap);
     
     
-    // save value into shared memory  TODO: remove later!!!
-    s_in[load_idx] = in_even;
-    s_in[load_idx + 1] = in_odd;
     
-    // TODO: is this needed?
-    __threadfence_block();
-    
-    // compute count of consecutive zeros before even value
-    // TODO: reimplement after getting it all to work
+//     // save value into shared memory  TODO: remove later!!!
+//     s_in[load_idx] = in_even;
+//     s_in[load_idx + 1] = in_odd;
+//     
+//     // TODO: is this needed?
+//     __threadfence_block();
+//     
+//     // compute count of consecutive zeros before even value
+//     // TODO: reimplement after getting it all to work
 //     int ref_zeros_before_even = 0; // TODO implement anyhow (NOTE: first DC coefficient is treated as nonzero)
 //     for(int i = load_idx; --i > 0; ) {
 //         if(s_in[i]) {
@@ -317,15 +321,17 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
 //         ref_zeros_before_even++;
 //     }
 //     assert(zeros_before_even == ref_zeros_before_even);
-    
-    // TODO: set to true if any nonzero value follows thread's even value
-    bool ref_nonzero_follows = false;
-    for(int i = load_idx + 1; i < 64; i++) {
-        if(s_in[i]) {
-            ref_nonzero_follows = true;
-            break;
-        }
-    }
+//     
+//     // TODO: set to true if any nonzero value follows thread's even value
+//     bool ref_nonzero_follows = false;
+//     for(int i = load_idx + 1; i < 64; i++) {
+//         if(s_in[i]) {
+//             ref_nonzero_follows = true;
+//             break;
+//         }
+//     }
+//     
+//     assert(ref_nonzero_follows == nonzero_follows);
     
     // count of consecutive zeros before odd value (either one more than 
     // even if even is zero or none if even value itself is nonzero)
@@ -341,7 +347,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     ((short2*)s_in)[load_idx].y = zeros_before_even & 0xF;
     ((short2*)s_in)[load_idx + 1].x = in_odd;
     ((short2*)s_in)[load_idx + 1].y = zeros_before_odd & 0xF;
-    if(!ref_nonzero_follows && !in_odd) {
+    if(!nonzero_follows && !in_odd) {
         ((short2*)s_in)[load_idx + 1].y = -1;
     }
     __threadfence_block();
