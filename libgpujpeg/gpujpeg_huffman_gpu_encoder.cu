@@ -179,7 +179,7 @@ gpujpeg_huffman_gpu_encoder_decompose(int in_value, int & nbits, int & out_value
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, int16_t* data, uint8_t* & data_compressed, 
+gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, int* data, uint8_t* & data_compressed, 
     struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
     // Encode the DC coefficient difference per section F.1.2.1
@@ -217,7 +217,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
     int r = 0;
     for ( int k = 1; k < 64; k++ ) 
     {
-        temp = data[gpujpeg_huffman_gpu_encoder_order_natural[k]];
+        temp = data[k];
         if ( temp == 0 ) {
             r++;
         }
@@ -290,6 +290,19 @@ __device__ int
 gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compressed, int * s_in, int * s_out, int &out_size, int *last_dc, int tid,
                 struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
+    // each thread loads a pair of values (pair after zigzag reordering)
+    const int load_idx = tid * 2;
+    int in_even = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx]];
+    const int in_odd = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx + 1]];
+    
+    
+    
+    
+    
+    // save value into shared memory
+    s_in[load_idx] = in_even;
+    s_in[load_idx + 1] = in_odd;
+    
     int result = 0;
     if(0 == tid) {
         int & dc = *last_dc;
@@ -300,15 +313,12 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
             put_bits = 0;
             out_size = 1;
         }
-        result = gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, dc, block, data_compressed, d_table_dc, d_table_ac);
+        result = gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, dc, s_in, data_compressed, d_table_dc, d_table_ac);
     }
     return __ballot(result);
     
     
-//     // each thread loads pair of values (pair after zigzag reordering)
-//     const int load_idx = tid * 2;
-//     int in_even = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx]];
-//     const int in_odd = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx + 1]];
+
 //     
 //     // compute count of consecutive zeros before even value
 //     // TODO: reimplement after getting it all to work
