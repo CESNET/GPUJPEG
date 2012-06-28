@@ -96,9 +96,6 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int code, int size, int & put_val
     // This routine is heavily used, so it's worth coding tightly
     int _put_buffer = (int)code;
     int _put_bits = put_bits;
-    // If size is 0, caller used an invalid Huffman table entry
-    if ( size == 0 )
-        return -1;
     // Mask off any extra bits in code
     _put_buffer &= (((int)1) << size) - 1; 
     // New number of bits in buffer
@@ -208,10 +205,8 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
     }
 
     // Write category offset (EmitBits rejects calls with size 0)
-    if ( nbits ) {
-        if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
-            return -1;
-    }
+    if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
+        return -1;
     
     // find last nonzero value
     int last_nonzero_idx = 64;
@@ -223,44 +218,40 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
     
     // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
     int r = 0;
+    int value;
     for ( int k = 1; k <= last_nonzero_idx; k++ ) 
     {
-        temp = data[k];
-        if ( temp == 0 ) {
-            r++;
+        temp2 = value = temp = data[k];
+
+        if ( temp < 0 ) {
+            // temp is abs value of input
+            temp = -temp;        
+            // This code assumes we are on a two's complement machine
+            temp2--;
         }
-        else {
-            // If run length > 15, must emit special run-length-16 codes (0xF0)
-            while ( r > 15 ) {
-                if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[0xF0], d_table_ac->size[0xF0], put_value, put_bits, data_compressed) != 0 )
-                    return -1;
-                r -= 16;
-            }
 
-            temp2 = temp;
-            if ( temp < 0 ) {
-                // temp is abs value of input
-                temp = -temp;        
-                // This code assumes we are on a two's complement machine
-                temp2--;
-            }
-
-            // Find the number of bits needed for the magnitude of the coefficient
-            // there must be at least one 1 bit
+        // Find the number of bits needed for the magnitude of the coefficient
+        // there must be at least one 1 bit
+        nbits = 0;
+        if( temp ) {
             nbits = 1;
             while ( (temp >>= 1) )
                 nbits++;
+        }
 
-            // Emit Huffman symbol for run length / number of bits
-            int i = (r << 4) + nbits;
-            if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[i], d_table_ac->size[i], put_value, put_bits, data_compressed) != 0 )
-                return -1;
+        // Emit Huffman symbol for run length / number of bits
+        int i = ((r << 4) + nbits) & 0xFF;
+        if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[i], d_table_ac->size[i], put_value, put_bits, data_compressed) != 0 )
+            return -1;
 
-            // Write Category offset
-            if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
-                return -1;
+        // Write Category offset
+        if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
+            return -1;
 
+        if( value ) {
             r = 0;
+        } else {
+            r++;
         }
     }
 
