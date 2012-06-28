@@ -30,7 +30,8 @@
 #include "gpujpeg_huffman_gpu_encoder.h"
 #include "gpujpeg_util.h"
 
-#define THREAD_BLOCK_SIZE 48
+#define WARPS_NUM 8
+
 
 #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
 /** Allocate huffman tables in constant memory */
@@ -490,18 +491,17 @@ gpujpeg_huffman_encoder_encode_kernel(
 #endif
     
     int warpidx  = threadIdx.x >> 5;
-    int warpsnum = 8; // TODO kandidat na nahrazeni konstantou
     int tid    = threadIdx.x & 31;
     int out_size = 0;
 
-    __shared__ int s_in_all[64 * 8];
-    __shared__ int s_out_all[192 * 8];
+    __shared__ int s_in_all[64 * WARPS_NUM];
+    __shared__ int s_out_all[192 * WARPS_NUM];
 
     int * s_in  =  s_in_all + warpidx * 64;
     int * s_out = s_out_all + warpidx * 192;
     
     // Select Segment
-    int segment_index = blockIdx.x * warpsnum + warpidx;
+    int segment_index = blockIdx.x * WARPS_NUM + warpidx;
     if ( segment_index >= segment_count )
         return;
     
@@ -649,7 +649,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel, cudaFuncCachePreferShared);
             
     // Run kernel
-    dim3 thread(32 * 8);
+    dim3 thread(32 * WARPS_NUM);
     dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, (thread.x / 32)));
     gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
         coder->d_component, 
