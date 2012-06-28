@@ -287,28 +287,41 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     int in_even = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx]];
     const int in_odd = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx + 1]];
     
-    // save value into shared memory  TODO: remove later!!!
-    s_in[load_idx] = in_even;
-    s_in[load_idx + 1] = in_odd;
+    // compute number of zeros preceding the thread's even value
+    const unsigned int even_nonzero_bitmap = 1 | __ballot(in_even); // DC coefficient is always treated as nonzero
+    const unsigned int odd_nonzero_bitmap = __ballot(in_odd);
+    const unsigned int nonzero_mask = (1 << tid) - 1;
+    const int even_nonzero_count = __clz(even_nonzero_bitmap & nonzero_mask);
+    const int odd_nonzero_count = __clz(odd_nonzero_bitmap & nonzero_mask);
+    const int zeros_before_even = (min(odd_nonzero_count, even_nonzero_count) + tid - 32) * 2
+                                + (odd_nonzero_count > even_nonzero_count ? 1 : 0);
     
-    // TODO: is this needed?
-    __threadfence_block();
+    
+    
+    
+//     // save value into shared memory  TODO: remove later!!!
+//     s_in[load_idx] = in_even;
+//     s_in[load_idx + 1] = in_odd;
+//     
+//     // TODO: is this needed?
+//     __threadfence_block();
     
     // compute count of consecutive zeros before even value
     // TODO: reimplement after getting it all to work
-    int zeros_before_even = 0; // TODO implement anyhow (NOTE: first DC coefficient is treated as nonzero)
-    for(int i = load_idx; --i > 0; ) {
-        if(s_in[i]) {
-            break;
-        }
-        zeros_before_even++;
-    }
+//     int ref_zeros_before_even = 0; // TODO implement anyhow (NOTE: first DC coefficient is treated as nonzero)
+//     for(int i = load_idx; --i > 0; ) {
+//         if(s_in[i]) {
+//             break;
+//         }
+//         ref_zeros_before_even++;
+//     }
+//     assert(zeros_before_even == ref_zeros_before_even);
     
 //     // TODO: set to true if any nonzero value follows thread's even value
-//     bool nonzero_follows = false;
+//     bool ref_nonzero_follows = false;
 //     for(int i = load_idx + 1; i < 64; i++) {
 //         if(s_in[i]) {
-//             nonzero_follows = true;
+//             ref_nonzero_follows = true;
 //             break;
 //         }
 //     }
