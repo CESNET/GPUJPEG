@@ -30,7 +30,8 @@
 #include "gpujpeg_huffman_gpu_encoder.h"
 #include "gpujpeg_util.h"
 
-#define THREAD_BLOCK_SIZE 48
+#define WARPS_NUM 8
+
 
 #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
 /** Allocate huffman tables in constant memory */
@@ -540,25 +541,24 @@ gpujpeg_huffman_encoder_encode_kernel(
 #endif
     
     int warpidx  = threadIdx.x >> 5;
-    int warpsnum = 8; // TODO kandidat na nahrazeni konstantou
     int tid    = threadIdx.x & 31;
     int out_size = 0;
 
-    __shared__ int s_in_all[64 * 8];
-    __shared__ int s_out_all[192 * 8];
+    __shared__ int s_in_all[64 * WARPS_NUM];
+    __shared__ int s_out_all[192 * WARPS_NUM];
 
     int * s_in  =  s_in_all + warpidx * 64;
     int * s_out = s_out_all + warpidx * 192;
     
     // Select Segment
-    int segment_index = blockIdx.x * warpsnum + warpidx;
+    int segment_index = blockIdx.x * WARPS_NUM + warpidx;
     if ( segment_index >= segment_count )
         return;
     
     struct gpujpeg_segment* segment = &d_segment[segment_index];
     
     // Initialize huffman coder
-    int dc[GPUJPEG_MAX_COMPONENT_COUNT]; //TODO pouze prvni vlakno
+    int dc[GPUJPEG_MAX_COMPONENT_COUNT];
     for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ )
         dc[comp] = 0;
     
@@ -568,14 +568,12 @@ gpujpeg_huffman_encoder_encode_kernel(
     
     // Non-interleaving mode
     if ( comp_count == 1 ) {
-        int segment_index = segment->scan_segment_index; //TODO tento index muze byt jiny nez byl segment_index vyse?
 
         // Get component for current scan
         struct gpujpeg_component* component = &d_component[segment->scan_index];
 
         // Get component data for MCU (first block)
         int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count) * component->mcu_size];
-        //int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size];
 
         // Get coder parameters
         int & last_dc = dc[segment->scan_index];
@@ -599,10 +597,9 @@ gpujpeg_huffman_encoder_encode_kernel(
             block += component->mcu_size;
         }
     }
-#if 0
     // Interleaving mode
     else {
-        int segment_index = segment->scan_segment_index;
+        int segment_index = segment->scan_segment_index; //TODO asi nepotrebne
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
             //assert(segment->scan_index == 0);
@@ -628,7 +625,7 @@ gpujpeg_huffman_encoder_encode_kernel(
                         int16_t* block = &component->d_data_quantized[data_index];
                         
                         // Get coder parameters
-                        int & component_dc = dc[comp];
+                        int & last_dc = dc[comp];
             
                         // Get huffman tables
                         struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
@@ -642,13 +639,12 @@ gpujpeg_huffman_encoder_encode_kernel(
                         }
                         
                         // Encode 8x8 block
-                        gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, component_dc, block, data_compressed, d_table_dc, d_table_ac);
+                        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_in, s_out, out_size, &last_dc, tid, d_table_dc, d_table_ac);
                     }
                 }
             }
         }
     }
-#endif
 
     // Emit left bits
     gpujpeg_huffman_gpu_encoder_emit_left_bits(data_compressed, s_out, out_size, tid);
@@ -699,7 +695,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel, cudaFuncCachePreferShared);
             
     // Run kernel
-    dim3 thread(32 * 8);
+    dim3 thread(32 * WARPS_NUM);
     dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, (thread.x / 32)));
     gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
         coder->d_component, 
