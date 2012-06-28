@@ -217,11 +217,10 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
     }
     
     // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
-    int r = 0;
-    int value;
     for ( int k = 1; k <= last_nonzero_idx; k++ ) 
     {
-        temp2 = value = temp = data[k].x;
+        const int value = temp2 = temp = data[k].x;
+        const int r = data[k].y;
 
         if ( temp < 0 ) {
             // temp is abs value of input
@@ -240,19 +239,13 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
         }
 
         // Emit Huffman symbol for run length / number of bits
-        int i = ((r << 4) + nbits) & 0xFF;
+        int i = (r << 4) + nbits;
         if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[i], d_table_ac->size[i], put_value, put_bits, data_compressed) != 0 )
             return -1;
 
         // Write Category offset
         if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
             return -1;
-
-        if( value ) {
-            r = 0;
-        } else {
-            r++;
-        }
     }
 
     // If all the left coefs were zero, emit an end-of-block code
@@ -331,9 +324,9 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     // replace values in shared memory with tuples (value, preceding zero count)
     __threadfence_block();
     ((short2*)s_in)[load_idx].x = in_even;
-    ((short2*)s_in)[load_idx].y = zeros_before_even;
+    ((short2*)s_in)[load_idx].y = zeros_before_even & 0xF;
     ((short2*)s_in)[load_idx + 1].x = in_odd;
-    ((short2*)s_in)[load_idx + 1].y = zeros_before_odd;
+    ((short2*)s_in)[load_idx + 1].y = zeros_before_odd & 0xF;
     __threadfence_block();
     
     
