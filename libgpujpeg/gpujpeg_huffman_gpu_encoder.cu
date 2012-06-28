@@ -170,21 +170,140 @@ gpujpeg_huffman_gpu_encoder_decompose(int in_value, int & nbits, int & out_value
     }
 }
 
+
+
+
 /**
  * Encode one 8x8 block
  *
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, int * &data_compressed, int * s_in, int * s_out, int &out_size, int *last_dc, int tid,
+gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, int16_t* data, uint8_t* & data_compressed, 
+    struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
+{
+    // Encode the DC coefficient difference per section F.1.2.1
+    int temp = data[0] - dc;
+    dc = data[0];
+    
+    int temp2 = temp;
+    if ( temp < 0 ) {
+        // Temp is abs value of input
+        temp = -temp;
+        // For a negative input, want temp2 = bitwise complement of abs(input)
+        // This code assumes we are on a two's complement machine
+        temp2--;
+    }
+
+    // Find the number of bits needed for the magnitude of the coefficient
+    int nbits = 0;
+    while ( temp ) {
+        nbits++;
+        temp >>= 1;
+    }
+
+    // Write category number
+    if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_dc->code[nbits], d_table_dc->size[nbits], put_value, put_bits, data_compressed) != 0 ) {
+        return -1;
+    }
+
+    // Write category offset (EmitBits rejects calls with size 0)
+    if ( nbits ) {
+        if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
+            return -1;
+    }
+    
+    // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
+    int r = 0;
+    for ( int k = 1; k < 64; k++ ) 
+    {
+        temp = data[gpujpeg_huffman_gpu_encoder_order_natural[k]];
+        if ( temp == 0 ) {
+            r++;
+        }
+        else {
+            // If run length > 15, must emit special run-length-16 codes (0xF0)
+            while ( r > 15 ) {
+                if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[0xF0], d_table_ac->size[0xF0], put_value, put_bits, data_compressed) != 0 )
+                    return -1;
+                r -= 16;
+            }
+
+            temp2 = temp;
+            if ( temp < 0 ) {
+                // temp is abs value of input
+                temp = -temp;        
+                // This code assumes we are on a two's complement machine
+                temp2--;
+            }
+
+            // Find the number of bits needed for the magnitude of the coefficient
+            // there must be at least one 1 bit
+            nbits = 1;
+            while ( (temp >>= 1) )
+                nbits++;
+
+            // Emit Huffman symbol for run length / number of bits
+            int i = (r << 4) + nbits;
+            if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[i], d_table_ac->size[i], put_value, put_bits, data_compressed) != 0 )
+                return -1;
+
+            // Write Category offset
+            if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
+                return -1;
+
+            r = 0;
+        }
+    }
+
+    // If all the left coefs were zero, emit an end-of-block code
+    if ( r > 0 ) {
+        if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[0], d_table_ac->size[0], put_value, put_bits, data_compressed) != 0 )
+            return -1;
+    }
+
+    return 0;
+}
+
+
+
+__device__ void
+gpujpeg_huffman_gpu_encoder_emit_left_bits(uint8_t * &data_compressed, int * s_out, int &out_size, int tid) {
+    if(0 == tid) {
+        int & put_value = s_out[0];
+        int & put_bits = s_out[1];
+        if(out_size == 0) {
+            put_value = 0;
+            put_bits = 0;
+            out_size = 1;
+        }
+        gpujpeg_huffman_gpu_encoder_emit_left_bits(put_value, put_bits, data_compressed);
+    }
+}
+
+/**
+ * Encode one 8x8 block
+ *
+ * @return 0 if succeeds, otherwise nonzero
+ */
+__device__ int
+gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compressed, int * s_in, int * s_out, int &out_size, int *last_dc, int tid,
                 struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
+    int result = 0;
     if(0 == tid) {
-        
-        
-        
-        
+        int & dc = *last_dc;
+        int & put_value = s_out[0];
+        int & put_bits = s_out[1];
+        if(out_size == 0) {
+            put_value = 0;
+            put_bits = 0;
+            out_size = 1;
+        }
+        result = gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, dc, block, data_compressed, d_table_dc, d_table_ac);
     }
+    return __ballot(result);
+    
     
 //     // each thread loads pair of values (pair after zigzag reordering)
 //     const int load_idx = tid * 2;
@@ -394,8 +513,8 @@ gpujpeg_huffman_encoder_encode_kernel(
         dc[comp] = 0;
     
     // Prepare data pointers
-    int * data_compressed = (int *)&d_data_compressed[segment->data_compressed_index]; //TODO zmeni datovy typ
-    int * data_compressed_start = data_compressed;
+    uint8_t * data_compressed = &d_data_compressed[segment->data_compressed_index]; //TODO zmeni datovy typ
+    uint8_t * data_compressed_start = data_compressed;
     
     // Non-interleaving mode
     if ( comp_count == 1 ) {
@@ -482,9 +601,7 @@ gpujpeg_huffman_encoder_encode_kernel(
 #endif
 
     // Emit left bits
-    //TODO co jsou nase zbyvajici bity
-    //if ( put_bits > 0 )
-    //    gpujpeg_huffman_gpu_encoder_emit_left_bits(put_value, put_bits, data_compressed);
+    gpujpeg_huffman_gpu_encoder_emit_left_bits(data_compressed, s_out, out_size, tid);
 
     // Output restart marker
     if (tid == 0 ) {
@@ -532,8 +649,8 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel, cudaFuncCachePreferShared);
             
     // Run kernel
-    dim3 thread(THREAD_BLOCK_SIZE);
-    dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, thread.x));
+    dim3 thread(32 * 8);
+    dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, (thread.x / 32)));
     gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
         coder->d_component, 
         coder->d_segment, 
