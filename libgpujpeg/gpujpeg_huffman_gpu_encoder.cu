@@ -547,10 +547,9 @@ gpujpeg_huffman_encoder_encode_kernel(
             block += component->mcu_size;
         }
     }
-#if 0
     // Interleaving mode
     else {
-        int segment_index = segment->scan_segment_index;
+        int segment_index = segment->scan_segment_index; //TODO asi nepotrebne
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
             //assert(segment->scan_index == 0);
@@ -576,7 +575,7 @@ gpujpeg_huffman_encoder_encode_kernel(
                         int16_t* block = &component->d_data_quantized[data_index];
                         
                         // Get coder parameters
-                        int & component_dc = dc[comp];
+                        int & last_dc = dc[comp];
             
                         // Get huffman tables
                         struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
@@ -590,13 +589,12 @@ gpujpeg_huffman_encoder_encode_kernel(
                         }
                         
                         // Encode 8x8 block
-                        gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, component_dc, block, data_compressed, d_table_dc, d_table_ac);
+                        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_in, s_out, out_size, &last_dc, tid, d_table_dc, d_table_ac);
                     }
                 }
             }
         }
     }
-#endif
 
     // Emit left bits
     gpujpeg_huffman_gpu_encoder_emit_left_bits(data_compressed, s_out, out_size, tid);
