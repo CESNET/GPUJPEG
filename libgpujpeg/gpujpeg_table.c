@@ -314,6 +314,14 @@ gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, 
     }
     gpujpeg_table_huffman_encoder_compute(table);
     
+    // reserve first index in AC table for special purposes
+    if ( huff_type == GPUJPEG_HUFFMAN_AC ) {
+        table->code[256] = table->code[0];
+        table->size[256] = table->size[0];
+        table->code[0] = 0;
+        table->size[0] = 0;
+    }
+    
 #ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
     // Copy table to device memory
     if ( cudaSuccess != cudaMemcpy(d_table, table, sizeof(struct gpujpeg_table_huffman_encoder), cudaMemcpyHostToDevice) )

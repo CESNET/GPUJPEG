@@ -258,7 +258,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
 
     // If all the left coefs were zero, emit an end-of-block code
     if ( r > 0 ) {
-        if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[0], d_table_ac->size[0], put_value, put_bits, data_compressed) != 0 )
+        if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[256], d_table_ac->size[256], put_value, put_bits, data_compressed) != 0 )
             return -1;
     }
 
