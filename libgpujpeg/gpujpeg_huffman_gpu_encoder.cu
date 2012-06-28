@@ -213,9 +213,17 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
             return -1;
     }
     
+    // find last nonzero value
+    int last_nonzero_idx = 64;
+    while( last_nonzero_idx-- ) {
+        if( data[last_nonzero_idx] ) {
+            break;
+        }
+    }
+    
     // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
     int r = 0;
-    for ( int k = 1; k < 64; k++ ) 
+    for ( int k = 1; k <= last_nonzero_idx; k++ ) 
     {
         temp = data[k];
         if ( temp == 0 ) {
@@ -257,7 +265,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
     }
 
     // If all the left coefs were zero, emit an end-of-block code
-    if ( r > 0 ) {
+    if ( last_nonzero_idx != 63 ) {
         if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[256], d_table_ac->size[256], put_value, put_bits, data_compressed) != 0 )
             return -1;
     }
