@@ -208,20 +208,27 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
     if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
         return -1;
     
-    // find last nonzero value
-    int last_nonzero_idx = 64;
-    while( last_nonzero_idx-- ) {
-        if( data[last_nonzero_idx].x ) {
-            break;
-        }
-    }
+//     // find last nonzero value
+//     int last_nonzero_idx = 64;
+//     while( last_nonzero_idx-- ) {
+//         if( data[last_nonzero_idx].x ) {
+//             break;
+//         }
+//     }
     
     // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
-    for ( int k = 1; k <= last_nonzero_idx; k++ ) 
+    for ( int k = 1; k < 64; k++ ) 
     {
         const int value = temp2 = temp = data[k].x;
         const int r = data[k].y;
 
+        // if last coefficient is zero
+        if ( r == -1 ) {
+            if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[256], d_table_ac->size[256], put_value, put_bits, data_compressed) != 0 )
+                return -1;
+            break;
+        }
+        
         if ( temp < 0 ) {
             // temp is abs value of input
             temp = -temp;        
@@ -245,12 +252,6 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
 
         // Write Category offset
         if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
-            return -1;
-    }
-
-    // If all the left coefs were zero, emit an end-of-block code
-    if ( last_nonzero_idx != 63 ) {
-        if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[256], d_table_ac->size[256], put_value, put_bits, data_compressed) != 0 )
             return -1;
     }
 
@@ -299,12 +300,12 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     
     
     
-//     // save value into shared memory  TODO: remove later!!!
-//     s_in[load_idx] = in_even;
-//     s_in[load_idx + 1] = in_odd;
-//     
-//     // TODO: is this needed?
-//     __threadfence_block();
+    // save value into shared memory  TODO: remove later!!!
+    s_in[load_idx] = in_even;
+    s_in[load_idx + 1] = in_odd;
+    
+    // TODO: is this needed?
+    __threadfence_block();
     
     // compute count of consecutive zeros before even value
     // TODO: reimplement after getting it all to work
@@ -317,14 +318,14 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
 //     }
 //     assert(zeros_before_even == ref_zeros_before_even);
     
-//     // TODO: set to true if any nonzero value follows thread's even value
-//     bool ref_nonzero_follows = false;
-//     for(int i = load_idx + 1; i < 64; i++) {
-//         if(s_in[i]) {
-//             ref_nonzero_follows = true;
-//             break;
-//         }
-//     }
+    // TODO: set to true if any nonzero value follows thread's even value
+    bool ref_nonzero_follows = false;
+    for(int i = load_idx + 1; i < 64; i++) {
+        if(s_in[i]) {
+            ref_nonzero_follows = true;
+            break;
+        }
+    }
     
     // count of consecutive zeros before odd value (either one more than 
     // even if even is zero or none if even value itself is nonzero)
@@ -340,6 +341,9 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     ((short2*)s_in)[load_idx].y = zeros_before_even & 0xF;
     ((short2*)s_in)[load_idx + 1].x = in_odd;
     ((short2*)s_in)[load_idx + 1].y = zeros_before_odd & 0xF;
+    if(!ref_nonzero_follows && !in_odd) {
+        ((short2*)s_in)[load_idx + 1].y = -1;
+    }
     __threadfence_block();
     
     
