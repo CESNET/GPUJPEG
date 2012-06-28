@@ -508,7 +508,7 @@ gpujpeg_huffman_encoder_encode_kernel(
     struct gpujpeg_segment* segment = &d_segment[segment_index];
     
     // Initialize huffman coder
-    int dc[GPUJPEG_MAX_COMPONENT_COUNT]; //TODO pouze prvni vlakno
+    int dc[GPUJPEG_MAX_COMPONENT_COUNT];
     for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ )
         dc[comp] = 0;
     
@@ -518,14 +518,12 @@ gpujpeg_huffman_encoder_encode_kernel(
     
     // Non-interleaving mode
     if ( comp_count == 1 ) {
-        int segment_index = segment->scan_segment_index; //TODO tento index muze byt jiny nez byl segment_index vyse?
 
         // Get component for current scan
         struct gpujpeg_component* component = &d_component[segment->scan_index];
 
         // Get component data for MCU (first block)
         int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count) * component->mcu_size];
-        //int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size];
 
         // Get coder parameters
         int & last_dc = dc[segment->scan_index];
