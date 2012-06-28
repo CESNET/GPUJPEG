@@ -176,12 +176,12 @@ gpujpeg_huffman_gpu_encoder_decompose(int in_value, int & nbits, int & out_value
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, int* data, uint8_t* & data_compressed, 
+gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, short2* data, uint8_t* & data_compressed, 
     struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
     // Encode the DC coefficient difference per section F.1.2.1
-    int temp = data[0] - dc;
-    dc = data[0];
+    int temp = data[0].x - dc;
+    dc = data[0].x;
     
     int temp2 = temp;
     if ( temp < 0 ) {
@@ -211,7 +211,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
     // find last nonzero value
     int last_nonzero_idx = 64;
     while( last_nonzero_idx-- ) {
-        if( data[last_nonzero_idx] ) {
+        if( data[last_nonzero_idx].x ) {
             break;
         }
     }
@@ -221,7 +221,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
     int value;
     for ( int k = 1; k <= last_nonzero_idx; k++ ) 
     {
-        temp2 = value = temp = data[k];
+        temp2 = value = temp = data[k].x;
 
         if ( temp < 0 ) {
             // temp is abs value of input
@@ -294,13 +294,48 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     int in_even = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx]];
     const int in_odd = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx + 1]];
     
-    
-    
-    
-    
-    // save value into shared memory
+    // save value into shared memory  TODO: remove later!!!
     s_in[load_idx] = in_even;
     s_in[load_idx + 1] = in_odd;
+    
+    // TODO: is this needed?
+    __threadfence_block();
+    
+    // compute count of consecutive zeros before even value
+    // TODO: reimplement after getting it all to work
+    int zeros_before_even = 0; // TODO implement anyhow (NOTE: first DC coefficient is treated as nonzero)
+    for(int i = load_idx; --i > 0; ) {
+        if(s_in[i]) {
+            break;
+        }
+        zeros_before_even++;
+    }
+    
+//     // TODO: set to true if any nonzero value follows thread's even value
+//     bool nonzero_follows = false;
+//     for(int i = load_idx + 1; i < 64; i++) {
+//         if(s_in[i]) {
+//             nonzero_follows = true;
+//             break;
+//         }
+//     }
+    
+    // count of consecutive zeros before odd value (either one more than 
+    // even if even is zero or none if even value itself is nonzero)
+    const int zeros_before_odd = in_even || !tid ? 0 : zeros_before_even + 1;
+    
+    
+    
+    
+    
+    // replace values in shared memory with tuples (value, preceding zero count)
+    __threadfence_block();
+    ((short2*)s_in)[load_idx].x = in_even;
+    ((short2*)s_in)[load_idx].y = zeros_before_even;
+    ((short2*)s_in)[load_idx + 1].x = in_odd;
+    ((short2*)s_in)[load_idx + 1].y = zeros_before_odd;
+    __threadfence_block();
+    
     
     int result = 0;
     if(0 == tid) {
@@ -312,23 +347,13 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
             put_bits = 0;
             out_size = 1;
         }
-        result = gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, dc, s_in, data_compressed, d_table_dc, d_table_ac);
+        result = gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, dc, (short2*)s_in, data_compressed, d_table_dc, d_table_ac);
     }
     return __ballot(result);
     
     
 
 //     
-//     // compute count of consecutive zeros before even value
-//     // TODO: reimplement after getting it all to work
-//     const int zeros_before_even = 0; // TODO implement anyhow (NOTE: first DC coefficient is treated as nonzero)
-//     
-//     // TODO: set to true if any nonzero value follows thread's even value
-//     const bool nonzero_follows = true;
-//     
-//     // count of consecutive zeros before odd value (either one more than 
-//     // even if even is zero or none if even value itself is nonzero)
-//     const int zeros_before_odd = in_even ? 0 : zeros_before_even + 1;
 //     
 //     // pointer to LUT for encoding thread's even value 
 //     // (only thread #0 uses DC table, others use AC table)
