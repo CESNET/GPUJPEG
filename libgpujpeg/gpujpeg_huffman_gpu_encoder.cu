@@ -79,71 +79,96 @@ __constant__ int gpujpeg_huffman_gpu_encoder_order_natural[GPUJPEG_ORDER_NATURAL
     *data_compressed = (uint8_t)(marker); \
     data_compressed++; }
 
-/**
- * Output bits to the file. Only the right 24 bits of put_buffer are used; 
- * the valid bits are left-justified in this part.  At most 16 bits can be 
- * passed to EmitBits in one call, and we never retain more than 7 bits 
- * in put_buffer between calls, so 24 bits are sufficient.
- * 
- * @param coder  Huffman coder structure
- * @param code  Huffman code
- * @param size  Size in bits of the Huffman code
- * @return void
- */
-__device__ inline int
-gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int code, int size, int & put_value, int & put_bits, uint8_t* & data_compressed)
-{
-    // This routine is heavily used, so it's worth coding tightly
-    int _put_buffer = (int)code;
-    int _put_bits = put_bits;
-    // Mask off any extra bits in code
-    _put_buffer &= (((int)1) << size) - 1; 
-    // New number of bits in buffer
-    _put_bits += size;                    
-    // Align incoming bits
-    _put_buffer <<= 24 - _put_bits;        
-    // And merge with old buffer contents
-    _put_buffer |= put_value;    
-    // If there are more than 8 bits, write it out
-    unsigned char uc;
-    while ( _put_bits >= 8 ) {
-        // Write one byte out
-        uc = (unsigned char) ((_put_buffer >> 16) & 0xFF);
-        gpujpeg_huffman_gpu_encoder_emit_byte(data_compressed, uc);
-        // If need to stuff a zero byte
-        if ( uc == 0xFF ) {  
-            // Write zero byte out
-            gpujpeg_huffman_gpu_encoder_emit_byte(data_compressed, 0);
-        }
-        _put_buffer <<= 8;
-        _put_bits -= 8;
-    }
-    // update state variables
-    put_value = _put_buffer; 
-    put_bits = _put_bits;
-    return 0;
-}
+// /**
+//  * Output bits to the file. Only the right 24 bits of put_buffer are used; 
+//  * the valid bits are left-justified in this part.  At most 16 bits can be 
+//  * passed to EmitBits in one call, and we never retain more than 7 bits 
+//  * in put_buffer between calls, so 24 bits are sufficient.
+//  * 
+//  * @param coder  Huffman coder structure
+//  * @param code  Huffman code
+//  * @param size  Size in bits of the Huffman code
+//  * @return void
+//  */
+// __device__ inline int
+// gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int code, int size, int & put_value, int & put_bits, uint8_t* & data_compressed)
+// {
+//     // This routine is heavily used, so it's worth coding tightly
+//     int _put_buffer = (int)code;
+//     int _put_bits = put_bits;
+//     // Mask off any extra bits in code
+//     _put_buffer &= (((int)1) << size) - 1; 
+//     // New number of bits in buffer
+//     _put_bits += size;                    
+//     // Align incoming bits
+//     _put_buffer <<= 24 - _put_bits;        
+//     // And merge with old buffer contents
+//     _put_buffer |= put_value;    
+//     // If there are more than 8 bits, write it out
+//     unsigned char uc;
+//     while ( _put_bits >= 8 ) {
+//         // Write one byte out
+//         uc = (unsigned char) ((_put_buffer >> 16) & 0xFF);
+//         gpujpeg_huffman_gpu_encoder_emit_byte(data_compressed, uc);
+//         // If need to stuff a zero byte
+//         if ( uc == 0xFF ) {  
+//             // Write zero byte out
+//             gpujpeg_huffman_gpu_encoder_emit_byte(data_compressed, 0);
+//         }
+//         _put_buffer <<= 8;
+//         _put_bits -= 8;
+//     }
+//     // update state variables
+//     put_value = _put_buffer; 
+//     put_bits = _put_bits;
+//     return 0;
+// }
 
 /**
- * Emit left bits
- * 
- * @param coder  Huffman coder structure
- * @return void
+ * Adds up to 24 bits at once.
  */
-__device__ inline void
-gpujpeg_huffman_gpu_encoder_emit_left_bits(int & put_value, int & put_bits, uint8_t* & data_compressed)
-{
-    // Fill 7 bits with ones
-    if ( gpujpeg_huffman_gpu_encoder_emit_bits(0x7F, 7, put_value, put_bits, data_compressed) != 0 )
-        return;
-    
-    //unsigned char uc = (unsigned char) ((put_value >> 16) & 0xFF);
-    // Write one byte out
-    //gpujpeg_huffman_gpu_encoder_emit_byte(data_compressed, uc);
-    
-    put_value = 0; 
-    put_bits = 0;
+__device__ inline void 
+gpujpeg_huffman_gpu_encoder_emit_bits(int & buffer_bits, uint8_t * const buffer_ptr, int code_bit_size, unsigned int code_word) {
+    while ( code_bit_size ) {
+        // get pointer to current output byte and number of remianing bits in it 
+        uint8_t * const out_byte_ptr = buffer_ptr + (buffer_bits >> 3);
+        const int old_bit_count = buffer_bits & 7;
+        const int new_bit_count = min(8 - old_bit_count, code_bit_size);
+        
+        const uint8_t out_byte = ((old_bit_count ? *out_byte_ptr : 0) << new_bit_count)
+                               | (code_word >> (code_bit_size - new_bit_count) & ((1 << new_bit_count) - 1));
+        
+        out_byte_ptr[0] = out_byte;
+        if(out_byte == 0xff) {
+            out_byte_ptr[1] = 0;
+            buffer_bits += 8;
+        }
+        
+        code_bit_size -= new_bit_count;
+        buffer_bits += new_bit_count;
+    }
 }
+
+// /**
+//  * Emit left bits
+//  * 
+//  * @param coder  Huffman coder structure
+//  * @return void
+//  */
+// __device__ inline void
+// gpujpeg_huffman_gpu_encoder_emit_left_bits(int & put_value, int & put_bits, uint8_t* & data_compressed)
+// {
+//     // Fill 7 bits with ones
+//     if ( gpujpeg_huffman_gpu_encoder_emit_bits(0x7F, 7, put_value, put_bits, data_compressed) != 0 )
+//         return;
+//     
+//     //unsigned char uc = (unsigned char) ((put_value >> 16) & 0xFF);
+//     // Write one byte out
+//     //gpujpeg_huffman_gpu_encoder_emit_byte(data_compressed, uc);
+//     
+//     put_value = 0; 
+//     put_bits = 0;
+// }
 
 /**
  * Decomposes given value into number of bits and one's complement value.
@@ -176,45 +201,21 @@ gpujpeg_huffman_gpu_encoder_decompose(int in_value, int & nbits, int & out_value
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & dc, short2* data, uint8_t* & data_compressed, 
+gpujpeg_huffman_gpu_encoder_encode_block(int & out_bits, int & dc, short2* data, uint8_t* & data_compressed, 
     struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
     // Encode the DC coefficient difference per section F.1.2.1
     int temp = data[0].x - dc;
     dc = data[0].x;
     
-    int temp2 = temp;
-    if ( temp < 0 ) {
-        // Temp is abs value of input
-        temp = -temp;
-        // For a negative input, want temp2 = bitwise complement of abs(input)
-        // This code assumes we are on a two's complement machine
-        temp2--;
-    }
-
-    // Find the number of bits needed for the magnitude of the coefficient
-    int nbits = 0;
-    while ( temp ) {
-        nbits++;
-        temp >>= 1;
-    }
-
+    int temp2, nbits;
+    gpujpeg_huffman_gpu_encoder_decompose(temp, nbits, temp2);
+    
     // Write category number
-    if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_dc->code[nbits], d_table_dc->size[nbits], put_value, put_bits, data_compressed) != 0 ) {
-        return -1;
-    }
+    gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, d_table_dc->size[nbits], d_table_dc->code[nbits]);
 
     // Write category offset (EmitBits rejects calls with size 0)
-    if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
-        return -1;
-    
-//     // find last nonzero value
-//     int last_nonzero_idx = 64;
-//     while( last_nonzero_idx-- ) {
-//         if( data[last_nonzero_idx].x ) {
-//             break;
-//         }
-//     }
+    gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, nbits, temp2);
     
     // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
     for ( int k = 1; k < 64; k++ ) 
@@ -224,35 +225,18 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
 
         // if last coefficient is zero
         if ( r == -1 ) {
-            if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[256], d_table_ac->size[256], put_value, put_bits, data_compressed) != 0 )
-                return -1;
+            gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, d_table_ac->size[256], d_table_ac->code[256]);
             break;
         }
         
-        if ( temp < 0 ) {
-            // temp is abs value of input
-            temp = -temp;        
-            // This code assumes we are on a two's complement machine
-            temp2--;
-        }
-
-        // Find the number of bits needed for the magnitude of the coefficient
-        // there must be at least one 1 bit
-        nbits = 0;
-        if( temp ) {
-            nbits = 1;
-            while ( (temp >>= 1) )
-                nbits++;
-        }
+        gpujpeg_huffman_gpu_encoder_decompose(temp, nbits, temp2);
 
         // Emit Huffman symbol for run length / number of bits
         int i = (r << 4) + nbits;
-        if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[i], d_table_ac->size[i], put_value, put_bits, data_compressed) != 0 )
-            return -1;
+        gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, d_table_ac->size[i], d_table_ac->code[i]);
 
         // Write Category offset
-        if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
-            return -1;
+        gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, nbits, temp2);
     }
 
     return 0;
@@ -262,15 +246,9 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & put_value, int & put_bits, int & 
 
 __device__ void
 gpujpeg_huffman_gpu_encoder_emit_left_bits(uint8_t * &data_compressed, int * s_out, int &out_size, int tid) {
-    if(0 == tid) {
-        int & put_value = s_out[0];
-        int & put_bits = s_out[1];
-        if(out_size == 0) {
-            put_value = 0;
-            put_bits = 0;
-            out_size = 1;
-        }
-        gpujpeg_huffman_gpu_encoder_emit_left_bits(put_value, put_bits, data_compressed);
+    if(tid == 0) {
+        gpujpeg_huffman_gpu_encoder_emit_bits(out_size, data_compressed, 7, 0x7f);
+        data_compressed += (out_size >> 3);
     }
 }
 
@@ -356,14 +334,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     int result = 0;
     if(0 == tid) {
         int & dc = *last_dc;
-        int & put_value = s_out[0];
-        int & put_bits = s_out[1];
-        if(out_size == 0) {
-            put_value = 0;
-            put_bits = 0;
-            out_size = 1;
-        }
-        result = gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, dc, (short2*)s_in, data_compressed, d_table_dc, d_table_ac);
+        result = gpujpeg_huffman_gpu_encoder_encode_block(out_size, dc, (short2*)s_in, data_compressed, d_table_dc, d_table_ac);
     }
     return __ballot(result);
     
@@ -417,98 +388,6 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
 //     int even_bit_size
 //     if()
 //     
-//     
-//     typedef uint64_t loading_t;
-//     const int loading_iteration_count = 64 * 2 / sizeof(loading_t);
-//     
-//     // Load block to shared memory
-//     __shared__ int16_t s_data[64 * THREAD_BLOCK_SIZE];
-//     for ( int i = 0; i < loading_iteration_count; i++ ) {
-//         ((loading_t*)s_data)[loading_iteration_count * threadIdx.x + i] = ((loading_t*)data)[i];
-//     }
-//     int data_start = 64 * threadIdx.x;
-// 
-//     // Encode the DC coefficient difference per section F.1.2.1
-//     int temp = s_data[data_start + 0] - dc;
-//     dc = s_data[data_start + 0];
-//     
-//     int temp2 = temp;
-//     if ( temp < 0 ) {
-//         // Temp is abs value of input
-//         temp = -temp;
-//         // For a negative input, want temp2 = bitwise complement of abs(input)
-//         // This code assumes we are on a two's complement machine
-//         temp2--;
-//     }
-// 
-//     // Find the number of bits needed for the magnitude of the coefficient
-//     int nbits = 0;
-//     while ( temp ) {
-//         nbits++;
-//         temp >>= 1;
-//     }
-// 
-//     // Write category number
-//     if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_dc->code[nbits], d_table_dc->size[nbits], put_value, put_bits, data_compressed) != 0 ) {
-//         return -1;
-//     }
-// 
-//     // Write category offset (EmitBits rejects calls with size 0)
-//     if ( nbits ) {
-//         if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
-//             return -1;
-//     }
-//     
-//     // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
-//     int r = 0;
-//     for ( int k = 1; k < 64; k++ ) 
-//     {
-//         temp = s_data[data_start + gpujpeg_huffman_gpu_encoder_order_natural[k]];
-//         if ( temp == 0 ) {
-//             r++;
-//         }
-//         else {
-//             // If run length > 15, must emit special run-length-16 codes (0xF0)
-//             while ( r > 15 ) {
-//                 if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[0xF0], d_table_ac->size[0xF0], put_value, put_bits, data_compressed) != 0 )
-//                     return -1;
-//                 r -= 16;
-//             }
-// 
-//             temp2 = temp;
-//             if ( temp < 0 ) {
-//                 // temp is abs value of input
-//                 temp = -temp;        
-//                 // This code assumes we are on a two's complement machine
-//                 temp2--;
-//             }
-// 
-//             // Find the number of bits needed for the magnitude of the coefficient
-//             // there must be at least one 1 bit
-//             nbits = 1;
-//             while ( (temp >>= 1) )
-//                 nbits++;
-// 
-//             // Emit Huffman symbol for run length / number of bits
-//             int i = (r << 4) + nbits;
-//             if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[i], d_table_ac->size[i], put_value, put_bits, data_compressed) != 0 )
-//                 return -1;
-// 
-//             // Write Category offset
-//             if ( gpujpeg_huffman_gpu_encoder_emit_bits((unsigned int) temp2, nbits, put_value, put_bits, data_compressed) != 0 )
-//                 return -1;
-// 
-//             r = 0;
-//         }
-//     }
-// 
-//     // If all the left coefs were zero, emit an end-of-block code
-//     if ( r > 0 ) {
-//         if ( gpujpeg_huffman_gpu_encoder_emit_bits(d_table_ac->code[0], d_table_ac->size[0], put_value, put_bits, data_compressed) != 0 )
-//             return -1;
-//     }
-// 
-//     return 0;
 }
 
 /**
