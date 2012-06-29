@@ -193,6 +193,34 @@ gpujpeg_huffman_gpu_encoder_decompose(int in_value, int & nbits, int & out_value
 }
 
 
+__device__ static void
+gpujpeg_huffman_gpu_encode_value(int & out_nbits, int & out_cword, const int preceding_zero_count, const int value,
+                                 const struct gpujpeg_table_huffman_encoder * const d_table) {
+    out_cword = value;
+    int absolute = value;
+    if ( value < 0 ) {
+        // valu eis now absolute value of input
+        absolute = -absolute;
+        // For a negative input, want temp2 = bitwise complement of abs(input)
+        // This code assumes we are on a two's complement machine
+        out_cword--;
+    }
+
+    // Find the number of bits needed for the magnitude of the coefficient
+    out_nbits = 0;
+    while ( absolute ) {
+        out_nbits++;
+        absolute >>= 1;
+    }
+    
+    // trim remaining bits
+    out_cword &= (1 << out_nbits) - 1;
+    
+    // find prefix of the codeword and size of the prefix
+    const int prefix_idx = preceding_zero_count * 16 + out_nbits;
+    out_cword |= d_table->code[prefix_idx] << out_nbits;
+    out_nbits += d_table->size[prefix_idx];
+}
 
 
 /**
@@ -208,19 +236,14 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & out_bits, int & dc, short2* data,
     int temp = data[0].x - dc;
     dc = data[0].x;
     
-    int temp2, nbits;
-    gpujpeg_huffman_gpu_encoder_decompose(temp, nbits, temp2);
-    
-    // Write category number
-    gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, d_table_dc->size[nbits], d_table_dc->code[nbits]);
-
-    // Write category offset (EmitBits rejects calls with size 0)
-    gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, nbits, temp2);
+    int cword_size, cword_value;
+    gpujpeg_huffman_gpu_encode_value(cword_size, cword_value, 0, temp, d_table_dc);
+    gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, cword_size, cword_value);
     
     // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
     for ( int k = 1; k < 64; k++ ) 
     {
-        const int value = temp2 = temp = data[k].x;
+        const int value = data[k].x;
         const int r = data[k].y;
 
         // if last coefficient is zero
@@ -229,14 +252,8 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & out_bits, int & dc, short2* data,
             break;
         }
         
-        gpujpeg_huffman_gpu_encoder_decompose(temp, nbits, temp2);
-
-        // Emit Huffman symbol for run length / number of bits
-        int i = (r << 4) + nbits;
-        gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, d_table_ac->size[i], d_table_ac->code[i]);
-
-        // Write Category offset
-        gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, nbits, temp2);
+        gpujpeg_huffman_gpu_encode_value(cword_size, cword_value, r, value, d_table_ac);
+        gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, cword_size, cword_value);
     }
 
     return 0;
@@ -280,37 +297,6 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     const unsigned int follow_mask = ~nonzero_mask;
     const bool nonzero_follows = follow_mask & ((even_nonzero_bitmap >> 1) | odd_nonzero_bitmap);
     
-    
-    
-//     // save value into shared memory  TODO: remove later!!!
-//     s_in[load_idx] = in_even;
-//     s_in[load_idx + 1] = in_odd;
-//     
-//     // TODO: is this needed?
-//     __threadfence_block();
-//     
-//     // compute count of consecutive zeros before even value
-//     // TODO: reimplement after getting it all to work
-//     int ref_zeros_before_even = 0; // TODO implement anyhow (NOTE: first DC coefficient is treated as nonzero)
-//     for(int i = load_idx; --i > 0; ) {
-//         if(s_in[i]) {
-//             break;
-//         }
-//         ref_zeros_before_even++;
-//     }
-//     assert(zeros_before_even == ref_zeros_before_even);
-//     
-//     // TODO: set to true if any nonzero value follows thread's even value
-//     bool ref_nonzero_follows = false;
-//     for(int i = load_idx + 1; i < 64; i++) {
-//         if(s_in[i]) {
-//             ref_nonzero_follows = true;
-//             break;
-//         }
-//     }
-//     
-//     assert(ref_nonzero_follows == nonzero_follows);
-    
     // count of consecutive zeros before odd value (either one more than 
     // even if even is zero or none if even value itself is nonzero)
     const int zeros_before_odd = in_even || !tid ? 0 : zeros_before_even + 1;
@@ -335,6 +321,11 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     if(0 == tid) {
         int & dc = *last_dc;
         result = gpujpeg_huffman_gpu_encoder_encode_block(out_size, dc, (short2*)s_in, data_compressed, d_table_dc, d_table_ac);
+        
+        
+        
+        
+        
     }
     return __ballot(result);
     
