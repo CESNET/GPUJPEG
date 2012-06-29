@@ -114,16 +114,16 @@ gpujpeg_huffman_gpu_encode_value(int & out_nbits, int & out_cword, const int pre
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(const int leftover_value, int & out_bits, int & dc, short2* data, uint8_t* & data_compressed, 
+gpujpeg_huffman_gpu_encoder_encode_block(const int value0, const int leftover_value, int & out_bits, int & dc, int * data, uint8_t* & data_compressed, 
     struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
     // Encode the DC coefficient difference per section F.1.2.1
-    int temp = data[0].x - dc;
-    dc = data[0].x;
+    int temp = value0 - dc;
+    dc = value0;
     
     __threadfence_block();
     // put leftover bits back
-    *(int*)data = leftover_value;
+    *data = leftover_value;
     
     int cword_size, cword_value;
     gpujpeg_huffman_gpu_encode_value(cword_size, cword_value, 0, temp, d_table_dc);
@@ -133,18 +133,10 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int leftover_value, int & out_bit
     for ( int k = 1; k < 64; k++ ) 
     {
         __threadfence_block();
-        const int value = data[k].x;
-        const int r = data[k].y;
+        const int size = data[k] & 31;
+        const int value = data[k] >> 5;
         __threadfence_block();
-        // if last coefficient is zero
-        if ( r == -1 ) {
-            gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, (uint8_t*)data, d_table_ac->size[256], d_table_ac->code[256]);
-            break;
-        }
-        
-        gpujpeg_huffman_gpu_encode_value(cword_size, cword_value, r, value, d_table_ac);
-        gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, (uint8_t*)data, cword_size, cword_value);
-        __threadfence_block();
+        gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, (uint8_t*)data, size, value);
     }
 
     return 0;
@@ -221,29 +213,70 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     // even if even is zero or none if even value itself is nonzero)
     const int zeros_before_odd = in_even || !tid ? 0 : zeros_before_even + 1;
     
-    
-    
     // (TODO: remove later) save leftover bits from previous iteration
-    const int leftover_value = s_temp[0];
+    uint8_t leftover_value = *(uint8_t*)s_temp;
     
+    // clear the buffer in parallel
+    ((uint64_t*)s_temp)[tid] = 0;
+    
+    // put leftover value back
+    if(0 == tid) {
+        *(uint8_t*)s_temp = leftover_value;
+    }
+    
+    
+    
+    
+    // pointer to LUT for encoding thread's even value 
+    // (only thread #0 uses DC table, others use AC table)
+    const struct gpujpeg_table_huffman_encoder * d_table_even = d_table_ac;
+    
+    // first thread handles special DC coefficient
+    if(0 == tid) {
+        // first thread uses DC table for its even value
+        d_table_even = d_table_dc;
+        
+        // update last DC coefficient
+        const int original_in_even = in_even;
+        in_even -= *last_dc;
+        *last_dc = original_in_even;
+    }
+    
+    // each thread encodes its two pixels
+    int even_code_size = 0, even_code_value = 0, odd_code_size = 0, odd_code_value = 0;
+    if(nonzero_follows || !tid) {
+        gpujpeg_huffman_gpu_encode_value(even_code_size, even_code_value, zeros_before_even & 0xf, in_even, d_table_even);
+        gpujpeg_huffman_gpu_encode_value(odd_code_size, odd_code_value, zeros_before_odd & 0xf, in_odd, d_table_ac);
+    }
+    if(tid == 31 && !in_odd) {
+        odd_code_size = d_table_ac->size[256];
+        odd_code_value = d_table_ac->code[256];
+    }
     
     // replace values in shared memory with tuples (value, preceding zero count)
-    __threadfence_block();
-    ((short2*)s_temp)[load_idx].x = in_even;
-    ((short2*)s_temp)[load_idx].y = zeros_before_even & 0xF;
-    ((short2*)s_temp)[load_idx + 1].x = in_odd;
-    ((short2*)s_temp)[load_idx + 1].y = zeros_before_odd & 0xF;
-    if(!nonzero_follows && !in_odd) {
-        ((short2*)s_temp)[load_idx + 1].y = -1;
-    }
+    s_temp[load_idx] = even_code_size + 32 * even_code_value;
+    s_temp[load_idx + 1] = odd_code_size + 32 * odd_code_value;
     __threadfence_block();
     
     
     int result = 0;
     if(0 == tid) {
-        int & dc = *last_dc;
-        result = gpujpeg_huffman_gpu_encoder_encode_block(leftover_value, remaining_bits, dc, (short2*)s_temp, data_compressed, d_table_dc, d_table_ac);
+        for ( int k = 0; k < 64; k++ ) 
+        {
+            const int size = s_temp[k] & 31;
+            const int value = s_temp[k] >> 5;
+            if(k == 0) {
+                *s_temp = leftover_value;   // put leftover bits back
+            }
+            gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, size, value);
+        }
         
+        
+        
+        
+        
+        
+        __threadfence_block();
         
         // apply byte stuffing to encoded bytes
         gpujpeg_huffman_gpu_encoder_byte_stuff((uint8_t*)s_temp, remaining_bits, (uint8_t*)s_out, remaining_bytes);
@@ -253,57 +286,6 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
         gpujpeg_huffman_gpu_encoder_output((uint8_t*)s_out, remaining_bytes, data_compressed);
     }
     return __ballot(result);
-    
-    
-
-//     
-//     
-//     // pointer to LUT for encoding thread's even value 
-//     // (only thread #0 uses DC table, others use AC table)
-//     const struct gpujpeg_table_huffman_encoder * d_table_even = d_table_ac;
-//     
-//     // first thread handles special DC coefficient
-//     if(0 == tid) {
-//         // first thread uses DC table for its even value
-//         d_table_even = d_table_dc;
-//         
-//         // update last DC coefficient
-//         const int original_in_even = in_even;
-//         in_even -= last_dc;
-//         last_dc = original_in_even;
-//     }
-//     
-//     // decompose the even value into bit length and one's complement value
-//     int even_bit_size = 0, even_code = 0, even_out_size = 0, even_out_bits = in_even;
-//     if(in_even || tid == 0) {
-//         gpujpeg_huffman_gpu_encoder_decompose(in_even, even_bit_size, even_code);
-//     } else if((zeros_before_even & 15) == 15) {
-//         even_bit_size = 0xF0;
-//     }
-//     
-//     // encode even value's code if any of following holds:
-//     //  - thread index == 0
-//     //  - even value is nonzero
-//     //  - 16th zero in row
-//     if(even_bit_size || tid == 0) {
-//         // encode the value itself only if nonzero or in first thread
-//         if(in_even || tid == 0) {
-//             even_out_size = even_bit_size;
-//         }
-//         
-//         // prepend with value's size (or 16 zero code)
-//         const int code_idx = (zeros_before_even << 4) + even_bit_size;
-//         const int code_size = d_table_even->size[code_idx];
-//         even_out_bits <<= code_size;
-//         even_out_bits |= d_table_even->code[code_idx];
-//     }
-//     
-//     
-//     
-//     // encode odd value - only if 16th zero, or last and zero or nonzero
-//     int even_bit_size
-//     if()
-//     
 }
 
 /**
