@@ -140,11 +140,6 @@ gpujpeg_huffman_gpu_encoder_emit_bits(int & buffer_bits, uint8_t * const buffer_
                                | (code_word >> (code_bit_size - new_bit_count) & ((1 << new_bit_count) - 1));
         
         out_byte_ptr[0] = out_byte;
-        if(out_byte == 0xff) {
-            out_byte_ptr[1] = 0;
-            buffer_bits += 8;
-        }
-        
         code_bit_size -= new_bit_count;
         buffer_bits += new_bit_count;
     }
@@ -230,31 +225,37 @@ gpujpeg_huffman_gpu_encode_value(int & out_nbits, int & out_cword, const int pre
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int & out_bits, int & dc, short2* data, uint8_t* & data_compressed, 
+gpujpeg_huffman_gpu_encoder_encode_block(const int leftover_value, int & out_bits, int & dc, short2* data, uint8_t* & data_compressed, 
     struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
     // Encode the DC coefficient difference per section F.1.2.1
     int temp = data[0].x - dc;
     dc = data[0].x;
     
+    __threadfence_block();
+    // put leftover bits back
+    *(int*)data = leftover_value;
+    
     int cword_size, cword_value;
     gpujpeg_huffman_gpu_encode_value(cword_size, cword_value, 0, temp, d_table_dc);
-    gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, cword_size, cword_value);
+    gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, (uint8_t*)data, cword_size, cword_value);
     
     // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
     for ( int k = 1; k < 64; k++ ) 
     {
+        __threadfence_block();
         const int value = data[k].x;
         const int r = data[k].y;
-
+        __threadfence_block();
         // if last coefficient is zero
         if ( r == -1 ) {
-            gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, d_table_ac->size[256], d_table_ac->code[256]);
+            gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, (uint8_t*)data, d_table_ac->size[256], d_table_ac->code[256]);
             break;
         }
         
         gpujpeg_huffman_gpu_encode_value(cword_size, cword_value, r, value, d_table_ac);
-        gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, data_compressed, cword_size, cword_value);
+        gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, (uint8_t*)data, cword_size, cword_value);
+        __threadfence_block();
     }
 
     return 0;
@@ -262,13 +263,31 @@ gpujpeg_huffman_gpu_encoder_encode_block(int & out_bits, int & dc, short2* data,
 
 
 
+// apply byte stuffing to encoded bytes
 __device__ void
-gpujpeg_huffman_gpu_encoder_emit_left_bits(uint8_t * &data_compressed, int * s_out, int &out_size, int tid) {
+gpujpeg_huffman_gpu_encoder_byte_stuff(uint8_t* src, int & remaining_bits, uint8_t * & dest) {
+    const int byte_count = remaining_bits / 8;
+    for(int i = 0; i < byte_count; i++) {
+        const uint8_t value = src[i];
+        *(dest++) = value;
+        if(0xff == value) {
+            *(dest++) = 0;
+        }
+    }
+    remaining_bits &= 7;
+    src[0] = src[byte_count];
+}
+
+
+__device__ void
+gpujpeg_huffman_gpu_encoder_emit_left_bits(uint8_t * &data_compressed, int * s_temp, int * s_out, int & remaining_bits, int & remaining_bytes, int tid) {
     if(tid == 0) {
-        gpujpeg_huffman_gpu_encoder_emit_bits(out_size, data_compressed, 7, 0x7f);
-        data_compressed += (out_size >> 3);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, 7, 0x7f);
+        gpujpeg_huffman_gpu_encoder_byte_stuff((uint8_t*)s_temp, remaining_bits, data_compressed);
     }
 }
+
+
 
 /**
  * Encode one 8x8 block
@@ -276,7 +295,8 @@ gpujpeg_huffman_gpu_encoder_emit_left_bits(uint8_t * &data_compressed, int * s_o
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compressed, int * s_in, int * s_out, int &out_size, int *last_dc, int tid,
+gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compressed, int * s_temp, int * s_out,
+                int & remaining_bits, int & remaining_bytes, int *last_dc, int tid,
                 struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
     // each thread loads a pair of values (pair after zigzag reordering)
@@ -304,16 +324,18 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     
     
     
+    // (TODO: remove later) save leftover bits from previous iteration
+    const int leftover_value = s_temp[0];
     
     
     // replace values in shared memory with tuples (value, preceding zero count)
     __threadfence_block();
-    ((short2*)s_in)[load_idx].x = in_even;
-    ((short2*)s_in)[load_idx].y = zeros_before_even & 0xF;
-    ((short2*)s_in)[load_idx + 1].x = in_odd;
-    ((short2*)s_in)[load_idx + 1].y = zeros_before_odd & 0xF;
+    ((short2*)s_temp)[load_idx].x = in_even;
+    ((short2*)s_temp)[load_idx].y = zeros_before_even & 0xF;
+    ((short2*)s_temp)[load_idx + 1].x = in_odd;
+    ((short2*)s_temp)[load_idx + 1].y = zeros_before_odd & 0xF;
     if(!nonzero_follows && !in_odd) {
-        ((short2*)s_in)[load_idx + 1].y = -1;
+        ((short2*)s_temp)[load_idx + 1].y = -1;
     }
     __threadfence_block();
     
@@ -321,12 +343,13 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     int result = 0;
     if(0 == tid) {
         int & dc = *last_dc;
-        result = gpujpeg_huffman_gpu_encoder_encode_block(out_size, dc, (short2*)s_in, data_compressed, d_table_dc, d_table_ac);
+        result = gpujpeg_huffman_gpu_encoder_encode_block(leftover_value, remaining_bits, dc, (short2*)s_temp, data_compressed, d_table_dc, d_table_ac);
         
         
+        // apply byte stuffing to encoded bytes
+        gpujpeg_huffman_gpu_encoder_byte_stuff((uint8_t*)s_temp, remaining_bits, data_compressed);
         
-        
-        
+        __threadfence_block();
     }
     return __ballot(result);
     
@@ -412,13 +435,14 @@ gpujpeg_huffman_encoder_encode_kernel(
     
     int warpidx  = threadIdx.x >> 5;
     int tid    = threadIdx.x & 31;
-    int out_size = 0;
+    int remaining_bytes = 0;
+    int remaining_bits = 0;
 
-    __shared__ int s_in_all[64 * WARPS_NUM];
+    __shared__ int s_temp_all[64 * WARPS_NUM];
     __shared__ int s_out_all[192 * WARPS_NUM];
 
-    int * s_in  =  s_in_all + warpidx * 64;
-    int * s_out = s_out_all + warpidx * 192;
+    int * s_temp = s_temp_all + warpidx * 64;
+    int * s_out  =  s_out_all + warpidx * 192;
     
     // Select Segment
     int segment_index = blockIdx.x * WARPS_NUM + warpidx;
@@ -462,7 +486,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
             // Encode 8x8 block
-            if (gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_in, s_out, out_size, &last_dc, tid, d_table_dc, d_table_ac) != 0)
+            if (gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_temp, s_out, remaining_bits, remaining_bytes, &last_dc, tid, d_table_dc, d_table_ac) != 0)
                 break;
             block += component->mcu_size;
         }
@@ -509,7 +533,7 @@ gpujpeg_huffman_encoder_encode_kernel(
                         }
                         
                         // Encode 8x8 block
-                        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_in, s_out, out_size, &last_dc, tid, d_table_dc, d_table_ac);
+                        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_temp, s_out, remaining_bits, remaining_bytes, &last_dc, tid, d_table_dc, d_table_ac);
                     }
                 }
             }
@@ -517,7 +541,7 @@ gpujpeg_huffman_encoder_encode_kernel(
     }
 
     // Emit left bits
-    gpujpeg_huffman_gpu_encoder_emit_left_bits(data_compressed, s_out, out_size, tid);
+    gpujpeg_huffman_gpu_encoder_emit_left_bits(data_compressed, s_temp, s_out, remaining_bits, remaining_bytes, tid);
 
     // Output restart marker
     if (tid == 0 ) {
