@@ -44,30 +44,6 @@ extern struct gpujpeg_table_huffman_encoder (*gpujpeg_encoder_table_huffman)[GPU
 __constant__ int gpujpeg_huffman_gpu_encoder_order_natural[GPUJPEG_ORDER_NATURAL_SIZE];
 
 /**
- * Write one byte to compressed data
- * 
- * @param data_compressed  Data compressed
- * @param value  Byte value to write
- * @return void
- */
-#define gpujpeg_huffman_gpu_encoder_emit_byte(data_compressed, value) { \
-    *data_compressed = (uint8_t)(value); \
-    data_compressed++; }
-    
-/**
- * Write two bytes to compressed data
- * 
- * @param data_compressed  Data compressed
- * @param value  Two-byte value to write
- * @return void
- */
-#define gpujpeg_huffman_gpu_encoder_emit_2byte(data_compressed, value) { \
-    *data_compressed = (uint8_t)(((value) >> 8) & 0xFF); \
-    data_compressed++; \
-    *data_compressed = (uint8_t)((value) & 0xFF); \
-    data_compressed++; }
-    
-/**
  * Write marker to compressed data
  * 
  * @param data_compressed  Data compressed
@@ -80,50 +56,6 @@ __constant__ int gpujpeg_huffman_gpu_encoder_order_natural[GPUJPEG_ORDER_NATURAL
     *data_compressed = (uint8_t)(marker); \
     data_compressed++; }
 
-// /**
-//  * Output bits to the file. Only the right 24 bits of put_buffer are used; 
-//  * the valid bits are left-justified in this part.  At most 16 bits can be 
-//  * passed to EmitBits in one call, and we never retain more than 7 bits 
-//  * in put_buffer between calls, so 24 bits are sufficient.
-//  * 
-//  * @param coder  Huffman coder structure
-//  * @param code  Huffman code
-//  * @param size  Size in bits of the Huffman code
-//  * @return void
-//  */
-// __device__ inline int
-// gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int code, int size, int & put_value, int & put_bits, uint8_t* & data_compressed)
-// {
-//     // This routine is heavily used, so it's worth coding tightly
-//     int _put_buffer = (int)code;
-//     int _put_bits = put_bits;
-//     // Mask off any extra bits in code
-//     _put_buffer &= (((int)1) << size) - 1; 
-//     // New number of bits in buffer
-//     _put_bits += size;                    
-//     // Align incoming bits
-//     _put_buffer <<= 24 - _put_bits;        
-//     // And merge with old buffer contents
-//     _put_buffer |= put_value;    
-//     // If there are more than 8 bits, write it out
-//     unsigned char uc;
-//     while ( _put_bits >= 8 ) {
-//         // Write one byte out
-//         uc = (unsigned char) ((_put_buffer >> 16) & 0xFF);
-//         gpujpeg_huffman_gpu_encoder_emit_byte(data_compressed, uc);
-//         // If need to stuff a zero byte
-//         if ( uc == 0xFF ) {  
-//             // Write zero byte out
-//             gpujpeg_huffman_gpu_encoder_emit_byte(data_compressed, 0);
-//         }
-//         _put_buffer <<= 8;
-//         _put_bits -= 8;
-//     }
-//     // update state variables
-//     put_value = _put_buffer; 
-//     put_bits = _put_bits;
-//     return 0;
-// }
 
 /**
  * Adds up to 24 bits at once.
@@ -142,49 +74,6 @@ gpujpeg_huffman_gpu_encoder_emit_bits(int & buffer_bits, uint8_t * const buffer_
         out_byte_ptr[0] = out_byte;
         code_bit_size -= new_bit_count;
         buffer_bits += new_bit_count;
-    }
-}
-
-// /**
-//  * Emit left bits
-//  * 
-//  * @param coder  Huffman coder structure
-//  * @return void
-//  */
-// __device__ inline void
-// gpujpeg_huffman_gpu_encoder_emit_left_bits(int & put_value, int & put_bits, uint8_t* & data_compressed)
-// {
-//     // Fill 7 bits with ones
-//     if ( gpujpeg_huffman_gpu_encoder_emit_bits(0x7F, 7, put_value, put_bits, data_compressed) != 0 )
-//         return;
-//     
-//     //unsigned char uc = (unsigned char) ((put_value >> 16) & 0xFF);
-//     // Write one byte out
-//     //gpujpeg_huffman_gpu_encoder_emit_byte(data_compressed, uc);
-//     
-//     put_value = 0; 
-//     put_bits = 0;
-// }
-
-/**
- * Decomposes given value into number of bits and one's complement value.
- */
-__device__ void
-gpujpeg_huffman_gpu_encoder_decompose(int in_value, int & nbits, int & out_value) {
-    out_value = in_value;
-    if ( in_value < 0 ) {
-        // Temp is abs value of input
-        in_value = -in_value;
-        // For a negative input, want temp2 = bitwise complement of abs(input)
-        // This code assumes we are on a two's complement machine
-        out_value--;
-    }
-
-    // Find the number of bits needed for the magnitude of the coefficient
-    nbits = 0;
-    while ( in_value ) {
-        nbits++;
-        in_value >>= 1;
     }
 }
 

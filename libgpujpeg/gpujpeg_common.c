@@ -39,6 +39,9 @@
 #endif
 #include <cuda_gl_interop.h>
 
+// rounds number of segment bytes up to next multiple of 128
+#define SEGMENT_ALIGN(b) (((b) + 127) & ~127)
+
 /** Documented at declaration */
 struct gpujpeg_devices_info
 gpujpeg_get_devices_info()
@@ -439,7 +442,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
                 coder->segment[index].data_compressed_size = 0;
                 // Increase parameters for next segment
                 data_index += mcu_count * coder->mcu_size;
-                data_compressed_index += (mcu_count * coder->mcu_compressed_size + 15) & ~15;
+                data_compressed_index += SEGMENT_ALIGN(mcu_count * coder->mcu_compressed_size);
                 mcu_index += mcu_count;
             }
         } else {
@@ -463,7 +466,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
                     coder->segment[index].data_compressed_size = 0;
                     // Increase parameters for next segment
                     data_index += mcu_count * component->mcu_size;
-                    data_compressed_index += (mcu_count * component->mcu_compressed_size + 15) & ~15;
+                    data_compressed_index += SEGMENT_ALIGN(mcu_count * component->mcu_compressed_size);
                     mcu_index += mcu_count;
                     index++;
                 }
