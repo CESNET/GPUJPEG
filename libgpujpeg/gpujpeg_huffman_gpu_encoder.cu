@@ -265,13 +265,13 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int leftover_value, int & out_bit
 
 // apply byte stuffing to encoded bytes
 __device__ void
-gpujpeg_huffman_gpu_encoder_byte_stuff(uint8_t* src, int & remaining_bits, uint8_t * & dest) {
+gpujpeg_huffman_gpu_encoder_byte_stuff(uint8_t* const src, int & remaining_bits, uint8_t * const dest, int & remaining_bytes) {
     const int byte_count = remaining_bits / 8;
     for(int i = 0; i < byte_count; i++) {
         const uint8_t value = src[i];
-        *(dest++) = value;
+        dest[remaining_bytes++] = value;
         if(0xff == value) {
-            *(dest++) = 0;
+            dest[remaining_bytes++] = 0;
         }
     }
     remaining_bits &= 7;
@@ -279,14 +279,24 @@ gpujpeg_huffman_gpu_encoder_byte_stuff(uint8_t* src, int & remaining_bits, uint8
 }
 
 
+
+__device__ void
+gpujpeg_huffman_gpu_encoder_output(uint8_t * const src, int & remaining_bytes, uint8_t * & dest) {
+    for(int i = 0; i < remaining_bytes; i++) {
+        *(dest++) = src[i];
+    }
+    remaining_bytes = 0;
+}
+
+
 __device__ void
 gpujpeg_huffman_gpu_encoder_emit_left_bits(uint8_t * &data_compressed, int * s_temp, int * s_out, int & remaining_bits, int & remaining_bytes, int tid) {
     if(tid == 0) {
         gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, 7, 0x7f);
-        gpujpeg_huffman_gpu_encoder_byte_stuff((uint8_t*)s_temp, remaining_bits, data_compressed);
+        gpujpeg_huffman_gpu_encoder_byte_stuff((uint8_t*)s_temp, remaining_bits, (uint8_t*)s_out, remaining_bytes);
+        gpujpeg_huffman_gpu_encoder_output((uint8_t*)s_out, remaining_bytes, data_compressed);
     }
 }
-
 
 
 /**
@@ -347,9 +357,11 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
         
         
         // apply byte stuffing to encoded bytes
-        gpujpeg_huffman_gpu_encoder_byte_stuff((uint8_t*)s_temp, remaining_bits, data_compressed);
+        gpujpeg_huffman_gpu_encoder_byte_stuff((uint8_t*)s_temp, remaining_bits, (uint8_t*)s_out, remaining_bytes);
         
         __threadfence_block();
+        
+        gpujpeg_huffman_gpu_encoder_output((uint8_t*)s_out, remaining_bytes, data_compressed);
     }
     return __ballot(result);
     
