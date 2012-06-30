@@ -72,6 +72,10 @@ gpujpeg_huffman_gpu_encoder_emit_bits(int & buffer_bits, uint8_t * const buffer_
                                | (code_word >> (code_bit_size - new_bit_count) & ((1 << new_bit_count) - 1));
         
         out_byte_ptr[0] = out_byte;
+        if(out_byte == 0xFF) {
+            out_byte_ptr[1] = 0;
+            buffer_bits += 8;
+        }
         code_bit_size -= new_bit_count;
         buffer_bits += new_bit_count;
     }
@@ -114,80 +118,7 @@ gpujpeg_huffman_gpu_encode_value(int & out_nbits, int & out_cword, const int pre
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(const int value0, const int leftover_value, int & out_bits, int & dc, int * data, uint8_t* & data_compressed, 
-    struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
-{
-    // Encode the DC coefficient difference per section F.1.2.1
-    int temp = value0 - dc;
-    dc = value0;
-    
-    __threadfence_block();
-    // put leftover bits back
-    *data = leftover_value;
-    
-    int cword_size, cword_value;
-    gpujpeg_huffman_gpu_encode_value(cword_size, cword_value, 0, temp, d_table_dc);
-    gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, (uint8_t*)data, cword_size, cword_value);
-    
-    // Encode the AC coefficients per section F.1.2.2 (r = run length of zeros)
-    for ( int k = 1; k < 64; k++ ) 
-    {
-        __threadfence_block();
-        const int size = data[k] & 31;
-        const int value = data[k] >> 5;
-        __threadfence_block();
-        gpujpeg_huffman_gpu_encoder_emit_bits(out_bits, (uint8_t*)data, size, value);
-    }
-
-    return 0;
-}
-
-
-
-// apply byte stuffing to encoded bytes
-__device__ void
-gpujpeg_huffman_gpu_encoder_byte_stuff(uint8_t* const src, int & remaining_bits, uint8_t * const dest, int & remaining_bytes) {
-    const int byte_count = remaining_bits / 8;
-    for(int i = 0; i < byte_count; i++) {
-        const uint8_t value = src[i];
-        dest[remaining_bytes++] = value;
-        if(0xff == value) {
-            dest[remaining_bytes++] = 0;
-        }
-    }
-    remaining_bits &= 7;
-    src[0] = src[byte_count];
-}
-
-
-
-__device__ void
-gpujpeg_huffman_gpu_encoder_output(uint8_t * const src, int & remaining_bytes, uint8_t * & dest) {
-    for(int i = 0; i < remaining_bytes; i++) {
-        *(dest++) = src[i];
-    }
-    remaining_bytes = 0;
-}
-
-
-__device__ void
-gpujpeg_huffman_gpu_encoder_emit_left_bits(uint8_t * &data_compressed, int * s_temp, int * s_out, int & remaining_bits, int & remaining_bytes, int tid) {
-    if(tid == 0) {
-        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, 7, 0x7f);
-        gpujpeg_huffman_gpu_encoder_byte_stuff((uint8_t*)s_temp, remaining_bits, (uint8_t*)s_out, remaining_bytes);
-        gpujpeg_huffman_gpu_encoder_output((uint8_t*)s_out, remaining_bytes, data_compressed);
-    }
-}
-
-
-/**
- * Encode one 8x8 block
- *
- * @return 0 if succeeds, otherwise nonzero
- */
-__device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compressed, int * s_temp, int * s_out,
-                int & remaining_bits, int & remaining_bytes, int *last_dc, int tid,
+gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint4 * &data_compressed, int *last_dc, int tid,
                 struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
     // each thread loads a pair of values (pair after zigzag reordering)
@@ -213,20 +144,6 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
     // even if even is zero or none if even value itself is nonzero)
     const int zeros_before_odd = in_even || !tid ? 0 : zeros_before_even + 1;
     
-    // (TODO: remove later) save leftover bits from previous iteration
-    uint8_t leftover_value = *(uint8_t*)s_temp;
-    
-    // clear the buffer in parallel
-    ((uint64_t*)s_temp)[tid] = 0;
-    
-    // put leftover value back
-    if(0 == tid) {
-        *(uint8_t*)s_temp = leftover_value;
-    }
-    
-    
-    
-    
     // pointer to LUT for encoding thread's even value 
     // (only thread #0 uses DC table, others use AC table)
     const struct gpujpeg_table_huffman_encoder * d_table_even = d_table_ac;
@@ -248,45 +165,28 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint8_t * &data_compre
         gpujpeg_huffman_gpu_encode_value(even_code_size, even_code_value, zeros_before_even & 0xf, in_even, d_table_even);
         gpujpeg_huffman_gpu_encode_value(odd_code_size, odd_code_value, zeros_before_odd & 0xf, in_odd, d_table_ac);
     }
+    
+    // last thread writes "end of block" value if last coefficient is zero
     if(tid == 31 && !in_odd) {
         odd_code_size = d_table_ac->size[256];
         odd_code_value = d_table_ac->code[256];
     }
     
-    // replace values in shared memory with tuples (value, preceding zero count)
-    s_temp[load_idx] = even_code_size + 32 * even_code_value;
-    s_temp[load_idx + 1] = odd_code_size + 32 * odd_code_value;
-    __threadfence_block();
+    // each thread saves one tuple of codewords into the output buffer
+    uint2 codewords;
+    codewords.x = even_code_size + 32 * even_code_value;
+    codewords.y = odd_code_size + 32 * odd_code_value;
+    ((uint2*)data_compressed)[tid] = codewords;
     
+    // advance the pointer
+    data_compressed += (32 * sizeof(uint2)) / sizeof(*data_compressed);
     
-    int result = 0;
-    if(0 == tid) {
-        for ( int k = 0; k < 64; k++ ) 
-        {
-            const int size = s_temp[k] & 31;
-            const int value = s_temp[k] >> 5;
-            if(k == 0) {
-                *s_temp = leftover_value;   // put leftover bits back
-            }
-            gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, size, value);
-        }
-        
-        
-        
-        
-        
-        
-        __threadfence_block();
-        
-        // apply byte stuffing to encoded bytes
-        gpujpeg_huffman_gpu_encoder_byte_stuff((uint8_t*)s_temp, remaining_bits, (uint8_t*)s_out, remaining_bytes);
-        
-        __threadfence_block();
-        
-        gpujpeg_huffman_gpu_encoder_output((uint8_t*)s_out, remaining_bytes, data_compressed);
-    }
-    return __ballot(result);
+    // nothing to fail here
+    return 0;
 }
+
+
+
 
 /**
  * Huffman encoder kernel
@@ -316,16 +216,12 @@ gpujpeg_huffman_encoder_encode_kernel(
     struct gpujpeg_table_huffman_encoder* d_table_cbcr_ac = &gpujpeg_huffman_gpu_encoder_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
 #endif
     
-    int warpidx  = threadIdx.x >> 5;
-    int tid    = threadIdx.x & 31;
-    int remaining_bytes = 0;
-    int remaining_bits = 0;
+    int warpidx = threadIdx.x >> 5;
+    int tid = threadIdx.x & 31;
 
-    __shared__ int s_temp_all[64 * WARPS_NUM];
-    __shared__ int s_out_all[192 * WARPS_NUM];
-
-    int * s_temp = s_temp_all + warpidx * 64;
-    int * s_out  =  s_out_all + warpidx * 192;
+//     __shared__ int s_out_all[256 * WARPS_NUM];
+// 
+//     uint4 * s_out  =  s_out_all + warpidx * 256;
     
     // Select Segment
     int segment_index = blockIdx.x * WARPS_NUM + warpidx;
@@ -340,8 +236,8 @@ gpujpeg_huffman_encoder_encode_kernel(
         dc[comp] = 0;
     
     // Prepare data pointers
-    uint8_t * data_compressed = &d_data_compressed[segment->data_compressed_index]; //TODO zmeni datovy typ
-    uint8_t * data_compressed_start = data_compressed;
+    uint4 * data_compressed = (uint4*)(d_data_compressed + segment->data_compressed_index);
+    uint4 * data_compressed_start = data_compressed;
     
     // Non-interleaving mode
     if ( comp_count == 1 ) {
@@ -369,7 +265,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
             // Encode 8x8 block
-            if (gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_temp, s_out, remaining_bits, remaining_bytes, &last_dc, tid, d_table_dc, d_table_ac) != 0)
+            if (gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, &last_dc, tid, d_table_dc, d_table_ac) != 0)
                 break;
             block += component->mcu_size;
         }
@@ -416,26 +312,102 @@ gpujpeg_huffman_encoder_encode_kernel(
                         }
                         
                         // Encode 8x8 block
-                        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_temp, s_out, remaining_bits, remaining_bytes, &last_dc, tid, d_table_dc, d_table_ac);
+                        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, &last_dc, tid, d_table_dc, d_table_ac);
                     }
                 }
             }
         }
     }
 
-    // Emit left bits
-    gpujpeg_huffman_gpu_encoder_emit_left_bits(data_compressed, s_temp, s_out, remaining_bits, remaining_bytes, tid);
-
-    // Output restart marker
+    // Set number of codewords.
     if (tid == 0 ) {
-        int restart_marker = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index % 8);
-        gpujpeg_huffman_gpu_encoder_marker(data_compressed, restart_marker);
-                
-        // Set compressed size
-        segment->data_compressed_size = data_compressed - data_compressed_start;
+        segment->data_compressed_size = (data_compressed - data_compressed_start) * 4;
     }
     __syncthreads();
 }
+
+
+
+#define SERIALIZATION_THREADS_PER_TBLOCK 192
+
+
+/**
+ * Codeword serialization kernel.
+ * 
+ * @return void
+ */
+__global__ static void
+gpujpeg_huffman_encoder_serialization_kernel(
+    struct gpujpeg_segment* d_segment,
+    int segment_count, 
+    uint8_t* d_data_compressed
+) {    
+    // Temp buffer for all threads of the threadblock
+    __shared__ uint4 s_temp_all[2 * SERIALIZATION_THREADS_PER_TBLOCK];
+
+    // Thread's 32 bytes in shared memory for output composition
+    uint4 * const s_temp = s_temp_all + threadIdx.x * 2;
+    
+    // Select Segment
+    int segment_index = blockIdx.x * SERIALIZATION_THREADS_PER_TBLOCK + threadIdx.x;
+    if ( segment_index >= segment_count )
+        return;
+    
+    // Thread's segment
+    struct gpujpeg_segment* const segment = &d_segment[segment_index];
+    
+    // Input and output pointers
+    uint4 * const d_dest_stream_start = (uint4*)(d_data_compressed + segment->data_compressed_index);
+    uint4 * d_dest_stream = d_dest_stream_start;
+    const uint4 * d_src_codewords = d_dest_stream_start;
+    
+    // number of bits in the temp buffer
+    int remaining_bits = 0;
+    
+    // "data_compressed_size" is now initialize dto number of codewords to be serialized
+    const int cword_count = segment->data_compressed_size;
+    for( int cword_idx = 0; cword_idx < cword_count; cword_idx += 4 ) // reading 4 codewords at once
+    {
+        // read 4 codewords and advance input pointer to next ones
+        const uint4 cwords = *(d_src_codewords++);
+        
+        // encode all 4 codewords
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, cwords.x & 31, cwords.x >> 5);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, cwords.y & 31, cwords.y >> 5);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, cwords.z & 31, cwords.z >> 5);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, cwords.w & 31, cwords.w >> 5);
+        
+        // possibly flush output if have at least 16 bytes
+        if(remaining_bits > (16 * 8)) {
+            // write 16 bytes into destination buffer
+            *(d_dest_stream++) = s_temp[0];
+            
+            // move remaining bytes to first half of the buffer
+            s_temp[0] = s_temp[1];
+            
+            // update number of remaining bits
+            remaining_bits -= (16 * 8);
+        }
+    }
+    
+    // Emit left bits
+    gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, 7, 0x7f);
+
+    // Terminate codestream with restart marker
+    const int remaining_bytes = remaining_bits >> 3;
+    ((uint8_t*)s_temp)[remaining_bytes + 0] = 0xFF;
+    ((uint8_t*)s_temp)[remaining_bytes + 1] = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index % 8);
+    
+    // flush remaining bytes
+    d_dest_stream[0] = s_temp[0];
+    d_dest_stream[1] = s_temp[1];
+    
+    // Set compressed size
+    segment->data_compressed_size = (d_dest_stream - d_dest_stream_start) * 16 + remaining_bytes + 2;
+}
+
+
+
 
 /** Documented at declaration */
 int
@@ -470,8 +442,9 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
 
     // Configure more shared memory
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel, cudaFuncCachePreferShared);
+    cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_serialization_kernel, cudaFuncCachePreferShared);
             
-    // Run kernel
+    // Run encoder kernel
     dim3 thread(32 * WARPS_NUM);
     dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, (thread.x / 32)));
     gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
@@ -489,6 +462,18 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
     );
     cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman encoding failed");
+    
+    
+    // Run codeword serialization kernel
+    const int num_serialization_tblocks = gpujpeg_div_and_round_up(coder->segment_count, SERIALIZATION_THREADS_PER_TBLOCK);
+    gpujpeg_huffman_encoder_serialization_kernel<<<num_serialization_tblocks, SERIALIZATION_THREADS_PER_TBLOCK>>>(
+        coder->d_segment, 
+        coder->segment_count, 
+        coder->d_data_compressed
+    );
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Codeword serialization failed");
+    
     
     return 0;
 }
