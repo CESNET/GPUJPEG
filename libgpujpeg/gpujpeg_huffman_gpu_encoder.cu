@@ -126,11 +126,6 @@ gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned
         data_compressed += remaining_codewords;
         remaining_codewords = 0;
     }
-    
-    // pad codewords with zeros, not to have to use special cases in serialization kernel   TODO: remove this later!
-    if(tid < 4) {
-        data_compressed[tid] = 0;
-    }
 }
 
 
@@ -211,17 +206,29 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
         odd_codeword = 0;
     }
                              
-    // each thread saves its values
+    // each thread saves its values into temporary shared buffer
     if(even_codeword) {
-        data_compressed[codeword_offset] = even_codeword;
+        s_out[remaining_codewords + codeword_offset] = even_codeword;
         if(odd_codeword) {
-            data_compressed[codeword_offset + 1] = odd_codeword;
+            s_out[remaining_codewords + codeword_offset + 1] = odd_codeword;
         }
     }
     
-    // advance the pointer
-    data_compressed += codeword_count;
+    // advance count of codewords in shared memory buffer
+    remaining_codewords += codeword_count;
     
+    // flush some codewords to global memory if there are too many of them in shared buffer
+    const int flush_count = 32 * 4; // = half of the buffer
+    if(remaining_codewords > flush_count) {
+        // move first half of the buffer into output buffer in global memory and update output pointer
+        ((uint4*)data_compressed)[tid] = ((uint4*)s_out)[tid];
+        data_compressed += flush_count;
+        
+        // shift remaining codewords to begin of the buffer and update their count
+        ((uint4*)s_out)[tid] = ((uint4*)s_out)[flush_count / 4 + tid];  // 4 for 4 uints in uint4
+        remaining_codewords -= flush_count;
+    }
+        
     // nothing to fail here
     return 0;
 }
