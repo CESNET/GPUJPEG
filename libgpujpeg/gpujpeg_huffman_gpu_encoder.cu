@@ -112,13 +112,31 @@ gpujpeg_huffman_gpu_encode_value(int & out_nbits, int & out_cword, const int pre
 }
 
 
+__device__ void
+gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned int * &data_compressed, int & remaining_codewords, const int tid) {
+    // this works for up to 4 * 32 remaining codewords
+    if(remaining_codewords) {
+        // pad remianing codewords with extra zero-sized codewords, not to have to use special case in serialization kernel, which saves 4 codewords at once
+        s_out[remaining_codewords + tid] = 0;
+        
+        // save all remaining codewords at once (together with some zero sized padding codewords)
+        ((uint4*)data_compressed)[tid] = ((uint4*)s_out)[tid];
+        
+        // update codeword counter
+        data_compressed += remaining_codewords;
+        remaining_codewords = 0;
+    }
+}
+
+
 /**
  * Encode one 8x8 block
  *
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint4 * &data_compressed, int *last_dc, int tid,
+gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_compressed, unsigned int * const s_out,
+                int & remaining_codewords, int *last_dc, int tid,
                 struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
     // each thread loads a pair of values (pair after zigzag reordering)
@@ -179,7 +197,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint4 * &data_compress
     ((uint2*)data_compressed)[tid] = codewords;
     
     // advance the pointer
-    data_compressed += (32 * sizeof(uint2)) / sizeof(*data_compressed);
+    data_compressed += 64;
     
     // nothing to fail here
     return 0;
@@ -219,9 +237,11 @@ gpujpeg_huffman_encoder_encode_kernel(
     int warpidx = threadIdx.x >> 5;
     int tid = threadIdx.x & 31;
 
-//     __shared__ int s_out_all[256 * WARPS_NUM];
-// 
-//     uint4 * s_out  =  s_out_all + warpidx * 256;
+    __shared__ uint4 s_out_all[64 * WARPS_NUM];
+    unsigned int * s_out = (unsigned int*)(s_out_all + warpidx * 64);
+    
+    // Number of remaining codewords in shared buffer
+    int remaining_codewords = 0;
     
     // Select Segment
     int segment_index = blockIdx.x * WARPS_NUM + warpidx;
@@ -236,8 +256,8 @@ gpujpeg_huffman_encoder_encode_kernel(
         dc[comp] = 0;
     
     // Prepare data pointers
-    uint4 * data_compressed = (uint4*)(d_data_compressed + segment->data_compressed_index);
-    uint4 * data_compressed_start = data_compressed;
+    unsigned int * data_compressed = (unsigned int*)(d_data_compressed + segment->data_compressed_index);
+    unsigned int * data_compressed_start = data_compressed;
     
     // Non-interleaving mode
     if ( comp_count == 1 ) {
@@ -265,7 +285,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
             // Encode 8x8 block
-            if (gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, &last_dc, tid, d_table_dc, d_table_ac) != 0)
+            if (gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, &last_dc, tid, d_table_dc, d_table_ac) != 0)
                 break;
             block += component->mcu_size;
         }
@@ -312,16 +332,19 @@ gpujpeg_huffman_encoder_encode_kernel(
                         }
                         
                         // Encode 8x8 block
-                        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, &last_dc, tid, d_table_dc, d_table_ac);
+                        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, &last_dc, tid, d_table_dc, d_table_ac);
                     }
                 }
             }
         }
     }
 
+    // flush remaining codewords
+    gpujpeg_huffman_gpu_encoder_flush_codewords(s_out, data_compressed, remaining_codewords, tid);
+    
     // Set number of codewords.
     if (tid == 0 ) {
-        segment->data_compressed_size = (data_compressed - data_compressed_start) * 4;
+        segment->data_compressed_size = data_compressed - data_compressed_start;
     }
     __syncthreads();
 }
