@@ -126,6 +126,11 @@ gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned
         data_compressed += remaining_codewords;
         remaining_codewords = 0;
     }
+    
+    // pad codewords with zeros, not to have to use special cases in serialization kernel   TODO: remove this later!
+    if(tid < 4) {
+        data_compressed[tid] = 0;
+    }
 }
 
 
@@ -190,14 +195,32 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
         odd_code_value = d_table_ac->code[256];
     }
     
-    // each thread saves one tuple of codewords into the output buffer
-    uint2 codewords;
-    codewords.x = even_code_size + 32 * even_code_value;
-    codewords.y = odd_code_size + 32 * odd_code_value;
-    ((uint2*)data_compressed)[tid] = codewords;
+    // each thread get number of preceding nonzero codewords and total number of nonzero codewords in this block
+    const unsigned int even_codeword_presence = __ballot(even_code_size);
+    const unsigned int odd_codeword_presence = __ballot(odd_code_size);
+    const int codeword_offset = __popc(nonzero_mask & even_codeword_presence)
+                              + __popc(nonzero_mask & odd_codeword_presence);
+    const int codeword_count = __popc(odd_codeword_presence)
+                             + __popc(even_codeword_presence);
+    
+    // swap codewords if first is empty and the other is not
+    int even_codeword = even_code_size + 32 * even_code_value;
+    int odd_codeword = odd_code_size + 32 * odd_code_value;
+    if(even_codeword == 0) {
+        even_codeword = odd_codeword;
+        odd_codeword = 0;
+    }
+                             
+    // each thread saves its values
+    if(even_codeword) {
+        data_compressed[codeword_offset] = even_codeword;
+        if(odd_codeword) {
+            data_compressed[codeword_offset + 1] = odd_codeword;
+        }
+    }
     
     // advance the pointer
-    data_compressed += 64;
+    data_compressed += codeword_count;
     
     // nothing to fail here
     return 0;
