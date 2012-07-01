@@ -137,8 +137,8 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, uint4 * &data_compress
     
     
     // true if any nonzero pixel follows thread's even pixel
-    const unsigned int follow_mask = ~nonzero_mask;
-    const bool nonzero_follows = follow_mask & ((even_nonzero_bitmap >> 1) | odd_nonzero_bitmap);
+    const unsigned int follow_mask = ~(nonzero_mask >> 1);
+    const bool nonzero_follows = follow_mask & (even_nonzero_bitmap | odd_nonzero_bitmap);
     
     // count of consecutive zeros before odd value (either one more than 
     // even if even is zero or none if even value itself is nonzero)
