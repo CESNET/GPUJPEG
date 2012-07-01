@@ -177,7 +177,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
         *last_dc = original_in_even;
     }
     
-    // each thread encodes its two pixels
+    // each thread gets codeword for its two pixels
     int even_code_size = 0, even_code_value = 0, odd_code_size = 0, odd_code_value = 0;
     if(nonzero_follows || !tid) {
         gpujpeg_huffman_gpu_encode_value(even_code_size, even_code_value, zeros_before_even & 0xf, in_even, d_table_even);
@@ -190,32 +190,30 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
         odd_code_value = d_table_ac->code[256];
     }
     
+    // concatenate both codewords into one if they are short enough
+    if(even_code_size + odd_code_size < 27) {
+        even_code_value = (even_code_value << odd_code_size) | odd_code_value;
+        even_code_size += odd_code_size;
+        odd_code_size = 0;
+        odd_code_value = 0;
+    }
+    
     // each thread get number of preceding nonzero codewords and total number of nonzero codewords in this block
     const unsigned int even_codeword_presence = __ballot(even_code_size);
     const unsigned int odd_codeword_presence = __ballot(odd_code_size);
     const int codeword_offset = __popc(nonzero_mask & even_codeword_presence)
                               + __popc(nonzero_mask & odd_codeword_presence);
-    const int codeword_count = __popc(odd_codeword_presence)
-                             + __popc(even_codeword_presence);
     
-    // swap codewords if first is empty and the other is not
-    int even_codeword = even_code_size + 32 * even_code_value;
-    int odd_codeword = odd_code_size + 32 * odd_code_value;
-    if(even_codeword == 0) {
-        even_codeword = odd_codeword;
-        odd_codeword = 0;
-    }
-                             
     // each thread saves its values into temporary shared buffer
-    if(even_codeword) {
-        s_out[remaining_codewords + codeword_offset] = even_codeword;
-        if(odd_codeword) {
-            s_out[remaining_codewords + codeword_offset + 1] = odd_codeword;
+    if(even_code_size) {
+        s_out[remaining_codewords + codeword_offset] = even_code_size + 32 * even_code_value;
+        if(odd_code_size) {
+            s_out[remaining_codewords + codeword_offset + 1] = odd_code_size + 32 * odd_code_value;
         }
     }
     
     // advance count of codewords in shared memory buffer
-    remaining_codewords += codeword_count;
+    remaining_codewords += __popc(odd_codeword_presence) + __popc(even_codeword_presence);
     
     // flush some codewords to global memory if there are too many of them in shared buffer
     const int flush_count = 32 * 4; // = half of the buffer
