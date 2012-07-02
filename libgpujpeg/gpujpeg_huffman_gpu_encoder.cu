@@ -58,26 +58,30 @@ __constant__ int gpujpeg_huffman_gpu_encoder_order_natural[GPUJPEG_ORDER_NATURAL
 
 
 /**
- * Adds up to 24 bits at once.
+ * Adds up to 32 bits at once.
  */
 __device__ inline void 
-gpujpeg_huffman_gpu_encoder_emit_bits(int & buffer_bits, uint8_t * const buffer_ptr, int code_bit_size, unsigned int code_word) {
-    while ( code_bit_size ) {
-        // get pointer to current output byte and number of remianing bits in it 
-        uint8_t * const out_byte_ptr = buffer_ptr + (buffer_bits >> 3);
-        const int old_bit_count = buffer_bits & 7;
-        const int new_bit_count = min(8 - old_bit_count, code_bit_size);
+gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_count, int & bit_count, uint8_t * const out_ptr, const int code_bit_size, unsigned int code_word) {
+    // TODO: move codeword upshifting into parallel kernel
+    code_word <<= (32 - code_bit_size);
+    
+    // concatenate with remaining bits
+    remaining_bits |= code_word >> bit_count;
+    bit_count += code_bit_size;
+    if (bit_count >= 8) {
+        do {
+            const unsigned int out_byte = remaining_bits >> 24;
+            out_ptr[byte_count++] = out_byte;
+            if(0xff == out_byte) {
+                out_ptr[byte_count++] = 0;
+            }
+            
+            remaining_bits <<= 8;
+            bit_count -= 8;
+        } while (bit_count >= 8);
         
-        const uint8_t out_byte = ((old_bit_count ? *out_byte_ptr : 0) << new_bit_count)
-                               | (code_word >> (code_bit_size - new_bit_count) & ((1 << new_bit_count) - 1));
-        
-        out_byte_ptr[0] = out_byte;
-        if(out_byte == 0xFF) {
-            out_byte_ptr[1] = 0;
-            buffer_bits += 8;
-        }
-        code_bit_size -= new_bit_count;
-        buffer_bits += new_bit_count;
+        remaining_bits = code_word << (code_bit_size - bit_count);
+        remaining_bits &= 0xfffffffe << (31 - bit_count);
     }
 }
 
@@ -412,8 +416,9 @@ gpujpeg_huffman_encoder_serialization_kernel(
     uint4 * d_dest_stream = d_dest_stream_start;
     const uint4 * d_src_codewords = d_dest_stream_start;
     
-    // number of bits in the temp buffer
-    int remaining_bits = 0;
+    // number of bytes in the temp buffer, remaining bits and their count
+    int byte_count = 0, bit_count = 0;
+    unsigned int remaining_bits = 0;
     
     // "data_compressed_size" is now initialize dto number of codewords to be serialized
     const int cword_count = segment->data_compressed_size;
@@ -423,13 +428,13 @@ gpujpeg_huffman_encoder_serialization_kernel(
         const uint4 cwords = *(d_src_codewords++);
         
         // encode all 4 codewords
-        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, cwords.x & 31, cwords.x >> 5);
-        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, cwords.y & 31, cwords.y >> 5);
-        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, cwords.z & 31, cwords.z >> 5);
-        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, cwords.w & 31, cwords.w >> 5);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.x & 31, cwords.x >> 5);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.y & 31, cwords.y >> 5);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.z & 31, cwords.z >> 5);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.w & 31, cwords.w >> 5);
         
         // possibly flush output if have at least 16 bytes
-        if(remaining_bits > (16 * 8)) {
+        if(byte_count > 16) {
             // write 16 bytes into destination buffer
             *(d_dest_stream++) = s_temp[0];
             
@@ -437,24 +442,23 @@ gpujpeg_huffman_encoder_serialization_kernel(
             s_temp[0] = s_temp[1];
             
             // update number of remaining bits
-            remaining_bits -= (16 * 8);
+            byte_count -= 16;
         }
     }
     
     // Emit left bits
-    gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, (uint8_t*)s_temp, 7, 0x7f);
+    gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, 7, 0x7f);
 
     // Terminate codestream with restart marker
-    const int remaining_bytes = remaining_bits >> 3;
-    ((uint8_t*)s_temp)[remaining_bytes + 0] = 0xFF;
-    ((uint8_t*)s_temp)[remaining_bytes + 1] = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index % 8);
+    ((uint8_t*)s_temp)[byte_count + 0] = 0xFF;
+    ((uint8_t*)s_temp)[byte_count + 1] = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index % 8);
     
     // flush remaining bytes
     d_dest_stream[0] = s_temp[0];
     d_dest_stream[1] = s_temp[1];
     
     // Set compressed size
-    segment->data_compressed_size = (d_dest_stream - d_dest_stream_start) * 16 + remaining_bytes + 2;
+    segment->data_compressed_size = (d_dest_stream - d_dest_stream_start) * 16 + byte_count + 2;
 }
 
 
