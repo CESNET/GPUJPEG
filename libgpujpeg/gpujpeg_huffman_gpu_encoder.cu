@@ -43,6 +43,9 @@ extern struct gpujpeg_table_huffman_encoder (*gpujpeg_encoder_table_huffman)[GPU
 /** Natural order in constant memory */
 __constant__ int gpujpeg_huffman_gpu_encoder_order_natural[GPUJPEG_ORDER_NATURAL_SIZE];
 
+/** Value decomposition in constant memory (input range from -4096 to 4095  ... both inclusive) */
+__device__ unsigned int gpujpeg_huffman_value_decomposition[8 * 1024];
+
 /**
  * Write marker to compressed data
  * 
@@ -57,12 +60,44 @@ __constant__ int gpujpeg_huffman_gpu_encoder_order_natural[GPUJPEG_ORDER_NATURAL
     data_compressed++; }
 
 
+/** Initializes coefficient decomposition table in global memory */
+static __global__ void
+gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel() {
+    // fetch some value
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    const int value = tid - 4096;
+    
+    // decompose it
+    unsigned int value_code = value;
+    int absolute = value;
+    if ( value < 0 ) {
+        // valu eis now absolute value of input
+        absolute = -absolute;
+        // For a negative input, want temp2 = bitwise complement of abs(input)
+        // This code assumes we are on a two's complement machine
+        value_code--;
+    }
+
+    // Find the number of bits needed for the magnitude of the coefficient
+    unsigned int value_nbits = 0;
+    while ( absolute ) {
+        value_nbits++;
+        absolute >>= 1;
+    }
+    
+    // save result packed into unsigned int (value bits are left aligned in MSBs and size is right aligned in LSBs)
+    gpujpeg_huffman_value_decomposition[tid] = value_nbits | (value_code << (32 - value_nbits));
+//     printf("%+04d: %08x\n", value, gpujpeg_huffman_value_decomposition[tid]);
+}
+
+
 /**
  * Adds up to 32 bits at once.
  * Codeword value must be aligned to left (most significant bits).
  */
 __device__ inline void 
-gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_count, int & bit_count, uint8_t * const out_ptr, const unsigned int packed_code_word) {
+gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_count, int & bit_count, uint8_t * const out_ptr, const unsigned int packed_code_word)
+{
     // decompose packed codeword into the msb-aligned value and bit-length of the value
     const unsigned int code_word = packed_code_word & ~31;
     const unsigned int code_bit_size = packed_code_word & 31;
@@ -90,33 +125,22 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
 
 __device__ static unsigned int
 gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int value,
-                                 const struct gpujpeg_table_huffman_encoder * const d_table) {
-    unsigned int value_code = value;
-    int absolute = value;
-    if ( value < 0 ) {
-        // valu eis now absolute value of input
-        absolute = -absolute;
-        // For a negative input, want temp2 = bitwise complement of abs(input)
-        // This code assumes we are on a two's complement machine
-        value_code--;
-    }
-
-    // Find the number of bits needed for the magnitude of the coefficient
-    unsigned int value_nbits = 0;
-    while ( absolute ) {
-        value_nbits++;
-        absolute >>= 1;
-    }
+                                 const struct gpujpeg_table_huffman_encoder * const d_table)
+{
+    // value bits are in MSBs (left aligned) and bit size of the value is in LSBs (right aligned)
+    const unsigned int packed_value = gpujpeg_huffman_value_decomposition[4096 + value];
     
-    // upshift the value, trimming remaining bits
-    value_code <<= 32 - value_nbits;
+    // decompose value info into upshifted value and value's bit size
+    const int value_nbits = packed_value & 0xf;
+    const unsigned int value_code = packed_value & ~0xf;
     
     // find prefix of the codeword and size of the prefix
-    const int prefix_idx = preceding_zero_count * 16 + value_nbits;
-    unsigned int codeword = d_table->code[prefix_idx];
+    const int prefix_idx = (preceding_zero_count & 0xf) * 16 + value_nbits;
+    const unsigned int codeword = d_table->code[prefix_idx];
+    const unsigned int prefix_nbits = codeword & 31;
     
     // compose packed codeword with its size
-    return (codeword + value_nbits) | (value_code >> (codeword & 31));
+    return (codeword + value_nbits) | (value_code >> prefix_nbits);
 }
 
 
@@ -188,8 +212,8 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
     // each thread gets codeword for its two pixels
     unsigned int even_code = 0, odd_code = 0;
     if(nonzero_follows || !tid) {
-        even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even & 0xf, in_even, d_table_even);
-        odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd & 0xf, in_odd, d_table_ac);
+        even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even, in_even, d_table_even);
+        odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd, in_odd, d_table_ac);
     }
     
     // last thread writes "end of block" value if last coefficient is zero
@@ -502,7 +526,13 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
     // Configure more shared memory
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel, cudaFuncCachePreferShared);
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_serialization_kernel, cudaFuncCachePreferShared);
-            
+    cudaFuncSetCacheConfig(gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel, cudaFuncCachePreferShared);
+    
+    // Initialize decomposition lookup table
+    gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel<<<32, 256>>>();  // 8192 threads total
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Decomposition LUT initialization failed");
+    
     // Run encoder kernel
     dim3 thread(32 * WARPS_NUM);
     dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, (thread.x / 32)));
