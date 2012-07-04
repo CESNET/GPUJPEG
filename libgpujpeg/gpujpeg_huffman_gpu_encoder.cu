@@ -59,11 +59,13 @@ __constant__ int gpujpeg_huffman_gpu_encoder_order_natural[GPUJPEG_ORDER_NATURAL
 
 /**
  * Adds up to 32 bits at once.
+ * Codeword value must be aligned to left (most significant bits).
  */
 __device__ inline void 
-gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_count, int & bit_count, uint8_t * const out_ptr, const int code_bit_size, unsigned int code_word) {
-    // TODO: move codeword upshifting into parallel kernel
-    code_word <<= (32 - code_bit_size);
+gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_count, int & bit_count, uint8_t * const out_ptr, const unsigned int packed_code_word) {
+    // decompose packed codeword into the msb-aligned value and bit-length of the value
+    const unsigned int code_word = packed_code_word & ~31;
+    const unsigned int code_bit_size = packed_code_word & 31;
     
     // concatenate with remaining bits
     remaining_bits |= code_word >> bit_count;
@@ -87,7 +89,7 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
 
 
 __device__ static void
-gpujpeg_huffman_gpu_encode_value(int & out_nbits, int & out_cword, const int preceding_zero_count, const int value,
+gpujpeg_huffman_gpu_encode_value(unsigned int & out_nbits, unsigned int & out_cword, const int preceding_zero_count, const int value,
                                  const struct gpujpeg_table_huffman_encoder * const d_table) {
     out_cword = value;
     int absolute = value;
@@ -182,7 +184,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
     }
     
     // each thread gets codeword for its two pixels
-    int even_code_size = 0, even_code_value = 0, odd_code_size = 0, odd_code_value = 0;
+    unsigned int even_code_size = 0, even_code_value = 0, odd_code_size = 0, odd_code_value = 0;
     if(nonzero_follows || !tid) {
         gpujpeg_huffman_gpu_encode_value(even_code_size, even_code_value, zeros_before_even & 0xf, in_even, d_table_even);
         gpujpeg_huffman_gpu_encode_value(odd_code_size, odd_code_value, zeros_before_odd & 0xf, in_odd, d_table_ac);
@@ -210,9 +212,9 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
     
     // each thread saves its values into temporary shared buffer
     if(even_code_size) {
-        s_out[remaining_codewords + codeword_offset] = even_code_size + 32 * even_code_value;
+        s_out[remaining_codewords + codeword_offset] = even_code_size + (even_code_value << (32 - even_code_size));
         if(odd_code_size) {
-            s_out[remaining_codewords + codeword_offset + 1] = odd_code_size + 32 * odd_code_value;
+            s_out[remaining_codewords + codeword_offset + 1] = odd_code_size + (odd_code_value << (32 - odd_code_size));
         }
     }
     
@@ -428,10 +430,10 @@ gpujpeg_huffman_encoder_serialization_kernel(
         const uint4 cwords = *(d_src_codewords++);
         
         // encode all 4 codewords
-        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.x & 31, cwords.x >> 5);
-        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.y & 31, cwords.y >> 5);
-        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.z & 31, cwords.z >> 5);
-        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.w & 31, cwords.w >> 5);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.x);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.y);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.z);
+        gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.w);
         
         // possibly flush output if have at least 16 bytes
         if(byte_count > 16) {
@@ -447,7 +449,7 @@ gpujpeg_huffman_encoder_serialization_kernel(
     }
     
     // Emit left bits
-    gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, 7, 0x7f);
+    gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, 0xfe000007);
 
     // Terminate codestream with restart marker
     ((uint8_t*)s_temp)[byte_count + 0] = 0xFF;
