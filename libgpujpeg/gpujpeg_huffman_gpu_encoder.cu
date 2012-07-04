@@ -91,33 +91,32 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
 __device__ static unsigned int
 gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int value,
                                  const struct gpujpeg_table_huffman_encoder * const d_table) {
-    unsigned int out_cword = value;
+    unsigned int value_code = value;
     int absolute = value;
     if ( value < 0 ) {
         // valu eis now absolute value of input
         absolute = -absolute;
         // For a negative input, want temp2 = bitwise complement of abs(input)
         // This code assumes we are on a two's complement machine
-        out_cword--;
+        value_code--;
     }
 
     // Find the number of bits needed for the magnitude of the coefficient
-    unsigned int out_nbits = 0;
+    unsigned int value_nbits = 0;
     while ( absolute ) {
-        out_nbits++;
+        value_nbits++;
         absolute >>= 1;
     }
     
-    // trim remaining bits
-    out_cword &= (1 << out_nbits) - 1;
+    // upshift the value, trimming remaining bits
+    value_code <<= 32 - value_nbits;
     
     // find prefix of the codeword and size of the prefix
-    const int prefix_idx = preceding_zero_count * 16 + out_nbits;
-    out_cword |= d_table->code[prefix_idx] << out_nbits;
-    out_nbits += d_table->size[prefix_idx];
+    const int prefix_idx = preceding_zero_count * 16 + value_nbits;
+    unsigned int codeword = d_table->code[prefix_idx];
     
     // compose packed codeword with its size
-    return out_nbits | (out_cword << (32 - out_nbits));
+    return (codeword + value_nbits) | (value_code >> (codeword & 31));
 }
 
 
@@ -195,9 +194,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
     
     // last thread writes "end of block" value if last coefficient is zero
     if(tid == 31 && !in_odd) {
-        unsigned int odd_code_size = d_table_ac->size[256];
-        unsigned int odd_code_value = d_table_ac->code[256];
-        odd_code = odd_code_size | (odd_code_value << (32 - odd_code_size));
+        odd_code = d_table_ac->code[256];
     }
     
     // concatenate both codewords into one if they are short enough

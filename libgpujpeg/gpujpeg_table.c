@@ -284,8 +284,7 @@ gpujpeg_table_huffman_encoder_compute(struct gpujpeg_table_huffman_encoder* tabl
     memset(table->size, 0, sizeof(table->size));
 
     for (p = 0; p < lastp; p++) {
-        table->code[table->huffval[p]] = huffcode[p];
-        table->size[table->huffval[p]] = huffsize[p];
+        table->code[table->huffval[p]] = huffsize[p] | (huffcode[p] << (32 - huffsize[p]));
     }
 }
 
