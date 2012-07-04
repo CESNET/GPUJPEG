@@ -88,10 +88,10 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
 }
 
 
-__device__ static void
-gpujpeg_huffman_gpu_encode_value(unsigned int & out_nbits, unsigned int & out_cword, const int preceding_zero_count, const int value,
+__device__ static unsigned int
+gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int value,
                                  const struct gpujpeg_table_huffman_encoder * const d_table) {
-    out_cword = value;
+    unsigned int out_cword = value;
     int absolute = value;
     if ( value < 0 ) {
         // valu eis now absolute value of input
@@ -102,7 +102,7 @@ gpujpeg_huffman_gpu_encode_value(unsigned int & out_nbits, unsigned int & out_cw
     }
 
     // Find the number of bits needed for the magnitude of the coefficient
-    out_nbits = 0;
+    unsigned int out_nbits = 0;
     while ( absolute ) {
         out_nbits++;
         absolute >>= 1;
@@ -115,6 +115,9 @@ gpujpeg_huffman_gpu_encode_value(unsigned int & out_nbits, unsigned int & out_cw
     const int prefix_idx = preceding_zero_count * 16 + out_nbits;
     out_cword |= d_table->code[prefix_idx] << out_nbits;
     out_nbits += d_table->size[prefix_idx];
+    
+    // compose packed codeword with its size
+    return out_nbits | (out_cword << (32 - out_nbits));
 }
 
 
@@ -184,37 +187,39 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
     }
     
     // each thread gets codeword for its two pixels
-    unsigned int even_code_size = 0, even_code_value = 0, odd_code_size = 0, odd_code_value = 0;
+    unsigned int even_code = 0, odd_code = 0;
     if(nonzero_follows || !tid) {
-        gpujpeg_huffman_gpu_encode_value(even_code_size, even_code_value, zeros_before_even & 0xf, in_even, d_table_even);
-        gpujpeg_huffman_gpu_encode_value(odd_code_size, odd_code_value, zeros_before_odd & 0xf, in_odd, d_table_ac);
+        even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even & 0xf, in_even, d_table_even);
+        odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd & 0xf, in_odd, d_table_ac);
     }
     
     // last thread writes "end of block" value if last coefficient is zero
     if(tid == 31 && !in_odd) {
-        odd_code_size = d_table_ac->size[256];
-        odd_code_value = d_table_ac->code[256];
+        unsigned int odd_code_size = d_table_ac->size[256];
+        unsigned int odd_code_value = d_table_ac->code[256];
+        odd_code = odd_code_size | (odd_code_value << (32 - odd_code_size));
     }
     
     // concatenate both codewords into one if they are short enough
-    if(even_code_size + odd_code_size < 27) {
-        even_code_value = (even_code_value << odd_code_size) | odd_code_value;
-        even_code_size += odd_code_size;
-        odd_code_size = 0;
-        odd_code_value = 0;
+    const unsigned int even_code_size = even_code & 31;
+    const unsigned int odd_code_size = odd_code & 31;
+    const unsigned int total_size = even_code_size + odd_code_size;
+    if(total_size <= 27) {
+        even_code = total_size | ((odd_code & ~31) >> even_code_size) | (even_code & ~31);
+        odd_code = 0;
     }
     
     // each thread get number of preceding nonzero codewords and total number of nonzero codewords in this block
-    const unsigned int even_codeword_presence = __ballot(even_code_size);
-    const unsigned int odd_codeword_presence = __ballot(odd_code_size);
+    const unsigned int even_codeword_presence = __ballot(even_code);
+    const unsigned int odd_codeword_presence = __ballot(odd_code);
     const int codeword_offset = __popc(nonzero_mask & even_codeword_presence)
                               + __popc(nonzero_mask & odd_codeword_presence);
     
     // each thread saves its values into temporary shared buffer
-    if(even_code_size) {
-        s_out[remaining_codewords + codeword_offset] = even_code_size + (even_code_value << (32 - even_code_size));
-        if(odd_code_size) {
-            s_out[remaining_codewords + codeword_offset + 1] = odd_code_size + (odd_code_value << (32 - odd_code_size));
+    if(even_code) {
+        s_out[remaining_codewords + codeword_offset] = even_code;
+        if(odd_code) {
+            s_out[remaining_codewords + codeword_offset + 1] = odd_code;
         }
     }
     
