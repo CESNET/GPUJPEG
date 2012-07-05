@@ -166,7 +166,7 @@ gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ int
-gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_compressed, unsigned int * const s_out,
+gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &data_compressed, unsigned int * const s_out,
                 int & remaining_codewords, int *last_dc, int tid,
                 struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
@@ -315,6 +315,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         return;
     
     struct gpujpeg_segment* segment = &d_segment[segment_index];
+    const int segment_mcu_count = segment->mcu_count;
     
     // Initialize huffman coder
     int dc[GPUJPEG_MAX_COMPONENT_COUNT];
@@ -332,7 +333,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         struct gpujpeg_component* component = &d_component[segment->scan_index];
 
         // Get component data for MCU (first block)
-        int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count) * component->mcu_size];
+        const int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count) * component->mcu_size];
 
         // Get coder parameters
         int & last_dc = dc[segment->scan_index];
@@ -347,20 +348,23 @@ gpujpeg_huffman_encoder_encode_kernel(
             d_table_dc = d_table_cbcr_dc;
             d_table_ac = d_table_cbcr_ac;
         }
+        
+        // mcu size of the component
+        const int comp_mcu_size = component->mcu_size;
             
         // Encode MCUs in segment
-        for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
+        for ( int mcu_index = 0; mcu_index < segment_mcu_count; mcu_index++ ) {
             // Encode 8x8 block
             if (gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, &last_dc, tid, d_table_dc, d_table_ac) != 0)
                 break;
-            block += component->mcu_size;
+            block += comp_mcu_size;
         }
     }
     // Interleaving mode
     else {
         int segment_index = segment->scan_segment_index; //TODO asi nepotrebne
         // Encode MCUs in segment
-        for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
+        for ( int mcu_index = 0; mcu_index < segment_mcu_count; mcu_index++ ) {
             //assert(segment->scan_index == 0);
             for ( int comp = 0; comp < comp_count; comp++ ) {
                 struct gpujpeg_component* component = &d_component[comp];
@@ -368,35 +372,46 @@ gpujpeg_huffman_encoder_encode_kernel(
                 // Prepare mcu indexes
                 int mcu_index_x = (segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
                 int mcu_index_y = (segment_index * component->segment_mcu_count + mcu_index) / component->mcu_count_x;
+                
                 // Compute base data index
                 int data_index_base = mcu_index_y * (component->mcu_size * component->mcu_count_x) + mcu_index_x * (component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
                 
+                // Get huffman tables
+                struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
+                struct gpujpeg_table_huffman_encoder* d_table_ac = NULL;
+                if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
+                    d_table_dc = d_table_y_dc;
+                    d_table_ac = d_table_y_ac;
+                } else {
+                    d_table_dc = d_table_cbcr_dc;
+                    d_table_ac = d_table_cbcr_ac;
+                }
+                
+                // Get sampling faactors
+                const int comp_vertical_sampling = component->sampling_factor.vertical;
+                const int comp_horizontal_sampling = component->sampling_factor.horizontal;
+                
+                // Pointer to quantized data of the component
+                const int16_t* const d_component_data_quantized = component->d_data_quantized;
+                
+                // Size and count of MCUs in component
+                const int comp_mcu_stride = component->mcu_count_x * component->mcu_size_x * GPUJPEG_BLOCK_SIZE;
+                
                 // For all vertical 8x8 blocks
-                for ( int y = 0; y < component->sampling_factor.vertical; y++ ) {
+                for ( int y = 0; y < comp_vertical_sampling; y++ ) {
                     // Compute base row data index
-                    int data_index_row = data_index_base + y * (component->mcu_count_x * component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
+                    int data_index_row = data_index_base + y * comp_mcu_stride;
                     // For all horizontal 8x8 blocks
-                    for ( int x = 0; x < component->sampling_factor.horizontal; x++ ) {
+                    for ( int x = 0; x < comp_horizontal_sampling; x++ ) {
                         // Compute 8x8 block data index
                         int data_index = data_index_row + x * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
                         
                         // Get component data for MCU
-                        int16_t* block = &component->d_data_quantized[data_index];
+                        const int16_t* block = d_component_data_quantized + data_index;
                         
                         // Get coder parameters
                         int & last_dc = dc[comp];
             
-                        // Get huffman tables
-                        struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
-                        struct gpujpeg_table_huffman_encoder* d_table_ac = NULL;
-                        if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
-                            d_table_dc = d_table_y_dc;
-                            d_table_ac = d_table_y_ac;
-                        } else {
-                            d_table_dc = d_table_cbcr_dc;
-                            d_table_ac = d_table_cbcr_ac;
-                        }
-                        
                         // Encode 8x8 block
                         gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, &last_dc, tid, d_table_dc, d_table_ac);
                     }
