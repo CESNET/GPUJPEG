@@ -123,9 +123,11 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
 }
 
 
+template <bool USE_DEFAULT>
 __device__ static unsigned int
 gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int value,
-                                 const struct gpujpeg_table_huffman_encoder * const d_table)
+                                 const struct gpujpeg_table_huffman_encoder * const d_table,
+                                 const bool encode, const int default_prefix_idx)
 {
     // value bits are in MSBs (left aligned) and bit size of the value is in LSBs (right aligned)
     const unsigned int packed_value = gpujpeg_huffman_value_decomposition[4096 + value];
@@ -135,12 +137,15 @@ gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int value
     const unsigned int value_code = packed_value & ~0xf;
     
     // find prefix of the codeword and size of the prefix
-    const int prefix_idx = (preceding_zero_count & 0xf) * 16 + value_nbits;
-    const unsigned int codeword = d_table->code[prefix_idx];
-    const unsigned int prefix_nbits = codeword & 31;
+    int prefix_idx = encode ? (preceding_zero_count & 0xf) * 16 + value_nbits : 0;
+    if(USE_DEFAULT && prefix_idx < 0xf0 && !(prefix_idx & 0xf)) {
+        prefix_idx = default_prefix_idx;
+    }
+    const unsigned int prefix_code = d_table->code[prefix_idx];
+    const unsigned int prefix_nbits = prefix_code & 31;
     
     // compose packed codeword with its size
-    return (codeword + value_nbits) | (value_code >> prefix_nbits);
+    return (prefix_code + value_nbits) | (value_code >> prefix_nbits);
 }
 
 
@@ -210,16 +215,9 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
     }
     
     // each thread gets codeword for its two pixels
-    unsigned int even_code = 0, odd_code = 0;
-    if(nonzero_follows || !tid) {
-        even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even, in_even, d_table_even);
-        odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd, in_odd, d_table_ac);
-    }
-    
-    // last thread writes "end of block" value if last coefficient is zero
-    if(tid == 31 && !in_odd) {
-        odd_code = d_table_ac->code[256];
-    }
+    const bool encode = nonzero_follows || !tid;
+    unsigned int even_code = gpujpeg_huffman_gpu_encode_value<false>(zeros_before_even, in_even, d_table_even, encode, 0);
+    unsigned int odd_code = gpujpeg_huffman_gpu_encode_value<true>(zeros_before_odd, in_odd, d_table_ac, encode, tid == 31 ? 256 : 0);
     
     // concatenate both codewords into one if they are short enough
     const unsigned int even_code_size = even_code & 31;
