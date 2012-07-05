@@ -224,11 +224,6 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
     unsigned int even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even, in_even, d_table_even);
     unsigned int odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd, in_odd, d_table_ac);
     
-    // special case for last zero coefficient
-    if(tid == 31 && in_odd == 0) {
-        odd_code = d_table_ac->gcode[256];
-    }
-    
     // concatenate both codewords into one if they are short enough
     const unsigned int even_code_size = even_code & 31;
     const unsigned int odd_code_size = odd_code & 31;
@@ -279,6 +274,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
  * 
  * @return void
  */
+__launch_bounds__(WARPS_NUM * 32, 1024 / (WARPS_NUM * 32))
 __global__ void
 gpujpeg_huffman_encoder_encode_kernel(
     struct gpujpeg_component* d_component,
@@ -427,6 +423,7 @@ gpujpeg_huffman_encoder_encode_kernel(
  * 
  * @return void
  */
+__launch_bounds__(SERIALIZATION_THREADS_PER_TBLOCK, 1536 / SERIALIZATION_THREADS_PER_TBLOCK)
 __global__ static void
 gpujpeg_huffman_encoder_serialization_kernel(
     struct gpujpeg_segment* d_segment,
