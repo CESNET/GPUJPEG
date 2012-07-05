@@ -123,11 +123,10 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
 }
 
 
-template <bool USE_DEFAULT>
 __device__ static unsigned int
 gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int value,
                                  const struct gpujpeg_table_huffman_encoder * const d_table,
-                                 const bool encode, const int default_prefix_idx)
+                                 const bool encode)
 {
     // value bits are in MSBs (left aligned) and bit size of the value is in LSBs (right aligned)
     const unsigned int packed_value = gpujpeg_huffman_value_decomposition[4096 + value];
@@ -137,11 +136,8 @@ gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int value
     const unsigned int value_code = packed_value & ~0xf;
     
     // find prefix of the codeword and size of the prefix
-    int prefix_idx = encode ? (preceding_zero_count & 0xf) * 16 + value_nbits : 0;
-    if(USE_DEFAULT && prefix_idx < 0xf0 && !(prefix_idx & 0xf)) {
-        prefix_idx = default_prefix_idx;
-    }
-    const unsigned int prefix_code = d_table->code[prefix_idx];
+    int prefix_idx = encode ? preceding_zero_count * 16 + value_nbits : 0;
+    const unsigned int prefix_code = d_table->gcode[prefix_idx];
     const unsigned int prefix_nbits = prefix_code & 31;
     
     // compose packed codeword with its size
@@ -216,8 +212,13 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
     
     // each thread gets codeword for its two pixels
     const bool encode = nonzero_follows || !tid;
-    unsigned int even_code = gpujpeg_huffman_gpu_encode_value<false>(zeros_before_even, in_even, d_table_even, encode, 0);
-    unsigned int odd_code = gpujpeg_huffman_gpu_encode_value<true>(zeros_before_odd, in_odd, d_table_ac, encode, tid == 31 ? 256 : 0);
+    unsigned int even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even & 0xf, in_even, d_table_even, encode);
+    unsigned int odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd & 0xf, in_odd, d_table_ac, encode);
+    
+    // special case for last zero coefficient
+    if(tid == 31 && in_odd == 0) {
+        odd_code = d_table_ac->gcode[256];
+    }
     
     // concatenate both codewords into one if they are short enough
     const unsigned int even_code_size = even_code & 31;

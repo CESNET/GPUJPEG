@@ -92,10 +92,14 @@ struct gpujpeg_table_quantization
 /** JPEG table for huffman encoding */
 struct gpujpeg_table_huffman_encoder {
     // Code for each symbol 
-    unsigned int code[257];    
+    unsigned int code[256];
     // Length of code for each symbol 
-    char size[257];
+    char size[256];
     // If no code has been allocated for a symbol S, size[S] is 0 
+    
+    // Code for each symbol (MSBs contain the code itself and LSBs contain its size).
+    // additionally transposed (index has swapped lower and upper 4 bits).
+    unsigned int gcode[257];    
 
     // These two fields directly represent the contents of a JPEG DHT marker
     // bits[k] = # of symbols with codes of length k bits; bits[0] is unused
