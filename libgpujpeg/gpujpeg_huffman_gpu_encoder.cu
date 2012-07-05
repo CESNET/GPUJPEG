@@ -176,22 +176,24 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
     int in_even = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx]];
     const int in_odd = block[gpujpeg_huffman_gpu_encoder_order_natural[load_idx + 1]];
     
-    // compute number of zeros preceding the thread's even value
-    const unsigned int even_nonzero_bitmap = 1 | __ballot(in_even); // DC coefficient is always treated as nonzero
-    const unsigned int odd_nonzero_bitmap = __ballot(in_odd);
+    // compute preceding zero count for even coefficient
     const unsigned int nonzero_mask = (1 << tid) - 1;
-    const int even_nonzero_count = __clz(even_nonzero_bitmap & nonzero_mask);
-    const int odd_nonzero_count = __clz(odd_nonzero_bitmap & nonzero_mask);
-    int zeros_before_even = (min(odd_nonzero_count, even_nonzero_count) + tid - 32) * 2
-                                + (odd_nonzero_count > even_nonzero_count ? 1 : 0);
+    const unsigned int nonzero_bitmap_0 = 1 | __ballot(in_even);  // DC is always treated as nonzero
+    const unsigned int nonzero_bitmap_1 = __ballot(in_odd);
+    const unsigned int nonzero_bitmap_pairs = nonzero_bitmap_0 | nonzero_bitmap_1;
+    
+    const int zero_pair_count = __clz(nonzero_bitmap_pairs & nonzero_mask);
+    int zeros_before_even = 2 * (zero_pair_count + tid - 32);
+    if((0x80000000 >> zero_pair_count) > (nonzero_bitmap_1 & nonzero_mask)) {
+        zeros_before_even++;
+    }
+    
+    // true if any nonzero pixel follows thread's odd pixel
+    const bool nonzero_follows = nonzero_bitmap_pairs & ~nonzero_mask;
     
     // count of consecutive zeros before odd value (either one more than 
     // even if even is zero or none if even value itself is nonzero)
     int zeros_before_odd = in_even || !tid ? 0 : zeros_before_even + 1;
-                                
-    // true if any nonzero pixel follows thread's even pixel
-    const unsigned int follow_mask = ~(nonzero_mask >> 1);
-    const bool nonzero_follows = follow_mask & (even_nonzero_bitmap | odd_nonzero_bitmap);
     
     // clear zero counts if no nonzero pixel follows (so that no 16-zero symbols will be emited)
     // otherwise only trim extra bits from the counts of following zeros
