@@ -453,9 +453,8 @@ gpujpeg_huffman_encoder_serialization_kernel(
     int byte_count = 0, bit_count = 0;
     unsigned int remaining_bits = 0;
     
-    // "data_compressed_size" is now initialize dto number of codewords to be serialized
-    const int cword_count = segment->data_compressed_size;
-    for( int cword_idx = 0; cword_idx < cword_count; cword_idx += 4 ) // reading 4 codewords at once
+    // "data_compressed_size" is now initialized to number of codewords to be serialized
+    for(int cword_tuple_count = (segment->data_compressed_size + 3) >> 2; cword_tuple_count--; ) // reading 4 codewords at once
     {
         // read 4 codewords and advance input pointer to next ones
         const uint4 cwords = *(d_src_codewords++);
