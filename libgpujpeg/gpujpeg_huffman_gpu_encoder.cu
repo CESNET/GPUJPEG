@@ -125,8 +125,7 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
 
 __device__ static unsigned int
 gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int value,
-                                 const struct gpujpeg_table_huffman_encoder * const d_table,
-                                 const bool encode)
+                                 const struct gpujpeg_table_huffman_encoder * const d_table)
 {
     // value bits are in MSBs (left aligned) and bit size of the value is in LSBs (right aligned)
     const unsigned int packed_value = gpujpeg_huffman_value_decomposition[4096 + value];
@@ -136,7 +135,7 @@ gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int value
     const unsigned int value_code = packed_value & ~0xf;
     
     // find prefix of the codeword and size of the prefix
-    int prefix_idx = encode ? preceding_zero_count * 16 + value_nbits : 0;
+    const int prefix_idx = preceding_zero_count * 16 + value_nbits;
     const unsigned int prefix_code = d_table->gcode[prefix_idx];
     const unsigned int prefix_nbits = prefix_code & 31;
     
@@ -183,17 +182,22 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
     const unsigned int nonzero_mask = (1 << tid) - 1;
     const int even_nonzero_count = __clz(even_nonzero_bitmap & nonzero_mask);
     const int odd_nonzero_count = __clz(odd_nonzero_bitmap & nonzero_mask);
-    const int zeros_before_even = (min(odd_nonzero_count, even_nonzero_count) + tid - 32) * 2
+    int zeros_before_even = (min(odd_nonzero_count, even_nonzero_count) + tid - 32) * 2
                                 + (odd_nonzero_count > even_nonzero_count ? 1 : 0);
     
-    
+    // count of consecutive zeros before odd value (either one more than 
+    // even if even is zero or none if even value itself is nonzero)
+    int zeros_before_odd = in_even || !tid ? 0 : zeros_before_even + 1;
+                                
     // true if any nonzero pixel follows thread's even pixel
     const unsigned int follow_mask = ~(nonzero_mask >> 1);
     const bool nonzero_follows = follow_mask & (even_nonzero_bitmap | odd_nonzero_bitmap);
     
-    // count of consecutive zeros before odd value (either one more than 
-    // even if even is zero or none if even value itself is nonzero)
-    const int zeros_before_odd = in_even || !tid ? 0 : zeros_before_even + 1;
+    // clear zero counts if no nonzero pixel follows (so that no 16-zero symbols will be emited)
+    // otherwise only trim extra bits from the counts of following zeros
+    const int zero_count_mask = nonzero_follows ? 0xF : 0;
+    zeros_before_even &= zero_count_mask;
+    zeros_before_odd &= zero_count_mask;
     
     // pointer to LUT for encoding thread's even value 
     // (only thread #0 uses DC table, others use AC table)
@@ -210,10 +214,15 @@ gpujpeg_huffman_gpu_encoder_encode_block(int16_t * block, unsigned int * &data_c
         *last_dc = original_in_even;
     }
     
+    // last thread handles special block-termination symbol
+    if(0 == ((tid ^ 31) | in_odd)) {
+        // this causes selection of huffman symbol at index 256 (which contains the termination symbol)
+        zeros_before_odd = 16;
+    }
+    
     // each thread gets codeword for its two pixels
-    const bool encode = nonzero_follows || !tid;
-    unsigned int even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even & 0xf, in_even, d_table_even, encode);
-    unsigned int odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd & 0xf, in_odd, d_table_ac, encode);
+    unsigned int even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even, in_even, d_table_even);
+    unsigned int odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd, in_odd, d_table_ac);
     
     // special case for last zero coefficient
     if(tid == 31 && in_odd == 0) {
