@@ -328,6 +328,7 @@ gpujpeg_huffman_encoder_encode_kernel(
     
     // Non-interleaving mode
     if ( comp_count == 1 ) {
+        int segment_index = segment->scan_segment_index;
 
         // Get component for current scan
         struct gpujpeg_component* component = &d_component[segment->scan_index];
