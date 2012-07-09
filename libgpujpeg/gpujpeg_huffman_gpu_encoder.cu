@@ -46,6 +46,9 @@ __constant__ int gpujpeg_huffman_gpu_encoder_order_natural[GPUJPEG_ORDER_NATURAL
 /** Value decomposition in constant memory (input range from -4096 to 4095  ... both inclusive) */
 __device__ unsigned int gpujpeg_huffman_value_decomposition[8 * 1024];
 
+/** Size of occupied part of output buffer */
+__device__ unsigned int gpujpeg_huffman_output_byte_count;
+
 /**
  * Write marker to compressed data
  * 
@@ -88,6 +91,11 @@ gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel() {
     // save result packed into unsigned int (value bits are left aligned in MSBs and size is right aligned in LSBs)
     gpujpeg_huffman_value_decomposition[tid] = value_nbits | (value_code << (32 - value_nbits));
 //     printf("%+04d: %08x\n", value, gpujpeg_huffman_value_decomposition[tid]);
+    
+    // first thread also initializes size of final output, not to have to do it in separate memcpy/kernel
+    if(0 == tid) {
+        gpujpeg_huffman_output_byte_count = 0;
+    }
 }
 
 
@@ -514,6 +522,53 @@ gpujpeg_huffman_encoder_serialization_kernel(
 
 
 
+/**
+ * Huffman coder output compaction kernel.
+ * 
+ * @return void
+ */
+__global__ static void
+gpujpeg_huffman_encoder_compaction_kernel (
+    struct gpujpeg_segment* const d_segment,
+    const int segment_count, 
+    const uint8_t* const d_src,
+    uint8_t* const d_dest
+) {    
+    // get some segment (size of threadblocks is 32 x N, so threadIdx.y is warp index)
+    const int segment_idx = threadIdx.y + blockIdx.x * blockDim.y;
+    if(segment_idx >= segment_count) {
+        return;
+    }
+    
+    // temp variables for all warps
+    __shared__ volatile unsigned int s_out_offsets[WARPS_NUM];
+    
+    // get info about the segment
+    const unsigned int segment_byte_count = (d_segment[segment_idx].data_compressed_size + 511) & ~511;  // number of bytes rounded up to multiple of 512
+    const unsigned int segment_in_offset = d_segment[segment_idx].data_compressed_index;  // this should be aligned at least to 16byte boundary
+    
+    // first thread of each warp reserves space in output buffer
+    if(0 == threadIdx.x) {
+         const unsigned int segment_out_offset = atomicAdd(&gpujpeg_huffman_output_byte_count, segment_byte_count);
+         s_out_offsets[threadIdx.y] = segment_out_offset;
+         d_segment[segment_idx].data_compressed_index = segment_out_offset;
+    }
+    
+    // all threads read output buffer offset for their segment and prepare input and output pointers and number of copy iterations
+    const uint4 * d_in = threadIdx.x + (uint4*)(d_src + segment_in_offset);
+    uint4 * d_out = threadIdx.x + (uint4*)(d_dest + s_out_offsets[threadIdx.y]);
+    unsigned int copy_iterations = segment_byte_count / 512; // 512 is number of bytes copied in each iteration (32 threads * 16 bytes per thread)
+    
+    // copy the data!
+    while(copy_iterations--) {
+        *d_out = *d_in;
+        d_out += 32;
+        d_in += 32;
+    }
+}
+
+
+
 /** Documented at declaration */
 int
 gpujpeg_huffman_gpu_encoder_init()
@@ -563,7 +618,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
         coder->d_segment, 
         comp_count,
         coder->segment_count, 
-        coder->d_data_compressed
+        coder->d_temp_huffman
     #ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
         ,encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC]
         ,encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC]
@@ -580,10 +635,25 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
     gpujpeg_huffman_encoder_serialization_kernel<<<num_serialization_tblocks, SERIALIZATION_THREADS_PER_TBLOCK>>>(
         coder->d_segment, 
         coder->segment_count, 
-        coder->d_data_compressed
+        coder->d_temp_huffman
     );
     cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Codeword serialization failed");
+    
+    // Run output compaction kernel (one warp per segment)
+    const dim3 compaction_thread(32, WARPS_NUM);
+    const dim3 compaction_grid(gpujpeg_div_and_round_up(coder->segment_count, WARPS_NUM));
+    gpujpeg_huffman_encoder_compaction_kernel<<<compaction_grid, compaction_thread>>>(
+        coder->d_segment,
+        coder->segment_count,
+        coder->d_temp_huffman,
+        coder->d_data_compressed
+    );
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Output compaction failed");
+    
+    
+    // TODO: read and return number of occupied bytes
     
     
     return 0;
