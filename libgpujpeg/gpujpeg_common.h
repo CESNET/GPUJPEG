@@ -361,6 +361,8 @@ struct gpujpeg_coder
     uint8_t* data_compressed;
     // Huffman coder data in device memory (output/input for encoder/decoder)
     uint8_t* d_data_compressed;
+    // Huffman coder temporary data (in device memory only)
+    uint8_t* d_temp_huffman;
 
     // Operation durations
     float duration_memory_to;

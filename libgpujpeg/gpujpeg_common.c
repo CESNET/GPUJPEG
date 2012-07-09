@@ -496,7 +496,8 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         total_size += coder->data_raw_size;
         total_size += coder->data_size;
         total_size += coder->data_size * 2;
-        total_size += coder->data_compressed_size;
+        total_size += coder->data_compressed_size;  // for Huffman coding output
+        total_size += coder->data_compressed_size;  // for Hiffman coding temp buffer
 
         printf("\nAllocation Info:\n");
         printf("    Segment Count:            %d\n", coder->segment_count);
@@ -505,6 +506,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         printf("    Preprocessor Buffer Size: %0.1f MB\n", (double)coder->data_size / (1024.0 * 1024.0));
         printf("    DCT Buffer Size:          %0.1f MB\n", (double)2 * coder->data_size / (1024.0 * 1024.0));
         printf("    Compressed Buffer Size:   %0.1f MB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
+        printf("    Huffman Temp buffer Size: %0.1f MB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
         printf("    Structures Size:          %0.1f kB\n", (double)structures_size / (1024.0));
         printf("    Total GPU Memory Size:    %0.1f MB\n", (double)total_size / (1024.0 * 1024.0));
         printf("");
@@ -551,6 +553,11 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_compressed, max_compressed_data_size * sizeof(uint8_t)) ) 
         result = 0;   
     gpujpeg_cuda_check_error("Coder data compressed allocation");
+    
+    // Allocate Huffman coder temporary buffer
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_temp_huffman, max_compressed_data_size * sizeof(uint8_t)) ) 
+        result = 0;   
+    gpujpeg_cuda_check_error("Huffman temp buffer allocation");
      
     return 0;
 }
@@ -577,6 +584,8 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
         cudaFreeHost(coder->segment); 
     if ( coder->d_segment != NULL )
         cudaFree(coder->d_segment);
+    if ( coder->d_temp_huffman != NULL )
+        cudaFree(coder->d_temp_huffman);
     return 0;
 }
 
