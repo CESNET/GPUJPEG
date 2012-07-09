@@ -318,7 +318,8 @@ gpujpeg_huffman_encoder_encode_kernel(
     int remaining_codewords = 0;
     
     // Select Segment
-    int segment_index = blockIdx.x * WARPS_NUM + warpidx;
+    const int block_idx = blockIdx.x + blockIdx.y * gridDim.x;
+    const int segment_index = block_idx * WARPS_NUM + warpidx;
     if ( segment_index >= segment_count )
         return;
     
@@ -463,7 +464,8 @@ gpujpeg_huffman_encoder_serialization_kernel(
     uint4 * const s_temp = s_temp_all + threadIdx.x * 2;
     
     // Select Segment
-    int segment_index = blockIdx.x * SERIALIZATION_THREADS_PER_TBLOCK + threadIdx.x;
+    const int block_idx = blockIdx.x + blockIdx.y * gridDim.x;
+    int segment_index = block_idx * SERIALIZATION_THREADS_PER_TBLOCK + threadIdx.x;
     if ( segment_index >= segment_count )
         return;
     
@@ -535,7 +537,8 @@ gpujpeg_huffman_encoder_compaction_kernel (
     uint8_t* const d_dest
 ) {    
     // get some segment (size of threadblocks is 32 x N, so threadIdx.y is warp index)
-    const int segment_idx = threadIdx.y + blockIdx.x * blockDim.y;
+    const int block_idx = blockIdx.x + blockIdx.y * gridDim.x;
+    const int segment_idx = threadIdx.y + block_idx * blockDim.y;
     if(segment_idx >= segment_count) {
         return;
     }
@@ -586,6 +589,21 @@ gpujpeg_huffman_gpu_encoder_init()
     return 0;
 }
 
+
+dim3
+gpujpeg_huffman_gpu_encoder_grid_size(int tblock_count)
+{
+    dim3 size(tblock_count);
+    while(size.x > 0xffff) {
+        size.x = (size.x + 1) >> 1;
+        size.y <<= 1;
+    }
+    return size;
+}
+
+
+
+
 /** Documented at declaration */
 int
 gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int * output_byte_count)
@@ -612,7 +630,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
     
     // Run encoder kernel
     dim3 thread(32 * WARPS_NUM);
-    dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, (thread.x / 32)));
+    dim3 grid = gpujpeg_huffman_gpu_encoder_grid_size(gpujpeg_div_and_round_up(coder->segment_count, (thread.x / 32)));
     gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
         coder->d_component, 
         coder->d_segment, 
@@ -632,6 +650,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
     
     // Run codeword serialization kernel
     const int num_serialization_tblocks = gpujpeg_div_and_round_up(coder->segment_count, SERIALIZATION_THREADS_PER_TBLOCK);
+    const dim3 serialization_grid = gpujpeg_huffman_gpu_encoder_grid_size(num_serialization_tblocks);
     gpujpeg_huffman_encoder_serialization_kernel<<<num_serialization_tblocks, SERIALIZATION_THREADS_PER_TBLOCK>>>(
         coder->d_segment, 
         coder->segment_count, 
@@ -642,7 +661,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
     
     // Run output compaction kernel (one warp per segment)
     const dim3 compaction_thread(32, WARPS_NUM);
-    const dim3 compaction_grid(gpujpeg_div_and_round_up(coder->segment_count, WARPS_NUM));
+    const dim3 compaction_grid = gpujpeg_huffman_gpu_encoder_grid_size(gpujpeg_div_and_round_up(coder->segment_count, WARPS_NUM));
     gpujpeg_huffman_encoder_compaction_kernel<<<compaction_grid, compaction_thread>>>(
         coder->d_segment,
         coder->segment_count,
