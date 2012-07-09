@@ -547,7 +547,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     // Allocate compressed data
     int max_compressed_data_size = coder->data_compressed_size;
     max_compressed_data_size += GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
-    max_compressed_data_size *= 2;
+    //max_compressed_data_size *= 2;
     if ( cudaSuccess != cudaMallocHost((void**)&coder->data_compressed, max_compressed_data_size * sizeof(uint8_t)) ) 
         result = 0;   
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_compressed, max_compressed_data_size * sizeof(uint8_t)) ) 
