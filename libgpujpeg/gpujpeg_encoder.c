@@ -307,7 +307,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
     // Perform huffman coding on GPU (when restart interval is set)
     else {    
         // Perform huffman coding
-        if ( gpujpeg_huffman_gpu_encoder_encode(encoder) != 0 ) {
+        unsigned int output_size;
+        if ( gpujpeg_huffman_gpu_encoder_encode(encoder, &output_size) != 0 ) {
             fprintf(stderr, "[GPUJPEG] [Error] Huffman encoder on GPU failed!\n");
             return -1;
         }
@@ -320,7 +321,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
         GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
         // Copy compressed data from device memory to cpu memory
-        if ( cudaSuccess != cudaMemcpy(coder->data_compressed, coder->d_data_compressed, coder->data_compressed_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) != 0 )
+        if ( cudaSuccess != cudaMemcpy(coder->data_compressed, coder->d_data_compressed, output_size, cudaMemcpyDeviceToHost) != 0 )
             return -1;
         // Copy segments from device memory
         if ( cudaSuccess != cudaMemcpy(coder->segment, coder->d_segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyDeviceToHost) )

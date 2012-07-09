@@ -588,8 +588,8 @@ gpujpeg_huffman_gpu_encoder_init()
 
 /** Documented at declaration */
 int
-gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
-{    
+gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int * output_byte_count)
+{   
     // Get coder
     struct gpujpeg_coder* coder = &encoder->coder;
     
@@ -650,11 +650,11 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
         coder->d_data_compressed
     );
     cudaThreadSynchronize();
-    gpujpeg_cuda_check_error("Output compaction failed");
+    gpujpeg_cuda_check_error("Huffman output compaction failed");
     
-    
-    // TODO: read and return number of occupied bytes
-    
+    // Read and return number of occupied bytes
+    cudaMemcpyFromSymbol(output_byte_count, gpujpeg_huffman_output_byte_count, sizeof(unsigned int), 0, cudaMemcpyDeviceToHost);
+    gpujpeg_cuda_check_error("Huffman output size getting failed");
     
     return 0;
 }
