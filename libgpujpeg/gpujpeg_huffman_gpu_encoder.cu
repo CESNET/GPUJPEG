@@ -494,7 +494,7 @@ gpujpeg_huffman_encoder_serialization_kernel(
         gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.w);
         
         // possibly flush output if have at least 16 bytes
-        if(byte_count > 16) {
+        if(byte_count >= 16) {
             // write 16 bytes into destination buffer
             *(d_dest_stream++) = s_temp[0];
             
