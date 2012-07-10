@@ -439,6 +439,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
                 coder->segment[index].scan_segment_index = index;
                 coder->segment[index].mcu_count = mcu_count;
                 coder->segment[index].data_compressed_index = data_compressed_index;
+                coder->segment[index].data_temp_index = data_compressed_index;
                 coder->segment[index].data_compressed_size = 0;
                 // Increase parameters for next segment
                 data_index += mcu_count * coder->mcu_size;
@@ -463,6 +464,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
                     coder->segment[index].scan_segment_index = segment;
                     coder->segment[index].mcu_count = mcu_count;
                     coder->segment[index].data_compressed_index = data_compressed_index;
+                    coder->segment[index].data_temp_index = data_compressed_index;
                     coder->segment[index].data_compressed_size = 0;
                     // Increase parameters for next segment
                     data_index += mcu_count * component->mcu_size;

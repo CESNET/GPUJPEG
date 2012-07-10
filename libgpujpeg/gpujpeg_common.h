@@ -221,6 +221,8 @@ struct gpujpeg_segment
     
     // Data compressed index (output/input data from/to segment for encoder/decoder)
     int data_compressed_index;
+    // Date temp index (temporary data of segment in CC 2.0 encoder)
+    int data_temp_index;
     // Data compressed size (output/input data from/to segment for encoder/decoder)
     int data_compressed_size;
 };

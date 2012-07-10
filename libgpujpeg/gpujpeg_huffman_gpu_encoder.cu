@@ -332,7 +332,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         dc[comp] = 0;
     
     // Prepare data pointers
-    unsigned int * data_compressed = (unsigned int*)(d_data_compressed + segment->data_compressed_index);
+    unsigned int * data_compressed = (unsigned int*)(d_data_compressed + segment->data_temp_index);
     unsigned int * data_compressed_start = data_compressed;
     
     // Non-interleaving mode
@@ -473,7 +473,7 @@ gpujpeg_huffman_encoder_serialization_kernel(
     struct gpujpeg_segment* const segment = &d_segment[segment_index];
     
     // Input and output pointers
-    uint4 * const d_dest_stream_start = (uint4*)(d_data_compressed + segment->data_compressed_index);
+    uint4 * const d_dest_stream_start = (uint4*)(d_data_compressed + segment->data_temp_index);
     uint4 * d_dest_stream = d_dest_stream_start;
     const uint4 * d_src_codewords = d_dest_stream_start;
     
@@ -562,7 +562,7 @@ gpujpeg_huffman_encoder_compaction_kernel (
     
     // get info about the segment
     const unsigned int segment_byte_count = (d_segment[segment_idx].data_compressed_size + 511) & ~511;  // number of bytes rounded up to multiple of 512
-    const unsigned int segment_in_offset = d_segment[segment_idx].data_compressed_index;  // this should be aligned at least to 16byte boundary
+    const unsigned int segment_in_offset = d_segment[segment_idx].data_temp_index;  // this should be aligned at least to 16byte boundary
     
     // first thread of each warp reserves space in output buffer
     if(0 == threadIdx.x) {
