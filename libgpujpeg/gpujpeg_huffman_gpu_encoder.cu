@@ -487,9 +487,23 @@ gpujpeg_huffman_encoder_serialization_kernel(
         // read 4 codewords and advance input pointer to next ones
         const uint4 cwords = *(d_src_codewords++);
         
-        // encode all 4 codewords
+        // encode first pair of codewords
         gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.x);
         gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.y);
+        
+        // possibly flush output if have at least 16 bytes
+        if(byte_count >= 16) {
+            // write 16 bytes into destination buffer
+            *(d_dest_stream++) = s_temp[0];
+            
+            // move remaining bytes to first half of the buffer
+            s_temp[0] = s_temp[1];
+            
+            // update number of remaining bits
+            byte_count -= 16;
+        }
+        
+        // encode other two codewords
         gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.z);
         gpujpeg_huffman_gpu_encoder_emit_bits(remaining_bits, byte_count, bit_count, (uint8_t*)s_temp, cwords.w);
         
