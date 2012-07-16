@@ -261,7 +261,9 @@ gpujpeg_huffman_encoder_encode_kernel(
     struct gpujpeg_segment* d_segment,
     int comp_count,
     int segment_count, 
-    uint8_t* d_data_compressed
+    uint8_t* d_data_compressed,
+    const uint64_t* const d_block_list,
+    const int16_t* const d_data_quantized
 #ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
     ,struct gpujpeg_table_huffman_encoder* d_table_y_dc
     ,struct gpujpeg_table_huffman_encoder* d_table_y_ac
@@ -295,6 +297,10 @@ gpujpeg_huffman_encoder_encode_kernel(
     uint8_t* data_compressed = &d_data_compressed[segment->data_compressed_index];
     uint8_t* data_compressed_start = data_compressed;
     
+    // Pointer to segment's list of 8x8 blocks and their count
+    const uint64_t* packed_block_info_ptr = d_block_list + segment->block_index_list_begin;
+    int block_count = segment->block_count;
+    
     // Non-interleaving mode
     if ( comp_count == 1 ) {
         int segment_index = segment->scan_segment_index;
@@ -302,6 +308,12 @@ gpujpeg_huffman_encoder_encode_kernel(
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
             // Get component for current scan
             struct gpujpeg_component* component = &d_component[segment->scan_index];
+            
+            // Get pointer to next block input data and info about its color type
+            const uint64_t packed_block_info = *(packed_block_info_ptr++);
+            const enum gpujpeg_component_type component_type = packed_block_info & 0x80 ? GPUJPEG_COMPONENT_CHROMINANCE : GPUJPEG_COMPONENT_LUMINANCE;
+            const int dc_idx = packed_block_info & 0x7f;
+            const int16_t* in_block = &d_data_quantized[packed_block_info >> 8];
      
             // Get component data for MCU
             int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size];
@@ -319,10 +331,15 @@ gpujpeg_huffman_encoder_encode_kernel(
                 d_table_dc = d_table_cbcr_dc;
                 d_table_ac = d_table_cbcr_ac;
             }
-            
+                        
             // Encode 8x8 block
             if ( gpujpeg_huffman_gpu_encoder_encode_block(put_value, put_bits, component_dc, block, data_compressed, d_table_dc, d_table_ac) != 0 )
                 break;
+            
+            #if __CUDA_ARCH__ >= 200
+            assert(in_block == block);
+            
+            #endif
         } 
     }
     // Interleaving mode
@@ -428,7 +445,9 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder)
         coder->d_segment, 
         comp_count,
         coder->segment_count, 
-        coder->d_data_compressed
+        coder->d_data_compressed,
+        coder->d_block_list,
+        coder->d_data_quantized
     #ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
         ,encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC]
         ,encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC]

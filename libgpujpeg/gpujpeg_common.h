@@ -281,6 +281,8 @@ struct gpujpeg_component
     int16_t* data_quantized;
     // DCT and quantizer data in device memory (output/input for encoder/decoder)
     int16_t* d_data_quantized;
+    // Index of DCT and quantizer data in device and host buffers
+    unsigned int data_quantized_index;
 };
 
 /**
@@ -352,10 +354,12 @@ struct gpujpeg_coder
     // Number od 8x8 blocks in all components
     int block_count;
     
-    // List of block indices in host memory (MSB 0 = luminance block, MSB 1 = chroma block)
-    unsigned int* block_list;
+    // List of block indices in host memory (lower 7 bits are index of component, 
+    // 8th bit is 0 for luminance block or 1 for chroma block and bits from 9 
+    // above are base index of the block in quantized buffer data)
+    uint64_t* block_list;
     // List of block indices in device memory (same format as host-memory block list)
-    unsigned int* d_block_list;
+    uint64_t* d_block_list;
     
     
     // Raw image data in host memory (loaded from file for encoder, saved to file for decoder)
