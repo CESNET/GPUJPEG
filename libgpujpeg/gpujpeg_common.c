@@ -603,12 +603,9 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
                         for ( int x = 0; x < component->sampling_factor.horizontal; x++ ) {
                             // Compute 8x8 block data index
                             uint64_t data_index = data_index_row + x * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
-                            coder->block_list[block_idx++] = component->type == GPUJPEG_COMPONENT_LUMINANCE ? data_index : (data_index | 0x80000000);
-                            
-//                             uint64_t data_index = component->data_quantized_index + (segment->scan_segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size;
-//                             uint64_t component_type = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00 : 0x80;
-//                             uint64_t dc_index = segment->scan_index;
-//                             coder->block_list[block_idx++] = dc_index | component_type | (data_index << 8);
+                            uint64_t component_type = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00 : 0x80;
+                            uint64_t dc_index = comp;
+                            coder->block_list[block_idx++] = dc_index | component_type | (data_index << 8);
                         }
                     }
                 }
