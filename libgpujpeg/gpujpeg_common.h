@@ -352,10 +352,10 @@ struct gpujpeg_coder
     // Number od 8x8 blocks in all components
     int block_count;
     
-    // List of block indices in host memory (positive number = luminance block, negative = chroma block)
-    int* block_list;
-    // List of block indices in device memory (same format as host list)
-    int* d_block_list;
+    // List of block indices in host memory (MSB 0 = luminance block, MSB 1 = chroma block)
+    unsigned int* block_list;
+    // List of block indices in device memory (same format as host-memory block list)
+    unsigned int* d_block_list;
     
     
     // Raw image data in host memory (loaded from file for encoder, saved to file for decoder)

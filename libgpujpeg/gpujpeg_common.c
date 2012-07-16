@@ -549,9 +549,9 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     coder->block_count = 0;
     for ( int comp = 0; comp < coder->param_image.comp_count; comp++ )
         coder->block_count += (coder->component[comp].data_width * coder->component[comp].data_height) / (8 * 8);
-    if ( cudaSuccess != cudaMallocHost((void**)&coder->block_list, coder->block_count * sizeof(int)) ) 
+    if ( cudaSuccess != cudaMallocHost((void**)&coder->block_list, coder->block_count * sizeof(unsigned int)) ) 
         result = 0;   
-    if ( cudaSuccess != cudaMalloc((void**)&coder->d_block_list, coder->block_count * sizeof(int)) ) 
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_block_list, coder->block_count * sizeof(unsigned int)) ) 
         result = 0;
     if( result == 0 )
         return 0;
@@ -572,8 +572,8 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
                 struct gpujpeg_component* component = &coder->component[segment->scan_index];
          
                 // Offset of component data for MCU
-                int data_index = (segment->scan_segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size;
-                coder->block_list[block_idx++] = component->type == GPUJPEG_COMPONENT_LUMINANCE ? data_index : -data_index;
+                unsigned int data_index = (segment->scan_segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size;
+                coder->block_list[block_idx++] = component->type == GPUJPEG_COMPONENT_LUMINANCE ? data_index : (data_index | 0x80000000);
             } 
         }
         // Interleaving mode
@@ -597,8 +597,8 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
                         // For all horizontal 8x8 blocks
                         for ( int x = 0; x < component->sampling_factor.horizontal; x++ ) {
                             // Compute 8x8 block data index
-                            int data_index = data_index_row + x * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
-                            coder->block_list[block_idx++] = component->type == GPUJPEG_COMPONENT_LUMINANCE ? data_index : -data_index;
+                            unsigned int data_index = data_index_row + x * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+                            coder->block_list[block_idx++] = component->type == GPUJPEG_COMPONENT_LUMINANCE ? data_index : (data_index | 0x80000000);
                         }
                     }
                 }
@@ -609,7 +609,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     assert(block_idx == coder->block_count);
     
     // Copy block lists to device memory
-    if ( cudaSuccess != cudaMemcpy(coder->d_block_list, coder->block_list, coder->block_count * sizeof(int), cudaMemcpyHostToDevice) )
+    if ( cudaSuccess != cudaMemcpy(coder->d_block_list, coder->block_list, coder->block_count * sizeof(unsigned int), cudaMemcpyHostToDevice) )
         result = 0;
     
     // Copy segments to device memory
