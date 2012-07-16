@@ -561,7 +561,7 @@ gpujpeg_huffman_encoder_compaction_kernel (
     __shared__ volatile unsigned int s_out_offsets[WARPS_NUM];
     
     // get info about the segment
-    const unsigned int segment_byte_count = (d_segment[segment_idx].data_compressed_size + 511) & ~511;  // number of bytes rounded up to multiple of 512
+    const unsigned int segment_byte_count = (d_segment[segment_idx].data_compressed_size + 15) & ~15;  // number of bytes rounded up to multiple of 16
     const unsigned int segment_in_offset = d_segment[segment_idx].data_temp_index;  // this should be aligned at least to 16byte boundary
     
     // first thread of each warp reserves space in output buffer
@@ -581,6 +581,11 @@ gpujpeg_huffman_encoder_compaction_kernel (
         *d_out = *d_in;
         d_out += 32;
         d_in += 32;
+    }
+    
+    // copy remaining bytes (less than 512 bytes)
+    if((threadIdx.x * 16) < (segment_byte_count & 511)) {
+        *d_out = *d_in;
     }
 }
 
