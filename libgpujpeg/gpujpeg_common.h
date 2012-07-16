@@ -223,6 +223,11 @@ struct gpujpeg_segment
     int data_compressed_index;
     // Data compressed size (output/input data from/to segment for encoder/decoder)
     int data_compressed_size;
+    
+    // Offset of first block index
+    int block_index_list_begin;
+    // Number of blocks of the segment
+    int block_count;
 };
 
 /**
@@ -343,6 +348,15 @@ struct gpujpeg_coder
     int data_size;
     // Compressed allocated data size
     int data_compressed_size;
+    
+    // Number od 8x8 blocks in all components
+    int block_count;
+    
+    // List of block indices in host memory (positive number = luminance block, negative = chroma block)
+    int* block_list;
+    // List of block indices in device memory (same format as host list)
+    int* d_block_list;
+    
     
     // Raw image data in host memory (loaded from file for encoder, saved to file for decoder)
     uint8_t* data_raw;
