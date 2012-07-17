@@ -292,7 +292,7 @@ gpujpeg_table_huffman_encoder_compute(struct gpujpeg_table_huffman_encoder* tabl
 
 /** Documented at declaration */
 int
-gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, struct gpujpeg_table_huffman_encoder* d_table, enum gpujpeg_component_type comp_type, enum gpujpeg_huffman_type huff_type)
+gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, enum gpujpeg_component_type comp_type, enum gpujpeg_huffman_type huff_type)
 {
     assert(comp_type == GPUJPEG_COMPONENT_LUMINANCE || comp_type == GPUJPEG_COMPONENT_CHROMINANCE);
     assert(huff_type == GPUJPEG_HUFFMAN_DC || huff_type == GPUJPEG_HUFFMAN_AC);
@@ -315,24 +315,6 @@ gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, 
     }
     gpujpeg_table_huffman_encoder_compute(table);
     
-    // make a upshifted copy of the table for GPU encoding
-    for ( int i = 0; i <= 256; i++ ) {
-        const int size = table->size[i & 0xFF];
-        table->gcode[i] = (table->code[i & 0xFF] << (32 - size)) | size;
-    }
-    
-    // reserve first index in GPU version of AC table for special purposes
-    if ( huff_type == GPUJPEG_HUFFMAN_AC ) {
-        table->gcode[0] = 0;
-    }
-    
-    
-#ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
-    // Copy table to device memory
-    if ( cudaSuccess != cudaMemcpy(d_table, table, sizeof(struct gpujpeg_table_huffman_encoder), cudaMemcpyHostToDevice) )
-        return -1;
-#endif
-        
     return 0;
 }
 

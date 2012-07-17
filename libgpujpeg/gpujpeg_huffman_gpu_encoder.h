@@ -39,10 +39,11 @@ extern "C" {
 /**
  * Init huffman encoder
  * 
+ * @param table_huffman  pointer to initialized huffman tables in CPU memory
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_huffman_gpu_encoder_init();
+gpujpeg_huffman_gpu_encoder_init(const struct gpujpeg_encoder * encoder);
 
 /**
  * Perform huffman encoding

@@ -33,12 +33,16 @@
 #define WARPS_NUM 8
 
 
-#ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
-/** Allocate huffman tables in constant memory */
-__constant__ struct gpujpeg_table_huffman_encoder gpujpeg_huffman_gpu_encoder_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
-/** Pass huffman tables to encoder */
-extern struct gpujpeg_table_huffman_encoder (*gpujpeg_encoder_table_huffman)[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT] = &gpujpeg_huffman_gpu_encoder_table_huffman;
-#endif
+
+/**
+ * Huffman coding tables in constant memory - each has 257 items (256 + 1 extra)
+ * There are are 4 of them - one after another, in following order:
+ *    - luminance (Y) AC
+ *    - luminance (Y) DC
+ *    - chroma (cb/cr) AC
+ *    - chroma (cb/cr) DC
+ */
+__device__ uint32_t gpujpeg_huffman_gpu_lut[(256 + 1) * 4];
 
 /** Natural order in constant memory */
 __constant__ int gpujpeg_huffman_gpu_encoder_order_natural[GPUJPEG_ORDER_NATURAL_SIZE];
@@ -127,22 +131,22 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
 
 
 __device__ static unsigned int
-gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count_idx, const int value,
-                                 const struct gpujpeg_table_huffman_encoder * const d_table)
+gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count_idx, const int coefficient,
+                                 const int huffman_lut_offset)
 {
     // value bits are in MSBs (left aligned) and bit size of the value is in LSBs (right aligned)
-    const unsigned int packed_value = gpujpeg_huffman_value_decomposition[4096 + value];
+    const unsigned int packed_value = gpujpeg_huffman_value_decomposition[4096 + coefficient];
     
     // decompose value info into upshifted value and value's bit size
     const int value_nbits = packed_value & 0xf;
     const unsigned int value_code = packed_value & ~0xf;
     
     // find prefix of the codeword and size of the prefix
-    const unsigned int prefix_code = d_table->gcode[preceding_zero_count_idx | value_nbits];
-    const unsigned int prefix_nbits = prefix_code & 31;
+    const unsigned int packed_prefix = gpujpeg_huffman_gpu_lut[huffman_lut_offset + preceding_zero_count_idx + value_nbits];
+    const unsigned int prefix_nbits = packed_prefix & 31;
     
     // compose packed codeword with its size
-    return (prefix_code + value_nbits) | (value_code >> prefix_nbits);
+    return (packed_prefix + value_nbits) | (value_code >> prefix_nbits);
 }
 
 
@@ -154,7 +158,7 @@ gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned
         s_out[remaining_codewords + tid] = 0;
         
         // save all remaining codewords at once (together with some zero sized padding codewords)
-        ((uint4*)data_compressed)[tid] = ((uint4*)s_out)[tid];
+        *((uint4*)data_compressed) = ((uint4*)s_out)[tid];
         
         // update codeword counter
         data_compressed += remaining_codewords;
@@ -170,8 +174,7 @@ gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned
  */
 __device__ int
 gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &data_compressed, unsigned int * const s_out,
-                int & remaining_codewords, const int last_dc_idx, int tid,
-                struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
+                int & remaining_codewords, const int last_dc_idx, int tid, const int huffman_lut_offset)
 {
     // each thread loads a pair of values (pair after zigzag reordering)
     const int load_idx = tid * 2;
@@ -206,12 +209,12 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
     
     // pointer to LUT for encoding thread's even value 
     // (only thread #0 uses DC table, others use AC table)
-    const struct gpujpeg_table_huffman_encoder * d_table_even = d_table_ac;
+    int even_lut_offset = huffman_lut_offset;
     
     // first thread handles special DC coefficient
     if(0 == tid) {
-        // first thread uses DC table for its even value
-        d_table_even = d_table_dc;
+        // first thread uses DC part of the table for its even value
+        even_lut_offset += 256 + 1;
         
         // update last DC coefficient (saved at the special place at the end of the shared bufer)
         const int original_in_even = in_even;
@@ -226,9 +229,9 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
     }
     
     // each thread gets codeword for its two pixels
-    unsigned int even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even, in_even, d_table_even);
-    unsigned int odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd, in_odd, d_table_ac);
-    
+    unsigned int even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even, in_even, even_lut_offset);
+    unsigned int odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd, in_odd, huffman_lut_offset);
+        
     // concatenate both codewords into one if they are short enough
     const unsigned int even_code_size = even_code & 31;
     const unsigned int odd_code_size = odd_code & 31;
@@ -259,7 +262,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
     const int flush_count = 32 * 4; // = half of the buffer
     if(remaining_codewords > flush_count) {
         // move first half of the buffer into output buffer in global memory and update output pointer
-        ((uint4*)data_compressed)[tid] = ((uint4*)s_out)[tid];
+        *((uint4*)data_compressed) = ((uint4*)s_out)[tid];
         data_compressed += flush_count;
         
         // shift remaining codewords to begin of the buffer and update their count
@@ -287,22 +290,7 @@ gpujpeg_huffman_encoder_encode_kernel(
     uint8_t* d_data_compressed,
     const uint64_t* const d_block_list,
     int16_t* const d_data_quantized
-#ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
-    ,struct gpujpeg_table_huffman_encoder* d_table_y_dc
-    ,struct gpujpeg_table_huffman_encoder* d_table_y_ac
-    ,struct gpujpeg_table_huffman_encoder* d_table_cbcr_dc
-    ,struct gpujpeg_table_huffman_encoder* d_table_cbcr_ac
-#endif
-)
-{    
-#ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
-    // Get huffman tables from constant memory
-    struct gpujpeg_table_huffman_encoder* d_table_y_dc = &gpujpeg_huffman_gpu_encoder_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
-    struct gpujpeg_table_huffman_encoder* d_table_y_ac = &gpujpeg_huffman_gpu_encoder_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
-    struct gpujpeg_table_huffman_encoder* d_table_cbcr_dc = &gpujpeg_huffman_gpu_encoder_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
-    struct gpujpeg_table_huffman_encoder* d_table_cbcr_ac = &gpujpeg_huffman_gpu_encoder_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
-#endif
-    
+) {    
     int warpidx = threadIdx.x >> 5;
     int tid = threadIdx.x & 31;
 
@@ -335,6 +323,9 @@ gpujpeg_huffman_encoder_encode_kernel(
     unsigned int * data_compressed = (unsigned int*)(d_data_compressed + segment->data_temp_index);
     unsigned int * data_compressed_start = data_compressed;
     
+    // Pre-add thread ID to output pointer (it's allways used only with it)
+    data_compressed += (tid * 4);
+    
     // Pointer to segment's list of 8x8 blocks and their count
     const uint64_t* packed_block_info_ptr = d_block_list + segment->block_index_list_begin;
     int block_count = segment->block_count;
@@ -347,22 +338,14 @@ gpujpeg_huffman_encoder_encode_kernel(
         // Get coder parameters
         const int last_dc_idx = 256 + (packed_block_info & 0x7f);
         
-        // Get huffman tables
-        struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
-        struct gpujpeg_table_huffman_encoder* d_table_ac = NULL;
-        if ( packed_block_info & 0x80 ) {
-            d_table_dc = d_table_cbcr_dc;
-            d_table_ac = d_table_cbcr_ac;
-        } else {
-            d_table_dc = d_table_y_dc;
-            d_table_ac = d_table_y_ac;
-        }
+        // Get offset to right part of huffman table
+        const int huffman_table_offset = packed_block_info & 0x80 ? (256 + 1) * 2 : 0; // possibly skips luminance tables
         
         // Source data pointer
         int16_t* block = &d_data_quantized[packed_block_info >> 8];
                     
         // Encode 8x8 block
-        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, last_dc_idx, tid, d_table_dc, d_table_ac);
+        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, last_dc_idx, tid, huffman_table_offset);
     }
 
     // flush remaining codewords
@@ -524,10 +507,26 @@ gpujpeg_huffman_encoder_compaction_kernel (
 }
 
 
+/** Adds packed coefficients into the GPU version of Huffman lookup table. */
+void
+gpujpeg_huffman_gpu_add_packed_table(uint32_t * const dest, const struct gpujpeg_table_huffman_encoder * const src, const bool is_ac) {
+    // make a upshifted copy of the table for GPU encoding
+    for ( int i = 0; i <= 256; i++ ) {
+        const int size = src->size[i & 0xFF];
+        dest[i] = (src->code[i & 0xFF] << (32 - size)) | size;
+    }
+    
+    // reserve first index in GPU version of AC table for special purposes
+    if ( is_ac ) {
+        dest[0] = 0;
+    }
+}
+
+
 
 /** Documented at declaration */
 int
-gpujpeg_huffman_gpu_encoder_init()
+gpujpeg_huffman_gpu_encoder_init(const struct gpujpeg_encoder * encoder)
 {
     
     // Initialize decomposition lookup table
@@ -535,6 +534,21 @@ gpujpeg_huffman_gpu_encoder_init()
     gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel<<<32, 256>>>();  // 8192 threads total
     cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Decomposition LUT initialization failed");
+    
+    // compose GPU version of the huffman LUT and copy it into GPU mempry
+    uint32_t gpujpeg_huffman_cpu_lut[(256 + 1) * 4];
+    gpujpeg_huffman_gpu_add_packed_table(gpujpeg_huffman_cpu_lut + 257 * 0, &encoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC], true);
+    gpujpeg_huffman_gpu_add_packed_table(gpujpeg_huffman_cpu_lut + 257 * 1, &encoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC], false);
+    gpujpeg_huffman_gpu_add_packed_table(gpujpeg_huffman_cpu_lut + 257 * 2, &encoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC], true);
+    gpujpeg_huffman_gpu_add_packed_table(gpujpeg_huffman_cpu_lut + 257 * 3, &encoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC], false);
+    cudaMemcpyToSymbol(
+        gpujpeg_huffman_gpu_lut,
+        gpujpeg_huffman_cpu_lut,
+        (256 + 1) * 4 * sizeof(*gpujpeg_huffman_gpu_lut),
+        0,
+        cudaMemcpyHostToDevice
+    );
+    gpujpeg_cuda_check_error("Huffman encoder init (Huffman LUT copy)");
     
     // Copy natural order to constant device memory
     cudaMemcpyToSymbol(
@@ -544,7 +558,7 @@ gpujpeg_huffman_gpu_encoder_init()
         0,
         cudaMemcpyHostToDevice
     );
-    gpujpeg_cuda_check_error("Huffman encoder init");
+    gpujpeg_cuda_check_error("Huffman encoder init (natural order copy)");
     
     return 0;
 }
@@ -586,12 +600,6 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
         coder->d_temp_huffman,
         coder->d_block_list,
         coder->d_data_quantized
-    #ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
-        ,encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC]
-        ,encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC]
-        ,encoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC]
-        ,encoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC]
-    #endif
     );
     cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman encoding failed");

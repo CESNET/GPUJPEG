@@ -96,10 +96,6 @@ struct gpujpeg_table_huffman_encoder {
     // Length of code for each symbol 
     char size[256];
     // If no code has been allocated for a symbol S, size[S] is 0 
-    
-    // Code for each symbol (MSBs contain the code itself and LSBs contain its size).
-    // additionally transposed (index has swapped lower and upper 4 bits).
-    unsigned int gcode[257];    
 
     // These two fields directly represent the contents of a JPEG DHT marker
     // bits[k] = # of symbols with codes of length k bits; bits[0] is unused
@@ -172,13 +168,12 @@ gpujpeg_table_quantization_print(struct gpujpeg_table_quantization* table);
  * Initialize encoder huffman DC and AC table for component type
  * 
  * @param table  Table structure
- * @param d_table  Table structure in device memory
  * @param comp_type  Component type (luminance/chrominance)
  * @param huff_type  Huffman type (DC/AC)
  * @return void
  */
 int
-gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, struct gpujpeg_table_huffman_encoder* d_table, enum gpujpeg_component_type comp_type, enum gpujpeg_huffman_type huff_type);
+gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, enum gpujpeg_component_type comp_type, enum gpujpeg_huffman_type huff_type);
 
 /**
  * Initialize decoder huffman DC and AC table for component type. It copies bit and values arrays to table and call compute routine.
