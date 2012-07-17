@@ -91,11 +91,6 @@ gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel() {
     // save result packed into unsigned int (value bits are left aligned in MSBs and size is right aligned in LSBs)
     gpujpeg_huffman_value_decomposition[tid] = value_nbits | (value_code << (32 - value_nbits));
 //     printf("%+04d: %08x\n", value, gpujpeg_huffman_value_decomposition[tid]);
-    
-    // first thread also initializes size of final output, not to have to do it in separate memcpy/kernel
-    if(0 == tid) {
-        gpujpeg_huffman_output_byte_count = 0;
-    }
 }
 
 
@@ -320,6 +315,13 @@ gpujpeg_huffman_encoder_encode_kernel(
     // Select Segment
     const int block_idx = blockIdx.x + blockIdx.y * gridDim.x;
     const int segment_index = block_idx * WARPS_NUM + warpidx;
+    
+    // fires thread initializes compact output size for next kernel
+    if(0 == tid && 0 == warpidx && 0 == block_idx) {
+        gpujpeg_huffman_output_byte_count = 0;
+    }
+    
+    // stop if out of segment bounds
     if ( segment_index >= segment_count )
         return;
     
@@ -595,6 +597,13 @@ gpujpeg_huffman_encoder_compaction_kernel (
 int
 gpujpeg_huffman_gpu_encoder_init()
 {
+    
+    // Initialize decomposition lookup table
+    cudaFuncSetCacheConfig(gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel, cudaFuncCachePreferShared);
+    gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel<<<32, 256>>>();  // 8192 threads total
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Decomposition LUT initialization failed");
+    
     // Copy natural order to constant device memory
     cudaMemcpyToSymbol(
         (const char*)gpujpeg_huffman_gpu_encoder_order_natural,
@@ -640,12 +649,6 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
     // Configure more shared memory
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel, cudaFuncCachePreferShared);
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_serialization_kernel, cudaFuncCachePreferShared);
-    cudaFuncSetCacheConfig(gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel, cudaFuncCachePreferShared);
-    
-    // Initialize decomposition lookup table
-    gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel<<<32, 256>>>();  // 8192 threads total
-    cudaThreadSynchronize();
-    gpujpeg_cuda_check_error("Decomposition LUT initialization failed");
     
     // Run encoder kernel
     dim3 thread(32 * WARPS_NUM);
@@ -665,7 +668,6 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
     );
     cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman encoding failed");
-    
     
     // Run codeword serialization kernel
     const int num_serialization_tblocks = gpujpeg_div_and_round_up(coder->segment_count, SERIALIZATION_THREADS_PER_TBLOCK);
