@@ -170,7 +170,7 @@ gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned
  */
 __device__ int
 gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &data_compressed, unsigned int * const s_out,
-                int & remaining_codewords, int *last_dc, int tid,
+                int & remaining_codewords, const int last_dc_idx, int tid,
                 struct gpujpeg_table_huffman_encoder* d_table_dc, struct gpujpeg_table_huffman_encoder* d_table_ac)
 {
     // each thread loads a pair of values (pair after zigzag reordering)
@@ -213,10 +213,10 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
         // first thread uses DC table for its even value
         d_table_even = d_table_dc;
         
-        // update last DC coefficient
+        // update last DC coefficient (saved at the special place at the end of the shared bufer)
         const int original_in_even = in_even;
-        in_even -= *last_dc;
-        *last_dc = original_in_even;
+        in_even -= ((int*)s_out)[last_dc_idx];
+        ((int*)s_out)[last_dc_idx] = original_in_even;
     }
     
     // last thread handles special block-termination symbol
@@ -306,8 +306,8 @@ gpujpeg_huffman_encoder_encode_kernel(
     int warpidx = threadIdx.x >> 5;
     int tid = threadIdx.x & 31;
 
-    __shared__ uint4 s_out_all[64 * WARPS_NUM];
-    unsigned int * s_out = (unsigned int*)(s_out_all + warpidx * 64);
+    __shared__ uint4 s_out_all[(64 + 1) * WARPS_NUM];
+    unsigned int * s_out = (unsigned int*)(s_out_all + warpidx * (64 + 1));
     
     // Number of remaining codewords in shared buffer
     int remaining_codewords = 0;
@@ -326,10 +326,10 @@ gpujpeg_huffman_encoder_encode_kernel(
         return;
     struct gpujpeg_segment* segment = &d_segment[segment_index];
     
-    // Initialize huffman coder
-    int dc[GPUJPEG_MAX_COMPONENT_COUNT];
-    for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ )
-        dc[comp] = 0;
+    // Initialize last DC coefficients
+    if(tid < 3) {
+        s_out[256 + tid] = 0;
+    }
     
     // Prepare data pointers
     unsigned int * data_compressed = (unsigned int*)(d_data_compressed + segment->data_temp_index);
@@ -345,7 +345,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         const uint64_t packed_block_info = *(packed_block_info_ptr++);
         
         // Get coder parameters
-        int & last_dc = dc[packed_block_info & 0x7f];
+        const int last_dc_idx = 256 + (packed_block_info & 0x7f);
         
         // Get huffman tables
         struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
@@ -362,7 +362,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         int16_t* block = &d_data_quantized[packed_block_info >> 8];
                     
         // Encode 8x8 block
-        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, &last_dc, tid, d_table_dc, d_table_ac);
+        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, last_dc_idx, tid, d_table_dc, d_table_ac);
     }
 
     // flush remaining codewords
