@@ -282,11 +282,11 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
 __launch_bounds__(WARPS_NUM * 32, 1024 / (WARPS_NUM * 32))
 __global__ void
 gpujpeg_huffman_encoder_encode_kernel(
-    struct gpujpeg_component* d_component,
     struct gpujpeg_segment* d_segment,
-    int comp_count,
     int segment_count, 
-    uint8_t* d_data_compressed
+    uint8_t* d_data_compressed,
+    const uint64_t* const d_block_list,
+    int16_t* const d_data_quantized
 #ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
     ,struct gpujpeg_table_huffman_encoder* d_table_y_dc
     ,struct gpujpeg_table_huffman_encoder* d_table_y_ac
@@ -324,9 +324,7 @@ gpujpeg_huffman_encoder_encode_kernel(
     // stop if out of segment bounds
     if ( segment_index >= segment_count )
         return;
-    
     struct gpujpeg_segment* segment = &d_segment[segment_index];
-    const int segment_mcu_count = segment->mcu_count;
     
     // Initialize huffman coder
     int dc[GPUJPEG_MAX_COMPONENT_COUNT];
@@ -337,99 +335,34 @@ gpujpeg_huffman_encoder_encode_kernel(
     unsigned int * data_compressed = (unsigned int*)(d_data_compressed + segment->data_temp_index);
     unsigned int * data_compressed_start = data_compressed;
     
-    // Non-interleaving mode
-    if ( comp_count == 1 ) {
-        int segment_index = segment->scan_segment_index;
-
-        // Get component for current scan
-        struct gpujpeg_component* component = &d_component[segment->scan_index];
-
-        // Get component data for MCU (first block)
-        const int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count) * component->mcu_size];
-
+    // Pointer to segment's list of 8x8 blocks and their count
+    const uint64_t* packed_block_info_ptr = d_block_list + segment->block_index_list_begin;
+    int block_count = segment->block_count;
+    
+    // Encode MCUs in segment
+    while(block_count--) {
+        // Get pointer to next block input data and info about its color type
+        const uint64_t packed_block_info = *(packed_block_info_ptr++);
+        
         // Get coder parameters
-        int & last_dc = dc[segment->scan_index];
-
+        int & last_dc = dc[packed_block_info & 0x7f];
+        
         // Get huffman tables
         struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
         struct gpujpeg_table_huffman_encoder* d_table_ac = NULL;
-        if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
-            d_table_dc = d_table_y_dc;
-            d_table_ac = d_table_y_ac;
-        } else {
+        if ( packed_block_info & 0x80 ) {
             d_table_dc = d_table_cbcr_dc;
             d_table_ac = d_table_cbcr_ac;
+        } else {
+            d_table_dc = d_table_y_dc;
+            d_table_ac = d_table_y_ac;
         }
         
-        // mcu size of the component
-        const int comp_mcu_size = component->mcu_size;
-            
-        // Encode MCUs in segment
-        for ( int mcu_index = 0; mcu_index < segment_mcu_count; mcu_index++ ) {
-            // Encode 8x8 block
-            if (gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, &last_dc, tid, d_table_dc, d_table_ac) != 0)
-                break;
-            block += comp_mcu_size;
-        }
-    }
-    // Interleaving mode
-    else {
-        int segment_index = segment->scan_segment_index; //TODO asi nepotrebne
-        // Encode MCUs in segment
-        for ( int mcu_index = 0; mcu_index < segment_mcu_count; mcu_index++ ) {
-            //assert(segment->scan_index == 0);
-            for ( int comp = 0; comp < comp_count; comp++ ) {
-                struct gpujpeg_component* component = &d_component[comp];
-
-                // Prepare mcu indexes
-                int mcu_index_x = (segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
-                int mcu_index_y = (segment_index * component->segment_mcu_count + mcu_index) / component->mcu_count_x;
-                
-                // Compute base data index
-                int data_index_base = mcu_index_y * (component->mcu_size * component->mcu_count_x) + mcu_index_x * (component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
-                
-                // Get huffman tables
-                struct gpujpeg_table_huffman_encoder* d_table_dc = NULL;
-                struct gpujpeg_table_huffman_encoder* d_table_ac = NULL;
-                if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
-                    d_table_dc = d_table_y_dc;
-                    d_table_ac = d_table_y_ac;
-                } else {
-                    d_table_dc = d_table_cbcr_dc;
-                    d_table_ac = d_table_cbcr_ac;
-                }
-                
-                // Get sampling faactors
-                const int comp_vertical_sampling = component->sampling_factor.vertical;
-                const int comp_horizontal_sampling = component->sampling_factor.horizontal;
-                
-                // Pointer to quantized data of the component
-                const int16_t* const d_component_data_quantized = component->d_data_quantized;
-                
-                // Size and count of MCUs in component
-                const int comp_mcu_stride = component->mcu_count_x * component->mcu_size_x * GPUJPEG_BLOCK_SIZE;
-                
-                // For all vertical 8x8 blocks
-                for ( int y = 0; y < comp_vertical_sampling; y++ ) {
-                    // Compute base row data index
-                    int data_index_row = data_index_base + y * comp_mcu_stride;
-                    // For all horizontal 8x8 blocks
-                    for ( int x = 0; x < comp_horizontal_sampling; x++ ) {
-                        // Compute 8x8 block data index
-                        int data_index = data_index_row + x * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
-                        
-                        // Get component data for MCU
-                        const int16_t* block = d_component_data_quantized + data_index;
-                        
-                        // Get coder parameters
-                        int & last_dc = dc[comp];
-            
-                        // Encode 8x8 block
-                        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, &last_dc, tid, d_table_dc, d_table_ac);
-                    }
-                }
-            }
-        }
+        // Source data pointer
+        int16_t* block = &d_data_quantized[packed_block_info >> 8];
+                    
+        // Encode 8x8 block
+        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, &last_dc, tid, d_table_dc, d_table_ac);
     }
 
     // flush remaining codewords
@@ -439,7 +372,6 @@ gpujpeg_huffman_encoder_encode_kernel(
     if (tid == 0 ) {
         segment->data_compressed_size = data_compressed - data_compressed_start;
     }
-    __syncthreads();
 }
 
 
@@ -641,11 +573,6 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
     
     assert(coder->param.restart_interval > 0);
     
-    int comp_count = 1;
-    if ( coder->param.interleaved == 1 )
-        comp_count = coder->param_image.comp_count;
-    assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
-
     // Configure more shared memory
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel, cudaFuncCachePreferShared);
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_serialization_kernel, cudaFuncCachePreferShared);
@@ -654,11 +581,11 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
     dim3 thread(32 * WARPS_NUM);
     dim3 grid = gpujpeg_huffman_gpu_encoder_grid_size(gpujpeg_div_and_round_up(coder->segment_count, (thread.x / 32)));
     gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
-        coder->d_component, 
         coder->d_segment, 
-        comp_count,
         coder->segment_count, 
-        coder->d_temp_huffman
+        coder->d_temp_huffman,
+        coder->d_block_list,
+        coder->d_data_quantized
     #ifndef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
         ,encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC]
         ,encoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC]
