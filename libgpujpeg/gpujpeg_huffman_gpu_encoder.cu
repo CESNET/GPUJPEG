@@ -131,7 +131,7 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
 
 
 __device__ static unsigned int
-gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count_idx, const int coefficient,
+gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int coefficient,
                                  const int huffman_lut_offset)
 {
     // value bits are in MSBs (left aligned) and bit size of the value is in LSBs (right aligned)
@@ -142,7 +142,8 @@ gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count_idx, const int c
     const unsigned int value_code = packed_value & ~0xf;
     
     // find prefix of the codeword and size of the prefix
-    const unsigned int packed_prefix = gpujpeg_huffman_gpu_lut[huffman_lut_offset + preceding_zero_count_idx + value_nbits];
+    const int huffman_lut_idx = huffman_lut_offset + preceding_zero_count * 16 + value_nbits;
+    const unsigned int packed_prefix = gpujpeg_huffman_gpu_lut[huffman_lut_idx];
     const unsigned int prefix_nbits = packed_prefix & 31;
     
     // compose packed codeword with its size
@@ -188,9 +189,9 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
     const unsigned int nonzero_bitmap_pairs = nonzero_bitmap_0 | nonzero_bitmap_1;
     
     const int zero_pair_count = __clz(nonzero_bitmap_pairs & nonzero_mask);
-    int zeros_before_even = 32 * (zero_pair_count + tid - 32);
+    int zeros_before_even = 2 * (zero_pair_count + tid - 32);
     if((0x80000000 >> zero_pair_count) > (nonzero_bitmap_1 & nonzero_mask)) {
-        zeros_before_even += 16;
+        zeros_before_even += 1;
     }
     
     // true if any nonzero pixel follows thread's odd pixel
@@ -199,11 +200,11 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
     // count of consecutive zeros before odd value (either one more than 
     // even if even is zero or none if even value itself is nonzero)
     // (the count is actually multiplied by 16)
-    int zeros_before_odd = in_even || !tid ? 0 : zeros_before_even + 16;
+    int zeros_before_odd = in_even || !tid ? 0 : zeros_before_even + 1;
     
     // clear zero counts if no nonzero pixel follows (so that no 16-zero symbols will be emited)
     // otherwise only trim extra bits from the counts of following zeros
-    const int zero_count_mask = nonzero_follows ? 0xF0 : 0;
+    const int zero_count_mask = nonzero_follows ? 0xF : 0;
     zeros_before_even &= zero_count_mask;
     zeros_before_odd &= zero_count_mask;
     
@@ -225,7 +226,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
     // last thread handles special block-termination symbol
     if(0 == ((tid ^ 31) | in_odd)) {
         // this causes selection of huffman symbol at index 256 (which contains the termination symbol)
-        zeros_before_odd = 256;
+        zeros_before_odd = 16;
     }
     
     // each thread gets codeword for its two pixels
@@ -475,7 +476,7 @@ gpujpeg_huffman_encoder_compaction_kernel (
     }
     
     // temp variables for all warps
-    __shared__ volatile unsigned int s_out_offsets[WARPS_NUM];
+    __shared__ uint4* volatile s_out_ptrs[WARPS_NUM];
     
     // get info about the segment
     const unsigned int segment_byte_count = (d_segment[segment_idx].data_compressed_size + 15) & ~15;  // number of bytes rounded up to multiple of 16
@@ -484,13 +485,13 @@ gpujpeg_huffman_encoder_compaction_kernel (
     // first thread of each warp reserves space in output buffer
     if(0 == threadIdx.x) {
          const unsigned int segment_out_offset = atomicAdd(&gpujpeg_huffman_output_byte_count, segment_byte_count);
-         s_out_offsets[threadIdx.y] = segment_out_offset;
+         s_out_ptrs[threadIdx.y] = (uint4*)(d_dest + segment_out_offset);
          d_segment[segment_idx].data_compressed_index = segment_out_offset;
     }
     
     // all threads read output buffer offset for their segment and prepare input and output pointers and number of copy iterations
     const uint4 * d_in = threadIdx.x + (uint4*)(d_src + segment_in_offset);
-    uint4 * d_out = threadIdx.x + (uint4*)(d_dest + s_out_offsets[threadIdx.y]);
+    uint4 * d_out = threadIdx.x + s_out_ptrs[threadIdx.y];
     unsigned int copy_iterations = segment_byte_count / 512; // 512 is number of bytes copied in each iteration (32 threads * 16 bytes per thread)
     
     // copy the data!
