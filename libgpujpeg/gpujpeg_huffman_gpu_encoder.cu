@@ -232,7 +232,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
     // each thread gets codeword for its two pixels
     unsigned int even_code = gpujpeg_huffman_gpu_encode_value(zeros_before_even, in_even, even_lut_offset);
     unsigned int odd_code = gpujpeg_huffman_gpu_encode_value(zeros_before_odd, in_odd, huffman_lut_offset);
-        
+            
     // concatenate both codewords into one if they are short enough
     const unsigned int even_code_size = even_code & 31;
     const unsigned int odd_code_size = odd_code & 31;
@@ -283,6 +283,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
  * 
  * @return void
  */
+template <bool CONTINUOUS_BLOCK_LIST>
 __launch_bounds__(WARPS_NUM * 32, 1024 / (WARPS_NUM * 32))
 __global__ void
 gpujpeg_huffman_encoder_encode_kernel(
@@ -290,7 +291,9 @@ gpujpeg_huffman_encoder_encode_kernel(
     int segment_count, 
     uint8_t* d_data_compressed,
     const uint64_t* const d_block_list,
-    int16_t* const d_data_quantized
+    int16_t* const d_data_quantized,
+    struct gpujpeg_component* const d_component,
+    const int comp_count
 ) {    
     int warpidx = threadIdx.x >> 5;
     int tid = threadIdx.x & 31;
@@ -327,26 +330,49 @@ gpujpeg_huffman_encoder_encode_kernel(
     // Pre-add thread ID to output pointer (it's allways used only with it)
     data_compressed += (tid * 4);
     
-    // Pointer to segment's list of 8x8 blocks and their count
-    const uint64_t* packed_block_info_ptr = d_block_list + segment->block_index_list_begin;
-    int block_count = segment->block_count;
-    
-    // Encode MCUs in segment
-    while(block_count--) {
-        // Get pointer to next block input data and info about its color type
-        const uint64_t packed_block_info = *(packed_block_info_ptr++);
+    // Encode all block in segment
+    if(CONTINUOUS_BLOCK_LIST) {
+        // Get component for current scan
+        const struct gpujpeg_component* component = &d_component[segment->scan_index];
         
-        // Get coder parameters
-        const int last_dc_idx = 256 + (packed_block_info & 0x7f);
+        // mcu size of the component
+        const int comp_mcu_size = component->mcu_size;
         
-        // Get offset to right part of huffman table
-        const int huffman_table_offset = packed_block_info & 0x80 ? (256 + 1) * 2 : 0; // possibly skips luminance tables
+        // Get component data for MCU (first block)
+        const int16_t* block = component->d_data_quantized + (segment->scan_segment_index * component->segment_mcu_count) * comp_mcu_size;
         
-        // Source data pointer
-        int16_t* block = &d_data_quantized[packed_block_info >> 8];
-                    
-        // Encode 8x8 block
-        gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, last_dc_idx, tid, huffman_table_offset);
+        // Get huffman table offset
+        const int huffman_table_offset = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0 : (256 + 1) * 2; // possibly skips luminance tables
+        
+        // Encode MCUs in segment
+        for (int block_count = segment->mcu_count; block_count--;) {
+            // Encode 8x8 block
+            gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, 256, tid, huffman_table_offset);
+            
+            // Advance to next block
+            block += comp_mcu_size;
+        }
+    } else {
+        // Pointer to segment's list of 8x8 blocks and their count
+        const uint64_t* packed_block_info_ptr = d_block_list + segment->block_index_list_begin;
+        
+        // Encode all blocks
+        for(int block_count = segment->block_count; block_count--;) {
+            // Get pointer to next block input data and info about its color type
+            const uint64_t packed_block_info = *(packed_block_info_ptr++);
+            
+            // Get coder parameters
+            const int last_dc_idx = 256 + (packed_block_info & 0x7f);
+            
+            // Get offset to right part of huffman table
+            const int huffman_table_offset = packed_block_info & 0x80 ? (256 + 1) * 2 : 0; // possibly skips luminance tables
+            
+            // Source data pointer
+            int16_t* block = &d_data_quantized[packed_block_info >> 8];
+                        
+            // Encode 8x8 block
+            gpujpeg_huffman_gpu_encoder_encode_block(block, data_compressed, s_out, remaining_codewords, last_dc_idx, tid, huffman_table_offset);
+        }
     }
 
     // flush remaining codewords
@@ -588,20 +614,41 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
     
     assert(coder->param.restart_interval > 0);
     
-    // Configure more shared memory
-    cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel, cudaFuncCachePreferShared);
+    // Configure more shared memory for all kernels
+    cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel<true>, cudaFuncCachePreferShared);
+    cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel<false>, cudaFuncCachePreferShared);
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_serialization_kernel, cudaFuncCachePreferShared);
+    
+    // Select encoder kernel which either expects continuos segments of blocks or uses block lists
+    int comp_count = 1;
+    if ( coder->param.interleaved == 1 )
+        comp_count = coder->param_image.comp_count;
+    assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     
     // Run encoder kernel
     dim3 thread(32 * WARPS_NUM);
     dim3 grid = gpujpeg_huffman_gpu_encoder_grid_size(gpujpeg_div_and_round_up(coder->segment_count, (thread.x / 32)));
-    gpujpeg_huffman_encoder_encode_kernel<<<grid, thread>>>(
-        coder->d_segment, 
-        coder->segment_count, 
-        coder->d_temp_huffman,
-        coder->d_block_list,
-        coder->d_data_quantized
-    );
+    if(comp_count == 1) {
+        gpujpeg_huffman_encoder_encode_kernel<true><<<grid, thread>>>(
+            coder->d_segment, 
+            coder->segment_count, 
+            coder->d_temp_huffman,
+            coder->d_block_list,
+            coder->d_data_quantized,
+            coder->d_component,
+            comp_count
+        );
+    } else { 
+        gpujpeg_huffman_encoder_encode_kernel<false><<<grid, thread>>>(
+            coder->d_segment, 
+            coder->segment_count, 
+            coder->d_temp_huffman,
+            coder->d_block_list,
+            coder->d_data_quantized,
+            coder->d_component,
+            comp_count
+        );
+    }
     cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman encoding failed");
     
