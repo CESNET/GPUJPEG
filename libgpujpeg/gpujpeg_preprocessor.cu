@@ -94,7 +94,7 @@ struct gpujpeg_preprocessor_raw_to_comp_store
             samp_factor_v = comp.sampling_factor.vertical;
         }
         
-        if ( (position_x % samp_factor_h) != 0 && (position_x % samp_factor_v) != 0 )
+        if ( (position_x % samp_factor_h) != 0 || (position_y % samp_factor_v) != 0 )
             return;
         position_x = position_x / samp_factor_h;
         position_y = position_y / samp_factor_v;
