@@ -33,7 +33,7 @@ HUFFMAN_CODER_TABLES_IN_CONSTANT ?= 1
 # Use DCT from NPP library (is faster but causes color change)
 # If set to 0, own implementation is used, it doesn't cause color change
 # but for non-fermi GPUs it is slower
-DCT_FROM_NPP ?= 1
+DCT_FROM_NPP ?= 0
 # Flag if use OpenGL
 USE_OPENGL ?= 0
 # Debug
@@ -85,7 +85,8 @@ CFLAGS += $(COMMONFLAGS) -std=c99
 # CUDA flags
 NVCCFLAGS += $(COMMONFLAGS) \
 	-gencode arch=compute_20,code=sm_20 \
-	-gencode arch=compute_11,code=sm_11
+	-gencode arch=compute_11,code=sm_11 \
+	--ptxas-options="-v"
 # Linker flags
 LDFLAGS += -shared
 

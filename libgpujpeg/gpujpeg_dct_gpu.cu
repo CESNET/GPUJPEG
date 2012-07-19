@@ -107,6 +107,48 @@ unfixo(int x)
     return (x + 0x1000) >> 13;
 }
 
+
+template <typename T>
+__device__ static inline void
+dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
+    T & out0, T & out1, T & out2, T & out3, T & out4, T & out5, T & out6, T & out7)
+{
+    const int tmp0 = in7 + in0;
+    const int tmp1 = in6 + in1;
+    const int tmp2 = in5 + in2;
+    const int tmp3 = in4 + in3;
+    const int tmp4 = in3 - in4;
+    const int tmp5 = in2 - in5;
+    const int tmp6 = in1 - in6;
+    const int tmp7 = in0 - in7;
+
+    const int tmp10 = tmp3 + tmp0;
+    const int tmp11 = tmp2 + tmp1;
+    const int tmp12 = tmp1 - tmp2;
+    const int tmp13 = tmp0 - tmp3;
+
+    const int tmp16 = unfixo(FMUL(tmp6 + tmp5, SIN_1_4));
+    const int tmp15 = unfixo(FMUL(tmp6 - tmp5, COS_1_4));
+
+    const int tmp4b = tmp4 << 2;
+    const int tmp7b = tmp7 << 2;
+
+    const int tmp14 = tmp4b + tmp15;
+    const int tmp25 = tmp4b - tmp15;
+    const int tmp26 = tmp7b - tmp16;
+    const int tmp17 = tmp7b + tmp16;
+    
+    out0 = unfixh(FMUL(tmp10 + tmp11, SIN_1_4));
+    out1 = unfixh(FMUL(tmp17, OCOS_1_16) + FMUL(tmp14, OSIN_1_16));
+    out2 = unfixh(FMUL(tmp13, COS_1_8) + FMUL(tmp12, SIN_1_8));
+    out3 = unfixh(FMUL(tmp26, OCOS_3_16) - FMUL(tmp25, OSIN_3_16));
+    out4 = unfixh(FMUL(tmp10 - tmp11, COS_1_4));
+    out5 = unfixh(FMUL(tmp26, OCOS_5_16) + FMUL(tmp25, OSIN_5_16));
+    out6 = unfixh(FMUL(tmp13, SIN_1_8) - FMUL(tmp12, COS_1_8));
+    out7 = unfixh(FMUL(tmp17, OCOS_7_16) - FMUL(tmp14, OSIN_7_16));
+}
+
+
 /**
  * Performs in-place DCT of vector of 8 elements (used to access columns in shared memory).
  *
@@ -117,73 +159,10 @@ unfixo(int x)
 __device__ void
 gpujpeg_dct_gpu_kernel_inplace(int16_t* SrcDst, int Stride)
 {
-    int in0, in1, in2, in3, in4, in5, in6, in7;
-    int tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-    int tmp10, tmp11, tmp12, tmp13;
-    int tmp14, tmp15, tmp16, tmp17;
-    int tmp25, tmp26;
-
-    int DoubleStride = Stride << 1;
-
-    int16_t* DstPtr = SrcDst;
-    in0 = *DstPtr;
-    DstPtr += Stride;
-    in1 = *DstPtr;
-    DstPtr += Stride;
-    in2 = *DstPtr;
-    DstPtr += Stride;
-    in3 = *DstPtr;
-    DstPtr += Stride;
-    in4 = *DstPtr;
-    DstPtr += Stride;
-    in5 = *DstPtr;
-    DstPtr += Stride;
-    in6 = *DstPtr;
-    DstPtr += Stride;
-    in7 = *DstPtr;
-
-    tmp0 = in7 + in0;
-    tmp1 = in6 + in1;
-    tmp2 = in5 + in2;
-    tmp3 = in4 + in3;
-    tmp4 = in3 - in4;
-    tmp5 = in2 - in5;
-    tmp6 = in1 - in6;
-    tmp7 = in0 - in7;
-
-    tmp10 = tmp3 + tmp0;
-    tmp11 = tmp2 + tmp1;
-    tmp12 = tmp1 - tmp2;
-    tmp13 = tmp0 - tmp3;
-
-    tmp16 = unfixo(FMUL(tmp6 + tmp5, SIN_1_4));
-    tmp15 = unfixo(FMUL(tmp6 - tmp5, COS_1_4));
-
-    tmp4 <<= 2;
-    tmp7 <<= 2;
-
-    tmp14 = tmp4 + tmp15;
-    tmp25 = tmp4 - tmp15;
-    tmp26 = tmp7 - tmp16;
-    tmp17 = tmp7 + tmp16;
-
-    DstPtr = SrcDst;
-    *DstPtr = unfixh(FMUL(tmp10 + tmp11, SIN_1_4));
-    DstPtr += DoubleStride;
-    *DstPtr = unfixh(FMUL(tmp13, COS_1_8) + FMUL(tmp12, SIN_1_8));
-    DstPtr += DoubleStride;
-    *DstPtr = unfixh(FMUL(tmp10 - tmp11, COS_1_4));
-    DstPtr += DoubleStride;
-    *DstPtr = unfixh(FMUL(tmp13, SIN_1_8) - FMUL(tmp12, COS_1_8));
-
-    DstPtr = SrcDst + Stride;
-    *DstPtr = unfixh(FMUL(tmp17, OCOS_1_16) + FMUL(tmp14, OSIN_1_16));
-    DstPtr += DoubleStride;
-    *DstPtr = unfixh(FMUL(tmp26, OCOS_3_16) - FMUL(tmp25, OSIN_3_16));
-    DstPtr += DoubleStride;
-    *DstPtr = unfixh(FMUL(tmp26, OCOS_5_16) + FMUL(tmp25, OSIN_5_16));
-    DstPtr += DoubleStride;
-    *DstPtr = unfixh(FMUL(tmp17, OCOS_7_16) - FMUL(tmp14, OSIN_7_16));
+    dct(SrcDst[Stride * 0], SrcDst[Stride * 1], SrcDst[Stride * 2], SrcDst[Stride * 3],
+        SrcDst[Stride * 4], SrcDst[Stride * 5], SrcDst[Stride * 6], SrcDst[Stride * 7],
+        SrcDst[Stride * 0], SrcDst[Stride * 1], SrcDst[Stride * 2], SrcDst[Stride * 3],
+        SrcDst[Stride * 4], SrcDst[Stride * 5], SrcDst[Stride * 6], SrcDst[Stride * 7]);
 }
 
 /**
@@ -195,61 +174,15 @@ gpujpeg_dct_gpu_kernel_inplace(int16_t* SrcDst, int Stride)
 __device__ void
 gpujpeg_dct_gpu_kernel_inplace(uint32_t* V8)
 {
-    int in0, in1, in2, in3, in4, in5, in6, in7;
-    int tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-    int tmp10, tmp11, tmp12, tmp13;
-    int tmp14, tmp15, tmp16, tmp17;
-    int tmp25, tmp26;
     PackedInteger sh0, sh1, sh2, sh3;
 
     sh0.hInt = V8[0];
     sh1.hInt = V8[1];
     sh2.hInt = V8[2];
     sh3.hInt = V8[3];
-    in0 = sh0.hShort1;
-    in1 = sh0.hShort2;
-    in2 = sh1.hShort1;
-    in3 = sh1.hShort2;
-    in4 = sh2.hShort1;
-    in5 = sh2.hShort2;
-    in6 = sh3.hShort1;
-    in7 = sh3.hShort2;
 
-    tmp0 = in7 + in0;
-    tmp1 = in6 + in1;
-    tmp2 = in5 + in2;
-    tmp3 = in4 + in3;
-    tmp4 = in3 - in4;
-    tmp5 = in2 - in5;
-    tmp6 = in1 - in6;
-    tmp7 = in0 - in7;
-
-    tmp10 = tmp3 + tmp0;
-    tmp11 = tmp2 + tmp1;
-    tmp12 = tmp1 - tmp2;
-    tmp13 = tmp0 - tmp3;
-
-    sh0.hShort1 = unfixh(FMUL(tmp10 + tmp11, SIN_1_4));
-    sh2.hShort1 = unfixh(FMUL(tmp10 - tmp11, COS_1_4));
-
-    sh1.hShort1 = unfixh(FMUL(tmp13, COS_1_8) + FMUL(tmp12, SIN_1_8));
-    sh3.hShort1 = unfixh(FMUL(tmp13, SIN_1_8) - FMUL(tmp12, COS_1_8));
-
-    tmp16 = unfixo(FMUL(tmp6 + tmp5, SIN_1_4));
-    tmp15 = unfixo(FMUL(tmp6 - tmp5, COS_1_4));
-
-    tmp4 <<= 2;
-    tmp7 <<= 2;
-
-    tmp14 = tmp4 + tmp15;
-    tmp25 = tmp4 - tmp15;
-    tmp26 = tmp7 - tmp16;
-    tmp17 = tmp7 + tmp16;
-
-    sh0.hShort2 = unfixh(FMUL(tmp17, OCOS_1_16) + FMUL(tmp14, OSIN_1_16));
-    sh3.hShort2 = unfixh(FMUL(tmp17, OCOS_7_16) - FMUL(tmp14, OSIN_7_16));
-    sh2.hShort2 = unfixh(FMUL(tmp26, OCOS_5_16) + FMUL(tmp25, OSIN_5_16));
-    sh1.hShort2 = unfixh(FMUL(tmp26, OCOS_3_16) - FMUL(tmp25, OSIN_3_16));
+    dct(sh0.hShort1, sh0.hShort2, sh1.hShort1, sh1.hShort2, sh2.hShort1, sh2.hShort2, sh3.hShort1, sh3.hShort2,
+        sh0.hShort1, sh0.hShort2, sh1.hShort1, sh1.hShort2, sh2.hShort1, sh2.hShort2, sh3.hShort1, sh3.hShort2);
 
     V8[0] = sh0.hInt;
     V8[1] = sh1.hInt;
