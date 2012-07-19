@@ -220,7 +220,7 @@ dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5
  * @return None
  */
 __device__ void
-gpujpeg_dct_gpu_kernel_inplace(int16_t* SrcDst, int Stride)
+gpujpeg_dct_gpu_kernel_inplace(float* SrcDst, int Stride)
 {
     dct(SrcDst[Stride * 0], SrcDst[Stride * 1], SrcDst[Stride * 2], SrcDst[Stride * 3],
         SrcDst[Stride * 4], SrcDst[Stride * 5], SrcDst[Stride * 6], SrcDst[Stride * 7],
@@ -400,7 +400,7 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
                        int16_t* output, int output_stride, uint16_t* quantization_table)
 {
     // Shared data
-    __shared__ int16_t block[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
+    __shared__ float block[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
 
     // Block position
     int block_x = IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y);
@@ -412,7 +412,7 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     int thread_x_permutated = (thread_x & 0xFFFFFFE0) | (((thread_x << 1) | ((thread_x >> 4) & 0x1)) & 0x1F);
 
     // Determine position into shared buffer
-    int16_t* block_ptr = block + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
+    float* block_ptr = block + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
 
     // Determine position in source buffer and apply it
     int source_x = IMAD(block_x, GPUJPEG_BLOCK_SIZE, threadIdx.x);
@@ -423,8 +423,8 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     if ( block_x < block_count_x && block_y < block_count_y ) {
         #pragma unroll
         for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-            int16_t coefficient = (int16_t)(source[i * source_stride]);
-            coefficient -= 128;
+            float coefficient = (int16_t)(source[i * source_stride]);
+            coefficient -= 128.0f;
             block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient;
         }
     }
@@ -438,18 +438,9 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
 
     // Quantization
     for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-        uint16_t quantization = quantization_table[i * GPUJPEG_BLOCK_SIZE + threadIdx.x];
-        int coefficient = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
-
-        if ( coefficient < 0 ) {
-            coefficient = -coefficient;
-            coefficient = (coefficient * quantization + 16384) / 32767;
-            coefficient = -coefficient;
-        } else {
-            coefficient = (coefficient * quantization + 16384) / 32767;
-        }
-
-        block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient;
+        float quantization = (quantization_table[i * GPUJPEG_BLOCK_SIZE + threadIdx.x]) / 32767.0f;
+        float coefficient = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
+        block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient * quantization;
     }
     __syncthreads();
 
@@ -462,7 +453,7 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     if ( block_x < block_count_x && block_y < block_count_y ) {
         #pragma unroll
         for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
-            output[i * GPUJPEG_BLOCK_SIZE] = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
+            output[i * GPUJPEG_BLOCK_SIZE] = round(block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE]);
     }
 }
 
