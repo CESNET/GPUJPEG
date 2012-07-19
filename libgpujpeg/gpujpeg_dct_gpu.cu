@@ -113,39 +113,104 @@ __device__ static inline void
 dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
     T & out0, T & out1, T & out2, T & out3, T & out4, T & out5, T & out6, T & out7)
 {
-    const int tmp0 = in7 + in0;
-    const int tmp1 = in6 + in1;
-    const int tmp2 = in5 + in2;
-    const int tmp3 = in4 + in3;
-    const int tmp4 = in3 - in4;
-    const int tmp5 = in2 - in5;
-    const int tmp6 = in1 - in6;
-    const int tmp7 = in0 - in7;
+//     const int tmp0 = in7 + in0;
+//     const int tmp1 = in6 + in1;
+//     const int tmp2 = in5 + in2;
+//     const int tmp3 = in4 + in3;
+//     const int tmp4 = in3 - in4;
+//     const int tmp5 = in2 - in5;
+//     const int tmp6 = in1 - in6;
+//     const int tmp7 = in0 - in7;
+// 
+//     const int tmp10 = tmp3 + tmp0;
+//     const int tmp11 = tmp2 + tmp1;
+//     const int tmp12 = tmp1 - tmp2;
+//     const int tmp13 = tmp0 - tmp3;
+// 
+//     const int tmp16 = unfixo(FMUL(tmp6 + tmp5, SIN_1_4));
+//     const int tmp15 = unfixo(FMUL(tmp6 - tmp5, COS_1_4));
+// 
+//     const int tmp4b = tmp4 << 2;
+//     const int tmp7b = tmp7 << 2;
+// 
+//     const int tmp14 = tmp4b + tmp15;
+//     const int tmp25 = tmp4b - tmp15;
+//     const int tmp26 = tmp7b - tmp16;
+//     const int tmp17 = tmp7b + tmp16;
+//     
+//     out0 = unfixh(FMUL(tmp10 + tmp11, SIN_1_4));
+//     out1 = unfixh(FMUL(tmp17, OCOS_1_16) + FMUL(tmp14, OSIN_1_16));
+//     out2 = unfixh(FMUL(tmp13, COS_1_8) + FMUL(tmp12, SIN_1_8));
+//     out3 = unfixh(FMUL(tmp26, OCOS_3_16) - FMUL(tmp25, OSIN_3_16));
+//     out4 = unfixh(FMUL(tmp10 - tmp11, COS_1_4));
+//     out5 = unfixh(FMUL(tmp26, OCOS_5_16) + FMUL(tmp25, OSIN_5_16));
+//     out6 = unfixh(FMUL(tmp13, SIN_1_8) - FMUL(tmp12, COS_1_8));
+//     out7 = unfixh(FMUL(tmp17, OCOS_7_16) - FMUL(tmp14, OSIN_7_16));
 
-    const int tmp10 = tmp3 + tmp0;
-    const int tmp11 = tmp2 + tmp1;
-    const int tmp12 = tmp1 - tmp2;
-    const int tmp13 = tmp0 - tmp3;
 
-    const int tmp16 = unfixo(FMUL(tmp6 + tmp5, SIN_1_4));
-    const int tmp15 = unfixo(FMUL(tmp6 - tmp5, COS_1_4));
-
-    const int tmp4b = tmp4 << 2;
-    const int tmp7b = tmp7 << 2;
-
-    const int tmp14 = tmp4b + tmp15;
-    const int tmp25 = tmp4b - tmp15;
-    const int tmp26 = tmp7b - tmp16;
-    const int tmp17 = tmp7b + tmp16;
+    const float pi = 3.14159265f;
     
-    out0 = unfixh(FMUL(tmp10 + tmp11, SIN_1_4));
-    out1 = unfixh(FMUL(tmp17, OCOS_1_16) + FMUL(tmp14, OSIN_1_16));
-    out2 = unfixh(FMUL(tmp13, COS_1_8) + FMUL(tmp12, SIN_1_8));
-    out3 = unfixh(FMUL(tmp26, OCOS_3_16) - FMUL(tmp25, OSIN_3_16));
-    out4 = unfixh(FMUL(tmp10 - tmp11, COS_1_4));
-    out5 = unfixh(FMUL(tmp26, OCOS_5_16) + FMUL(tmp25, OSIN_5_16));
-    out6 = unfixh(FMUL(tmp13, SIN_1_8) - FMUL(tmp12, COS_1_8));
-    out7 = unfixh(FMUL(tmp17, OCOS_7_16) - FMUL(tmp14, OSIN_7_16));
+    const float scale0 = sin(pi / 4) / 2;
+    const float scale1 = 1 / (2 * sin(7 * pi / 16));
+    const float scale2 = 1 / (2 * sin(3 * pi / 8));
+    const float scale3 = 1 / (2 * cos(3 * pi / 16));
+    const float scale4 = sin(pi / 4);
+    const float scale5 = cos(3 * pi / 16) / 2;
+    const float scale6 = sin(3 * pi / 8) / 2;
+    const float scale7 = sin(7 * pi / 16) / 2;
+    
+    const float p1 = 0.4142135623f;
+    const float p2 = 0.6681786379f;
+    const float p3 = 0.1989123673f;
+    const float p4 = 0.4142135623f;
+    const float p5 = 0.4142135623f;
+    const float u1 = 0.3535533905f;
+    const float u2 = 0.4619397662f;
+    const float u3 = 0.1913417161f;
+    const float u4 = 0.7071067811f;
+    
+    float a0 = in7 + in0;
+    float a1 = in6 + in1;
+    float a2 = in5 + in2;
+    float a3 = in4 + in3;
+    float a4 = in3 - in4;
+    float a5 = in2 - in5;
+    float a6 = in1 - in6;
+    float a7 = in0 - in7;
+    
+    a5 = a5 - a6 * p4;
+    a6 = a6 + a5 * u4;
+    a5 = a6 * p5 - a5;
+    
+    float b0 = a0 + a3;
+    float b1 = a1 + a2;
+    float b2 = a1 - a2;
+    float b3 = a0 - a3;
+    float b4 = a4 + a5;
+    float b5 = a4 - a5;
+    float b6 = a7 - a6;
+    float b7 = a7 + a6;
+    
+    b0 = b0 + b1;
+    b1 = 0.5f * b0 - b1;
+    
+    b2 = p1 * b3 - b2;
+    b3 = b3 - u1 * b2;
+    
+    b4 = p3 * b7 - b4;
+    b7 = b7 - u3 * b4;
+    
+    b5 = b5 + p2 * b6;
+    b6 = b6 - u2 * b5;
+    
+    out0 = b0 * scale0;
+    out1 = b7 * scale7;
+    out2 = b3 * scale3;
+    out3 = b6 * scale6;
+    out4 = b1 * scale1;
+    out5 = b5 * scale5;
+    out6 = b2 * scale2;
+    out7 = b4 * scale4;
 }
 
 
