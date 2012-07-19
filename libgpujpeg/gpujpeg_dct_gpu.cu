@@ -148,16 +148,14 @@ dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5
 //     out7 = unfixh(FMUL(tmp17, OCOS_7_16) - FMUL(tmp14, OSIN_7_16));
 
 
-    const float pi = 3.14159265f;
-    
-    const float scale0 = sin(pi / 4) / 2;
-    const float scale1 = 1 / (2 * sin(7 * pi / 16));
-    const float scale2 = 1 / (2 * sin(3 * pi / 8));
-    const float scale3 = 1 / (2 * cos(3 * pi / 16));
-    const float scale4 = sin(pi / 4);
-    const float scale5 = cos(3 * pi / 16) / 2;
-    const float scale6 = sin(3 * pi / 8) / 2;
-    const float scale7 = sin(7 * pi / 16) / 2;
+    const float scale0 = 0.353553390593274f; // sin(pi / 4) / 2
+    const float scale1 = 0.509795579104159f; // 1 / (2 * sin(7 * pi / 16))
+    const float scale2 = 0.541196100146197f; // 1 / (2 * sin(3 * pi / 8))
+    const float scale3 = 0.601344886935045f; // 1 / (2 * cos(3 * pi / 16))
+    const float scale4 = 0.707106781186547f; // sin(pi / 4)
+    const float scale5 = 0.415734806151273f; // cos(3 * pi / 16) / 2
+    const float scale6 = 0.461939766255643f; // sin(3 * pi / 8) / 2
+    const float scale7 = 0.490392640201615f; // sin(7 * pi / 16) / 2
     
     const float p1 = 0.4142135623f;
     const float p2 = 0.6681786379f;
