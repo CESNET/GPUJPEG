@@ -228,30 +228,6 @@ gpujpeg_dct_gpu_kernel_inplace(int16_t* SrcDst, int Stride)
         SrcDst[Stride * 4], SrcDst[Stride * 5], SrcDst[Stride * 6], SrcDst[Stride * 7]);
 }
 
-/**
- * Performs in-place DCT of vector of 8 elements (used to access rows in shared memory).
- *
- * @param V8 [IN/OUT] - Pointer to the first two elements of vector
- * @return None
- */
-__device__ void
-gpujpeg_dct_gpu_kernel_inplace(uint32_t* V8)
-{
-    PackedInteger sh0, sh1, sh2, sh3;
-
-    sh0.hInt = V8[0];
-    sh1.hInt = V8[1];
-    sh2.hInt = V8[2];
-    sh3.hInt = V8[3];
-
-    dct(sh0.hShort1, sh0.hShort2, sh1.hShort1, sh1.hShort2, sh2.hShort1, sh2.hShort2, sh3.hShort1, sh3.hShort2,
-        sh0.hShort1, sh0.hShort2, sh1.hShort1, sh1.hShort2, sh2.hShort1, sh2.hShort2, sh3.hShort1, sh3.hShort2);
-
-    V8[0] = sh0.hInt;
-    V8[1] = sh1.hInt;
-    V8[2] = sh2.hInt;
-    V8[3] = sh3.hInt;
-}
 
 /**
  * Performs in-place IDCT of vector of 8 elements (used to access columns in shared memory).
@@ -423,11 +399,6 @@ __global__ void
 gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, int source_stride,
                        int16_t* output, int output_stride, uint16_t* quantization_table)
 {
-// For pre-fermi GPUs, quantization table in constant memory is faster
-#if __CUDA_ARCH__ < 200
-    quantization_table = gpujpeg_dct_gpu_quantization_table;
-#endif
-    
     // Shared data
     __shared__ int16_t block[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
 
@@ -450,20 +421,6 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
 
     // Load data to shared memory memory
     if ( block_x < block_count_x && block_y < block_count_y ) {
-        
-// For pre-fermi GPUs, loading from global memory by 4 bytes is faster
-#if __CUDA_ARCH__ < 200
-        __shared__ uint8_t block_byte[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
-        uint8_t* block_byte_ptr = block_byte + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
-        if ( threadIdx.x % 4 == 0 ) {
-            #pragma unroll
-            for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
-                ((uint32_t*)block_byte_ptr)[i * (GPUJPEG_DCT_THREAD_BLOCK_STRIDE / 4)] = ((uint32_t*)source)[i * (source_stride / 4)];
-        }
-        source = block_byte_ptr;
-        source_stride = GPUJPEG_DCT_THREAD_BLOCK_STRIDE;
-#endif
-    
         #pragma unroll
         for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
             int16_t coefficient = (int16_t)(source[i * source_stride]);
@@ -476,7 +433,7 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     __syncthreads();
     gpujpeg_dct_gpu_kernel_inplace(block + thread_y * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + thread_x_permutated, GPUJPEG_DCT_THREAD_BLOCK_STRIDE);
     __syncthreads();
-    gpujpeg_dct_gpu_kernel_inplace((uint32_t*)(block + (thread_y + threadIdx.x) * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + threadIdx.y * GPUJPEG_BLOCK_SIZE));
+    gpujpeg_dct_gpu_kernel_inplace(block + (thread_y + threadIdx.x) * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + threadIdx.y * GPUJPEG_BLOCK_SIZE, 1);
     __syncthreads();
 
     // Quantization
@@ -497,16 +454,15 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     __syncthreads();
 
     // Determine position in output buffer and apply it
-    int output_x = IMAD(IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y), GPUJPEG_BLOCK_SQUARED_SIZE, threadIdx.x * 2);
+    int output_x = IMAD(IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y), GPUJPEG_BLOCK_SQUARED_SIZE, threadIdx.x);
     int output_y = IMAD(blockIdx.y, GPUJPEG_DCT_BLOCK_COUNT_Y, threadIdx.z);
     output += IMAD(output_y, output_stride, output_x);
 
-    // Store data to global memory, only half of threads in each cell performs data moving (each thread moves 2 shorts)
-    int16_t* block_store_ptr = block_ptr + threadIdx.x; // Shortcut for "IMAD(..., threadIdx.x * 2)"
-    if ( threadIdx.x < (GPUJPEG_BLOCK_SIZE / 2) && block_x < block_count_x && block_y < block_count_y ) {
+    // Store data to global memory
+    if ( block_x < block_count_x && block_y < block_count_y ) {
         #pragma unroll
         for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
-            ((int*)output)[i * (GPUJPEG_BLOCK_SIZE / 2)] = ((int*)block_store_ptr)[i * (GPUJPEG_DCT_THREAD_BLOCK_STRIDE / 2)];
+            output[i * GPUJPEG_BLOCK_SIZE] = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
     }
 }
 
