@@ -111,7 +111,7 @@ unfixo(int x)
 template <typename T>
 __device__ static inline void
 dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
-    T & out0, T & out1, T & out2, T & out3, T & out4, T & out5, T & out6, T & out7)
+    volatile T & out0, volatile T & out1, volatile T & out2, volatile T & out3, volatile T & out4, volatile T & out5, volatile T & out6, volatile T & out7)
 {
 //     const int tmp0 = in7 + in0;
 //     const int tmp1 = in6 + in1;
@@ -395,66 +395,188 @@ __constant__ uint16_t gpujpeg_dct_gpu_quantization_table[64];
  * @param table         [IN]  - Quantization table
  * @return None
  */
+template <int WARP_COUNT>
 __global__ void
 gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, int source_stride,
                        int16_t* output, int output_stride, uint16_t* quantization_table)
 {
-    // Shared data
-    __shared__ float block[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
-
-    // Block position
-    int block_x = IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y);
-    int block_y = IMAD(blockIdx.y, GPUJPEG_DCT_BLOCK_COUNT_Y, threadIdx.z);
-
-    // Thread position in thread block
-    int thread_x = IMAD(threadIdx.y, GPUJPEG_BLOCK_SIZE, threadIdx.x);
-    int thread_y = IMUL(threadIdx.z, GPUJPEG_BLOCK_SIZE);
-    int thread_x_permutated = (thread_x & 0xFFFFFFE0) | (((thread_x << 1) | ((thread_x >> 4) & 0x1)) & 0x1F);
-
-    // Determine position into shared buffer
-    float* block_ptr = block + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
-
-    // Determine position in source buffer and apply it
-    int source_x = IMAD(block_x, GPUJPEG_BLOCK_SIZE, threadIdx.x);
-    int source_y = IMUL(block_y, GPUJPEG_BLOCK_SIZE);
-    source += IMAD(source_y, source_stride, source_x);
-
-    // Load data to shared memory memory
-    if ( block_x < block_count_x && block_y < block_count_y ) {
-        #pragma unroll
-        for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-            float coefficient = (int16_t)(source[i * source_stride]);
-            coefficient -= 128.0f;
-            block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient;
-        }
+    // each warp processes 4 8x8 blocks (horizontally neighboring)
+    const int block_idx_x = threadIdx.x >> 3;
+    const int block_idx_y = threadIdx.y;
+    
+    // offset of threadblocks's blocks in the image (along both axes)
+    const int block_offset_x = blockIdx.x * 4;
+    const int block_offset_y = blockIdx.y * WARP_COUNT;
+    
+    // true if thread's block is not out of image
+    const bool processing = block_offset_x + block_idx_x < block_count_x
+                         && block_offset_y + block_idx_y < block_count_y;
+    
+    // stop if out of block range
+    if(!processing) {
+        return;
     }
-
-    // Perform DCT
-    __syncthreads();
-    gpujpeg_dct_gpu_kernel_inplace(block + thread_y * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + thread_x_permutated, GPUJPEG_DCT_THREAD_BLOCK_STRIDE);
-    __syncthreads();
-    gpujpeg_dct_gpu_kernel_inplace(block + (thread_y + threadIdx.x) * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + threadIdx.y * GPUJPEG_BLOCK_SIZE, 1);
-    __syncthreads();
-
-    // Quantization
-    for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-        float quantization = (quantization_table[i * GPUJPEG_BLOCK_SIZE + threadIdx.x]) / 32767.0f;
-        float coefficient = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
-        block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient * quantization;
+    
+    // index of row/column processed by this thread within its 8x8 block
+    const int dct_idx = threadIdx.x & 7;
+    
+    
+    
+    // Data type of transformed coefficients
+    typedef float dct_t;
+    
+    // dimensions of shared buffer (compile time constants)
+    enum {
+        // 4 8x8 blocks, padded to odd number of 4byte banks
+        SHARED_STRIDE = ((32 * sizeof(dct_t)) | 4) / sizeof(dct_t),
+        
+        // number of shared buffer items needed for 1 warp
+        SHARED_SIZE_WARP = SHARED_STRIDE * 8,
+        
+        // total number of items in shared buffer
+        SHARED_SIZE_TOTAL = SHARED_SIZE_WARP * WARP_COUNT
+    };
+    
+    // buffer for transpositions of all blocks
+    __shared__ volatile dct_t s_transposition_all[SHARED_SIZE_TOTAL];
+    
+    // pointer to begin of transposition buffer for thread's block
+    volatile dct_t * const s_transposition = s_transposition_all + block_idx_y * SHARED_SIZE_WARP + block_idx_x * 8;
+    
+    
+    
+    
+    
+    
+    // Load input coefficients (each thread loads 1 row of 8 coefficients from its 8x8 block)
+    const int in_x = (block_offset_x + block_idx_x) * 8;
+    const int in_y = (block_offset_y + block_idx_y) * 8 + dct_idx;
+    const int in_offset = in_x + in_y * source_stride;
+    const ushort4 in = *((ushort4*)(source + in_offset));
+    
+    // separate input coefficients and apply level shift (assuming little endian hardware)
+    dct_t dct0 = (in.x & 0xFF) - 128;
+    dct_t dct1 = (in.x >> 8) - 128;
+    dct_t dct2 = (in.y & 0xFF) - 128;
+    dct_t dct3 = (in.y >> 8) - 128;
+    dct_t dct4 = (in.z & 0xFF) - 128;
+    dct_t dct5 = (in.z >> 8) - 128;
+    dct_t dct6 = (in.w & 0xFF) - 128;
+    dct_t dct7 = (in.w >> 8) - 128;
+    
+    
+    
+    
+    
+    // repeat "1D transform and transpose" two times
+    #pragma unroll
+    for(int i = 0; i < 2; i++) {
+        // destination pointer into shared transpose buffer (each thread saves one column)
+        volatile dct_t * const s_dest = s_transposition + dct_idx;
+        
+        dct(dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7,
+            s_dest[SHARED_STRIDE * 0],
+            s_dest[SHARED_STRIDE * 1],
+            s_dest[SHARED_STRIDE * 2],
+            s_dest[SHARED_STRIDE * 3],
+            s_dest[SHARED_STRIDE * 4],
+            s_dest[SHARED_STRIDE * 5],
+            s_dest[SHARED_STRIDE * 6],
+            s_dest[SHARED_STRIDE * 7]
+        );
+        
+        // read coefficients back - each thread read one row (no need to sync - only thread within same warp work on each block)
+        volatile dct_t * s_src = s_transposition + SHARED_STRIDE * dct_idx;
+        dct0 = s_src[0];
+        dct1 = s_src[1];
+        dct2 = s_src[2];
+        dct3 = s_src[3];
+        dct4 = s_src[4];
+        dct5 = s_src[5];
+        dct6 = s_src[6];
+        dct7 = s_src[7];
     }
-    __syncthreads();
-
-    // Determine position in output buffer and apply it
-    int output_x = IMAD(IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y), GPUJPEG_BLOCK_SQUARED_SIZE, threadIdx.x);
-    int output_y = IMAD(blockIdx.y, GPUJPEG_DCT_BLOCK_COUNT_Y, threadIdx.z);
-    output += IMAD(output_y, output_stride, output_x);
-
-    // Store data to global memory
-    if ( block_x < block_count_x && block_y < block_count_y ) {
-        #pragma unroll
-        for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
-            output[i * GPUJPEG_BLOCK_SIZE] = round(block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE]);
-    }
+    
+    // apply qunatzation to the row of coefficients
+    const uint16_t * const quantization_row = quantization_table + 8 * dct_idx;
+    dct0 *= quantization_row[0] * 3.05185094759972e-05f;
+    dct1 *= quantization_row[1] * 3.05185094759972e-05f;
+    dct2 *= quantization_row[2] * 3.05185094759972e-05f;
+    dct3 *= quantization_row[3] * 3.05185094759972e-05f;
+    dct4 *= quantization_row[4] * 3.05185094759972e-05f;
+    dct5 *= quantization_row[5] * 3.05185094759972e-05f;
+    dct6 *= quantization_row[6] * 3.05185094759972e-05f;
+    dct7 *= quantization_row[7] * 3.05185094759972e-05f;
+    
+    // save output row packed into 16 bytes
+    const int out_x = (block_offset_x + block_idx_x) * 64; // 64 coefficients per one transformed and quantized block
+    const int out_y = (block_offset_y + block_idx_y) * output_stride;
+    ((uint4*)(output + out_x + out_y))[dct_idx] = make_uint4(
+        (int)dct0 + 0x10000 * (int)dct1,
+        (int)dct2 + 0x10000 * (int)dct3,
+        (int)dct4 + 0x10000 * (int)dct5,
+        (int)dct6 + 0x10000 * (int)dct7
+    );
+    
+    
+    
+    
+//     // Shared data
+//     __shared__ float block[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
+// 
+//     // Block position
+//     int block_x = IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y);
+//     int block_y = IMAD(blockIdx.y, GPUJPEG_DCT_BLOCK_COUNT_Y, threadIdx.z);
+// 
+//     // Thread position in thread block
+//     int thread_x = IMAD(threadIdx.y, GPUJPEG_BLOCK_SIZE, threadIdx.x);
+//     int thread_y = IMUL(threadIdx.z, GPUJPEG_BLOCK_SIZE);
+//     int thread_x_permutated = (thread_x & 0xFFFFFFE0) | (((thread_x << 1) | ((thread_x >> 4) & 0x1)) & 0x1F);
+// 
+//     // Determine position into shared buffer
+//     float* block_ptr = block + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
+// 
+//     // Determine position in source buffer and apply it
+//     int source_x = IMAD(block_x, GPUJPEG_BLOCK_SIZE, threadIdx.x);
+//     int source_y = IMUL(block_y, GPUJPEG_BLOCK_SIZE);
+//     source += IMAD(source_y, source_stride, source_x);
+// 
+//     // Load data to shared memory memory
+//     if ( block_x < block_count_x && block_y < block_count_y ) {
+//         #pragma unroll
+//         for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
+//             float coefficient = (int16_t)(source[i * source_stride]);
+//             coefficient -= 128.0f;
+//             block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient;
+//         }
+//     }
+// 
+//     // Perform DCT
+//     __syncthreads();
+//     gpujpeg_dct_gpu_kernel_inplace(block + thread_y * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + thread_x_permutated, GPUJPEG_DCT_THREAD_BLOCK_STRIDE);
+//     __syncthreads();
+//     gpujpeg_dct_gpu_kernel_inplace(block + (thread_y + threadIdx.x) * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + threadIdx.y * GPUJPEG_BLOCK_SIZE, 1);
+//     __syncthreads();
+// 
+//     // Quantization
+//     for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
+//         float quantization = (quantization_table[i * GPUJPEG_BLOCK_SIZE + threadIdx.x]) / 32767.0f;
+//         float coefficient = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
+//         block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient * quantization;
+//     }
+//     __syncthreads();
+// 
+//     // Determine position in output buffer and apply it
+//     int output_x = IMAD(IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y), GPUJPEG_BLOCK_SQUARED_SIZE, threadIdx.x);
+//     int output_y = IMAD(blockIdx.y, GPUJPEG_DCT_BLOCK_COUNT_Y, threadIdx.z);
+//     output += IMAD(output_y, output_stride, output_x);
+// 
+//     // Store data to global memory
+//     if ( block_x < block_count_x && block_y < block_count_y ) {
+//         #pragma unroll
+//         for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
+//             output[i * GPUJPEG_BLOCK_SIZE] = round(block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE]);
+//     }
 }
 
 /** Quantization table */
@@ -605,18 +727,16 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
         );
         gpujpeg_cuda_check_error("Copy DCT quantization table to constant memory");
 
+        enum { WARP_COUNT = 4 };
+        
         // Perform block-wise DCT processing
         dim3 dct_grid(
-            gpujpeg_div_and_round_up(block_count_x, GPUJPEG_DCT_BLOCK_COUNT_X),
-            gpujpeg_div_and_round_up(block_count_y, GPUJPEG_DCT_BLOCK_COUNT_Y),
+            gpujpeg_div_and_round_up(block_count_x, 4),
+            gpujpeg_div_and_round_up(block_count_y, WARP_COUNT),
             1
         );
-        dim3 dct_block(
-            GPUJPEG_BLOCK_SIZE,
-            GPUJPEG_DCT_BLOCK_COUNT_X,
-            GPUJPEG_DCT_BLOCK_COUNT_Y
-        );
-        gpujpeg_dct_gpu_kernel<<<dct_grid, dct_block>>>(
+        dim3 dct_block(4 * 8, WARP_COUNT);
+        gpujpeg_dct_gpu_kernel<WARP_COUNT><<<dct_grid, dct_block>>>(
             block_count_x,
             block_count_y,
             component->d_data,
