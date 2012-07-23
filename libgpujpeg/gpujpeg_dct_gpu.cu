@@ -111,7 +111,8 @@ unfixo(int x)
 template <typename T>
 __device__ static inline void
 dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
-    volatile T & out0, volatile T & out1, volatile T & out2, volatile T & out3, volatile T & out4, volatile T & out5, volatile T & out6, volatile T & out7)
+    volatile T & out0, volatile T & out1, volatile T & out2, volatile T & out3, volatile T & out4, volatile T & out5, volatile T & out6, volatile T & out7,
+    const float level_shift = 0.0f)
 {
 //     const int tmp0 = in7 + in0;
 //     const int tmp1 = in6 + in1;
@@ -148,67 +149,134 @@ dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5
 //     out7 = unfixh(FMUL(tmp17, OCOS_7_16) - FMUL(tmp14, OSIN_7_16));
 
 
-    const float scale0 = 0.353553390593274f; // sin(pi / 4) / 2
-    const float scale1 = 0.509795579104159f; // 1 / (2 * sin(7 * pi / 16))
-    const float scale2 = 0.541196100146197f; // 1 / (2 * sin(3 * pi / 8))
-    const float scale3 = 0.601344886935045f; // 1 / (2 * cos(3 * pi / 16))
-    const float scale4 = 0.707106781186547f; // sin(pi / 4)
-    const float scale5 = 0.415734806151273f; // cos(3 * pi / 16) / 2
-    const float scale6 = 0.461939766255643f; // sin(3 * pi / 8) / 2
-    const float scale7 = 0.490392640201615f; // sin(7 * pi / 16) / 2
+//     const float scale0 = 0.353553390593274f; // sin(pi / 4) / 2
+//     const float scale1 = 0.509795579104159f; // 1 / (2 * sin(7 * pi / 16))
+//     const float scale2 = 0.541196100146197f; // 1 / (2 * sin(3 * pi / 8))
+//     const float scale3 = 0.601344886935045f; // 1 / (2 * cos(3 * pi / 16))
+//     const float scale4 = 0.707106781186547f; // sin(pi / 4)
+//     const float scale5 = 0.415734806151273f; // cos(3 * pi / 16) / 2
+//     const float scale6 = 0.461939766255643f; // sin(3 * pi / 8) / 2
+//     const float scale7 = 0.490392640201615f; // sin(7 * pi / 16) / 2
+//     
+//     const float p1 = 0.4142135623f;
+//     const float p2 = 0.6681786379f;
+//     const float p3 = 0.1989123673f;
+//     const float p4 = 0.4142135623f;
+//     const float p5 = 0.4142135623f;
+//     const float u1 = 0.3535533905f;
+//     const float u2 = 0.4619397662f;
+//     const float u3 = 0.1913417161f;
+//     const float u4 = 0.7071067811f;
+//     
+//     float a0 = in7 + in0;
+//     float a1 = in6 + in1;
+//     float a2 = in5 + in2;
+//     float a3 = in4 + in3;
+//     float a4 = in3 - in4;
+//     float a5 = in2 - in5;
+//     float a6 = in1 - in6;
+//     float a7 = in0 - in7;
+//     
+//     a5 = a5 - a6 * p4;
+//     a6 = a6 + a5 * u4;
+//     a5 = a6 * p5 - a5;
+//     
+//     float b0 = a0 + a3;
+//     float b1 = a1 + a2;
+//     float b2 = a1 - a2;
+//     float b3 = a0 - a3;
+//     float b4 = a4 + a5;
+//     float b5 = a4 - a5;
+//     float b6 = a7 - a6;
+//     float b7 = a7 + a6;
+//     
+//     b0 = b0 + b1;
+//     b1 = 0.5f * b0 - b1;
+//     
+//     b2 = p1 * b3 - b2;
+//     b3 = b3 - u1 * b2;
+//     
+//     b4 = p3 * b7 - b4;
+//     b7 = b7 - u3 * b4;
+//     
+//     b5 = b5 + p2 * b6;
+//     b6 = b6 - u2 * b5;
+//     
+//     out0 = b0 * scale0;
+//     out1 = b7 * scale7;
+//     out2 = b3 * scale3;
+//     out3 = b6 * scale6;
+//     out4 = b1 * scale1;
+//     out5 = b5 * scale5;
+//     out6 = b2 * scale2;
+//     out7 = b4 * scale4;
     
-    const float p1 = 0.4142135623f;
-    const float p2 = 0.6681786379f;
-    const float p3 = 0.1989123673f;
-    const float p4 = 0.4142135623f;
-    const float p5 = 0.4142135623f;
-    const float u1 = 0.3535533905f;
-    const float u2 = 0.4619397662f;
-    const float u3 = 0.1913417161f;
-    const float u4 = 0.7071067811f;
     
-    float a0 = in7 + in0;
-    float a1 = in6 + in1;
-    float a2 = in5 + in2;
-    float a3 = in4 + in3;
-    float a4 = in3 - in4;
-    float a5 = in2 - in5;
-    float a6 = in1 - in6;
-    float a7 = in0 - in7;
+    /* Load data into workspace */
+    const float tmp0 = in0 + in7;
+    const float tmp7 = in0 - in7;
+    const float tmp1 = in1 + in6;
+    const float tmp6 = in1 - in6;
+    const float tmp2 = in2 + in5;
+    const float tmp5 = in2 - in5;
+    const float tmp3 = in3 + in4;
+    const float tmp4 = in3 - in4;
+
+    {
+        /* Even part */
+
+        const float tmp10 = tmp0 + tmp3;        /* phase 2 */
+        const float tmp13 = tmp0 - tmp3;
+        const float tmp11 = tmp1 + tmp2;
+        const float tmp12 = tmp1 - tmp2;
+
+        /* Apply unsigned->signed conversion */
+        out0 = tmp10 + tmp11 - 8 * level_shift; /* phase 3 */
+        out4 = tmp10 - tmp11;
+
+        const float z1 = (tmp12 + tmp13) * 0.707106781f; /* c4 */
+        out2 = tmp13 + z1;    /* phase 5 */
+        out6 = tmp13 - z1;
+    }
+
+    {
+        /* Odd part */
+
+        const float tmp10 = tmp4 + tmp5;        /* phase 2 */
+        const float tmp11 = tmp5 + tmp6;
+        const float tmp12 = tmp6 + tmp7;
+
+        /* The rotator is modified from fig 4-8 to avoid extra negations. */
+        const float z5 = (tmp10 - tmp12) * 0.382683433f; /* c6 */
+        const float z2 = 0.541196100f * tmp10 + z5; /* c2-c6 */
+        const float z4 = 1.306562965f * tmp12 + z5; /* c2+c6 */
+        const float z3 = tmp11 * 0.707106781f; /* c4 */
+
+        const float z11 = tmp7 + z3;            /* phase 5 */
+        const float z13 = tmp7 - z3;
+
+        out5 = z13 + z2;      /* phase 6 */
+        out3 = z13 - z2;
+        out1 = z11 + z4;
+        out7 = z11 - z4;
+    }
     
-    a5 = a5 - a6 * p4;
-    a6 = a6 + a5 * u4;
-    a5 = a6 * p5 - a5;
     
-    float b0 = a0 + a3;
-    float b1 = a1 + a2;
-    float b2 = a1 - a2;
-    float b3 = a0 - a3;
-    float b4 = a4 + a5;
-    float b5 = a4 - a5;
-    float b6 = a7 - a6;
-    float b7 = a7 + a6;
     
-    b0 = b0 + b1;
-    b1 = 0.5f * b0 - b1;
     
-    b2 = p1 * b3 - b2;
-    b3 = b3 - u1 * b2;
+    // TODO: merge following unscaling with quantization!
+    const float q[8] = {1.0, 1.387039845, 1.306562965, 1.175875602, 1.0, 0.785694958, 0.541196100, 0.275899379};
+    const float t = 2.82842712474619f;  //  = 4 / sqrt(2)  ??!!?
     
-    b4 = p3 * b7 - b4;
-    b7 = b7 - u3 * b4;
+    out0 /= q[0] * t;
+    out1 /= q[1] * t;
+    out2 /= q[2] * t;
+    out3 /= q[3] * t;
+    out4 /= q[4] * t;
+    out5 /= q[5] * t;
+    out6 /= q[6] * t;
+    out7 /= q[7] * t;
     
-    b5 = b5 + p2 * b6;
-    b6 = b6 - u2 * b5;
-    
-    out0 = b0 * scale0;
-    out1 = b7 * scale7;
-    out2 = b3 * scale3;
-    out3 = b6 * scale6;
-    out4 = b1 * scale1;
-    out5 = b5 * scale5;
-    out6 = b2 * scale2;
-    out7 = b4 * scale4;
 }
 
 
