@@ -257,7 +257,10 @@ gpujpeg_idct_gpu_kernel_inplace(uint32_t* V8)
 }
 
 
-
+/**
+ * 1D 8point DCT, with optional level shift (must be premultiplied).
+ * Copied from Independent JPEG Group JPEG implementation, from file jfdctflt.c
+ */
 template <typename T>
 __device__ static inline void
 dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
