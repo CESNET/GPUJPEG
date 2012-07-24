@@ -239,27 +239,26 @@ dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5
         out6 = tmp13 - z1;
     }
 
-    {
-        /* Odd part */
+    
+    /* Odd part */
 
-        const float tmp10 = tmp4 + tmp5;        /* phase 2 */
-        const float tmp11 = tmp5 + tmp6;
-        const float tmp12 = tmp6 + tmp7;
+    const float tmp10 = tmp4 + tmp5;        /* phase 2 */
+    const float tmp11 = tmp5 + tmp6;
+    const float tmp12 = tmp6 + tmp7;
 
-        /* The rotator is modified from fig 4-8 to avoid extra negations. */
-        const float z5 = (tmp10 - tmp12) * 0.382683433f; /* c6 */
-        const float z2 = 0.541196100f * tmp10 + z5; /* c2-c6 */
-        const float z4 = 1.306562965f * tmp12 + z5; /* c2+c6 */
-        const float z3 = tmp11 * 0.707106781f; /* c4 */
+    /* The rotator is modified from fig 4-8 to avoid extra negations. */
+    const float z5 = (tmp10 - tmp12) * 0.382683433f; /* c6 */
+    const float z2 = 0.541196100f * tmp10 + z5; /* c2-c6 */
+    const float z4 = 1.306562965f * tmp12 + z5; /* c2+c6 */
+    const float z3 = tmp11 * 0.707106781f; /* c4 */
 
-        const float z11 = tmp7 + z3;            /* phase 5 */
-        const float z13 = tmp7 - z3;
+    const float z11 = tmp7 + z3;            /* phase 5 */
+    const float z13 = tmp7 - z3;
 
-        out5 = z13 + z2;      /* phase 6 */
-        out3 = z13 - z2;
-        out1 = z11 + z4;
-        out7 = z11 - z4;
-    }
+    out5 = z13 + z2;      /* phase 6 */
+    out3 = z13 - z2;
+    out1 = z11 + z4;
+    out7 = z11 - z4;
 }
 
 
@@ -502,53 +501,53 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     
     
     // Load input coefficients (each thread loads 1 row of 8 coefficients from its 8x8 block)
-    const int in_x = (block_offset_x + block_idx_x) * 8;
-    const int in_y = (block_offset_y + block_idx_y) * 8 + dct_idx;
+    const int in_x = (block_offset_x + block_idx_x) * 8 + dct_idx;
+    const int in_y = (block_offset_y + block_idx_y) * 8;
     const int in_offset = in_x + in_y * source_stride;
-    const ushort4 in = *((ushort4*)(source + in_offset));
+    const uint8_t * in = source + in_offset;
     
     // separate input coefficients and apply level shift (assuming little endian hardware)
-    dct_t dct0 = (in.x & 0xFF) - 128;
-    dct_t dct1 = (in.x >> 8) - 128;
-    dct_t dct2 = (in.y & 0xFF) - 128;
-    dct_t dct3 = (in.y >> 8) - 128;
-    dct_t dct4 = (in.z & 0xFF) - 128;
-    dct_t dct5 = (in.z >> 8) - 128;
-    dct_t dct6 = (in.w & 0xFF) - 128;
-    dct_t dct7 = (in.w >> 8) - 128;
+    dct_t src0 = *in;
+    in += source_stride;
+    dct_t src1 = *in;
+    in += source_stride;
+    dct_t src2 = *in;
+    in += source_stride;
+    dct_t src3 = *in;
+    in += source_stride;
+    dct_t src4 = *in;
+    in += source_stride;
+    dct_t src5 = *in;
+    in += source_stride;
+    dct_t src6 = *in;
+    in += source_stride;
+    dct_t src7 = *in;
     
     
     
     
     
-    // repeat "1D transform and transpose" two times
-    #pragma unroll
-    for(int i = 0; i < 2; i++) {
         // destination pointer into shared transpose buffer (each thread saves one column)
-        volatile dct_t * const s_dest = s_transposition + dct_idx;
-        
-        dct(dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7,
-            s_dest[SHARED_STRIDE * 0],
-            s_dest[SHARED_STRIDE * 1],
-            s_dest[SHARED_STRIDE * 2],
-            s_dest[SHARED_STRIDE * 3],
-            s_dest[SHARED_STRIDE * 4],
-            s_dest[SHARED_STRIDE * 5],
-            s_dest[SHARED_STRIDE * 6],
-            s_dest[SHARED_STRIDE * 7]
-        );
-        
-        // read coefficients back - each thread read one row (no need to sync - only thread within same warp work on each block)
-        volatile dct_t * s_src = s_transposition + SHARED_STRIDE * dct_idx;
-        dct0 = s_src[0];
-        dct1 = s_src[1];
-        dct2 = s_src[2];
-        dct3 = s_src[3];
-        dct4 = s_src[4];
-        dct5 = s_src[5];
-        dct6 = s_src[6];
-        dct7 = s_src[7];
-    }
+    volatile dct_t * const s_dest = s_transposition + dct_idx;
+    
+    dct(src0, src1, src2, src3, src4, src5, src6, src7,
+        s_dest[SHARED_STRIDE * 0],
+        s_dest[SHARED_STRIDE * 1],
+        s_dest[SHARED_STRIDE * 2],
+        s_dest[SHARED_STRIDE * 3],
+        s_dest[SHARED_STRIDE * 4],
+        s_dest[SHARED_STRIDE * 5],
+        s_dest[SHARED_STRIDE * 6],
+        s_dest[SHARED_STRIDE * 7],
+        128
+    );
+    
+    // read coefficients back - each thread reads one row (no need to sync - only threads within same warp work on each block)
+    volatile dct_t * s_src = s_transposition + SHARED_STRIDE * dct_idx;
+    dct_t dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7;
+    dct(s_src[0], s_src[1], s_src[2], s_src[3], s_src[4], s_src[5], s_src[6], s_src[7],
+        dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7);
+    
     
     // apply qunatzation to the row of coefficients
     const float * const quantization_row = gpujpeg_dct_gpu_quantization_table + 8 * dct_idx;
