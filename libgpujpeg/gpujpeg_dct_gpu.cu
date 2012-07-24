@@ -266,16 +266,15 @@ dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5
     
     // TODO: merge following unscaling with quantization!
     const float q[8] = {1.0, 1.387039845, 1.306562965, 1.175875602, 1.0, 0.785694958, 0.541196100, 0.275899379};
-    const float t = 2.82842712474619f;  //  = 4 / sqrt(2)  ??!!?
     
-    out0 /= q[0] * t;
-    out1 /= q[1] * t;
-    out2 /= q[2] * t;
-    out3 /= q[3] * t;
-    out4 /= q[4] * t;
-    out5 /= q[5] * t;
-    out6 /= q[6] * t;
-    out7 /= q[7] * t;
+    out0 /= q[0];
+    out1 /= q[1];
+    out2 /= q[2];
+    out3 /= q[3];
+    out4 /= q[4];
+    out5 /= q[5];
+    out6 /= q[6];
+    out7 /= q[7];
     
 }
 
@@ -567,14 +566,14 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     
     // apply qunatzation to the row of coefficients
     const uint16_t * const quantization_row = quantization_table + 8 * dct_idx;
-    dct0 *= quantization_row[0] * 3.05185094759972e-05f;
-    dct1 *= quantization_row[1] * 3.05185094759972e-05f;
-    dct2 *= quantization_row[2] * 3.05185094759972e-05f;
-    dct3 *= quantization_row[3] * 3.05185094759972e-05f;
-    dct4 *= quantization_row[4] * 3.05185094759972e-05f;
-    dct5 *= quantization_row[5] * 3.05185094759972e-05f;
-    dct6 *= quantization_row[6] * 3.05185094759972e-05f;
-    dct7 *= quantization_row[7] * 3.05185094759972e-05f;
+    dct0 *= quantization_row[0] * 3.05185094759972e-05f / 8;
+    dct1 *= quantization_row[1] * 3.05185094759972e-05f / 8;
+    dct2 *= quantization_row[2] * 3.05185094759972e-05f / 8;
+    dct3 *= quantization_row[3] * 3.05185094759972e-05f / 8;
+    dct4 *= quantization_row[4] * 3.05185094759972e-05f / 8;
+    dct5 *= quantization_row[5] * 3.05185094759972e-05f / 8;
+    dct6 *= quantization_row[6] * 3.05185094759972e-05f / 8;
+    dct7 *= quantization_row[7] * 3.05185094759972e-05f / 8;
     
     // save output row packed into 16 bytes
     const int out_x = (block_offset_x + block_idx_x) * 64; // 64 coefficients per one transformed and quantized block
