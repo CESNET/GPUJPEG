@@ -80,6 +80,7 @@ COMMONFLAGS += -I. -I$(CUDA_INSTALL_PATH)/include
 CFLAGS += $(COMMONFLAGS) -std=c99
 # CUDA flags
 NVCCFLAGS += $(COMMONFLAGS) \
+	--open64 \
 	-gencode arch=compute_20,code=sm_20 \
 	-gencode arch=compute_11,code=sm_11 \
 	--ptxas-options="-v"
