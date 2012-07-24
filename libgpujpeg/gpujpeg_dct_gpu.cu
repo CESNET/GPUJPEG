@@ -430,7 +430,10 @@ gpujpeg_idct_gpu_kernel_inplace(uint32_t* V8)
 }
 
 /** Quantization table */
-__constant__ float gpujpeg_dct_gpu_quantization_table[64];
+#if __CUDA_ARCH__ < 200
+__constant__ // quantization table in constant mempory is faster on devices without L2 cache
+#endif
+__device__ float gpujpeg_dct_gpu_quantization_table[64];
 
 /**
  * Performs 8x8 block-wise Forward Discrete Cosine Transform of the given
