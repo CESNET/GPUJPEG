@@ -231,7 +231,7 @@ dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5
         const float tmp12 = tmp1 - tmp2;
 
         /* Apply unsigned->signed conversion */
-        out0 = tmp10 + tmp11 - 8 * level_shift; /* phase 3 */
+        out0 = tmp10 + tmp11 + level_shift; /* phase 3 */
         out4 = tmp10 - tmp11;
 
         const float z1 = (tmp12 + tmp13) * 0.707106781f; /* c4 */
@@ -539,7 +539,7 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
         s_dest[SHARED_STRIDE * 5],
         s_dest[SHARED_STRIDE * 6],
         s_dest[SHARED_STRIDE * 7],
-        128
+        -1024.0f  // = 8 * -128 ... level shift sum for all 8 coefficients
     );
     
     // read coefficients back - each thread reads one row (no need to sync - only threads within same warp work on each block)
