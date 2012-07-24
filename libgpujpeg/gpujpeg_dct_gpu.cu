@@ -259,60 +259,51 @@ gpujpeg_idct_gpu_kernel_inplace(uint32_t* V8)
 
 /**
  * 1D 8point DCT, with optional level shift (must be premultiplied).
- * Copied from Independent JPEG Group JPEG implementation, from file jfdctflt.c
+ * Based on based on Arai, Agui, and Nakajima's DCT algorithm. (Trans. IEICE E-71(11):1095)
+ * Implementation inspired by Independent JPEG Group JPEG implementation, file jfdctflt.c, 
+ * but optimized for CUDA (cheap floating point MAD instructions).
  */
 template <typename T>
 __device__ static inline void
 dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
     volatile T & out0, volatile T & out1, volatile T & out2, volatile T & out3, volatile T & out4, volatile T & out5, volatile T & out6, volatile T & out7,
-    const float level_shift = 0.0f)
+    const float level_shift_8 = 0.0f)
 {
     /* Load data into workspace */
-    const float tmp0 = in0 + in7;
-    const float tmp7 = in0 - in7;
-    const float tmp1 = in1 + in6;
-    const float tmp6 = in1 - in6;
-    const float tmp2 = in2 + in5;
-    const float tmp5 = in2 - in5;
-    const float tmp3 = in3 + in4;
-    const float tmp4 = in3 - in4;
+    const float diff0 = in0 + in7;
+    const float diff1 = in1 + in6;
+    const float diff2 = in2 + in5;
+    const float diff3 = in3 + in4;
+    const float diff4 = in3 - in4;
+    const float diff5 = in2 - in5;
+    const float diff6 = in1 - in6;
+    const float diff7 = in0 - in7;
 
-    {
-        /* Even part */
+    const float even0 = diff0 + diff3;
+    const float even1 = diff1 + diff2;
+    const float even2 = diff1 - diff2;
+    const float even3 = diff0 - diff3;
 
-        const float tmp10 = tmp0 + tmp3;        /* phase 2 */
-        const float tmp13 = tmp0 - tmp3;
-        const float tmp11 = tmp1 + tmp2;
-        const float tmp12 = tmp1 - tmp2;
-
-        /* Apply unsigned->signed conversion */
-        out0 = tmp10 + tmp11 + level_shift; /* phase 3 */
-        out4 = tmp10 - tmp11;
-
-        const float z1 = (tmp12 + tmp13) * 0.707106781f; /* c4 */
-        out2 = tmp13 + z1;    /* phase 5 */
-        out6 = tmp13 - z1;
-    }
+    const float even_diff = even2 + even3;
     
-    /* Odd part */
+    const float odd0 = diff4 + diff5;
+    const float odd1 = diff5 + diff6;
+    const float odd2 = diff6 + diff7;
 
-    const float tmp10 = tmp4 + tmp5;        /* phase 2 */
-    const float tmp11 = tmp5 + tmp6;
-    const float tmp12 = tmp6 + tmp7;
+    const float odd_diff5 = (odd0 - odd2) * 0.382683433f;
+    const float odd_diff4 = 1.306562965f * odd2 + odd_diff5;
+    const float odd_diff3 = diff7 - odd1 * 0.707106781f;
+    const float odd_diff2 = 0.541196100f * odd0 + odd_diff5;
+    const float odd_diff1 = diff7 + odd1 * 0.707106781f;
 
-    /* The rotator is modified from fig 4-8 to avoid extra negations. */
-    const float z5 = (tmp10 - tmp12) * 0.382683433f; /* c6 */
-    const float z2 = 0.541196100f * tmp10 + z5; /* c2-c6 */
-    const float z4 = 1.306562965f * tmp12 + z5; /* c2+c6 */
-    const float z3 = tmp11 * 0.707106781f; /* c4 */
-
-    const float z11 = tmp7 + z3;            /* phase 5 */
-    const float z13 = tmp7 - z3;
-
-    out5 = z13 + z2;      /* phase 6 */
-    out3 = z13 - z2;
-    out1 = z11 + z4;
-    out7 = z11 - z4;
+    out0 = even0 + even1 + level_shift_8;
+    out1 = odd_diff1 + odd_diff4;
+    out2 = even3 + even_diff * 0.707106781f;
+    out3 = odd_diff3 - odd_diff2;
+    out4 = even0 - even1;
+    out5 = odd_diff3 + odd_diff2;
+    out6 = even3 - even_diff * 0.707106781f;
+    out7 = odd_diff1 - odd_diff4;
 }
 
 /** Quantization table */
