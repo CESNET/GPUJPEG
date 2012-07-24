@@ -30,10 +30,6 @@
 SHARED_LIBRARY ?= 1
 # Use constant memory for huffman coder tables?
 HUFFMAN_CODER_TABLES_IN_CONSTANT ?= 1
-# Use DCT from NPP library (is faster but causes color change)
-# If set to 0, own implementation is used, it doesn't cause color change
-# but for non-fermi GPUs it is slower
-DCT_FROM_NPP ?= 0
 # Flag if use OpenGL
 USE_OPENGL ?= 0
 # Debug
@@ -94,9 +90,6 @@ LDFLAGS += -shared
 ifeq ($(HUFFMAN_CODER_TABLES_IN_CONSTANT),1)
     COMMONFLAGS += -DGPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
 endif
-ifeq ($(DCT_FROM_NPP),1)
-    COMMONFLAGS += -DGPUJPEG_DCT_FROM_NPP
-endif
 ifeq ($(USE_OPENGL),1)
     LDFLAGS += -lGLEW
     COMMONFLAGS += -DGPUJPEG_USE_OPENGL
@@ -111,7 +104,7 @@ else
     # 32bit
     LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib
 endif
-LDFLAGS += -lcudart -lnpp
+LDFLAGS += -lcudart
 
 # Build
 build: $(TARGET)

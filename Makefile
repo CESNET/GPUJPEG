@@ -63,7 +63,7 @@ else
         # 32bit
         LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib
     endif
-    LDFLAGS += -lcudart -lnpp libgpujpeg/libgpujpeg.a
+    LDFLAGS += -lcudart libgpujpeg/libgpujpeg.a
     #Other flags
     ifeq ($(USE_OPENGL),1)
         LDFLAGS += -lGLEW

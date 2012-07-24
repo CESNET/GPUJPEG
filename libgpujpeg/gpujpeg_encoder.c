@@ -34,7 +34,6 @@
 #include "gpujpeg_huffman_cpu_encoder.h"
 #include "gpujpeg_huffman_gpu_encoder.h"
 #include "gpujpeg_util.h"
-#include <npp.h>
 
 #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
 /** Huffman tables in constant memory */
@@ -235,40 +234,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
     coder->duration_preprocessor = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
     GPUJPEG_CUSTOM_TIMER_START(encoder->def);
         
-#ifdef GPUJPEG_DCT_FROM_NPP
-    // Perform DCT and quantization (implementation from NPP)
-    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
-        // Get component
-        struct gpujpeg_component* component = &coder->component[comp];
-                
-        // Determine table type
-        enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
-        
-        //gpujpeg_component_print8(&coder->component[comp], coder->component[comp].d_data);
-        
-        //Perform forward DCT
-        NppiSize fwd_roi;
-        fwd_roi.width = component->data_width;
-        fwd_roi.height = component->data_height;
-        NppStatus status = nppiDCTQuantFwd8x8LS_JPEG_8u16s_C1R(
-            component->d_data, 
-            component->data_width * sizeof(uint8_t), 
-            component->d_data_quantized, 
-            component->data_width * GPUJPEG_BLOCK_SIZE * sizeof(int16_t), 
-            encoder->table_quantization[type].d_table, 
-            fwd_roi
-        );
-        if ( status != 0 ) {
-            fprintf(stderr, "[GPUJPEG] [Error] Forward DCT failed for component at index %d [error %d]!\n", comp, status);
-            return -1;
-        }
-
-        //gpujpeg_component_print16(&coder->component[comp], coder->component[comp].d_data_quantized);
-    }
-#else
-    // Perform DCT and quantization (own CUDA implementation)
+    // Perform DCT and quantization
     gpujpeg_dct_gpu(encoder);
-#endif
 
     // If restart interval is 0 then the GPU processing is in the end (even huffman coder will be performed on CPU)
     if ( coder->param.restart_interval == 0 ) {
