@@ -107,178 +107,6 @@ unfixo(int x)
     return (x + 0x1000) >> 13;
 }
 
-
-template <typename T>
-__device__ static inline void
-dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
-    volatile T & out0, volatile T & out1, volatile T & out2, volatile T & out3, volatile T & out4, volatile T & out5, volatile T & out6, volatile T & out7,
-    const float level_shift = 0.0f)
-{
-//     const int tmp0 = in7 + in0;
-//     const int tmp1 = in6 + in1;
-//     const int tmp2 = in5 + in2;
-//     const int tmp3 = in4 + in3;
-//     const int tmp4 = in3 - in4;
-//     const int tmp5 = in2 - in5;
-//     const int tmp6 = in1 - in6;
-//     const int tmp7 = in0 - in7;
-// 
-//     const int tmp10 = tmp3 + tmp0;
-//     const int tmp11 = tmp2 + tmp1;
-//     const int tmp12 = tmp1 - tmp2;
-//     const int tmp13 = tmp0 - tmp3;
-// 
-//     const int tmp16 = unfixo(FMUL(tmp6 + tmp5, SIN_1_4));
-//     const int tmp15 = unfixo(FMUL(tmp6 - tmp5, COS_1_4));
-// 
-//     const int tmp4b = tmp4 << 2;
-//     const int tmp7b = tmp7 << 2;
-// 
-//     const int tmp14 = tmp4b + tmp15;
-//     const int tmp25 = tmp4b - tmp15;
-//     const int tmp26 = tmp7b - tmp16;
-//     const int tmp17 = tmp7b + tmp16;
-//     
-//     out0 = unfixh(FMUL(tmp10 + tmp11, SIN_1_4));
-//     out1 = unfixh(FMUL(tmp17, OCOS_1_16) + FMUL(tmp14, OSIN_1_16));
-//     out2 = unfixh(FMUL(tmp13, COS_1_8) + FMUL(tmp12, SIN_1_8));
-//     out3 = unfixh(FMUL(tmp26, OCOS_3_16) - FMUL(tmp25, OSIN_3_16));
-//     out4 = unfixh(FMUL(tmp10 - tmp11, COS_1_4));
-//     out5 = unfixh(FMUL(tmp26, OCOS_5_16) + FMUL(tmp25, OSIN_5_16));
-//     out6 = unfixh(FMUL(tmp13, SIN_1_8) - FMUL(tmp12, COS_1_8));
-//     out7 = unfixh(FMUL(tmp17, OCOS_7_16) - FMUL(tmp14, OSIN_7_16));
-
-
-//     const float scale0 = 0.353553390593274f; // sin(pi / 4) / 2
-//     const float scale1 = 0.509795579104159f; // 1 / (2 * sin(7 * pi / 16))
-//     const float scale2 = 0.541196100146197f; // 1 / (2 * sin(3 * pi / 8))
-//     const float scale3 = 0.601344886935045f; // 1 / (2 * cos(3 * pi / 16))
-//     const float scale4 = 0.707106781186547f; // sin(pi / 4)
-//     const float scale5 = 0.415734806151273f; // cos(3 * pi / 16) / 2
-//     const float scale6 = 0.461939766255643f; // sin(3 * pi / 8) / 2
-//     const float scale7 = 0.490392640201615f; // sin(7 * pi / 16) / 2
-//     
-//     const float p1 = 0.4142135623f;
-//     const float p2 = 0.6681786379f;
-//     const float p3 = 0.1989123673f;
-//     const float p4 = 0.4142135623f;
-//     const float p5 = 0.4142135623f;
-//     const float u1 = 0.3535533905f;
-//     const float u2 = 0.4619397662f;
-//     const float u3 = 0.1913417161f;
-//     const float u4 = 0.7071067811f;
-//     
-//     float a0 = in7 + in0;
-//     float a1 = in6 + in1;
-//     float a2 = in5 + in2;
-//     float a3 = in4 + in3;
-//     float a4 = in3 - in4;
-//     float a5 = in2 - in5;
-//     float a6 = in1 - in6;
-//     float a7 = in0 - in7;
-//     
-//     a5 = a5 - a6 * p4;
-//     a6 = a6 + a5 * u4;
-//     a5 = a6 * p5 - a5;
-//     
-//     float b0 = a0 + a3;
-//     float b1 = a1 + a2;
-//     float b2 = a1 - a2;
-//     float b3 = a0 - a3;
-//     float b4 = a4 + a5;
-//     float b5 = a4 - a5;
-//     float b6 = a7 - a6;
-//     float b7 = a7 + a6;
-//     
-//     b0 = b0 + b1;
-//     b1 = 0.5f * b0 - b1;
-//     
-//     b2 = p1 * b3 - b2;
-//     b3 = b3 - u1 * b2;
-//     
-//     b4 = p3 * b7 - b4;
-//     b7 = b7 - u3 * b4;
-//     
-//     b5 = b5 + p2 * b6;
-//     b6 = b6 - u2 * b5;
-//     
-//     out0 = b0 * scale0;
-//     out1 = b7 * scale7;
-//     out2 = b3 * scale3;
-//     out3 = b6 * scale6;
-//     out4 = b1 * scale1;
-//     out5 = b5 * scale5;
-//     out6 = b2 * scale2;
-//     out7 = b4 * scale4;
-    
-    
-    /* Load data into workspace */
-    const float tmp0 = in0 + in7;
-    const float tmp7 = in0 - in7;
-    const float tmp1 = in1 + in6;
-    const float tmp6 = in1 - in6;
-    const float tmp2 = in2 + in5;
-    const float tmp5 = in2 - in5;
-    const float tmp3 = in3 + in4;
-    const float tmp4 = in3 - in4;
-
-    {
-        /* Even part */
-
-        const float tmp10 = tmp0 + tmp3;        /* phase 2 */
-        const float tmp13 = tmp0 - tmp3;
-        const float tmp11 = tmp1 + tmp2;
-        const float tmp12 = tmp1 - tmp2;
-
-        /* Apply unsigned->signed conversion */
-        out0 = tmp10 + tmp11 + level_shift; /* phase 3 */
-        out4 = tmp10 - tmp11;
-
-        const float z1 = (tmp12 + tmp13) * 0.707106781f; /* c4 */
-        out2 = tmp13 + z1;    /* phase 5 */
-        out6 = tmp13 - z1;
-    }
-
-    
-    /* Odd part */
-
-    const float tmp10 = tmp4 + tmp5;        /* phase 2 */
-    const float tmp11 = tmp5 + tmp6;
-    const float tmp12 = tmp6 + tmp7;
-
-    /* The rotator is modified from fig 4-8 to avoid extra negations. */
-    const float z5 = (tmp10 - tmp12) * 0.382683433f; /* c6 */
-    const float z2 = 0.541196100f * tmp10 + z5; /* c2-c6 */
-    const float z4 = 1.306562965f * tmp12 + z5; /* c2+c6 */
-    const float z3 = tmp11 * 0.707106781f; /* c4 */
-
-    const float z11 = tmp7 + z3;            /* phase 5 */
-    const float z13 = tmp7 - z3;
-
-    out5 = z13 + z2;      /* phase 6 */
-    out3 = z13 - z2;
-    out1 = z11 + z4;
-    out7 = z11 - z4;
-}
-
-
-/**
- * Performs in-place DCT of vector of 8 elements (used to access columns in shared memory).
- *
- * @param SrcDst [IN/OUT] - Pointer to the first element of vector
- * @param Stride [IN] - Value to add to ptr to access other elements
- * @return None
- */
-__device__ void
-gpujpeg_dct_gpu_kernel_inplace(float* SrcDst, int Stride)
-{
-    dct(SrcDst[Stride * 0], SrcDst[Stride * 1], SrcDst[Stride * 2], SrcDst[Stride * 3],
-        SrcDst[Stride * 4], SrcDst[Stride * 5], SrcDst[Stride * 6], SrcDst[Stride * 7],
-        SrcDst[Stride * 0], SrcDst[Stride * 1], SrcDst[Stride * 2], SrcDst[Stride * 3],
-        SrcDst[Stride * 4], SrcDst[Stride * 5], SrcDst[Stride * 6], SrcDst[Stride * 7]);
-}
-
-
 /**
  * Performs in-place IDCT of vector of 8 elements (used to access columns in shared memory).
  *
@@ -428,6 +256,62 @@ gpujpeg_idct_gpu_kernel_inplace(uint32_t* V8)
     V8[3] = sh3.hInt;
 }
 
+
+
+template <typename T>
+__device__ static inline void
+dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
+    volatile T & out0, volatile T & out1, volatile T & out2, volatile T & out3, volatile T & out4, volatile T & out5, volatile T & out6, volatile T & out7,
+    const float level_shift = 0.0f)
+{
+    /* Load data into workspace */
+    const float tmp0 = in0 + in7;
+    const float tmp7 = in0 - in7;
+    const float tmp1 = in1 + in6;
+    const float tmp6 = in1 - in6;
+    const float tmp2 = in2 + in5;
+    const float tmp5 = in2 - in5;
+    const float tmp3 = in3 + in4;
+    const float tmp4 = in3 - in4;
+
+    {
+        /* Even part */
+
+        const float tmp10 = tmp0 + tmp3;        /* phase 2 */
+        const float tmp13 = tmp0 - tmp3;
+        const float tmp11 = tmp1 + tmp2;
+        const float tmp12 = tmp1 - tmp2;
+
+        /* Apply unsigned->signed conversion */
+        out0 = tmp10 + tmp11 + level_shift; /* phase 3 */
+        out4 = tmp10 - tmp11;
+
+        const float z1 = (tmp12 + tmp13) * 0.707106781f; /* c4 */
+        out2 = tmp13 + z1;    /* phase 5 */
+        out6 = tmp13 - z1;
+    }
+    
+    /* Odd part */
+
+    const float tmp10 = tmp4 + tmp5;        /* phase 2 */
+    const float tmp11 = tmp5 + tmp6;
+    const float tmp12 = tmp6 + tmp7;
+
+    /* The rotator is modified from fig 4-8 to avoid extra negations. */
+    const float z5 = (tmp10 - tmp12) * 0.382683433f; /* c6 */
+    const float z2 = 0.541196100f * tmp10 + z5; /* c2-c6 */
+    const float z4 = 1.306562965f * tmp12 + z5; /* c2+c6 */
+    const float z3 = tmp11 * 0.707106781f; /* c4 */
+
+    const float z11 = tmp7 + z3;            /* phase 5 */
+    const float z13 = tmp7 - z3;
+
+    out5 = z13 + z2;      /* phase 6 */
+    out3 = z13 - z2;
+    out1 = z11 + z4;
+    out7 = z11 - z4;
+}
+
 /** Quantization table */
 #if __CUDA_ARCH__ < 200
 __constant__ // quantization table in constant mempory is faster on devices without L2 cache
@@ -449,7 +333,7 @@ __device__ float gpujpeg_dct_gpu_quantization_table[64];
  */
 template <int WARP_COUNT>
 __global__ void
-gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, int source_stride,
+gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, const unsigned int source_stride,
                        int16_t* output, int output_stride)
 {
     // each warp processes 4 8x8 blocks (horizontally neighboring)
@@ -472,8 +356,6 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     // index of row/column processed by this thread within its 8x8 block
     const int dct_idx = threadIdx.x & 7;
     
-    
-    
     // Data type of transformed coefficients
     typedef float dct_t;
     
@@ -494,11 +376,6 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     
     // pointer to begin of transposition buffer for thread's block
     volatile dct_t * const s_transposition = s_transposition_all + block_idx_y * SHARED_SIZE_WARP + block_idx_x * 8;
-    
-    
-    
-    
-    
     
     // Load input coefficients (each thread loads 1 row of 8 coefficients from its 8x8 block)
     const int in_x = (block_offset_x + block_idx_x) * 8 + dct_idx;
@@ -523,11 +400,7 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     in += source_stride;
     dct_t src7 = *in;
     
-    
-    
-    
-    
-        // destination pointer into shared transpose buffer (each thread saves one column)
+    // destination pointer into shared transpose buffer (each thread saves one column)
     volatile dct_t * const s_dest = s_transposition + dct_idx;
     
     dct(src0, src1, src2, src3, src4, src5, src6, src7,
@@ -541,7 +414,7 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
         s_dest[SHARED_STRIDE * 7],
         -1024.0f  // = 8 * -128 ... level shift sum for all 8 coefficients
     );
-    
+
     // read coefficients back - each thread reads one row (no need to sync - only threads within same warp work on each block)
     volatile dct_t * s_src = s_transposition + SHARED_STRIDE * dct_idx;
     dct_t dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7;
@@ -569,66 +442,6 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
         out4 + 0x10000 * out5,
         out6 + 0x10000 * out7
     );
-    
-    
-    
-    
-//     // Shared data
-//     __shared__ float block[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
-// 
-//     // Block position
-//     int block_x = IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y);
-//     int block_y = IMAD(blockIdx.y, GPUJPEG_DCT_BLOCK_COUNT_Y, threadIdx.z);
-// 
-//     // Thread position in thread block
-//     int thread_x = IMAD(threadIdx.y, GPUJPEG_BLOCK_SIZE, threadIdx.x);
-//     int thread_y = IMUL(threadIdx.z, GPUJPEG_BLOCK_SIZE);
-//     int thread_x_permutated = (thread_x & 0xFFFFFFE0) | (((thread_x << 1) | ((thread_x >> 4) & 0x1)) & 0x1F);
-// 
-//     // Determine position into shared buffer
-//     float* block_ptr = block + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
-// 
-//     // Determine position in source buffer and apply it
-//     int source_x = IMAD(block_x, GPUJPEG_BLOCK_SIZE, threadIdx.x);
-//     int source_y = IMUL(block_y, GPUJPEG_BLOCK_SIZE);
-//     source += IMAD(source_y, source_stride, source_x);
-// 
-//     // Load data to shared memory memory
-//     if ( block_x < block_count_x && block_y < block_count_y ) {
-//         #pragma unroll
-//         for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-//             float coefficient = (int16_t)(source[i * source_stride]);
-//             coefficient -= 128.0f;
-//             block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient;
-//         }
-//     }
-// 
-//     // Perform DCT
-//     __syncthreads();
-//     gpujpeg_dct_gpu_kernel_inplace(block + thread_y * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + thread_x_permutated, GPUJPEG_DCT_THREAD_BLOCK_STRIDE);
-//     __syncthreads();
-//     gpujpeg_dct_gpu_kernel_inplace(block + (thread_y + threadIdx.x) * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + threadIdx.y * GPUJPEG_BLOCK_SIZE, 1);
-//     __syncthreads();
-// 
-//     // Quantization
-//     for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-//         float quantization = (quantization_table[i * GPUJPEG_BLOCK_SIZE + threadIdx.x]) / 32767.0f;
-//         float coefficient = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
-//         block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient * quantization;
-//     }
-//     __syncthreads();
-// 
-//     // Determine position in output buffer and apply it
-//     int output_x = IMAD(IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y), GPUJPEG_BLOCK_SQUARED_SIZE, threadIdx.x);
-//     int output_y = IMAD(blockIdx.y, GPUJPEG_DCT_BLOCK_COUNT_Y, threadIdx.z);
-//     output += IMAD(output_y, output_stride, output_x);
-// 
-//     // Store data to global memory
-//     if ( block_x < block_count_x && block_y < block_count_y ) {
-//         #pragma unroll
-//         for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
-//             output[i * GPUJPEG_BLOCK_SIZE] = round(block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE]);
-//     }
 }
 
 /** Quantization table */
