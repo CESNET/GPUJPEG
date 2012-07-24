@@ -100,16 +100,8 @@ gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table
 
     // Update raw table by quality
     gpujpeg_table_quantization_apply_quality(table->table_raw, quality);
-
-    // Load forward table from raw table
-    for ( int i = 0; i < 64; i++ ) {
-        table->table[gpujpeg_order_natural[i]] = ((1 << 15) / (double)table->table_raw[i]) + 0.5;
-    }
-        
-    // Copy tables to device memory
-    if ( cudaSuccess != cudaMemcpy(table->d_table, table->table, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
-        return -1;
     
+    // DCT loads the table into GPU memory itself, after premultiplying coefficients with DCT normalization constants.
     return 0;
 }
 
