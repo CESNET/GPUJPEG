@@ -551,23 +551,23 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, in
     
     // apply qunatzation to the row of coefficients
     const float * const quantization_row = gpujpeg_dct_gpu_quantization_table + 8 * dct_idx;
-    dct0 *= quantization_row[0]; // * 3.05185094759972e-05f / 8;
-    dct1 *= quantization_row[1]; // * 3.05185094759972e-05f / 8;
-    dct2 *= quantization_row[2]; // * 3.05185094759972e-05f / 8;
-    dct3 *= quantization_row[3]; // * 3.05185094759972e-05f / 8;
-    dct4 *= quantization_row[4]; // * 3.05185094759972e-05f / 8;
-    dct5 *= quantization_row[5]; // * 3.05185094759972e-05f / 8;
-    dct6 *= quantization_row[6]; // * 3.05185094759972e-05f / 8;
-    dct7 *= quantization_row[7]; // * 3.05185094759972e-05f / 8;
+    const int out0 = 0.5f + dct0 * quantization_row[0];
+    const int out1 = 0.5f + dct1 * quantization_row[1];
+    const int out2 = 0.5f + dct2 * quantization_row[2];
+    const int out3 = 0.5f + dct3 * quantization_row[3];
+    const int out4 = 0.5f + dct4 * quantization_row[4];
+    const int out5 = 0.5f + dct5 * quantization_row[5];
+    const int out6 = 0.5f + dct6 * quantization_row[6];
+    const int out7 = 0.5f + dct7 * quantization_row[7];
     
     // save output row packed into 16 bytes
     const int out_x = (block_offset_x + block_idx_x) * 64; // 64 coefficients per one transformed and quantized block
     const int out_y = (block_offset_y + block_idx_y) * output_stride;
     ((uint4*)(output + out_x + out_y))[dct_idx] = make_uint4(
-        (int)dct0 + 0x10000 * (int)dct1,
-        (int)dct2 + 0x10000 * (int)dct3,
-        (int)dct4 + 0x10000 * (int)dct5,
-        (int)dct6 + 0x10000 * (int)dct7
+        out0 + 0x10000 * out1,
+        out2 + 0x10000 * out3,
+        out4 + 0x10000 * out5,
+        out6 + 0x10000 * out7
     );
     
     
