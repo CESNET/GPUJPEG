@@ -266,7 +266,7 @@ gpujpeg_idct_gpu_kernel_inplace(uint32_t* V8)
 template <typename T>
 __device__ static inline void
 dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
-    volatile T & out0, volatile T & out1, volatile T & out2, volatile T & out3, volatile T & out4, volatile T & out5, volatile T & out6, volatile T & out7,
+    T & out0, T & out1, T & out2, T & out3, T & out4, T & out5, T & out6, T & out7,
     const float level_shift_8 = 0.0f)
 {
     /* Load data into workspace */
@@ -366,10 +366,10 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     };
     
     // buffer for transpositions of all blocks
-    __shared__ volatile dct_t s_transposition_all[SHARED_SIZE_TOTAL];
+    __shared__ dct_t s_transposition_all[SHARED_SIZE_TOTAL];
     
     // pointer to begin of transposition buffer for thread's block
-    volatile dct_t * const s_transposition = s_transposition_all + block_idx_y * SHARED_SIZE_WARP + block_idx_x * 8;
+    dct_t * const s_transposition = s_transposition_all + block_idx_y * SHARED_SIZE_WARP + block_idx_x * 8;
     
     // Load input coefficients (each thread loads 1 row of 8 coefficients from its 8x8 block)
     const int in_x = (block_offset_x + block_idx_x) * 8 + dct_idx;
@@ -395,7 +395,7 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     dct_t src7 = *in;
     
     // destination pointer into shared transpose buffer (each thread saves one column)
-    volatile dct_t * const s_dest = s_transposition + dct_idx;
+    dct_t * const s_dest = s_transposition + dct_idx;
     
     dct(src0, src1, src2, src3, src4, src5, src6, src7,
         s_dest[SHARED_STRIDE * 0],
