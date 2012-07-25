@@ -87,6 +87,8 @@ struct gpujpeg_table_quantization
     uint16_t table[64];
     // Quantization forward/inverse table in device memory
     uint16_t* d_table;
+    // Quantization table for forward DCT, pre-divided with output DCT weights and transposed for coealescent access
+    float* d_table_forward;
 };
 
 /** JPEG table for huffman encoding */

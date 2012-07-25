@@ -306,12 +306,6 @@ dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5
     out7 = odd_diff1 - odd_diff4;
 }
 
-/** Quantization table */
-#if __CUDA_ARCH__ < 200
-__constant__ // quantization table in constant mempory is faster on devices without L2 cache
-#endif
-__device__ float gpujpeg_dct_gpu_quantization_table[64];
-
 /**
  * Performs 8x8 block-wise Forward Discrete Cosine Transform of the given
  * image plane and outputs result to the array of coefficients. Short implementation.
@@ -323,12 +317,13 @@ __device__ float gpujpeg_dct_gpu_quantization_table[64];
  * @param source_stride [IN]  - Stride of source
  * @param output        [OUT] - Source coefficients
  * @param output_stride [OUT] - Stride of source
+ * @param quant_table   [IN]  - Quantization table, pre-divided with DCT output scales
  * @return None
  */
 template <int WARP_COUNT>
 __global__ void
 gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, const unsigned int source_stride,
-                       int16_t* output, int output_stride)
+                       int16_t* output, int output_stride, const float * const quant_table)
 {
     // each warp processes 4 8x8 blocks (horizontally neighboring)
     const int block_idx_x = threadIdx.x >> 3;
@@ -416,16 +411,16 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
         dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7);
     
     
-    // apply qunatzation to the row of coefficients
-    const float * const quantization_row = gpujpeg_dct_gpu_quantization_table + 8 * dct_idx;
-    const int out0 = 0.5f + dct0 * quantization_row[0];
-    const int out1 = 0.5f + dct1 * quantization_row[1];
-    const int out2 = 0.5f + dct2 * quantization_row[2];
-    const int out3 = 0.5f + dct3 * quantization_row[3];
-    const int out4 = 0.5f + dct4 * quantization_row[4];
-    const int out5 = 0.5f + dct5 * quantization_row[5];
-    const int out6 = 0.5f + dct6 * quantization_row[6];
-    const int out7 = 0.5f + dct7 * quantization_row[7];
+    // apply quantization to the row of coefficients (table is transposed in glogal memory)
+    const float * const quantization_row = quant_table + dct_idx;
+    const int out0 = 0.5f + dct0 * quantization_row[0 * 8];
+    const int out1 = 0.5f + dct1 * quantization_row[1 * 8];
+    const int out2 = 0.5f + dct2 * quantization_row[2 * 8];
+    const int out3 = 0.5f + dct3 * quantization_row[3 * 8];
+    const int out4 = 0.5f + dct4 * quantization_row[4 * 8];
+    const int out5 = 0.5f + dct5 * quantization_row[5 * 8];
+    const int out6 = 0.5f + dct6 * quantization_row[6 * 8];
+    const int out7 = 0.5f + dct7 * quantization_row[7 * 8];
     
     // save output row packed into 16 bytes
     const int out_x = (block_offset_x + block_idx_x) * 64; // 64 coefficients per one transformed and quantized block
@@ -563,8 +558,9 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
         // Get component
         struct gpujpeg_component* component = &coder->component[comp];
 
-        // Determine table type
+        // Get quantization table
         enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
+        const float* const d_quantization_table = encoder->table_quantization[type].d_table_forward;
 
         int roi_width = component->data_width;
         int roi_height = component->data_height;
@@ -573,29 +569,6 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
         int block_count_x = roi_width / GPUJPEG_BLOCK_SIZE;
         int block_count_y = roi_height / GPUJPEG_BLOCK_SIZE;
         
-        // Scales of outputs of 1D DCT.
-        const double dct_scales[8] = {1.0, 1.387039845, 1.306562965, 1.175875602, 1.0, 0.785694958, 0.541196100, 0.275899379};
-        
-        // Prepare quantization table for GPU
-        const uint8_t* const raw_quant = encoder->table_quantization[type].table_raw;
-        float h_quantization_table[64];
-        for( int y = 0; y < 8; y++ ) {
-            for( int x = 0; x < 8; x++ ) {
-                const int quant_idx = x + 8 * y;
-                h_quantization_table[quant_idx] = 1.0 / (raw_quant[quant_idx] * dct_scales[y] * dct_scales[x] * 8); // 8 is the gain of 2D DCT
-            }
-        }
-        
-        // Copy quantization table to constant memory
-        cudaMemcpyToSymbol(
-            gpujpeg_dct_gpu_quantization_table,
-            h_quantization_table, 
-            64 * sizeof(*gpujpeg_dct_gpu_quantization_table),
-            0,
-            cudaMemcpyHostToDevice
-        );
-        gpujpeg_cuda_check_error("Copy DCT quantization table to constant memory");
-
         enum { WARP_COUNT = 4 };
         
         // Perform block-wise DCT processing
@@ -611,7 +584,8 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
             component->d_data,
             component->data_width,
             component->d_data_quantized,
-            component->data_width * GPUJPEG_BLOCK_SIZE
+            component->data_width * GPUJPEG_BLOCK_SIZE,
+            d_quantization_table
         );
         cudaThreadSynchronize();
         gpujpeg_cuda_check_error("Forward Integer DCT failed");

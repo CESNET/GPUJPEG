@@ -101,6 +101,22 @@ gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table
     // Update raw table by quality
     gpujpeg_table_quantization_apply_quality(table->table_raw, quality);
     
+    // Scales of outputs of 1D DCT.
+    const double dct_scales[8] = {1.0, 1.387039845, 1.306562965, 1.175875602, 1.0, 0.785694958, 0.541196100, 0.275899379};
+    
+    // Prepare transposed float quantization table, pre-divided by output DCT weights
+    float h_quantization_table[64];
+    for( int y = 0; y < 8; y++ ) {
+        for( int x = 0; x < 8; x++ ) {
+            h_quantization_table[x * 8 + y] = 1.0 / (table->table_raw[x + 8 * y] * dct_scales[y] * dct_scales[x] * 8); // 8 is the gain of 2D DCT
+        }
+    }
+    
+    // Copy quantization table to constant memory
+    if ( cudaSuccess != cudaMemcpy(table->d_table_forward, h_quantization_table, 64 * sizeof(float), cudaMemcpyHostToDevice) )
+        return  -1;
+    gpujpeg_cuda_check_error("Copy DCT quantization table to device memory");
+    
     // DCT loads the table into GPU memory itself, after premultiplying coefficients with DCT normalization constants.
     return 0;
 }
