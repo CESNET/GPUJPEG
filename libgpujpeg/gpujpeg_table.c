@@ -106,10 +106,10 @@ gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table
     
     // Prepare transposed float quantization table, pre-divided by output DCT weights
     float h_quantization_table[64];
-    for( int y = 0; y < 8; y++ ) {
-        for( int x = 0; x < 8; x++ ) {
-            h_quantization_table[x * 8 + y] = 1.0 / (table->table_raw[x + 8 * y] * dct_scales[y] * dct_scales[x] * 8); // 8 is the gain of 2D DCT
-        }
+    for( unsigned int i = 0; i < 64; i++ ) {
+        const unsigned int x = gpujpeg_order_natural[i] % 8;
+        const unsigned int y = gpujpeg_order_natural[i] / 8;
+        h_quantization_table[x * 8 + y] = 1.0 / (table->table_raw[i] * dct_scales[x] * dct_scales[y] * 8); // 8 is the gain of 2D DCT
     }
     
     // Copy quantization table to constant memory
