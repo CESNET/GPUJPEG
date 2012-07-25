@@ -413,14 +413,14 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     
     // apply quantization to the row of coefficients (table is transposed in glogal memory)
     const float * const quantization_row = quant_table + dct_idx;
-    const int out0 = 0.5f + dct0 * quantization_row[0 * 8];
-    const int out1 = 0.5f + dct1 * quantization_row[1 * 8];
-    const int out2 = 0.5f + dct2 * quantization_row[2 * 8];
-    const int out3 = 0.5f + dct3 * quantization_row[3 * 8];
-    const int out4 = 0.5f + dct4 * quantization_row[4 * 8];
-    const int out5 = 0.5f + dct5 * quantization_row[5 * 8];
-    const int out6 = 0.5f + dct6 * quantization_row[6 * 8];
-    const int out7 = 0.5f + dct7 * quantization_row[7 * 8];
+    const int out0 = rintf(dct0 * quantization_row[0 * 8]);
+    const int out1 = rintf(dct1 * quantization_row[1 * 8]);
+    const int out2 = rintf(dct2 * quantization_row[2 * 8]);
+    const int out3 = rintf(dct3 * quantization_row[3 * 8]);
+    const int out4 = rintf(dct4 * quantization_row[4 * 8]);
+    const int out5 = rintf(dct5 * quantization_row[5 * 8]);
+    const int out6 = rintf(dct6 * quantization_row[6 * 8]);
+    const int out7 = rintf(dct7 * quantization_row[7 * 8]);
     
     // save output row packed into 16 bytes
     const int out_x = (block_offset_x + block_idx_x) * 64; // 64 coefficients per one transformed and quantized block
