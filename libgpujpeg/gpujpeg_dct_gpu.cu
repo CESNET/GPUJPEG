@@ -426,10 +426,10 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     const int out_x = (block_offset_x + block_idx_x) * 64; // 64 coefficients per one transformed and quantized block
     const int out_y = (block_offset_y + block_idx_y) * output_stride;
     ((uint4*)(output + out_x + out_y))[dct_idx] = make_uint4(
-        out0 + 0x10000 * out1,
-        out2 + 0x10000 * out3,
-        out4 + 0x10000 * out5,
-        out6 + 0x10000 * out7
+        (out0 & 0xFFFF) + (out1 << 16),
+        (out2 & 0xFFFF) + (out3 << 16),
+        (out4 & 0xFFFF) + (out5 << 16),
+        (out6 & 0xFFFF) + (out7 << 16)
     );
 }
 
