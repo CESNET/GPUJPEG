@@ -77,42 +77,24 @@ gpujpeg_preprocessor_make_sampling_factor(int comp1_h, int comp1_v, int comp2_h,
  * Store value to component data buffer in specified position by buffer size and subsampling
  */
 template<
-    uint8_t s_samp_factor_h = GPUJPEG_DYNAMIC,
-    uint8_t s_samp_factor_v = GPUJPEG_DYNAMIC
+    unsigned int s_samp_factor_h,
+    unsigned int s_samp_factor_v
 >
-struct gpujpeg_preprocessor_raw_to_comp_store
+static __device__ void
+gpujpeg_preprocessor_raw_to_comp_store(uint8_t value, unsigned int position_x, unsigned int position_y, struct gpujpeg_preprocessor_data_component & comp)
 {
-    static __device__ void
-    perform(uint8_t value, unsigned int position_x, unsigned int position_y, struct gpujpeg_preprocessor_data_component & comp)
-    {
-        uint8_t samp_factor_h = s_samp_factor_h;
-        if ( samp_factor_h == GPUJPEG_DYNAMIC ) {
-            samp_factor_h = comp.sampling_factor.horizontal;
-        }
-        uint8_t samp_factor_v = s_samp_factor_v;
-        if ( samp_factor_v == GPUJPEG_DYNAMIC ) {
-            samp_factor_v = comp.sampling_factor.vertical;
-        }
-        
-        if ( (position_x % samp_factor_h) != 0 && (position_x % samp_factor_v) != 0 )
-            return;
-        position_x = position_x / samp_factor_h;
-        position_y = position_y / samp_factor_v;
+    const unsigned int samp_factor_h = ( s_samp_factor_h == GPUJPEG_DYNAMIC ) ? comp.sampling_factor.horizontal : s_samp_factor_h;
+    const unsigned int samp_factor_v = ( s_samp_factor_v == GPUJPEG_DYNAMIC ) ? comp.sampling_factor.vertical : s_samp_factor_v;
+    
+    if ( (position_x % samp_factor_h) || (position_y % samp_factor_v) )
+        return;
 
-        unsigned int data_position = position_y * comp.data_width + position_x;
-        comp.d_data[data_position] = value;
-    }
-};
-template<>
-struct gpujpeg_preprocessor_raw_to_comp_store<1, 1>
-{
-    static __device__ void
-    perform(uint8_t value, unsigned int position_x, unsigned int position_y, struct gpujpeg_preprocessor_data_component & comp)
-    {
-        int data_position = position_y * comp.data_width + position_x;
-        comp.d_data[data_position] = value;
-    }
-};
+    position_x = position_x / samp_factor_h;
+    position_y = position_y / samp_factor_v;
+
+    const unsigned int data_position = position_y * comp.data_width + position_x;
+    comp.d_data[data_position] = value;
+}
 
 /**
  * Kernel - Copy raw image source data into three separated component buffers
@@ -163,9 +145,9 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
         
     // Store
     if ( image_position_x < image_width ) {
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>::perform((uint8_t)r1, image_position_x, image_position_y, data.comp[0]);
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>::perform((uint8_t)r2, image_position_x, image_position_y, data.comp[1]);
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform((uint8_t)r3, image_position_x, image_position_y, data.comp[2]);
+        gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(r1, image_position_x, image_position_y, data.comp[0]);
+        gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(r2, image_position_x, image_position_y, data.comp[1]);
+        gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>(r3, image_position_x, image_position_y, data.comp[2]);
     }
 }
 
@@ -215,9 +197,9 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     
     // Store
     if ( image_position_x < image_width ) {
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>::perform((uint8_t)r1, image_position_x, image_position_y, data.comp[0]);
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>::perform((uint8_t)r2, image_position_x, image_position_y, data.comp[1]);
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform((uint8_t)r3, image_position_x, image_position_y, data.comp[2]);
+        gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(r1, image_position_x, image_position_y, data.comp[0]);
+        gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(r2, image_position_x, image_position_y, data.comp[1]);
+        gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>(r3, image_position_x, image_position_y, data.comp[2]);
     }
 }
 
