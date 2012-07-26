@@ -83,7 +83,7 @@ template<
 struct gpujpeg_preprocessor_raw_to_comp_store
 {
     static __device__ void
-    perform(uint8_t value, int position_x, int position_y, struct gpujpeg_preprocessor_data_component & comp)
+    perform(uint8_t value, unsigned int position_x, unsigned int position_y, struct gpujpeg_preprocessor_data_component & comp)
     {
         uint8_t samp_factor_h = s_samp_factor_h;
         if ( samp_factor_h == GPUJPEG_DYNAMIC ) {
@@ -99,7 +99,7 @@ struct gpujpeg_preprocessor_raw_to_comp_store
         position_x = position_x / samp_factor_h;
         position_y = position_y / samp_factor_v;
 
-        int data_position = position_y * comp.data_width + position_x;
+        unsigned int data_position = position_y * comp.data_width + position_x;
         comp.d_data[data_position] = value;
     }
 };
@@ -107,7 +107,7 @@ template<>
 struct gpujpeg_preprocessor_raw_to_comp_store<1, 1>
 {
     static __device__ void
-    perform(uint8_t value, int position_x, int position_y, struct gpujpeg_preprocessor_data_component & comp)
+    perform(uint8_t value, unsigned int position_x, unsigned int position_y, struct gpujpeg_preprocessor_data_component & comp)
     {
         int data_position = position_y * comp.data_width + position_x;
         comp.d_data[data_position] = value;
@@ -132,7 +132,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
 {
     const unsigned int image_position_x = threadIdx.x + blockIdx.x * blockDim.x;
     const unsigned int image_position_y = blockIdx.y;
-    int x  = threadIdx.x;
+    const unsigned int x = threadIdx.x;
     const unsigned int pix_offset = image_position_y * image_width + blockIdx.x * blockDim.x;
             
     // Load to shared
@@ -182,7 +182,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
 {
     const unsigned int image_position_x = threadIdx.x + blockIdx.x * blockDim.x;
     const unsigned int image_position_y = blockIdx.y;
-    int x = threadIdx.x;
+    const unsigned int x = threadIdx.x;
     const unsigned int pix_offset = image_position_y * image_width + blockIdx.x * blockDim.x;
         
     // Load to shared
@@ -195,7 +195,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     __syncthreads();
 
     // Load
-    int offset = x * 2;
+    const unsigned int offset = x * 2;
     float r1;
     float r2 = (float)(s_data[offset + 1]);
     float r3;
