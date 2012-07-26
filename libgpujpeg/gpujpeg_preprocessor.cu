@@ -128,9 +128,9 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
 
     // Load
     int offset = x * 3;
-    float r1 = (float)(s_data[offset]);
-    float r2 = (float)(s_data[offset + 1]);
-    float r3 = (float)(s_data[offset + 2]);
+    uint8_t r1 = s_data[offset];
+    uint8_t r2 = s_data[offset + 1];
+    uint8_t r3 = s_data[offset + 2];
 
     // Load Order
     gpujpeg_color_order<color_space>::perform_load(r1, r2, r3);
@@ -178,15 +178,15 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
 
     // Load
     const unsigned int offset = x * 2;
-    float r1;
-    float r2 = (float)(s_data[offset + 1]);
-    float r3;
+    uint8_t r1;
+    uint8_t r2 = s_data[offset + 1];
+    uint8_t r3;
     if ( (pix_offset + x) % 2 == 0 ) {
-        r1 = (float)(s_data[offset]);
-        r3 = (float)(s_data[offset + 2]);
+        r1 = s_data[offset];
+        r3 = s_data[offset + 2];
     } else {
-        r1 = (float)(s_data[offset - 2]);
-        r3 = (float)(s_data[offset]);
+        r1 = s_data[offset - 2];
+        r3 = s_data[offset];
     }
 
     // Load Order
@@ -406,7 +406,7 @@ template<
 struct gpujpeg_preprocessor_comp_to_raw_load
 {
     static __device__ void
-    perform(float & value, int position_x, int position_y, struct gpujpeg_preprocessor_data_component & comp)
+    perform(uint8_t & value, int position_x, int position_y, struct gpujpeg_preprocessor_data_component & comp)
     {
         uint8_t samp_factor_h = s_samp_factor_h;
         if ( samp_factor_h == GPUJPEG_DYNAMIC ) {
@@ -421,17 +421,17 @@ struct gpujpeg_preprocessor_comp_to_raw_load
         position_y = position_y / samp_factor_v;
         
         int data_position = position_y * comp.data_width + position_x;
-        value = (float)comp.d_data[data_position];
+        value = comp.d_data[data_position];
     }
 };
 template<>
 struct gpujpeg_preprocessor_comp_to_raw_load<1, 1>
 {
     static __device__ void
-    perform(float & value, int position_x, int position_y, struct gpujpeg_preprocessor_data_component & comp)
+    perform(uint8_t & value, int position_x, int position_y, struct gpujpeg_preprocessor_data_component & comp)
     {
         int data_position = position_y * comp.data_width + position_x;
-        value = (float)comp.d_data[data_position];
+        value = comp.d_data[data_position];
     }
 };
 
@@ -467,9 +467,9 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     int image_position_y = image_position / image_width;
         
     // Load
-    float r1;
-    float r2;
-    float r3;
+    uint8_t r1;
+    uint8_t r2;
+    uint8_t r3;
     gpujpeg_preprocessor_comp_to_raw_load<s_comp1_samp_factor_h, s_comp1_samp_factor_v>::perform(r1, image_position_x, image_position_y, data.comp[0]);
     gpujpeg_preprocessor_comp_to_raw_load<s_comp2_samp_factor_h, s_comp2_samp_factor_v>::perform(r2, image_position_x, image_position_y, data.comp[1]);
     gpujpeg_preprocessor_comp_to_raw_load<s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform(r3, image_position_x, image_position_y, data.comp[2]);
@@ -482,9 +482,9 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(struct gpujpeg_preprocessor_data d
 
     // Save
     image_position = image_position * 3;
-    d_data_raw[image_position + 0] = (uint8_t)round(r1);
-    d_data_raw[image_position + 1] = (uint8_t)round(r2);
-    d_data_raw[image_position + 2] = (uint8_t)round(r3);
+    d_data_raw[image_position + 0] = r1;
+    d_data_raw[image_position + 1] = r2;
+    d_data_raw[image_position + 2] = r3;
 }
 
 /** Specialization [sampling factor is 4:2:2] */
@@ -507,9 +507,9 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     int image_position_y = image_position / image_width;
         
     // Load
-    float r1;
-    float r2;
-    float r3;
+    uint8_t r1;
+    uint8_t r2;
+    uint8_t r3;
     gpujpeg_preprocessor_comp_to_raw_load<s_comp1_samp_factor_h, s_comp1_samp_factor_v>::perform(r1, image_position_x, image_position_y, data.comp[0]);
     gpujpeg_preprocessor_comp_to_raw_load<s_comp2_samp_factor_h, s_comp2_samp_factor_v>::perform(r2, image_position_x, image_position_y, data.comp[1]);
     gpujpeg_preprocessor_comp_to_raw_load<s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform(r3, image_position_x, image_position_y, data.comp[2]);
@@ -522,11 +522,11 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data d
 
     // Save
     image_position = image_position * 2;
-    d_data_raw[image_position + 1] = (uint8_t)round(r2);
+    d_data_raw[image_position + 1] = r2;
     if ( (image_position_x % 2) == 0 )
-        d_data_raw[image_position + 0] = (uint8_t)round(r1);
+        d_data_raw[image_position + 0] = r1;
     else
-        d_data_raw[image_position + 0] = (uint8_t)round(r3);
+        d_data_raw[image_position + 0] = r3;
 }
 
 /**
