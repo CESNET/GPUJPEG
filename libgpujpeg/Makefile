@@ -40,11 +40,17 @@ USE_OPENGL ?= 0
 DEBUG ?= 0
 # CUDA install path
 CUDA_INSTALL_PATH ?= /usr/local/cuda
+#Destination directory
+DESTDIR ?= /usr/local
+
 
 # Target executable
 TARGET := libgpujpeg.a
 ifeq ($(SHARED_LIBRARY),1)
-    TARGET := libgpujpeg.so
+    LIBRARY_NAME := libgpujpeg.so
+    SONAME := $(LIBRARY_NAME).0
+    REAL_NAME := $(SONAME).0.0
+    TARGET := $(REAL_NAME)
 endif
 
 # C files
@@ -85,9 +91,10 @@ CFLAGS += $(COMMONFLAGS) -std=c99
 # CUDA flags
 NVCCFLAGS += $(COMMONFLAGS) \
 	-gencode arch=compute_20,code=sm_20 \
-	-gencode arch=compute_11,code=sm_11
+	-gencode arch=compute_11,code=sm_11 \
+	-gencode arch=compute_10,code=sm_10
 # Linker flags
-LDFLAGS += -shared
+LDFLAGS += -shared -Wl,-soname,$(SONAME)
 
 # Other Flags
 ifeq ($(HUFFMAN_CODER_TABLES_IN_CONSTANT),1)
@@ -114,10 +121,12 @@ LDFLAGS += -lcudart -lnpp
 
 # Build
 build: $(TARGET)
+	ln -sf $(TARGET) $(LIBRARY_NAME)
+	ln -sf $(TARGET) $(SONAME)
 
 # Clean
 clean:
-	rm -f *.o $(TARGET)
+	rm -f *.o $(TARGET) $(SONAME) $(LIBRARY_NAME)
 	rm -f *.i *.ii 
 	rm -f *.cudafe1.c *.cudafe1.cpp *.cudafe1.gpu *.cudafe1.stub.c
 	rm -f *.cudafe2.c *.cudafe2.gpu *.cudafe2.stub.c
@@ -147,6 +156,22 @@ endif
 # Pattern rule for compiling CUDA files
 %.cu.o: %.cu
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@;
+
+install: $(TARGET)
+	install -d -m 755 $(DESTDIR)/lib
+	install -m 644 $(TARGET) $(DESTDIR)/lib
+ifeq ($(SHARED_LIBRARY),1)
+	ldconfig -n $(DESTDIR)/lib
+	ln -sf $(DESTDIR)/lib/$(SONAME) $(DESTDIR)/lib/$(LIBRARY_NAME)
+endif
+
+uninstall: $(TARGET)
+	rm $(DESTDIR)/lib/$(TARGET)
+ifeq ($(SHARED_LIBRARY),1)
+	rm $(DESTDIR)/lib/$(SONAME)
+	rm $(DESTDIR)/lib/$(LIBRARY_NAME)
+endif
+
 
 # Set file dependencies
 gpujpeg_common.c.o: gpujpeg_common.c gpujpeg_common.h
