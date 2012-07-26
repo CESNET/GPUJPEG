@@ -180,15 +180,17 @@ template<
 __global__ void 
 gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width, int image_height)
 {
-    int x  = threadIdx.x;
-    int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
+    const unsigned int image_position_x = threadIdx.x + blockIdx.x * blockDim.x;
+    const unsigned int image_position_y = blockIdx.y;
+    int x = threadIdx.x;
+    const unsigned int pix_offset = image_position_y * image_width + blockIdx.x * blockDim.x;
         
     // Load to shared
     __shared__ unsigned char s_data[RGB_8BIT_THREADS * 2];
     if ( (x * 4) < RGB_8BIT_THREADS * 2 ) {
         int* s = (int*)d_data_raw;
         int* d = (int*)s_data;
-        d[x] = s[((gX * 2) >> 2) + x];
+        d[x] = s[((pix_offset * 2) >> 2) + x];
     }
     __syncthreads();
 
@@ -197,7 +199,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     float r1;
     float r2 = (float)(s_data[offset + 1]);
     float r3;
-    if ( (gX + x) % 2 == 0 ) {
+    if ( (pix_offset + x) % 2 == 0 ) {
         r1 = (float)(s_data[offset]);
         r3 = (float)(s_data[offset + 2]);
     } else {
@@ -211,13 +213,8 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     // Color transform
     gpujpeg_color_transform<color_space, color_space_internal>::perform(r1, r2, r3);
     
-    // Position
-    int image_position = gX + x;
-    int image_position_x = image_position % image_width;
-    int image_position_y = image_position / image_width;
-    
     // Store
-    if ( image_position < (image_width * image_height) ) {
+    if ( image_position_x < image_width ) {
         gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>::perform((uint8_t)r1, image_position_x, image_position_y, data.comp[0]);
         gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>::perform((uint8_t)r2, image_position_x, image_position_y, data.comp[1]);
         gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform((uint8_t)r3, image_position_x, image_position_y, data.comp[2]);
