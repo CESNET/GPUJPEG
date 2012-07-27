@@ -83,11 +83,14 @@ gpujpeg_table_quantization_apply_quality(uint8_t* table_raw, int quality)
 {
     int s = (quality < 50) ? (5000 / quality) : (200 - (2 * quality));
     for ( int i = 0; i < 64; i++ ) {
-        uint8_t value = (s * (int)table_raw[i] + 50) / 100;
+        int value = (s * (int)table_raw[i] + 50) / 100;
         if ( value == 0 ) {
             value = 1;
         }
-        table_raw[i] = value;
+        if ( value > 255 ) {
+            value = 255;
+        }
+        table_raw[i] = (uint8_t)value;
     }
 }
 
