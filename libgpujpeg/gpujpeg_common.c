@@ -30,7 +30,6 @@
 #include "gpujpeg_common.h"
 #include "gpujpeg_util.h"
 #include "gpujpeg_preprocessor.h"
-#include <npp.h>
 #include <math.h>
 #ifdef GPUJPEG_USE_OPENGL
     #define GL_GLEXT_PROTOTYPES
@@ -152,9 +151,6 @@ gpujpeg_init_device(int device_id, int flags)
         int cuda_runtime_version = 0;
         cudaRuntimeGetVersion(&cuda_runtime_version);
         printf("CUDA runtime version:  %d.%d\n", cuda_runtime_version / 1000, (cuda_runtime_version % 100) / 10);
-        
-        const NppLibraryVersion* npp_version = nppGetLibVersion();
-        printf("NPP version:           %d.%d\n", npp_version->major, npp_version->minor);
         
         printf("Using Device #%d:       %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
     }

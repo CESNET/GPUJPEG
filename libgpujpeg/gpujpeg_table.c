@@ -29,7 +29,6 @@
  
 #include "gpujpeg_table.h"
 #include "gpujpeg_util.h"
-#include <npp.h>
 
 /** Default Quantization Table for Y component (zig-zag order)*/
 static uint8_t gpujpeg_table_default_quantization_luminance[] = { 
@@ -73,31 +72,52 @@ gpujpeg_table_quantization_set_default(uint8_t* table_raw, enum gpujpeg_componen
     memcpy(table_raw, table_default, 64 * sizeof(uint8_t));
 }
 
+/**
+ * Apply quality to quantization table
+ *
+ * @param table_raw  Table buffer
+ * @param quality  Quality to apply
+ */
+void
+gpujpeg_table_quantization_apply_quality(uint8_t* table_raw, int quality)
+{
+    int s = (quality < 50) ? (5000 / quality) : (200 - (2 * quality));
+    for ( int i = 0; i < 64; i++ ) {
+        uint8_t value = (s * (int)table_raw[i] + 50) / 100;
+        if ( value == 0 ) {
+            value = 1;
+        }
+        table_raw[i] = value;
+    }
+}
+
 /** Documented at declaration */
 int
 gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality)
 {
     // Load raw table in zig-zag order
     gpujpeg_table_quantization_set_default(table->table_raw, type);
-    
+
     // Update raw table by quality
-    nppiQuantFwdRawTableInit_JPEG_8u(table->table_raw, quality);
+    gpujpeg_table_quantization_apply_quality(table->table_raw, quality);
     
-    // Fix NPP bug before version 4.1 [http://forums.nvidia.com/index.php?showtopic=191896]
-    const NppLibraryVersion* npp_version = nppGetLibVersion();
-    if ( npp_version->major < 4 || (npp_version->major == 4 && npp_version->minor == 0) ) {
-        for ( int i = 0; i < 64; i++ ) {
-            table->table[gpujpeg_order_natural[i]] = ((1 << 15) / (double)table->table_raw[i]) + 0.5;
-        }
-    } else {
-        // Load forward table from raw table
-        nppiQuantFwdTableInit_JPEG_8u16u(table->table_raw, table->table);
+    // Scales of outputs of 1D DCT.
+    const double dct_scales[8] = {1.0, 1.387039845, 1.306562965, 1.175875602, 1.0, 0.785694958, 0.541196100, 0.275899379};
+    
+    // Prepare transposed float quantization table, pre-divided by output DCT weights
+    float h_quantization_table[64];
+    for( unsigned int i = 0; i < 64; i++ ) {
+        const unsigned int x = gpujpeg_order_natural[i] % 8;
+        const unsigned int y = gpujpeg_order_natural[i] / 8;
+        h_quantization_table[x * 8 + y] = 1.0 / (table->table_raw[i] * dct_scales[x] * dct_scales[y] * 8); // 8 is the gain of 2D DCT
     }
-        
-    // Copy tables to device memory
-    if ( cudaSuccess != cudaMemcpy(table->d_table, table->table, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
-        return -1;
     
+    // Copy quantization table to constant memory
+    if ( cudaSuccess != cudaMemcpy(table->d_table_forward, h_quantization_table, 64 * sizeof(float), cudaMemcpyHostToDevice) )
+        return  -1;
+    gpujpeg_cuda_check_error("Copy DCT quantization table to device memory");
+    
+    // DCT loads the table into GPU memory itself, after premultiplying coefficients with DCT normalization constants.
     return 0;
 }
 
@@ -109,19 +129,13 @@ gpujpeg_table_quantization_decoder_init(struct gpujpeg_table_quantization* table
     gpujpeg_table_quantization_set_default(table->table_raw, type);
     
     // Update raw table by quality
-    nppiQuantFwdRawTableInit_JPEG_8u(table->table_raw, quality);
+    gpujpeg_table_quantization_apply_quality(table->table_raw, quality);
     
-    // Fix NPP bug before version 4.1 [http://forums.nvidia.com/index.php?showtopic=191896]
-    const NppLibraryVersion* npp_version = nppGetLibVersion();
-    if ( npp_version->major < 4 || (npp_version->major == 4 && npp_version->minor == 0) ) {
-        for ( int i = 0; i < 64; i++ ) {
-            table->table[gpujpeg_order_natural[i]] = table->table_raw[i];
-        }
-    } else {
-        // Load inverse table from raw table
-        nppiQuantInvTableInit_JPEG_8u16u(table->table_raw, table->table);
+    // Load inverse table from raw table
+    for ( int i = 0; i < 64; i++ ) {
+        table->table[gpujpeg_order_natural[i]] = table->table_raw[i];
     }
-    
+
     // Copy tables to device memory
     if ( cudaSuccess != cudaMemcpy(table->d_table, table->table, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
         return -1;
@@ -132,17 +146,11 @@ gpujpeg_table_quantization_decoder_init(struct gpujpeg_table_quantization* table
 int
 gpujpeg_table_quantization_decoder_compute(struct gpujpeg_table_quantization* table)
 {
-    // Fix NPP bug before version 4.1 [http://forums.nvidia.com/index.php?showtopic=191896]
-    const NppLibraryVersion* npp_version = nppGetLibVersion();
-    if ( npp_version->major < 4 || (npp_version->major == 4 && npp_version->minor == 0) ) {
-        for ( int i = 0; i < 64; i++ ) {
-            table->table[gpujpeg_order_natural[i]] = table->table_raw[i];
-        }
-    } else {
-        // Load inverse table from raw table
-        nppiQuantInvTableInit_JPEG_8u16u(table->table_raw, table->table);
+    // Load inverse table from raw table
+    for ( int i = 0; i < 64; i++ ) {
+        table->table[gpujpeg_order_natural[i]] = table->table_raw[i];
     }
-    
+
     // Copy tables to device memory
     if ( cudaSuccess != cudaMemcpy(table->d_table, table->table, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
         return -1;
