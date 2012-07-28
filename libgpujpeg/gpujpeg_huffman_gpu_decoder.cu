@@ -30,6 +30,36 @@
 #include "gpujpeg_huffman_gpu_decoder.h"
 #include "gpujpeg_util.h"
 
+/**
+ * Entry of pre-built Huffman fast-decoding table.
+ */
+struct gpujpeg_table_huffman_decoder_entry {
+    /** Number of bits of code corresponding to this entry (0 - 16, both inclusive) */
+    int code_nbits;
+    
+    /** Number of run-length coded zeros before currently decoded coefficient (0 - 63, both inclusive) */
+    int rle_zero_count;
+    
+    /** Number of bits representing the value of currently decoded coefficient (0 - 16, both inclusive) */
+    int value_nbits;
+};
+
+/**
+ * Pre-built table for faster Huffman decoding (codewords up-to 16 bit length)
+ */
+struct gpujpeg_table_huffman_decoder_fast {
+    struct gpujpeg_table_huffman_decoder_entry codes[1 << 16];
+};
+
+
+
+/** Pre-built tables for faster huffman decoding in global memory. */
+__device__
+struct gpujpeg_table_huffman_decoder_fast gpujpeg_huffman_gpu_decoder_tables[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
+
+
+
+
 
 /** Natural order in constant memory */
 __constant__ int gpujpeg_huffman_gpu_decoder_order_natural[GPUJPEG_ORDER_NATURAL_SIZE];
@@ -393,6 +423,70 @@ gpujpeg_huffman_decoder_decode_kernel(
     }
 }
 
+/**
+ * Setup of one Huffman table entry for fast decoding.
+ * @param bits  bits to extract one codeword from (first bit is bit #15, then #14, ... last is #0)
+ * @param d_table_src  source (slow-decoding) table pointer
+ * @param d_table_dest  destination (fast-decoding) table pointer
+ */
+__device__ void
+gpujpeg_huffman_gpu_decoder_table_setup(
+    const int bits, 
+    const struct gpujpeg_table_huffman_decoder* const d_table_src,
+    struct gpujpeg_table_huffman_decoder_fast* const d_table_dest
+) {
+    // Decode one codeword from given bits to get following:
+    //  - minimal number of bits actually needed to decode the codeword (up to 16 bits, 0 for invalid ones)
+    //  - category ID represented by the codeword, consisting from:
+    //      - number of run-length-coded preceding zeros (up to 16, or 63 for both special end-of block symbol or invalid codewords)
+    //      - bit-size of the actual value of coefficient (up to 16, 0 for invalid ones)
+    int code_nbits = 1, category_id = 0;
+    
+    // First, decode codeword length (This is per Figure F.16 in the JPEG spec.)
+    int code_value = bits >> 15; // only single bit initially
+    while ( code_value > d_table_src->maxcode[code_nbits] ) {
+        code_value = bits >> (16 - ++code_nbits); // not enough to decide => try more bits
+    }
+    
+    // With garbage input we may reach the sentinel value l = 17.
+    if ( code_nbits > 16 ) {
+        code_nbits = 0;
+        // category ID remains 0 for invalid symbols from garbage input
+    } else {
+        category_id = d_table_src->huffval[d_table_src->valptr[code_nbits] + code_value - d_table_src->mincode[code_nbits]];
+    }
+    
+    // decompose category number into number of run-length coded zeros and length of the value
+    // (special category #0 contains all invalid codes and special end-of-block code -- all of those codes 
+    // should terminate block decoding => use 63 run-length zeros and 0 value bits for such symbols)
+    const int value_nbits = 0xF & category_id;
+    const int rle_zero_count = category_id ? min(category_id >> 4, 63) : 63;
+    
+    // save all the info into the right place in the destination table
+    d_table_dest->codes[bits].code_nbits = code_nbits;
+    d_table_dest->codes[bits].value_nbits = value_nbits;
+    d_table_dest->codes[bits].rle_zero_count = rle_zero_count;
+}
+
+/**
+ * Huffman decoder table setup kernel
+ * (Based on the original table, this kernel prepares another table, which is more suitable for fast decoding.)
+ */
+__global__ void
+gpujpeg_huffman_decoder_table_kernel(
+                const struct gpujpeg_table_huffman_decoder* const d_table_y_dc,
+                const struct gpujpeg_table_huffman_decoder* const d_table_y_ac,
+                const struct gpujpeg_table_huffman_decoder* const d_table_cbcr_dc,
+                const struct gpujpeg_table_huffman_decoder* const d_table_cbcr_ac
+) {
+    // Each thread uses all 4 Huffman tables to "decode" one symbol from its unique 16bits.
+    const int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_y_dc, &gpujpeg_huffman_gpu_decoder_tables[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC]);
+    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_y_ac, &gpujpeg_huffman_gpu_decoder_tables[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC]);
+    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_cbcr_dc, &gpujpeg_huffman_gpu_decoder_tables[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC]);
+    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_cbcr_ac, &gpujpeg_huffman_gpu_decoder_tables[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC]);
+}
+
 /** Documented at declaration */
 int
 gpujpeg_huffman_gpu_decoder_init()
@@ -424,9 +518,20 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
         comp_count = coder->param_image.comp_count;
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     
-    // Configure more L1 memory
-    cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_decode_kernel, cudaFuncCachePreferL1);
-
+    // Configure more Shared memory for both kernels
+    cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_table_kernel, cudaFuncCachePreferShared);
+    cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_decode_kernel, cudaFuncCachePreferShared);
+    
+    // Setup GPU tables (one thread for each of 65536 entries)
+    gpujpeg_huffman_decoder_table_kernel<<<256, 256>>>(
+        decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC],
+        decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC],
+        decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC],
+        decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC]
+    );
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Huffman decoder table setup failed");
+    
     // Run kernel
     dim3 thread(32);
     dim3 grid(gpujpeg_div_and_round_up(decoder->segment_count, thread.x));
