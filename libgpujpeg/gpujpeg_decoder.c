@@ -35,11 +35,6 @@
 #include "gpujpeg_huffman_gpu_decoder.h"
 #include "gpujpeg_util.h"
 
-#ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
-/** Huffman tables in constant memory */
-struct gpujpeg_table_huffman_decoder (*gpujpeg_decoder_table_huffman)[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
-#endif
-
 /** Documented at declaration */
 void
 gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* output)
@@ -222,23 +217,6 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     }
     // Perform huffman decoding on GPU (when restart interval is set)
     else {
-    #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
-        // Copy huffman tables to constant memory
-        for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
-            for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
-                int index = (comp_type * GPUJPEG_HUFFMAN_TYPE_COUNT + huff_type);
-                cudaMemcpyToSymbol(
-                    (char*)gpujpeg_decoder_table_huffman, 
-                    &decoder->table_huffman[comp_type][huff_type], 
-                    sizeof(struct gpujpeg_table_huffman_decoder), 
-                    index * sizeof(struct gpujpeg_table_huffman_decoder), 
-                    cudaMemcpyHostToDevice
-                );
-            }
-        }
-        gpujpeg_cuda_check_error("Decoder copy huffman tables to constant memory");
-    #endif
-    
         // Reset huffman output
         cudaMemset(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t));
         
