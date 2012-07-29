@@ -59,6 +59,7 @@ __device__ uint16_t gpujpeg_huffman_gpu_decoder_tables_full[4 * (1 << 16)];
 /** Number of code bits to be checked first (with high chance for the code to fit into this number of bits). */
 #define QUICK_CHECK_BITS 10
 #define QUICK_TABLE_ITEMS (4 * (1 << QUICK_CHECK_BITS))
+// TODO: try to tweak QUICK table size and memory space
 
 /** Table with same format as the full table, except that all-zero-entry means that the full table should be consulted. */
 __device__ uint16_t gpujpeg_huffman_gpu_decoder_tables_quick[QUICK_TABLE_ITEMS];
@@ -312,6 +313,8 @@ gpujpeg_huffman_gpu_decoder_decode_block(
     unsigned int & r_bit, unsigned int & r_bit_count, uint4* const s_byte,
     unsigned int & s_byte_idx, const uint4* & d_byte, unsigned int & d_byte_chunk_count)
 {
+    // TODO: try unified decoding of DC/AC coefficients
+    
     // Index of next coefficient to be decoded (in ZIG-ZAG order)
     unsigned int coefficient_idx = 0;
     
@@ -378,11 +381,7 @@ gpujpeg_huffman_decoder_decode_kernel(
     struct gpujpeg_segment* d_segment,
     int comp_count,
     int segment_count, 
-    uint8_t* d_data_compressed,
-    struct gpujpeg_table_huffman_decoder* d_table_y_dc,
-    struct gpujpeg_table_huffman_decoder* d_table_y_ac,
-    struct gpujpeg_table_huffman_decoder* d_table_cbcr_dc,
-    struct gpujpeg_table_huffman_decoder* d_table_cbcr_ac
+    uint8_t* d_data_compressed
 ) {
     int segment_index = blockIdx.x * THREADS_PER_TBLOCK + threadIdx.x;
     if ( segment_index >= segment_count )
@@ -394,7 +393,7 @@ gpujpeg_huffman_decoder_decode_kernel(
     __shared__ uint4 s_byte_all[2 * THREADS_PER_TBLOCK]; // 32 bytes per thread
     uint4 * const s_byte = s_byte_all + 2 * threadIdx.x;
     
-    // Last DC coefficient values
+    // Last DC coefficient values   TODO: try to move into shared memory
     int dc[GPUJPEG_MAX_COMPONENT_COUNT];
     for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ )
         dc[comp] = 0;
@@ -418,6 +417,8 @@ gpujpeg_huffman_decoder_decode_kernel(
     // bits loaded into the register and their count
     unsigned int r_bit_count = 0;
     unsigned int r_bit = 0; // LSB-aligned
+    
+    // TODO: try using block lists
     
     // Non-interleaving mode
     if ( comp_count == 1 ) {
@@ -627,11 +628,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
         coder->d_segment, 
         comp_count,
         decoder->segment_count,
-        coder->d_data_compressed,
-        decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC],
-        decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC],
-        decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC],
-        decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC]
+        coder->d_data_compressed
     );
     cudaError cuerr = cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman decoding failed");
