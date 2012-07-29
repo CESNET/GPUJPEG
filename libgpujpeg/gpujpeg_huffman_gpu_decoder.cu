@@ -239,39 +239,38 @@ gpujpeg_huffman_gpu_decoder_decode_special_decode(
 }
 
 /**
- * To find dc or ac value according to category and category offset
- * 
- * @param category
- * @param offset
- * @return int
+ * To find dc or ac value according to code and its bit length s
  */
 __device__ inline int
-gpujpeg_huffman_gpu_decoder_value_from_category(int category, int offset)
+gpujpeg_huffman_gpu_decoder_value_from_category(int nbits, int code)
 {
-    // Method 1: 
-    // On some machines, a shift and add will be faster than a table lookup.
-    // #define HUFF_EXTEND(x,s) \
-    // ((x)< (1<<((s)-1)) ? (x) + (((-1)<<(s)) + 1) : (x)) 
-
-    // Method 2: Table lookup
-    // If (offset < half[category]), then value is below zero
-    // Otherwise, value is above zero, and just the offset 
-    // entry n is 2**(n-1)
-    const int half[16] =    { 
-        0x0000, 0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0020, 0x0040, 
-        0x0080, 0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000
-    };
-
-    //start[i] is the starting value in this category; surely it is below zero
-    // entry n is (-1 << n) + 1
-    const int start[16] = { 
-        0, ((-1)<<1) + 1, ((-1)<<2) + 1, ((-1)<<3) + 1, ((-1)<<4) + 1,
-        ((-1)<<5) + 1, ((-1)<<6) + 1, ((-1)<<7) + 1, ((-1)<<8) + 1,
-        ((-1)<<9) + 1, ((-1)<<10) + 1, ((-1)<<11) + 1, ((-1)<<12) + 1,
-        ((-1)<<13) + 1, ((-1)<<14) + 1, ((-1)<<15) + 1 
-    };    
-
-    return (offset < half[category]) ? (offset + start[category]) : offset;    
+    // TODO: try to replace with __constant__ table lookup
+    return code < ((1 << nbits) >> 1) ? (code + ((-1) << nbits) + 1) : code;
+    
+//     // Method 1: 
+//     // On some machines, a shift and add will be faster than a table lookup.
+//     // #define HUFF_EXTEND(x,s) \
+//     // ((x)< (1<<((s)-1)) ? (x) + (((-1)<<(s)) + 1) : (x)) 
+// 
+//     // Method 2: Table lookup
+//     // If (offset < half[category]), then value is below zero
+//     // Otherwise, value is above zero, and just the offset 
+//     // entry n is 2**(n-1)
+//     const int half[16] =    { 
+//         0x0000, 0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0020, 0x0040, 
+//         0x0080, 0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000
+//     };
+// 
+//     //start[i] is the starting value in this category; surely it is below zero
+//     // entry n is (-1 << n) + 1
+//     const int start[16] = { 
+//         0, ((-1)<<1) + 1, ((-1)<<2) + 1, ((-1)<<3) + 1, ((-1)<<4) + 1,
+//         ((-1)<<5) + 1, ((-1)<<6) + 1, ((-1)<<7) + 1, ((-1)<<8) + 1,
+//         ((-1)<<9) + 1, ((-1)<<10) + 1, ((-1)<<11) + 1, ((-1)<<12) + 1,
+//         ((-1)<<13) + 1, ((-1)<<14) + 1, ((-1)<<15) + 1 
+//     };    
+// 
+//     return (code < half[nbits]) ? (code + start[nbits]) : code;    
 }
 
 /**
