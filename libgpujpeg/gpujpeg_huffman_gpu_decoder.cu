@@ -278,11 +278,7 @@ gpujpeg_huffman_gpu_decoder_value_from_category(int nbits, int code)
 }
 
 /**
- * Get category number for dc, or (0 run length, ac category) for ac.
- * The max length for Huffman codes is 15 bits; so we use 32 bits buffer    
- * m_nGetBuff, with the validated length is m_nGetBits.
- * Usually, more than 95% of the Huffman codes will be 8 or fewer bits long
- * To speed up, we should pay more attention on the codes whose length <= 8
+ * Decodes next coefficient, updating its output index
  * 
  * @param table
  * @param get_bits
