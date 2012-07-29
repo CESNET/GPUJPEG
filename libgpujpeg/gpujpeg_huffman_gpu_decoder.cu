@@ -58,12 +58,13 @@ __device__ uint16_t gpujpeg_huffman_gpu_decoder_tables_full[4 * (1 << 16)];
 
 /** Number of code bits to be checked first (with high chance for the code to fit into this number of bits). */
 #define QUICK_CHECK_BITS 8
+#define QUICK_TABLE_ITEMS (4 * (1 << QUICK_CHECK_BITS))
 
 /** Table with same format as the full table, except that all-zero-entry means that the full table should be consulted. */
-__device__ uint16_t gpujpeg_huffman_gpu_decoder_tables_quick[4 * (1 << QUICK_CHECK_BITS)];
+__device__ uint16_t gpujpeg_huffman_gpu_decoder_tables_quick[QUICK_TABLE_ITEMS];
 
-
-
+/** Same table as above, but copied into constant memory */
+__constant__ uint16_t gpujpeg_huffman_gpu_decoder_tables_quick_const[QUICK_TABLE_ITEMS];
 
 /** Natural order in constant memory */
 __constant__ int gpujpeg_huffman_gpu_decoder_order_natural[GPUJPEG_ORDER_NATURAL_SIZE];
@@ -297,7 +298,7 @@ gpujpeg_huffman_gpu_decoder_get_coefficient(
     const unsigned int table_idx = table_offset + gpujpeg_huffman_gpu_decoder_peek_bits(16, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
     
     // Try the quick table first (use the full table only if not succeded with the quick table)
-    unsigned int packed_info = gpujpeg_huffman_gpu_decoder_tables_quick[table_idx >> (16 - QUICK_CHECK_BITS)];
+    unsigned int packed_info = gpujpeg_huffman_gpu_decoder_tables_quick_const[table_idx >> (16 - QUICK_CHECK_BITS)];
     if(0 == packed_info) {
         packed_info = gpujpeg_huffman_gpu_decoder_tables_full[table_idx];
     }
@@ -601,6 +602,23 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     );
     cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman decoder table setup failed");
+
+    // Get pointer to quick decoding table in device memory
+    void * d_src_ptr = 0;
+    cudaGetSymbolAddress(&d_src_ptr, gpujpeg_huffman_gpu_decoder_tables_quick);
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Huffman decoder table address lookup failed");
+    
+    // Copy quick decoding table into constant memory
+    cudaMemcpyToSymbol(
+        gpujpeg_huffman_gpu_decoder_tables_quick_const,
+        d_src_ptr,
+        sizeof(*gpujpeg_huffman_gpu_decoder_tables_quick) * QUICK_TABLE_ITEMS,
+        0,
+        cudaMemcpyDeviceToDevice
+    );
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Huffman decoder table copy failed");
     
     // Run decoding kernel
     dim3 thread(THREADS_PER_TBLOCK);
