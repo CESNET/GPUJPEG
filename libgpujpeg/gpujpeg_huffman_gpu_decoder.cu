@@ -174,6 +174,28 @@ gpujpeg_huffman_gpu_decoder_get_bits(
     return (r_bit >> r_bit_count) & ((1 << nbits) - 1);
 }
 
+/**
+ * Gets bits without removing them from the buffer.
+ */
+__device__ inline unsigned int
+gpujpeg_huffman_gpu_decoder_peek_bits(
+                const unsigned int nbits, unsigned int & r_bit, unsigned int & r_bit_count, uint4 * const s_byte, 
+                unsigned int & s_byte_idx, const uint4 * & d_byte, unsigned int & d_byte_chunk_count)
+{
+    // load bits into the register if haven't got enough
+    gpujpeg_huffman_gpu_decoder_load_bits(nbits, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    
+    // return bits 
+    return (r_bit >> (r_bit_count - nbits)) & ((1 << nbits) - 1);
+}
+
+/**
+ * Removes some bits from the buffer (assumes that they are there)
+ */
+__device__ inline void
+gpujpeg_huffman_gpu_decoder_discard_bits(const unsigned int nb, unsigned int, unsigned int & r_bit_count) {
+    r_bit_count -= nb;
+}
 
 /**
  * Special Huffman decode:
@@ -190,7 +212,7 @@ gpujpeg_huffman_gpu_decoder_get_bits(
  */
 __device__ inline int
 gpujpeg_huffman_gpu_decoder_decode_special_decode(
-                struct gpujpeg_table_huffman_decoder* table, int min_bits, unsigned int & r_bit,
+                const struct gpujpeg_table_huffman_decoder* const table, int min_bits, unsigned int & r_bit,
                 unsigned int & r_bit_count, uint4 * const s_byte, 
                 unsigned int & s_byte_idx, const uint4 * & d_byte, unsigned int & d_byte_chunk_count)
 {
@@ -252,43 +274,38 @@ gpujpeg_huffman_gpu_decoder_value_from_category(int category, int offset)
     return (offset < half[category]) ? (offset + start[category]) : offset;    
 }
 
-// /**
-//  * Get category number for dc, or (0 run length, ac category) for ac.
-//  * The max length for Huffman codes is 15 bits; so we use 32 bits buffer    
-//  * m_nGetBuff, with the validated length is m_nGetBits.
-//  * Usually, more than 95% of the Huffman codes will be 8 or fewer bits long
-//  * To speed up, we should pay more attention on the codes whose length <= 8
-//  * 
-//  * @param table
-//  * @param get_bits
-//  * @param get_buff
-//  * @param data
-//  * @param data_size
-//  * @return int
-//  */
-// __device__ inline int
-// gpujpeg_huffman_gpu_decoder_get_category(int & get_bits, int & get_buff, uint8_t* & data, int & data_size, struct gpujpeg_table_huffman_decoder* table)
-// {
-//     // If left bits < 8, we should get more data
-//     if ( get_bits < 8 )
-//         gpujpeg_huffman_gpu_decoder_decode_fill_bit_buffer(get_bits, get_buff, data, data_size);
-// 
-//     // Call special process if data finished; min bits is 1
-//     if( get_bits < 8 )
-//         return gpujpeg_huffman_gpu_decoder_decode_special_decode(table, 1, get_bits, get_buff, data, data_size);
-// 
-//     // Peek the first valid byte    
-//     int look = ((get_buff >> (get_bits - 8)) & 0xFF);
-//     int nb = table->look_nbits[look];
-// 
-//     if ( nb ) { 
-//         get_bits -= nb;
-//         return table->look_sym[look]; 
-//     } else {
-//         //Decode long codes with length >= 9
-//         return gpujpeg_huffman_gpu_decoder_decode_special_decode(table, 9, get_bits, get_buff, data, data_size);
-//     }
-// }
+/**
+ * Get category number for dc, or (0 run length, ac category) for ac.
+ * The max length for Huffman codes is 15 bits; so we use 32 bits buffer    
+ * m_nGetBuff, with the validated length is m_nGetBits.
+ * Usually, more than 95% of the Huffman codes will be 8 or fewer bits long
+ * To speed up, we should pay more attention on the codes whose length <= 8
+ * 
+ * @param table
+ * @param get_bits
+ * @param get_buff
+ * @param data
+ * @param data_size
+ * @return int
+ */
+__device__ inline int
+gpujpeg_huffman_gpu_decoder_get_category(
+                unsigned int & r_bit, unsigned int & r_bit_count, uint4* const s_byte,
+                unsigned int & s_byte_idx, const uint4* & d_byte, unsigned int & d_byte_chunk_count,
+                const struct gpujpeg_table_huffman_decoder* const table)
+{
+    // Peek the first valid byte
+    const unsigned int look = gpujpeg_huffman_gpu_decoder_peek_bits(8, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    const int nb = table->look_nbits[look];
+
+    if ( nb ) { 
+        gpujpeg_huffman_gpu_decoder_discard_bits(nb, r_bit, r_bit_count);
+        return table->look_sym[look]; 
+    } else {
+        //Decode long codes with length >= 9
+        return gpujpeg_huffman_gpu_decoder_decode_special_decode(table, 9, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    }
+}
 
 /**
  * Decode one 8x8 block
@@ -303,8 +320,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(
 {
     // Section F.2.2.1: decode the DC coefficient difference
     // get dc category number, s
-//     int s = gpujpeg_huffman_gpu_decoder_get_category(get_bits, get_buff, data, data_size, table_dc);
-    int s = gpujpeg_huffman_gpu_decoder_decode_special_decode(table_dc, 1, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    int s = gpujpeg_huffman_gpu_decoder_get_category(r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count, table_dc);
     if ( s ) {
         // Get offset in this dc category
         int r = gpujpeg_huffman_gpu_decoder_get_bits(s, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
@@ -323,8 +339,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(
     // Since zeroes are skipped, output area must be cleared beforehand
     for ( int k = 1; k < 64; k++ ) {
         // s: (run, category)
-//         int s = gpujpeg_huffman_gpu_decoder_get_category(get_bits, get_buff, data, data_size, table_ac);
-        int s = gpujpeg_huffman_gpu_decoder_decode_special_decode(table_ac, 1, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+        int s = gpujpeg_huffman_gpu_decoder_get_category(r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count, table_ac);
         // r: run length for ac zero, 0 <= r < 16
         int r = s >> 4;
         // s: category for this non-zero ac
