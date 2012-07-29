@@ -122,9 +122,8 @@ __constant__ int gpujpeg_huffman_gpu_decoder_order_natural[GPUJPEG_ORDER_NATURAL
  */
 __device__ inline void
 gpujpeg_huffman_gpu_decoder_load_bits(
-                const unsigned int required_bit_count,
-                unsigned int & r_bit, unsigned int & r_bit_count, uint4 * const s_byte, 
-                unsigned int & s_byte_idx, const uint4 * & d_byte, unsigned int & d_byte_chunk_count
+                const unsigned int required_bit_count, unsigned int & r_bit,
+                unsigned int & r_bit_count, uint4 * const s_byte, unsigned int & s_byte_idx
 ) {
     // Add bytes until have enough
     while(r_bit_count < required_bit_count) {
@@ -137,19 +136,6 @@ gpujpeg_huffman_gpu_decoder_load_bits(
         // Add newly loaded byte to the buffer, updating bit count
         r_bit = (r_bit << 8) + byte_value;
         r_bit_count += 8;
-    }
-    
-    // Possibly load more bytes into shared buffer from global memory
-    if(s_byte_idx >= 16) {
-        // Move remaining bytes to begin and update index of next byte
-        s_byte[0] = s_byte[1];
-        s_byte_idx -= 16;
-        
-        // Load another byte chunk from global memory only if there is one
-        if(d_byte_chunk_count) {
-            s_byte[1] = *(d_byte++);
-            d_byte_chunk_count--;
-        }
     }
 }
 
@@ -166,11 +152,11 @@ gpujpeg_huffman_gpu_decoder_load_bits(
  */
 __device__ inline unsigned int
 gpujpeg_huffman_gpu_decoder_get_bits(
-                const unsigned int nbits, unsigned int & r_bit, unsigned int & r_bit_count, uint4 * const s_byte, 
-                unsigned int & s_byte_idx, const uint4 * & d_byte, unsigned int & d_byte_chunk_count)
+                const unsigned int nbits, unsigned int & r_bit, unsigned int & r_bit_count, 
+                uint4 * const s_byte, unsigned int & s_byte_idx)
 {
     // load bits into the register if haven't got enough
-    gpujpeg_huffman_gpu_decoder_load_bits(nbits, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    gpujpeg_huffman_gpu_decoder_load_bits(nbits, r_bit, r_bit_count, s_byte, s_byte_idx);
     
     // update remaining bit count
     r_bit_count -= nbits;
@@ -184,11 +170,11 @@ gpujpeg_huffman_gpu_decoder_get_bits(
  */
 __device__ inline unsigned int
 gpujpeg_huffman_gpu_decoder_peek_bits(
-                const unsigned int nbits, unsigned int & r_bit, unsigned int & r_bit_count, uint4 * const s_byte, 
-                unsigned int & s_byte_idx, const uint4 * & d_byte, unsigned int & d_byte_chunk_count)
+                const unsigned int nbits, unsigned int & r_bit, unsigned int & r_bit_count,
+                uint4 * const s_byte, unsigned int & s_byte_idx)
 {
     // load bits into the register if haven't got enough
-    gpujpeg_huffman_gpu_decoder_load_bits(nbits, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    gpujpeg_huffman_gpu_decoder_load_bits(nbits, r_bit, r_bit_count, s_byte, s_byte_idx);
     
     // return bits 
     return (r_bit >> (r_bit_count - nbits)) & ((1 << nbits) - 1);
@@ -218,19 +204,18 @@ gpujpeg_huffman_gpu_decoder_discard_bits(const unsigned int nb, unsigned int, un
 __device__ inline int
 gpujpeg_huffman_gpu_decoder_decode_special_decode(
                 const struct gpujpeg_table_huffman_decoder* const table, int min_bits, unsigned int & r_bit,
-                unsigned int & r_bit_count, uint4 * const s_byte, 
-                unsigned int & s_byte_idx, const uint4 * & d_byte, unsigned int & d_byte_chunk_count)
+                unsigned int & r_bit_count, uint4 * const s_byte, unsigned int & s_byte_idx)
 {
     // HUFF_DECODE has determined that the code is at least min_bits
     // bits long, so fetch that many bits in one swoop.
-    int code = gpujpeg_huffman_gpu_decoder_get_bits(min_bits, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    int code = gpujpeg_huffman_gpu_decoder_get_bits(min_bits, r_bit, r_bit_count, s_byte, s_byte_idx);
 
     // Collect the rest of the Huffman code one bit at a time.
     // This is per Figure F.16 in the JPEG spec.
     int l = min_bits;
     while ( code > table->maxcode[l] ) {
         code <<= 1;
-        code |= gpujpeg_huffman_gpu_decoder_get_bits(1, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+        code |= gpujpeg_huffman_gpu_decoder_get_bits(1, r_bit, r_bit_count, s_byte, s_byte_idx);
         l++;
     }
 
@@ -291,11 +276,10 @@ gpujpeg_huffman_gpu_decoder_value_from_category(int nbits, int code)
 __device__ inline int
 gpujpeg_huffman_gpu_decoder_get_coefficient(
                 unsigned int & r_bit, unsigned int & r_bit_count, uint4* const s_byte,
-                unsigned int & s_byte_idx, const uint4* & d_byte, unsigned int & d_byte_chunk_count,
-                const unsigned int table_offset, unsigned int & coefficient_idx)
+                unsigned int & s_byte_idx, const unsigned int table_offset, unsigned int & coefficient_idx)
 {
     // Peek next 16 bits and use them as an index into decoder table to find all the info.
-    const unsigned int table_idx = table_offset + gpujpeg_huffman_gpu_decoder_peek_bits(16, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    const unsigned int table_idx = table_offset + gpujpeg_huffman_gpu_decoder_peek_bits(16, r_bit, r_bit_count, s_byte, s_byte_idx);
     
     // Try the quick table first (use the full table only if not succeded with the quick table)
     unsigned int packed_info = gpujpeg_huffman_gpu_decoder_tables_quick_const[table_idx >> (16 - QUICK_CHECK_BITS)];
@@ -311,7 +295,9 @@ gpujpeg_huffman_gpu_decoder_get_coefficient(
     
     // read coefficient bits and decode the coefficient from them
     const unsigned int value_nbits = packed_info & 0xF;
-    const unsigned int value_code = gpujpeg_huffman_gpu_decoder_get_bits(value_nbits, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    const unsigned int value_code = gpujpeg_huffman_gpu_decoder_get_bits(value_nbits, r_bit, r_bit_count, s_byte, s_byte_idx);
+    
+    // return deocded coefficient
     return gpujpeg_huffman_gpu_decoder_value_from_category(value_nbits, value_code);
 }
 
@@ -331,7 +317,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(
     
     // Section F.2.2.1: decode the DC coefficient difference
     // Get the coefficient value (using DC coding table)
-    int dc_coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count, table_offset, coefficient_idx);
+    int dc_coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, table_offset, coefficient_idx);
 
     // Convert DC difference to actual value, update last_dc_val
     dc = dc_coefficient_value += dc;
@@ -346,8 +332,21 @@ gpujpeg_huffman_gpu_decoder_decode_block(
     // Section F.2.2.2: decode the AC coefficients
     // Since zeroes are skipped, output area must be cleared beforehand
     do {
+        // Possibly load more bytes into shared buffer from global memory
+        if(s_byte_idx >= 16) {
+            // Move remaining bytes to begin and update index of next byte
+            s_byte[0] = s_byte[1];
+            s_byte_idx -= 16;
+            
+            // Load another byte chunk from global memory only if there is one
+            if(d_byte_chunk_count) {
+                s_byte[1] = *(d_byte++);
+                d_byte_chunk_count--;
+            }
+        }
+        
         // decode next coefficient, updating its destination index
-        const int coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count, table_offset + 0x10000, coefficient_idx);
+        const int coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, table_offset + 0x10000, coefficient_idx);
         
         // stop with this block if have all coefficients
         if(coefficient_idx > 64) {
