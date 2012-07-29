@@ -64,53 +64,90 @@ struct gpujpeg_table_huffman_decoder_fast gpujpeg_huffman_gpu_decoder_tables[GPU
 /** Natural order in constant memory */
 __constant__ int gpujpeg_huffman_gpu_decoder_order_natural[GPUJPEG_ORDER_NATURAL_SIZE];
 
+// /**
+//  * Fill more bit to current get buffer
+//  * 
+//  * @param get_bits
+//  * @param get_buff
+//  * @param data
+//  * @param data_size
+//  * @return void
+//  */
+// __device__ inline void
+// gpujpeg_huffman_gpu_decoder_decode_fill_bit_buffer(int & get_bits, int & get_buff, uint8_t* & data, int & data_size)
+// {
+//     while ( get_bits < 25 ) {
+//         //Are there some data?
+//         if( data_size > 0 ) { 
+//             // Attempt to read a byte
+//             //printf("read byte %X 0x%X\n", (int)data, (unsigned char)*data);
+//             unsigned char uc = *data++;
+//             data_size--;            
+// 
+//             // If it's 0xFF, check and discard stuffed zero byte
+//             if ( uc == 0xFF ) {
+//                 while ( uc == 0xFF ) {
+//                     //printf("read byte %X 0x%X\n", (int)data, (unsigned char)*data);
+//                     uc = *data++;
+//                     data_size--;
+//                 }
+// 
+//                 if ( uc == 0 ) {
+//                     // Found FF/00, which represents an FF data byte
+//                     uc = 0xFF;
+//                 } else {                
+//                     // There should be enough bits still left in the data segment;
+//                     // if so, just break out of the outer while loop.
+//                     //if (m_nGetBits >= nbits)
+//                     if ( get_bits >= 0 )
+//                         break;
+//                 }
+//             }
+// 
+//             get_buff = (get_buff << 8) | ((int) uc);
+//             get_bits += 8;            
+//         }
+//         else
+//             break;
+//     }
+// }
+
 /**
- * Fill more bit to current get buffer
- * 
- * @param get_bits
- * @param get_buff
- * @param data
- * @param data_size
- * @return void
+ * Loads at least specified number of bits into the register
  */
 __device__ inline void
-gpujpeg_huffman_gpu_decoder_decode_fill_bit_buffer(int & get_bits, int & get_buff, uint8_t* & data, int & data_size)
-{
-    while ( get_bits < 25 ) {
-        //Are there some data?
-        if( data_size > 0 ) { 
-            // Attempt to read a byte
-            //printf("read byte %X 0x%X\n", (int)data, (unsigned char)*data);
-            unsigned char uc = *data++;
-            data_size--;            
-
-            // If it's 0xFF, check and discard stuffed zero byte
-            if ( uc == 0xFF ) {
-                while ( uc == 0xFF ) {
-                    //printf("read byte %X 0x%X\n", (int)data, (unsigned char)*data);
-                    uc = *data++;
-                    data_size--;
-                }
-
-                if ( uc == 0 ) {
-                    // Found FF/00, which represents an FF data byte
-                    uc = 0xFF;
-                } else {                
-                    // There should be enough bits still left in the data segment;
-                    // if so, just break out of the outer while loop.
-                    //if (m_nGetBits >= nbits)
-                    if ( get_bits >= 0 )
-                        break;
-                }
-            }
-
-            get_buff = (get_buff << 8) | ((int) uc);
-            get_bits += 8;            
+gpujpeg_huffman_gpu_decoder_load_bits(
+                const unsigned int required_bit_count,
+                unsigned int & r_bit, unsigned int & r_bit_count, uint4 * const s_byte, 
+                unsigned int & s_byte_idx, const uint4 * & d_byte, unsigned int & d_byte_chunk_count
+) {
+    // Add bytes until have enough
+    while(r_bit_count < required_bit_count) {
+        // Load byte value and posibly skip next stuffed byte if loaded byte's value is 0xFF
+        const uint8_t byte_value = ((const uint8_t*)s_byte)[s_byte_idx++];
+        if((uint8_t)0xFF == byte_value) {
+            s_byte_idx++;
         }
-        else
-            break;
+        
+        // Add newly loaded byte to the buffer, updating bit count
+        r_bit = (r_bit << 8) + byte_value;
+        r_bit_count += 8;
+    }
+    
+    // Possibly load more bytes into shared buffer from global memory
+    if(s_byte_idx >= 16) {
+        // Move remaining bytes to begin and update index of next byte
+        s_byte[0] = s_byte[1];
+        s_byte_idx -= 16;
+        
+        // Load another byte chunk from global memory only if there is one
+        if(d_byte_chunk_count) {
+            s_byte[1] = *(d_byte++);
+            d_byte_chunk_count--;
+        }
     }
 }
+
 
 /**
  * Get bits
@@ -122,14 +159,19 @@ gpujpeg_huffman_gpu_decoder_decode_fill_bit_buffer(int & get_bits, int & get_buf
  * @param data_size
  * @return bits
  */
-__device__ inline int
-gpujpeg_huffman_gpu_decoder_get_bits(int nbits, int & get_bits, int & get_buff, uint8_t* & data, int & data_size)
+__device__ inline unsigned int
+gpujpeg_huffman_gpu_decoder_get_bits(
+                const unsigned int nbits, unsigned int & r_bit, unsigned int & r_bit_count, uint4 * const s_byte, 
+                unsigned int & s_byte_idx, const uint4 * & d_byte, unsigned int & d_byte_chunk_count)
 {
-    //we should read nbits bits to get next data
-    if( get_bits < nbits )
-        gpujpeg_huffman_gpu_decoder_decode_fill_bit_buffer(get_bits, get_buff, data, data_size);
-    get_bits -= nbits;
-    return (int)(get_buff >> get_bits) & ((1 << nbits) - 1);
+    // load bits into the register if haven't got enough
+    gpujpeg_huffman_gpu_decoder_load_bits(nbits, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    
+    // update remaining bit count
+    r_bit_count -= nbits;
+    
+    // return bits 
+    return (r_bit >> r_bit_count) & ((1 << nbits) - 1);
 }
 
 
@@ -147,18 +189,21 @@ gpujpeg_huffman_gpu_decoder_get_bits(int nbits, int & get_bits, int & get_buff, 
  * @return int
  */
 __device__ inline int
-gpujpeg_huffman_gpu_decoder_decode_special_decode(struct gpujpeg_table_huffman_decoder* table, int min_bits, int & get_bits, int & get_buff, uint8_t* & data, int & data_size)
+gpujpeg_huffman_gpu_decoder_decode_special_decode(
+                struct gpujpeg_table_huffman_decoder* table, int min_bits, unsigned int & r_bit,
+                unsigned int & r_bit_count, uint4 * const s_byte, 
+                unsigned int & s_byte_idx, const uint4 * & d_byte, unsigned int & d_byte_chunk_count)
 {
     // HUFF_DECODE has determined that the code is at least min_bits
     // bits long, so fetch that many bits in one swoop.
-    int code = gpujpeg_huffman_gpu_decoder_get_bits(min_bits, get_bits, get_buff, data, data_size);
+    int code = gpujpeg_huffman_gpu_decoder_get_bits(min_bits, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
 
     // Collect the rest of the Huffman code one bit at a time.
     // This is per Figure F.16 in the JPEG spec.
     int l = min_bits;
     while ( code > table->maxcode[l] ) {
         code <<= 1;
-        code |= gpujpeg_huffman_gpu_decoder_get_bits(1, get_bits, get_buff, data, data_size);
+        code |= gpujpeg_huffman_gpu_decoder_get_bits(1, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
         l++;
     }
 
@@ -207,43 +252,43 @@ gpujpeg_huffman_gpu_decoder_value_from_category(int category, int offset)
     return (offset < half[category]) ? (offset + start[category]) : offset;    
 }
 
-/**
- * Get category number for dc, or (0 run length, ac category) for ac.
- * The max length for Huffman codes is 15 bits; so we use 32 bits buffer    
- * m_nGetBuff, with the validated length is m_nGetBits.
- * Usually, more than 95% of the Huffman codes will be 8 or fewer bits long
- * To speed up, we should pay more attention on the codes whose length <= 8
- * 
- * @param table
- * @param get_bits
- * @param get_buff
- * @param data
- * @param data_size
- * @return int
- */
-__device__ inline int
-gpujpeg_huffman_gpu_decoder_get_category(int & get_bits, int & get_buff, uint8_t* & data, int & data_size, struct gpujpeg_table_huffman_decoder* table)
-{
-    // If left bits < 8, we should get more data
-    if ( get_bits < 8 )
-        gpujpeg_huffman_gpu_decoder_decode_fill_bit_buffer(get_bits, get_buff, data, data_size);
-
-    // Call special process if data finished; min bits is 1
-    if( get_bits < 8 )
-        return gpujpeg_huffman_gpu_decoder_decode_special_decode(table, 1, get_bits, get_buff, data, data_size);
-
-    // Peek the first valid byte    
-    int look = ((get_buff >> (get_bits - 8)) & 0xFF);
-    int nb = table->look_nbits[look];
-
-    if ( nb ) { 
-        get_bits -= nb;
-        return table->look_sym[look]; 
-    } else {
-        //Decode long codes with length >= 9
-        return gpujpeg_huffman_gpu_decoder_decode_special_decode(table, 9, get_bits, get_buff, data, data_size);
-    }
-}
+// /**
+//  * Get category number for dc, or (0 run length, ac category) for ac.
+//  * The max length for Huffman codes is 15 bits; so we use 32 bits buffer    
+//  * m_nGetBuff, with the validated length is m_nGetBits.
+//  * Usually, more than 95% of the Huffman codes will be 8 or fewer bits long
+//  * To speed up, we should pay more attention on the codes whose length <= 8
+//  * 
+//  * @param table
+//  * @param get_bits
+//  * @param get_buff
+//  * @param data
+//  * @param data_size
+//  * @return int
+//  */
+// __device__ inline int
+// gpujpeg_huffman_gpu_decoder_get_category(int & get_bits, int & get_buff, uint8_t* & data, int & data_size, struct gpujpeg_table_huffman_decoder* table)
+// {
+//     // If left bits < 8, we should get more data
+//     if ( get_bits < 8 )
+//         gpujpeg_huffman_gpu_decoder_decode_fill_bit_buffer(get_bits, get_buff, data, data_size);
+// 
+//     // Call special process if data finished; min bits is 1
+//     if( get_bits < 8 )
+//         return gpujpeg_huffman_gpu_decoder_decode_special_decode(table, 1, get_bits, get_buff, data, data_size);
+// 
+//     // Peek the first valid byte    
+//     int look = ((get_buff >> (get_bits - 8)) & 0xFF);
+//     int nb = table->look_nbits[look];
+// 
+//     if ( nb ) { 
+//         get_bits -= nb;
+//         return table->look_sym[look]; 
+//     } else {
+//         //Decode long codes with length >= 9
+//         return gpujpeg_huffman_gpu_decoder_decode_special_decode(table, 9, get_bits, get_buff, data, data_size);
+//     }
+// }
 
 /**
  * Decode one 8x8 block
@@ -251,16 +296,18 @@ gpujpeg_huffman_gpu_decoder_get_category(int & get_bits, int & get_buff, uint8_t
  * @return 0 if succeeds, otherwise nonzero
  */
 __device__ inline int
-gpujpeg_huffman_gpu_decoder_decode_block(int & get_bits, int & get_buff, int & dc, uint8_t* & data, int & data_size, int16_t* data_output, 
-    struct gpujpeg_table_huffman_decoder* table_dc, struct gpujpeg_table_huffman_decoder* table_ac)
+gpujpeg_huffman_gpu_decoder_decode_block(
+    int & dc, int16_t* const data_output, struct gpujpeg_table_huffman_decoder* table_dc,
+    struct gpujpeg_table_huffman_decoder* table_ac, unsigned int & r_bit, unsigned int & r_bit_count,
+    uint4* const s_byte, unsigned int & s_byte_idx, const uint4* & d_byte, unsigned int & d_byte_chunk_count)
 {
     // Section F.2.2.1: decode the DC coefficient difference
     // get dc category number, s
 //     int s = gpujpeg_huffman_gpu_decoder_get_category(get_bits, get_buff, data, data_size, table_dc);
-    int s = gpujpeg_huffman_gpu_decoder_decode_special_decode(table_dc, 1, get_bits, get_buff, data, data_size);
+    int s = gpujpeg_huffman_gpu_decoder_decode_special_decode(table_dc, 1, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
     if ( s ) {
         // Get offset in this dc category
-        int r = gpujpeg_huffman_gpu_decoder_get_bits(s, get_bits, get_buff, data, data_size);
+        int r = gpujpeg_huffman_gpu_decoder_get_bits(s, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
         // Get dc difference value
         s = gpujpeg_huffman_gpu_decoder_value_from_category(s, r);
     }
@@ -277,7 +324,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(int & get_bits, int & get_buff, int & d
     for ( int k = 1; k < 64; k++ ) {
         // s: (run, category)
 //         int s = gpujpeg_huffman_gpu_decoder_get_category(get_bits, get_buff, data, data_size, table_ac);
-        int s = gpujpeg_huffman_gpu_decoder_decode_special_decode(table_ac, 1, get_bits, get_buff, data, data_size);
+        int s = gpujpeg_huffman_gpu_decoder_decode_special_decode(table_ac, 1, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
         // r: run length for ac zero, 0 <= r < 16
         int r = s >> 4;
         // s: category for this non-zero ac
@@ -286,7 +333,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(int & get_bits, int & get_buff, int & d
             //    k: position for next non-zero ac
             k += r;
             //    r: offset in this ac category
-            r = gpujpeg_huffman_gpu_decoder_get_bits(s, get_bits, get_buff, data, data_size);
+            r = gpujpeg_huffman_gpu_decoder_get_bits(s, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
             //    s: ac value
             s = gpujpeg_huffman_gpu_decoder_value_from_category(s, r);
 
@@ -335,16 +382,34 @@ gpujpeg_huffman_decoder_decode_kernel(
     
     struct gpujpeg_segment* segment = &d_segment[segment_index];
     
-    // Start coder
-    int get_buff = 0;
-    int get_bits = 0;
+    // Byte buffers in shared memory
+    __shared__ uint4 s_byte_all[2 * THREADS_PER_TBLOCK]; // 32 bytes per thread
+    uint4 * const s_byte = s_byte_all + 2 * threadIdx.x;
+    
+    // Last DC coefficient values
     int dc[GPUJPEG_MAX_COMPONENT_COUNT];
     for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ )
         dc[comp] = 0;
         
-    // Get compressed data
-    uint8_t* data_compressed = &d_data_compressed[segment->data_compressed_index];
-    int data_compressed_size = segment->data_compressed_size;
+    // Get aligned compressed data chunk pointer and load first 2 chunks of the data
+    const unsigned int d_byte_begin_idx = segment->data_compressed_index;
+    const unsigned int d_byte_begin_idx_aligned = d_byte_begin_idx & ~15; // loading 16byte chunks
+    const uint4* d_byte = (uint4*)(d_data_compressed + d_byte_begin_idx_aligned);
+    
+    // Get number of remaining global memory byte chunks (not to read bytes out of buffer)
+    const unsigned int d_byte_end_idx_aligned = (d_byte_begin_idx + segment->data_compressed_size + 15) & ~15;
+    unsigned int d_byte_chunk_count = (d_byte_end_idx_aligned - d_byte_begin_idx_aligned) / 16;
+    
+    // Load first 2 chunks of compressed data into the shared memory buffer and remember index of first code byte (skipping bytes read due to alignment)
+    s_byte[0] = d_byte[0];
+    s_byte[1] = d_byte[1];
+    d_byte += 2;
+    d_byte_chunk_count = max(d_byte_chunk_count, 2) - 2;
+    unsigned int s_byte_idx = d_byte_begin_idx - d_byte_begin_idx_aligned;
+    
+    // bits loaded into the register and their count
+    unsigned int r_bit_count = 0;
+    unsigned int r_bit = 0; // LSB-aligned
     
     // Non-interleaving mode
     if ( comp_count == 1 ) {
@@ -372,7 +437,7 @@ gpujpeg_huffman_decoder_decode_kernel(
             }
             
             // Encode 8x8 block
-            if ( gpujpeg_huffman_gpu_decoder_decode_block(get_buff, get_bits, component_dc, data_compressed, data_compressed_size, block, d_table_dc, d_table_ac) != 0 )
+            if ( gpujpeg_huffman_gpu_decoder_decode_block(component_dc, block, d_table_dc, d_table_ac, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count) != 0 )
                 break;
         } 
     }
@@ -418,7 +483,7 @@ gpujpeg_huffman_decoder_decode_kernel(
                         }
                         
                         // Encode 8x8 block
-                        gpujpeg_huffman_gpu_decoder_decode_block(get_buff, get_bits, component_dc, data_compressed, data_compressed_size, block, d_table_dc, d_table_ac);
+                        gpujpeg_huffman_gpu_decoder_decode_block(component_dc, block, d_table_dc, d_table_ac, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
                     }
                 }
             }
