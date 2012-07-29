@@ -544,7 +544,7 @@ gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder
         segment->scan_index = scan_index;
         segment->scan_segment_index = segment_index;
         segment->data_compressed_index = decoder->reader->data_compressed_size + scan_start;
-        segment->data_compressed_size = decoder->reader->data_compressed_size + scan_end;
+        segment->data_compressed_size = decoder->reader->data_compressed_size + scan_end - segment->data_compressed_index;
 
         // If segment is not last it contains restart marker at the end so remove it
         if ( (segment_index + 1) < segment_count ) {
