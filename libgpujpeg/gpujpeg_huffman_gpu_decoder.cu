@@ -45,17 +45,13 @@ struct gpujpeg_table_huffman_decoder_entry {
 };
 
 /**
- * Pre-built table for faster Huffman decoding (codewords up-to 16 bit length)
+ * 4 pre-built tables for faster Huffman decoding (codewords up-to 16 bit length):
+ *   0x00000 to 0x0ffff: luminance DC table
+ *   0x10000 to 0x1ffff: luminance AC table
+ *   0x20000 to 0x2ffff: chrominance DC table
+ *   0x30000 to 0x3ffff: chrominance AC table
  */
-struct gpujpeg_table_huffman_decoder_fast {
-    struct gpujpeg_table_huffman_decoder_entry codes[1 << 16];
-};
-
-
-
-/** Pre-built tables for faster huffman decoding in global memory. */
-__device__
-struct gpujpeg_table_huffman_decoder_fast gpujpeg_huffman_gpu_decoder_tables[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
+__device__ struct gpujpeg_table_huffman_decoder_entry gpujpeg_huffman_gpu_decoder_tables[4 * (1 << 16)];
 
 
 
@@ -515,7 +511,7 @@ __device__ void
 gpujpeg_huffman_gpu_decoder_table_setup(
     const int bits, 
     const struct gpujpeg_table_huffman_decoder* const d_table_src,
-    struct gpujpeg_table_huffman_decoder_fast* const d_table_dest
+    const int dest_offset
 ) {
     // Decode one codeword from given bits to get following:
     //  - minimal number of bits actually needed to decode the codeword (up to 16 bits, 0 for invalid ones)
@@ -545,9 +541,9 @@ gpujpeg_huffman_gpu_decoder_table_setup(
     const int rle_zero_count = category_id ? min(category_id >> 4, 63) : 63;
     
     // save all the info into the right place in the destination table
-    d_table_dest->codes[bits].code_nbits = code_nbits;
-    d_table_dest->codes[bits].value_nbits = value_nbits;
-    d_table_dest->codes[bits].rle_zero_count = rle_zero_count;
+    gpujpeg_huffman_gpu_decoder_tables[dest_offset + bits].code_nbits = code_nbits;
+    gpujpeg_huffman_gpu_decoder_tables[dest_offset + bits].value_nbits = value_nbits;
+    gpujpeg_huffman_gpu_decoder_tables[dest_offset + bits].rle_zero_count = rle_zero_count;
 }
 
 /**
@@ -563,10 +559,10 @@ gpujpeg_huffman_decoder_table_kernel(
 ) {
     // Each thread uses all 4 Huffman tables to "decode" one symbol from its unique 16bits.
     const int idx = threadIdx.x + blockIdx.x * blockDim.x;
-    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_y_dc, &gpujpeg_huffman_gpu_decoder_tables[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC]);
-    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_y_ac, &gpujpeg_huffman_gpu_decoder_tables[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC]);
-    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_cbcr_dc, &gpujpeg_huffman_gpu_decoder_tables[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC]);
-    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_cbcr_ac, &gpujpeg_huffman_gpu_decoder_tables[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC]);
+    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_y_dc, 0x00000);
+    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_y_ac, 0x10000);
+    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_cbcr_dc, 0x20000);
+    gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_cbcr_ac, 0x30000);
 }
 
 /** Documented at declaration */
