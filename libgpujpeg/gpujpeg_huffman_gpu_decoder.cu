@@ -256,7 +256,8 @@ gpujpeg_huffman_gpu_decoder_decode_block(int & get_bits, int & get_buff, int & d
 {
     // Section F.2.2.1: decode the DC coefficient difference
     // get dc category number, s
-    int s = gpujpeg_huffman_gpu_decoder_get_category(get_bits, get_buff, data, data_size, table_dc);
+//     int s = gpujpeg_huffman_gpu_decoder_get_category(get_bits, get_buff, data, data_size, table_dc);
+    int s = gpujpeg_huffman_gpu_decoder_decode_special_decode(table_dc, 1, get_bits, get_buff, data, data_size);
     if ( s ) {
         // Get offset in this dc category
         int r = gpujpeg_huffman_gpu_decoder_get_bits(s, get_bits, get_buff, data, data_size);
@@ -275,7 +276,8 @@ gpujpeg_huffman_gpu_decoder_decode_block(int & get_bits, int & get_buff, int & d
     // Since zeroes are skipped, output area must be cleared beforehand
     for ( int k = 1; k < 64; k++ ) {
         // s: (run, category)
-        int s = gpujpeg_huffman_gpu_decoder_get_category(get_bits, get_buff, data, data_size, table_ac);
+//         int s = gpujpeg_huffman_gpu_decoder_get_category(get_bits, get_buff, data, data_size, table_ac);
+        int s = gpujpeg_huffman_gpu_decoder_decode_special_decode(table_ac, 1, get_bits, get_buff, data, data_size);
         // r: run length for ac zero, 0 <= r < 16
         int r = s >> 4;
         // s: category for this non-zero ac
