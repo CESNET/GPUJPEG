@@ -57,7 +57,7 @@ struct gpujpeg_table_huffman_decoder_entry {
 __device__ uint16_t gpujpeg_huffman_gpu_decoder_tables_full[4 * (1 << 16)];
 
 /** Number of code bits to be checked first (with high chance for the code to fit into this number of bits). */
-#define QUICK_CHECK_BITS 8
+#define QUICK_CHECK_BITS 10
 #define QUICK_TABLE_ITEMS (4 * (1 << QUICK_CHECK_BITS))
 
 /** Table with same format as the full table, except that all-zero-entry means that the full table should be consulted. */
