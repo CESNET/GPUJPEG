@@ -284,22 +284,25 @@ gpujpeg_huffman_gpu_decoder_value_from_category(int nbits, int code)
  * @return int
  */
 __device__ inline int
-gpujpeg_huffman_gpu_decoder_get_category(
+gpujpeg_huffman_gpu_decoder_get_coefficient(
                 unsigned int & r_bit, unsigned int & r_bit_count, uint4* const s_byte,
                 unsigned int & s_byte_idx, const uint4* & d_byte, unsigned int & d_byte_chunk_count,
-                const struct gpujpeg_table_huffman_decoder* const table)
+                const unsigned int table_offset, unsigned int & coefficient_idx)
 {
-    // Peek the first valid byte
-    const unsigned int look = gpujpeg_huffman_gpu_decoder_peek_bits(8, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
-    const int nb = table->look_nbits[look];
-
-    if ( nb ) { 
-        gpujpeg_huffman_gpu_decoder_discard_bits(nb, r_bit, r_bit_count);
-        return table->look_sym[look]; 
-    } else {
-        //Decode long codes with length >= 9
-        return gpujpeg_huffman_gpu_decoder_decode_special_decode(table, 9, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
-    }
+    // Peek next 16 bits and use them to find all the info.
+    const unsigned int bits = gpujpeg_huffman_gpu_decoder_peek_bits(16, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    const gpujpeg_table_huffman_decoder_entry info = gpujpeg_huffman_gpu_decoder_tables[table_offset + bits];
+    
+    // remove the right number of bits from the bit buffer
+    gpujpeg_huffman_gpu_decoder_discard_bits(info.code_nbits, r_bit, r_bit_count);
+    
+    // update coefficient index by skipping run-length encoded zeros
+    coefficient_idx += info.rle_zero_count;
+    
+    // read coefficient bits and decode the coefficient from them
+    const unsigned int value_nbits = info.value_nbits;
+    const unsigned int value_code = gpujpeg_huffman_gpu_decoder_get_bits(value_nbits, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+    return gpujpeg_huffman_gpu_decoder_value_from_category(value_nbits, value_code);
 }
 
 /**
@@ -309,61 +312,41 @@ gpujpeg_huffman_gpu_decoder_get_category(
  */
 __device__ inline int
 gpujpeg_huffman_gpu_decoder_decode_block(
-    int & dc, int16_t* const data_output, struct gpujpeg_table_huffman_decoder* table_dc,
-    struct gpujpeg_table_huffman_decoder* table_ac, unsigned int & r_bit, unsigned int & r_bit_count,
-    uint4* const s_byte, unsigned int & s_byte_idx, const uint4* & d_byte, unsigned int & d_byte_chunk_count)
+    int & dc, int16_t* const data_output, const unsigned int table_offset,
+    unsigned int & r_bit, unsigned int & r_bit_count, uint4* const s_byte,
+    unsigned int & s_byte_idx, const uint4* & d_byte, unsigned int & d_byte_chunk_count)
 {
+    // Index of next coefficient to be decoded (in ZIG-ZAG order)
+    unsigned int coefficient_idx = 0;
+    
     // Section F.2.2.1: decode the DC coefficient difference
-    // get dc category number, s
-    int s = gpujpeg_huffman_gpu_decoder_get_category(r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count, table_dc);
-    if ( s ) {
-        // Get offset in this dc category
-        int r = gpujpeg_huffman_gpu_decoder_get_bits(s, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
-        // Get dc difference value
-        s = gpujpeg_huffman_gpu_decoder_value_from_category(s, r);
-    }
+    // Get the coefficient value (using DC coding table)
+    int dc_coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count, table_offset, coefficient_idx);
 
     // Convert DC difference to actual value, update last_dc_val
-    s += dc;
-    dc = s;
+    dc = dc_coefficient_value += dc;
 
     // Output the DC coefficient (assumes gpujpeg_natural_order[0] = 0)
-    data_output[0] = s;
+    // TODO: try to skip saving of zero coefficients
+    data_output[0] = dc_coefficient_value;
+    
+    // TODO: error check: coefficient_idx must still be 0 in valid codestreams
+    coefficient_idx = 1;
     
     // Section F.2.2.2: decode the AC coefficients
     // Since zeroes are skipped, output area must be cleared beforehand
-    for ( int k = 1; k < 64; k++ ) {
-        // s: (run, category)
-        int s = gpujpeg_huffman_gpu_decoder_get_category(r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count, table_ac);
-        // r: run length for ac zero, 0 <= r < 16
-        int r = s >> 4;
-        // s: category for this non-zero ac
-        s &= 15;
-        if ( s ) {
-            //    k: position for next non-zero ac
-            k += r;
-            //    r: offset in this ac category
-            r = gpujpeg_huffman_gpu_decoder_get_bits(s, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
-            //    s: ac value
-            s = gpujpeg_huffman_gpu_decoder_value_from_category(s, r);
-
-            data_output[gpujpeg_huffman_gpu_decoder_order_natural[k]] = s;
-        } else {
-            // s = 0, means ac value is 0 ? Only if r = 15.  
-            //means all the left ac are zero
-            if ( r != 15 )
-                break;
-            k += 15;
+    do {
+        // decode next coefficient, updating its destination index
+        const int coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count, table_offset + 0x10000, coefficient_idx);
+        
+        // stop with this block if have all coefficients
+        if(coefficient_idx >= 64) {
+            break;
         }
-    }
-    
-    /*printf("GPU Decode Block\n");
-    for ( int y = 0; y < 8; y++ ) {
-        for ( int x = 0; x < 8; x++ ) {
-            printf("%4d ", data_output[y * 8 + x]);
-        }
-        printf("\n");
-    }*/
+        
+        // save the coefficient   TODO: try to ommit saving 0 coefficients
+        data_output[gpujpeg_huffman_gpu_decoder_order_natural[coefficient_idx++]] = coefficient_value;
+    } while(coefficient_idx < 64);
     
     return 0;
 }
@@ -435,19 +418,11 @@ gpujpeg_huffman_decoder_decode_kernel(
             // Get coder parameters
             int & component_dc = dc[segment->scan_index];
             
-            // Get huffman tables
-            struct gpujpeg_table_huffman_decoder* d_table_dc = NULL;
-            struct gpujpeg_table_huffman_decoder* d_table_ac = NULL;
-            if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
-                d_table_dc = d_table_y_dc;
-                d_table_ac = d_table_y_ac;
-            } else {
-                d_table_dc = d_table_cbcr_dc;
-                d_table_ac = d_table_cbcr_ac;
-            }
+            // Get huffman tables offset
+            const unsigned int table_offset = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00000 : 0x20000;
             
             // Encode 8x8 block
-            if ( gpujpeg_huffman_gpu_decoder_decode_block(component_dc, block, d_table_dc, d_table_ac, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count) != 0 )
+            if ( gpujpeg_huffman_gpu_decoder_decode_block(component_dc, block, table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count) != 0 )
                 break;
         } 
     }
@@ -481,19 +456,11 @@ gpujpeg_huffman_decoder_decode_kernel(
                         // Get coder parameters
                         int & component_dc = dc[comp];
             
-                        // Get huffman tables
-                        struct gpujpeg_table_huffman_decoder* d_table_dc = NULL;
-                        struct gpujpeg_table_huffman_decoder* d_table_ac = NULL;
-                        if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
-                            d_table_dc = d_table_y_dc;
-                            d_table_ac = d_table_y_ac;
-                        } else {
-                            d_table_dc = d_table_cbcr_dc;
-                            d_table_ac = d_table_cbcr_ac;
-                        }
+                        // Get huffman tables offset
+                        const unsigned int table_offset = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00000 : 0x20000;
                         
                         // Encode 8x8 block
-                        gpujpeg_huffman_gpu_decoder_decode_block(component_dc, block, d_table_dc, d_table_ac, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+                        gpujpeg_huffman_gpu_decoder_decode_block(component_dc, block, table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
                     }
                 }
             }
