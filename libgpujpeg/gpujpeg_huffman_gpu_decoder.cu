@@ -360,6 +360,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(
     return 0;
 }
 
+
 /**
  * Huffman decoder kernel
  * 
@@ -367,6 +368,11 @@ gpujpeg_huffman_gpu_decoder_decode_block(
  */
 template <int THREADS_PER_TBLOCK>
 __global__ void
+#if __CUDA_ARCH__ < 200
+__launch_bounds__(THREADS_PER_TBLOCK, 2)
+#else
+__launch_bounds__(THREADS_PER_TBLOCK, 6)
+#endif
 gpujpeg_huffman_decoder_decode_kernel(
     struct gpujpeg_component* d_component,
     struct gpujpeg_segment* d_segment,
