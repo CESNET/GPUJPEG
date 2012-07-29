@@ -316,6 +316,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(int & get_bits, int & get_buff, int & d
  * 
  * @return void
  */
+template <int THREADS_PER_TBLOCK>
 __global__ void
 gpujpeg_huffman_decoder_decode_kernel(
     struct gpujpeg_component* d_component,
@@ -328,7 +329,7 @@ gpujpeg_huffman_decoder_decode_kernel(
     struct gpujpeg_table_huffman_decoder* d_table_cbcr_dc,
     struct gpujpeg_table_huffman_decoder* d_table_cbcr_ac
 ) {
-    int segment_index = blockIdx.x * blockDim.x + threadIdx.x;
+    int segment_index = blockIdx.x * THREADS_PER_TBLOCK + threadIdx.x;
     if ( segment_index >= segment_count )
         return;
     
@@ -520,9 +521,12 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
         comp_count = coder->param_image.comp_count;
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     
+    // Number of decoder kernel threads per each threadblock
+    enum { THREADS_PER_TBLOCK = 192 };
+    
     // Configure more Shared memory for both kernels
     cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_table_kernel, cudaFuncCachePreferShared);
-    cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_decode_kernel, cudaFuncCachePreferShared);
+    cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_decode_kernel<THREADS_PER_TBLOCK>, cudaFuncCachePreferShared);
     
     // Setup GPU tables (one thread for each of 65536 entries)
     gpujpeg_huffman_decoder_table_kernel<<<256, 256>>>(
@@ -534,10 +538,10 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman decoder table setup failed");
     
-    // Run kernel
-    dim3 thread(32);
-    dim3 grid(gpujpeg_div_and_round_up(decoder->segment_count, thread.x));
-    gpujpeg_huffman_decoder_decode_kernel<<<grid, thread>>>(
+    // Run decoding kernel
+    dim3 thread(THREADS_PER_TBLOCK);
+    dim3 grid(gpujpeg_div_and_round_up(decoder->segment_count, THREADS_PER_TBLOCK));
+    gpujpeg_huffman_decoder_decode_kernel<THREADS_PER_TBLOCK><<<grid, thread>>>(
         coder->d_component, 
         coder->d_segment, 
         comp_count,
