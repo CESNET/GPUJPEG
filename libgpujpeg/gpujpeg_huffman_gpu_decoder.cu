@@ -34,13 +34,7 @@
  * Entry of pre-built Huffman fast-decoding table.
  */
 struct gpujpeg_table_huffman_decoder_entry {
-    /** Number of bits of code corresponding to this entry (0 - 16, both inclusive) */
-    int code_nbits;
     
-    /** Number of run-length coded zeros before currently decoded coefficient (0 - 63, both inclusive) */
-    int rle_zero_count;
-    
-    /** Number of bits representing the value of currently decoded coefficient (0 - 16, both inclusive) */
     int value_nbits;
 };
 
@@ -50,8 +44,17 @@ struct gpujpeg_table_huffman_decoder_entry {
  *   0x10000 to 0x1ffff: luminance AC table
  *   0x20000 to 0x2ffff: chrominance DC table
  *   0x30000 to 0x3ffff: chrominance AC table
+ * 
+ * Each entry consists of:
+ *   - Number of bits of code corresponding to this entry (0 - 16, both inclusive) - bits 4 to 8
+ *   - Number of run-length coded zeros before currently decoded coefficient (0 - 64, both inclusive) - bits 9 to 15
+ *   - Number of bits representing the value of currently decoded coefficient (0 - 15, both inclusive) - bits 0 to 3
+ * bit #:    15                      9   8               4   3           0
+ *         +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ * value:  |      RLE zero count       |   code bit size   | value bit size|
+ *         +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
  */
-__device__ struct gpujpeg_table_huffman_decoder_entry gpujpeg_huffman_gpu_decoder_tables[4 * (1 << 16)];
+__device__ uint16_t gpujpeg_huffman_gpu_decoder_tables[4 * (1 << 16)];
 
 
 
@@ -291,16 +294,16 @@ gpujpeg_huffman_gpu_decoder_get_coefficient(
 {
     // Peek next 16 bits and use them to find all the info.
     const unsigned int bits = gpujpeg_huffman_gpu_decoder_peek_bits(16, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
-    const gpujpeg_table_huffman_decoder_entry info = gpujpeg_huffman_gpu_decoder_tables[table_offset + bits];
+    const unsigned int packed_info = gpujpeg_huffman_gpu_decoder_tables[table_offset + bits];
     
     // remove the right number of bits from the bit buffer
-    gpujpeg_huffman_gpu_decoder_discard_bits(info.code_nbits, r_bit, r_bit_count);
+    gpujpeg_huffman_gpu_decoder_discard_bits((packed_info >> 4) & 0x1F, r_bit, r_bit_count);
     
     // update coefficient index by skipping run-length encoded zeros
-    coefficient_idx += info.rle_zero_count;
+    coefficient_idx += packed_info >> 9;
     
     // read coefficient bits and decode the coefficient from them
-    const unsigned int value_nbits = info.value_nbits;
+    const unsigned int value_nbits = packed_info & 0xF;
     const unsigned int value_code = gpujpeg_huffman_gpu_decoder_get_bits(value_nbits, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
     return gpujpeg_huffman_gpu_decoder_value_from_category(value_nbits, value_code);
 }
@@ -508,9 +511,7 @@ gpujpeg_huffman_gpu_decoder_table_setup(
     const int rle_zero_count = category_id ? min(1 + (category_id >> 4), 64) : 64;
     
     // save all the info into the right place in the destination table
-    gpujpeg_huffman_gpu_decoder_tables[dest_offset + bits].code_nbits = code_nbits;
-    gpujpeg_huffman_gpu_decoder_tables[dest_offset + bits].value_nbits = value_nbits;
-    gpujpeg_huffman_gpu_decoder_tables[dest_offset + bits].rle_zero_count = rle_zero_count;
+    gpujpeg_huffman_gpu_decoder_tables[dest_offset + bits] = (rle_zero_count << 9) + (code_nbits << 4) + value_nbits;
 }
 
 /**
