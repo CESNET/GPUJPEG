@@ -340,12 +340,12 @@ gpujpeg_huffman_gpu_decoder_decode_block(
         const int coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count, table_offset + 0x10000, coefficient_idx);
         
         // stop with this block if have all coefficients
-        if(coefficient_idx >= 64) {
+        if(coefficient_idx > 64) {
             break;
         }
         
         // save the coefficient   TODO: try to ommit saving 0 coefficients
-        data_output[gpujpeg_huffman_gpu_decoder_order_natural[coefficient_idx++]] = coefficient_value;
+        data_output[gpujpeg_huffman_gpu_decoder_order_natural[coefficient_idx - 1]] = coefficient_value;
     } while(coefficient_idx < 64);
     
     return 0;
@@ -501,11 +501,11 @@ gpujpeg_huffman_gpu_decoder_table_setup(
         category_id = d_table_src->huffval[d_table_src->valptr[code_nbits] + code_value - d_table_src->mincode[code_nbits]];
     }
     
-    // decompose category number into number of run-length coded zeros and length of the value
+    // decompose category number into 1 + number of run-length coded zeros and length of the value
     // (special category #0 contains all invalid codes and special end-of-block code -- all of those codes 
-    // should terminate block decoding => use 63 run-length zeros and 0 value bits for such symbols)
+    // should terminate block decoding => use 64 run-length zeros and 0 value bits for such symbols)
     const int value_nbits = 0xF & category_id;
-    const int rle_zero_count = category_id ? min(category_id >> 4, 63) : 63;
+    const int rle_zero_count = category_id ? min(1 + (category_id >> 4), 64) : 64;
     
     // save all the info into the right place in the destination table
     gpujpeg_huffman_gpu_decoder_tables[dest_offset + bits].code_nbits = code_nbits;
