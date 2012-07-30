@@ -369,7 +369,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(
  * 
  * @return void
  */
-template <int THREADS_PER_TBLOCK>
+template <bool SINGLE_COMP, int THREADS_PER_TBLOCK>
 __global__ void
 #if __CUDA_ARCH__ < 200
 __launch_bounds__(THREADS_PER_TBLOCK, 2)
@@ -421,7 +421,7 @@ gpujpeg_huffman_decoder_decode_kernel(
     // TODO: try using block lists
     
     // Non-interleaving mode
-    if ( comp_count == 1 ) {
+    if ( SINGLE_COMP ) {
         int segment_index = segment->scan_segment_index;
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
@@ -591,7 +591,8 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     
     // Configure more Shared memory for both kernels
     cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_table_kernel, cudaFuncCachePreferShared);
-    cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_decode_kernel<THREADS_PER_TBLOCK>, cudaFuncCachePreferShared);
+    cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_decode_kernel<true, THREADS_PER_TBLOCK>, cudaFuncCachePreferShared);
+    cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_decode_kernel<false, THREADS_PER_TBLOCK>, cudaFuncCachePreferShared);
     
     // Setup GPU tables (one thread for each of 65536 entries)
     gpujpeg_huffman_decoder_table_kernel<<<256, 256>>>(
@@ -623,13 +624,23 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     // Run decoding kernel
     dim3 thread(THREADS_PER_TBLOCK);
     dim3 grid(gpujpeg_div_and_round_up(decoder->segment_count, THREADS_PER_TBLOCK));
-    gpujpeg_huffman_decoder_decode_kernel<THREADS_PER_TBLOCK><<<grid, thread>>>(
-        coder->d_component, 
-        coder->d_segment, 
-        comp_count,
-        decoder->segment_count,
-        coder->d_data_compressed
-    );
+    if(comp_count == 1) {
+        gpujpeg_huffman_decoder_decode_kernel<true, THREADS_PER_TBLOCK><<<grid, thread>>>(
+            coder->d_component, 
+            coder->d_segment, 
+            comp_count,
+            decoder->segment_count,
+            coder->d_data_compressed
+        );
+    } else {
+        gpujpeg_huffman_decoder_decode_kernel<false, THREADS_PER_TBLOCK><<<grid, thread>>>(
+            coder->d_component, 
+            coder->d_segment, 
+            comp_count,
+            decoder->segment_count,
+            coder->d_data_compressed
+        );
+    }
     cudaError cuerr = cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman decoding failed");
     
