@@ -55,20 +55,22 @@ ifeq ($(SHARED_LIBRARY),1)
     LDFLAGS += -Llibgpujpeg -lgpujpeg
 else
     # Do 32bit vs. 64bit setup
-    LBITS := $(shell getconf LONG_BIT)
-    ifeq ($(LBITS),64)
-        # 64bit
-        LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64
-    else
-        # 32bit
-        LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib
-    endif
-    LDFLAGS += -lcudart -lnpp libgpujpeg/libgpujpeg.a
+    LDFLAGS += libgpujpeg/libgpujpeg.a
     #Other flags
     ifeq ($(USE_OPENGL),1)
         LDFLAGS += -lGLEW
     endif 
 endif
+
+LBITS := $(shell getconf LONG_BIT)
+ifeq ($(LBITS),64)
+    # 64bit
+    LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64
+else
+    # 32bit
+    LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib
+endif
+LDFLAGS += -lcudart -lnpp
 
 # Build
 build: $(TARGET) $(TARGET).sh
@@ -83,6 +85,8 @@ COBJS=$(CFILES:.c=.c.o)
 
 # Build target
 $(TARGET): $(COBJS) libgpujpeg/libgpujpeg.build
+	echo $(LDFLAGS)
+	echo $(SHARED_LIBRARY)
 	$(LINK) $(COBJS) $(LDFLAGS) -o $(TARGET);    
     
 # Build target run script
