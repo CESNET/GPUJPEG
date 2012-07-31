@@ -381,7 +381,9 @@ gpujpeg_huffman_decoder_decode_kernel(
     struct gpujpeg_segment* d_segment,
     int comp_count,
     int segment_count, 
-    uint8_t* d_data_compressed
+    uint8_t* d_data_compressed,
+    const uint64_t* d_block_list,
+    int16_t* d_data_quantized
 ) {
     int segment_index = blockIdx.x * THREADS_PER_TBLOCK + threadIdx.x;
     if ( segment_index >= segment_count )
@@ -418,8 +420,6 @@ gpujpeg_huffman_decoder_decode_kernel(
     unsigned int r_bit_count = 0;
     unsigned int r_bit = 0; // LSB-aligned
     
-    // TODO: try using block lists
-    
     // Non-interleaving mode
     if ( SINGLE_COMP ) {
         int segment_index = segment->scan_segment_index;
@@ -444,43 +444,72 @@ gpujpeg_huffman_decoder_decode_kernel(
     }
     // Interleaving mode
     else {
-        int segment_index = segment->scan_segment_index;
-        // Encode MCUs in segment
-        for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
-            //assert(segment->scan_index == 0);
-            for ( int comp = 0; comp < comp_count; comp++ ) {
-                struct gpujpeg_component* component = &d_component[comp];
-
-                // Prepare mcu indexes
-                int mcu_index_x = (segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
-                int mcu_index_y = (segment_index * component->segment_mcu_count + mcu_index) / component->mcu_count_x;
-                // Compute base data index
-                int data_index_base = mcu_index_y * (component->mcu_size * component->mcu_count_x) + mcu_index_x * (component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
-                
-                // For all vertical 8x8 blocks
-                for ( int y = 0; y < component->sampling_factor.vertical; y++ ) {
-                    // Compute base row data index
-                    int data_index_row = data_index_base + y * (component->mcu_count_x * component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
-                    // For all horizontal 8x8 blocks
-                    for ( int x = 0; x < component->sampling_factor.horizontal; x++ ) {
-                        // Compute 8x8 block data index
-                        int data_index = data_index_row + x * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
-                        
-                        // Get component data for MCU
-                        int16_t* block = &component->d_data_quantized[data_index];
-                        
-                        // Get coder parameters
-                        int & component_dc = dc[comp];
+        // Pointer to segment's list of 8x8 blocks and their count
+        const uint64_t* packed_block_info_ptr = d_block_list + segment->block_index_list_begin;
+        
+        // Encode all blocks
+        for(int block_count = segment->block_count; block_count--;) {
+            // Get pointer to next block input data and info about its color type
+            const uint64_t packed_block_info = *(packed_block_info_ptr++);
             
-                        // Get huffman tables offset
-                        const unsigned int table_offset = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00000 : 0x20000;
-                        
-                        // Encode 8x8 block
-                        gpujpeg_huffman_gpu_decoder_decode_block(component_dc, block, table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
-                    }
-                }
-            }
+            // Get coder parameters
+            const int last_dc_idx = packed_block_info & 0x7f;
+            
+            // Get offset to right part of huffman table
+            const unsigned int huffman_table_offset = packed_block_info & 0x80 ? 0x20000 : 0x00000;
+            
+            // Source data pointer
+            int16_t* block = d_data_quantized + (packed_block_info >> 8);
+            
+            // Encode 8x8 block
+            gpujpeg_huffman_gpu_decoder_decode_block(dc[last_dc_idx], block, huffman_table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
         }
+        
+        
+//         // Encode MCUs in segment
+//         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
+//             
+//             
+//             
+//             
+//             
+//             
+//             
+//             
+//             //assert(segment->scan_index == 0);
+//             for ( int comp = 0; comp < comp_count; comp++ ) {
+//                 struct gpujpeg_component* component = &d_component[comp];
+// 
+//                 // Prepare mcu indexes
+//                 int mcu_index_x = (segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
+//                 int mcu_index_y = (segment_index * component->segment_mcu_count + mcu_index) / component->mcu_count_x;
+//                 // Compute base data index
+//                 int data_index_base = mcu_index_y * (component->mcu_size * component->mcu_count_x) + mcu_index_x * (component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
+//                 
+//                 // For all vertical 8x8 blocks
+//                 for ( int y = 0; y < component->sampling_factor.vertical; y++ ) {
+//                     // Compute base row data index
+//                     int data_index_row = data_index_base + y * (component->mcu_count_x * component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
+//                     // For all horizontal 8x8 blocks
+//                     for ( int x = 0; x < component->sampling_factor.horizontal; x++ ) {
+//                         // Compute 8x8 block data index
+//                         int data_index = data_index_row + x * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+//                         
+//                         // Get component data for MCU
+//                         int16_t* block = &component->d_data_quantized[data_index];
+//                         
+//                         // Get coder parameters
+//                         int & component_dc = dc[comp];
+//             
+//                         // Get huffman tables offset
+//                         const unsigned int table_offset = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00000 : 0x20000;
+//                         
+//                         // Encode 8x8 block
+//                         gpujpeg_huffman_gpu_decoder_decode_block(component_dc, block, table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+//                     }
+//                 }
+//             }
+//         }
     }
 }
 
@@ -630,7 +659,9 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
             coder->d_segment, 
             comp_count,
             decoder->segment_count,
-            coder->d_data_compressed
+            coder->d_data_compressed,
+            coder->d_block_list,
+            coder->d_data_quantized
         );
     } else {
         gpujpeg_huffman_decoder_decode_kernel<false, THREADS_PER_TBLOCK><<<grid, thread>>>(
@@ -638,7 +669,9 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
             coder->d_segment, 
             comp_count,
             decoder->segment_count,
-            coder->d_data_compressed
+            coder->d_data_compressed,
+            coder->d_block_list,
+            coder->d_data_quantized
         );
     }
     cudaError cuerr = cudaThreadSynchronize();
