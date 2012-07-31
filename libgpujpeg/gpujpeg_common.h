@@ -383,6 +383,10 @@ struct gpujpeg_coder
     uint8_t* d_data_compressed;
     // Huffman coder temporary data (in device memory only)
     uint8_t* d_temp_huffman;
+    
+    // CUDA Compute capability (major and minor version)
+    int cuda_cc_major;
+    int cuda_cc_minor;
 
     // Operation durations
     float duration_memory_to;

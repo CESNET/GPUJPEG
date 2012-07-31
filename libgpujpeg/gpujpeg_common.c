@@ -286,6 +286,15 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
 {
     int result = 1;
     
+    // Get info about the device
+    struct cudaDeviceProp device_properties;
+    int device_idx;
+    cudaGetDevice(&device_idx);
+    cudaGetDeviceProperties(&device_properties, device_idx);
+    gpujpeg_cuda_check_error("Device info getting");
+    coder->cuda_cc_major = device_properties.major;
+    coder->cuda_cc_minor = device_properties.minor;
+    
     coder->preprocessor = NULL;
     
     // Allocate color components
