@@ -422,24 +422,26 @@ gpujpeg_huffman_decoder_decode_kernel(
     
     // Non-interleaving mode
     if ( SINGLE_COMP ) {
-        int segment_index = segment->scan_segment_index;
+        // Get component for current scan
+        const struct gpujpeg_component* const component = d_component + segment->scan_index; 
+        
+        // Get huffman tables offset
+        const unsigned int table_offset = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00000 : 0x20000;
+        
+        // Size of MCUs in this segment's component
+        const int component_mcu_size = component->mcu_size;
+        
+        // Pointer to first MCU's output block
+        int16_t* block = component->d_data_quantized + segment->scan_segment_index * component->segment_mcu_count * component_mcu_size;
+        
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
-            // Get component for current scan
-            struct gpujpeg_component* component = &d_component[segment->scan_index];
-     
-            // Get component data for MCU
-            int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size];
-            
-            // Get coder parameters
-            int & component_dc = dc[segment->scan_index];
-            
-            // Get huffman tables offset
-            const unsigned int table_offset = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00000 : 0x20000;
-            
             // Encode 8x8 block
-            if ( gpujpeg_huffman_gpu_decoder_decode_block(component_dc, block, table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count) != 0 )
+            if ( gpujpeg_huffman_gpu_decoder_decode_block(dc[0], block, table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count) != 0 )
                 break;
+            
+            // advance to next block
+            block += component_mcu_size;
         } 
     }
     // Interleaving mode
