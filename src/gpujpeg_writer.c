@@ -27,9 +27,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "gpujpeg_writer.h"
-#include "gpujpeg_encoder.h"
-#include "gpujpeg_util.h"
+#include <libgpujpeg/gpujpeg_writer.h>
+#include <libgpujpeg/gpujpeg_encoder.h>
+#include <libgpujpeg/gpujpeg_util.h>
 
 /** Documented at declaration */
 struct gpujpeg_writer*

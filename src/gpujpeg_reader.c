@@ -27,9 +27,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "gpujpeg_reader.h"
-#include "gpujpeg_decoder.h"
-#include "gpujpeg_util.h"
+#include <libgpujpeg/gpujpeg_reader.h>
+#include <libgpujpeg/gpujpeg_decoder.h>
+#include <libgpujpeg/gpujpeg_util.h>
 
 /** Documented at declaration */
 struct gpujpeg_reader*

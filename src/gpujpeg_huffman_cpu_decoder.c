@@ -28,7 +28,7 @@
  */
  
 #include "gpujpeg_huffman_cpu_decoder.h"
-#include "gpujpeg_util.h"
+#include <libgpujpeg/gpujpeg_util.h>
 
 /** Huffman encoder structure */
 struct gpujpeg_huffman_cpu_decoder

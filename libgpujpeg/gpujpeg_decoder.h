@@ -30,9 +30,9 @@
 #ifndef GPUJPEG_DECODER_H
 #define GPUJPEG_DECODER_H
 
-#include "gpujpeg_common.h"
-#include "gpujpeg_table.h"
-#include "gpujpeg_reader.h"
+#include <libgpujpeg/gpujpeg_common.h>
+#include <libgpujpeg/gpujpeg_table.h>
+#include <libgpujpeg/gpujpeg_reader.h>
 
 /**
  * Decoder output type

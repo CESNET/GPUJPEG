@@ -27,18 +27,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUJPEG_DCT_CPU_H
-#define GPUJPEG_DCT_CPU_H
+#ifndef GPUJPEG_HUFFMAN_GPU_DECODER_H
+#define GPUJPEG_HUFFMAN_GPU_DECODER_H
 
-#include "gpujpeg_encoder.h"
-#include "gpujpeg_decoder.h"
+#include <libgpujpeg/gpujpeg_decoder.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
- * Peform inverse DCT on CPU
- *
- * @param decoder
+ * Init huffman decoder
+ * 
+ * @return 0 if succeeds, otherwise nonzero
  */
-void
-gpujpeg_idct_cpu(struct gpujpeg_decoder* decoder);
+int
+gpujpeg_huffman_gpu_decoder_init();
 
-#endif // GPUJPEG_DCT_CPU_H
+/**
+ * Perform huffman decoding
+ * 
+ * @param encoder  Decoder structure
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // GPUJPEG_HUFFMAN_GPU_DECODER_H

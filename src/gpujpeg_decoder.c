@@ -27,13 +27,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "gpujpeg_decoder.h"
+#include <libgpujpeg/gpujpeg_decoder.h>
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_dct_cpu.h"
 #include "gpujpeg_dct_gpu.h"
 #include "gpujpeg_huffman_cpu_decoder.h"
 #include "gpujpeg_huffman_gpu_decoder.h"
-#include "gpujpeg_util.h"
+#include <libgpujpeg/gpujpeg_util.h>
 #include <npp.h>
 
 #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT

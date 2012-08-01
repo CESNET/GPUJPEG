@@ -30,9 +30,9 @@
 #ifndef GPUJPEG_ENCODER_H
 #define GPUJPEG_ENCODER_H
 
-#include "gpujpeg_common.h"
-#include "gpujpeg_table.h"
-#include "gpujpeg_writer.h"
+#include <libgpujpeg/gpujpeg_common.h>
+#include <libgpujpeg/gpujpeg_table.h>
+#include <libgpujpeg/gpujpeg_writer.h>
 
 /**
  * Encoder input type

@@ -27,8 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "libgpujpeg/gpujpeg.h"
-#include "libgpujpeg/gpujpeg_util.h"
+#include <libgpujpeg/gpujpeg.h>
+#include <libgpujpeg/gpujpeg_util.h>
 #include <getopt.h>
 
 void

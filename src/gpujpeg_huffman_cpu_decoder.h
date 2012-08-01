@@ -27,34 +27,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUJPEG_HUFFMAN_GPU_ENCODER_H
-#define GPUJPEG_HUFFMAN_GPU_ENCODER_H
+#ifndef GPUJPEG_HUFFMAN_CPU_DECODER_H
+#define GPUJPEG_HUFFMAN_CPU_DECODER_H
 
-#include "gpujpeg_encoder.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <libgpujpeg/gpujpeg_decoder.h>
 
 /**
- * Init huffman encoder
+ * Perform huffman decoding
  * 
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_huffman_gpu_encoder_init();
+gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder);
 
-/**
- * Perform huffman encoding
- * 
- * @param encoder  Encoder structure
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif // GPUJPEG_HUFFMAN_GPU_ENCODER_H
+#endif // GPUJPEG_HUFFMAN_CPU_DECODER_H

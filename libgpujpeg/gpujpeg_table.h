@@ -30,7 +30,7 @@
 #ifndef GPUJPEG_TABLE_H
 #define GPUJPEG_TABLE_H
 
-#include "gpujpeg_type.h"
+#include <libgpujpeg/gpujpeg_type.h>
 
 #define GPUJPEG_ORDER_NATURAL_SIZE (64 + 16)
 

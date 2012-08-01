@@ -28,7 +28,7 @@
  */
 
 #include "gpujpeg_huffman_gpu_decoder.h"
-#include "gpujpeg_util.h"
+#include <libgpujpeg/gpujpeg_util.h>
 
 
 #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT

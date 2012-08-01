@@ -31,7 +31,7 @@
 #define GPUJPEG_COMMON_H
 
 #include <stdint.h>
-#include "gpujpeg_type.h"
+#include <libgpujpeg/gpujpeg_type.h>
 
 /** Marker used as segment info */
 #define GPUJPEG_MARKER_SEGMENT_INFO GPUJPEG_MARKER_APP13
