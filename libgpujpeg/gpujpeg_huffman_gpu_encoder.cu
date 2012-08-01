@@ -50,10 +50,16 @@ __device__ unsigned int gpujpeg_huffman_output_byte_count;
  */
 __device__ uint32_t gpujpeg_huffman_gpu_lut[(256 + 1) * 4];
 
-/** Value decomposition in constant memory (input range from -4096 to 4095  ... both inclusive) */
+/**
+ * Value decomposition in constant memory (input range from -4096 to 4095  ... both inclusive)
+ * Mapping from coefficient value into the code for the value ind its bit size.
+ */
 __device__ unsigned int gpujpeg_huffman_value_decomposition[8 * 1024];
 
-/** Initializes coefficient decomposition table in global memory */
+/**
+ * Initializes coefficient decomposition table in global memory.  (CC >= 2.0)
+ * Output table is a mapping from some value into its code and bit size.
+ */
 __global__ static void
 gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel() {
     // fetch some value
@@ -84,8 +90,8 @@ gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel() {
 
 #if __CUDA_ARCH__ >= 200
 /**
- * Adds up to 32 bits at once.
- * Codeword value must be aligned to left (most significant bits).
+ * Adds up to 32 bits at once into ouptut buffer, applying byte stuffing.
+ * Codeword value must be aligned to left (most significant bits). (CC >= 2.0)
  */
 __device__ static void 
 gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_count, int & bit_count, uint8_t * const out_ptr, const unsigned int packed_code_word)
@@ -97,11 +103,14 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
     // concatenate with remaining bits
     remaining_bits |= code_word >> bit_count;
     bit_count += code_bit_size;
+    
+    // flush some bytes if have more than 8 bits
     if (bit_count >= 8) {
         do {
             const unsigned int out_byte = remaining_bits >> 24;
             out_ptr[byte_count++] = out_byte;
             if(0xff == out_byte) {
+                // keep zero byte after each 0xFF (buffer is expected to be zeroed)
                 out_ptr[byte_count++] = 0;
             }
             
@@ -109,11 +118,17 @@ gpujpeg_huffman_gpu_encoder_emit_bits(unsigned int & remaining_bits, int & byte_
             bit_count -= 8;
         } while (bit_count >= 8);
         
+        // keep only remaining bits in the buffer
         remaining_bits = code_word << (code_bit_size - bit_count);
         remaining_bits &= 0xfffffffe << (31 - bit_count);
     }
 }
 
+/**
+ * Given some huffman table offset, RLE zero count and coefficient value, 
+ * this returns huffman codeword for the value (packed in 27 MSBs) 
+ * together with its bit size (in 5 LSBs).  (CC >= 2.0)
+ */
 __device__ static unsigned int
 gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int coefficient,
                                  const int huffman_lut_offset)
@@ -134,11 +149,14 @@ gpujpeg_huffman_gpu_encode_value(const int preceding_zero_count, const int coeff
     return (packed_prefix + value_nbits) | (value_code >> prefix_nbits);
 }
 
+/**
+ * Flush remaining codewords from buffer in shared memory to global memory output buffer.  (CC >= 2.0)
+ */
 __device__ static void
 gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned int * &data_compressed, int & remaining_codewords, const int tid) {
     // this works for up to 4 * 32 remaining codewords
     if(remaining_codewords) {
-        // pad remianing codewords with extra zero-sized codewords, not to have to use special case in serialization kernel, which saves 4 codewords at once
+        // pad remaining codewords with extra zero-sized codewords, not to have to use special case in serialization kernel, which saves 4 codewords at once
         s_out[remaining_codewords + tid] = 0;
         
         // save all remaining codewords at once (together with some zero sized padding codewords)
@@ -151,7 +169,7 @@ gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned
 }
 
 /**
- * Encode one 8x8 block
+ * Encode one 8x8 block  (CC >= 2.0)
  *
  * @return 0 if succeeds, otherwise nonzero
  */
@@ -259,7 +277,7 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
 #endif // #if __CUDA_ARCH__ >= 200
 
 /**
- * Huffman encoder kernel
+ * Huffman encoder kernel (For compute capability >= 2.0)
  * 
  * @return void
  */
@@ -371,7 +389,7 @@ gpujpeg_huffman_encoder_encode_kernel_warp(
 #define SERIALIZATION_THREADS_PER_TBLOCK 192
 
 /**
- * Codeword serialization kernel.
+ * Codeword serialization kernel (CC >= 2.0).
  * 
  * @return void
  */
@@ -928,6 +946,11 @@ gpujpeg_huffman_gpu_encoder_init(const struct gpujpeg_encoder * encoder)
     return 0;
 }
 
+/** 
+ * Get grid size for specified count of threadblocks. (Grid size is limited 
+ * to 65536 in both directions, so if we need more threadblocks, we must use 
+ * both x and y coordinates.)
+ */
 dim3
 gpujpeg_huffman_gpu_encoder_grid_size(int tblock_count)
 {

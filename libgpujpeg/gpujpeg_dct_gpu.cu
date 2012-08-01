@@ -265,11 +265,10 @@ gpujpeg_idct_gpu_kernel_inplace(uint32_t* V8)
  */
 template <typename T>
 __device__ static inline void
-dct(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
-    T & out0, T & out1, T & out2, T & out3, T & out4, T & out5, T & out6, T & out7,
-    const float level_shift_8 = 0.0f)
+gpujpeg_dct_gpu(const T in0, const T in1, const T in2, const T in3, const T in4, const T in5, const T in6, const T in7,
+                T & out0, T & out1, T & out2, T & out3, T & out4, T & out5, T & out6, T & out7,
+                const float level_shift_8 = 0.0f)
 {
-    /* Load data into workspace */
     const float diff0 = in0 + in7;
     const float diff1 = in1 + in6;
     const float diff2 = in2 + in5;
@@ -333,11 +332,9 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     const int block_offset_x = blockIdx.x * 4;
     const int block_offset_y = blockIdx.y * WARP_COUNT;
     
-    // true if thread's block is not out of image
+    // stop if thread's block is out of image
     const bool processing = block_offset_x + block_idx_x < block_count_x
                          && block_offset_y + block_idx_y < block_count_y;
-    
-    // stop if out of block range
     if(!processing) {
         return;
     }
@@ -345,7 +342,7 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     // index of row/column processed by this thread within its 8x8 block
     const int dct_idx = threadIdx.x & 7;
     
-    // Data type of transformed coefficients
+    // data type of transformed coefficients
     typedef float dct_t;
     
     // dimensions of shared buffer (compile time constants)
@@ -366,13 +363,13 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     // pointer to begin of transposition buffer for thread's block
     dct_t * const s_transposition = s_transposition_all + block_idx_y * SHARED_SIZE_WARP + block_idx_x * 8;
     
-    // Load input coefficients (each thread loads 1 row of 8 coefficients from its 8x8 block)
+    // input coefficients pointer (each thread loads 1 column of 8 coefficients from its 8x8 block)
     const int in_x = (block_offset_x + block_idx_x) * 8 + dct_idx;
     const int in_y = (block_offset_y + block_idx_y) * 8;
     const int in_offset = in_x + in_y * source_stride;
     const uint8_t * in = source + in_offset;
     
-    // separate input coefficients and apply level shift (assuming little endian hardware)
+    // load all 8 coefficients of thread's column, but do NOT apply level shift now - will be applied as part of DCT
     dct_t src0 = *in;
     in += source_stride;
     dct_t src1 = *in;
@@ -392,26 +389,27 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     // destination pointer into shared transpose buffer (each thread saves one column)
     dct_t * const s_dest = s_transposition + dct_idx;
     
-    dct(src0, src1, src2, src3, src4, src5, src6, src7,
-        s_dest[SHARED_STRIDE * 0],
-        s_dest[SHARED_STRIDE * 1],
-        s_dest[SHARED_STRIDE * 2],
-        s_dest[SHARED_STRIDE * 3],
-        s_dest[SHARED_STRIDE * 4],
-        s_dest[SHARED_STRIDE * 5],
-        s_dest[SHARED_STRIDE * 6],
-        s_dest[SHARED_STRIDE * 7],
-        -1024.0f  // = 8 * -128 ... level shift sum for all 8 coefficients
+    // transform the column (vertically) and save it into the transpose buffer
+    gpujpeg_dct_gpu(src0, src1, src2, src3, src4, src5, src6, src7,
+                    s_dest[SHARED_STRIDE * 0],
+                    s_dest[SHARED_STRIDE * 1],
+                    s_dest[SHARED_STRIDE * 2],
+                    s_dest[SHARED_STRIDE * 3],
+                    s_dest[SHARED_STRIDE * 4],
+                    s_dest[SHARED_STRIDE * 5],
+                    s_dest[SHARED_STRIDE * 6],
+                    s_dest[SHARED_STRIDE * 7],
+                    -1024.0f  // = 8 * -128 ... level shift sum for all 8 coefficients
     );
 
     // read coefficients back - each thread reads one row (no need to sync - only threads within same warp work on each block)
+    // ... and transform the row horizontally
     volatile dct_t * s_src = s_transposition + SHARED_STRIDE * dct_idx;
     dct_t dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7;
-    dct(s_src[0], s_src[1], s_src[2], s_src[3], s_src[4], s_src[5], s_src[6], s_src[7],
-        dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7);
+    gpujpeg_dct_gpu(s_src[0], s_src[1], s_src[2], s_src[3], s_src[4], s_src[5], s_src[6], s_src[7],
+                    dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7);
     
-    
-    // apply quantization to the row of coefficients (table is transposed in glogal memory)
+    // apply quantization to the row of coefficients (quantization table is actually transposed in global memory for coalesced memory acceses)
     const float * const quantization_row = quant_table + dct_idx;
     const int out0 = rintf(dct0 * quantization_row[0 * 8]);
     const int out1 = rintf(dct1 * quantization_row[1 * 8]);
@@ -422,13 +420,13 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     const int out6 = rintf(dct6 * quantization_row[6 * 8]);
     const int out7 = rintf(dct7 * quantization_row[7 * 8]);
     
-    // save output row packed into 16 bytes
+    // using single write, save output row packed into 16 bytes
     const int out_x = (block_offset_x + block_idx_x) * 64; // 64 coefficients per one transformed and quantized block
     const int out_y = (block_offset_y + block_idx_y) * output_stride;
     ((uint4*)(output + out_x + out_y))[dct_idx] = make_uint4(
-        (out0 & 0xFFFF) + (out1 << 16),
+        (out0 & 0xFFFF) + (out1 << 16), 
         (out2 & 0xFFFF) + (out3 << 16),
-        (out4 & 0xFFFF) + (out5 << 16),
+        (out4 & 0xFFFF) + (out5 << 16),  // ... & 0xFFFF keeps only lower 16 bits - useful for negative numbers, which have 1s in upper bits
         (out6 & 0xFFFF) + (out7 << 16)
     );
 }
