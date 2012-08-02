@@ -30,7 +30,7 @@
 #ifndef GPUJPEG_READER_H
 #define GPUJPEG_READER_H
 
-#include "gpujpeg_common.h"
+#include <libgpujpeg/gpujpeg_common.h>
 
 /** JPEG decoder structure predeclaration */
 struct gpujpeg_decoder;

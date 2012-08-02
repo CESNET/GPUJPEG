@@ -28,7 +28,7 @@
  */
 
 #include "gpujpeg_dct_gpu.h"
-#include "gpujpeg_util.h"
+#include <libgpujpeg/gpujpeg_util.h>
 
 /*
  * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.

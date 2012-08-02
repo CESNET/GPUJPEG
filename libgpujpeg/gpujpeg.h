@@ -30,7 +30,7 @@
 #ifndef GPUJPEG_H
 #define GPUJPEG_H
 
-#include "gpujpeg_encoder.h"
-#include "gpujpeg_decoder.h"
+#include <libgpujpeg/gpujpeg_encoder.h>
+#include <libgpujpeg/gpujpeg_decoder.h>
 
 #endif // GPUJPEG_H

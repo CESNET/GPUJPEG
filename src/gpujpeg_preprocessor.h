@@ -27,20 +27,56 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUJPEG_HUFFMAN_CPU_ENCODER_H
-#define GPUJPEG_HUFFMAN_CPU_ENCODER_H
+#ifndef GPUJPEG_PREPROCESSOR_H
+#define GPUJPEG_PREPROCESSOR_H
 
-#include "gpujpeg_encoder.h"
+#include <libgpujpeg/gpujpeg_encoder.h>
+#include <libgpujpeg/gpujpeg_decoder.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
- * Perform huffman encoding
+ * Init preprocessor encoder
  * 
- * @param encoder  Encoder structure
- * @param type  Component type
- * @param data  Data buffer
+ * @param encoder
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder);
+gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder);
 
-#endif // GPUJPEG_HUFFMAN_CPU_ENCODER_H
+/**
+ * Preprocessor encode
+ * 
+ * @param encoder  Encoder structure
+ * @param image  Image source data
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder);
+
+/**
+ * Init preprocessor decoder
+ * 
+ * @param encoder
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder);
+
+/**
+ * Preprocessor decode
+ * 
+ * @param encoder  Encoder structure
+ * @param image  Image source data
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // GPUJPEG_PREPROCESSOR_H

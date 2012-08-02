@@ -1,0 +1,140 @@
+AC_PREREQ([2.65])
+AC_INIT([libgpujpeg], [0.0.0], [martin.srom@mail.muni.cz], [libgpujpeg], [https://sourceforge.net/p/gpujpeg/])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([src/main.c])
+AM_INIT_AUTOMAKE
+
+AC_CONFIG_HEADERS([config.h])
+
+GPUJPEG_MAJOR_VERSION=0
+GPUJPEG_MINOR_VERSION=0
+GPUJPEG_MICRO_VERSION=0
+GPUJPEG_REVISION_VERSION=0
+
+GPUJPEG_LIBRARY_VERSION=0:0:0
+GPUJPEG_LIBRARY_RELEASE=0
+
+GPUJPEG_API_VERSION=0.1
+AC_SUBST(GPUJPEG_API_VERSION)
+AC_SUBST(GPUJPEG_LIBRARY_VERSION)
+AC_SUBST(GPUJPEG_LIBRARY_RELEASE)
+
+LT_PREREQ([2.2])
+LT_INIT
+
+AC_PROG_LIBTOOL
+AM_PROG_LIBTOOL
+
+# Checks for programs.
+AC_PROG_CXX
+AC_PROG_CC
+AC_PROG_INSTALL
+AM_PROG_CC_C_O
+
+# debug
+AC_ARG_ENABLE(debug, [  --enable-debug             compile with debug info] )
+if test x$enable_debug = x ; then
+	enable_debug=no
+fi
+
+if test x$enable_debug = xyes ; then
+	COMMON_CFLAGS+=" -g -D_DEBUG -O0"
+	NVCCFLAGS+=" -G"
+else
+	COMMON_CFLAGS+=" -O2"
+fi
+
+# huffmann
+AC_ARG_ENABLE(constant-tables, [  --disable-constant-tables  disable huffman coder tables in constant memory] )
+if test x$enable_constant_tables = x ; then
+	enable_constant_tables=yes
+fi
+
+if test x$enable_constant_tables = xyes ; then
+	AC_DEFINE([GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT], [1], [Build with huffmann coder tables in constant memory])
+fi
+
+# DCT from NPP library
+AC_ARG_ENABLE(npp-dct, [  --disable-npp-dct          Use DCT from NPP library (is faster but causes]
+[		color change); if disabled custom implementation is used, it]
+[		doesn't cause color change but for non-fermi GPUs it is slower] )
+if test x$enable_npp_dct = x ; then
+	enable_npp_dct=yes
+fi
+
+if test x$enable_npp_dct = xyes ; then
+	AC_DEFINE([DGPUJPEG_DCT_FROM_NPP], [1], [Build with DCT from NPP library])
+fi
+
+# opengl
+AC_ARG_ENABLE(opengl, [  --enable-opengl            enable opengl support] )
+if test x$enable_opengl = x ; then
+	enable_opengl=no
+fi
+
+if test $enable_opengl = yes ; then
+        AC_CHECK_HEADER(GL/glew.h, FOUND_GLEW_H=yes)
+        AC_CHECK_LIB(GLEW, glewIsSupported, FOUND_GLEW_L=yes)
+
+        if test "$FOUND_GLEW_L" = yes -a "$FOUND_GLEW_H" = yes ; then
+                AC_DEFINE([GPUJPEG_USE_OPENGL], [1], [Build with OpenGL support])
+                GPUJPEG_LIBS+=" -lGLEW"
+        else
+                enable_opengl=no
+        fi
+fi
+
+
+# CUDA
+AC_ARG_WITH(cuda,
+        [  --with-cuda=DIR         specify cuda root],
+        [CUDA_INSTALL_PATH=$withval]
+)
+
+AC_PATH_PROG(CUDA, nvcc, nvcc_not_found, [$PATH$PATH_SEPARATOR$CUDA_INSTALL_PATH]dnl
+	[$PATH_SEPARATOR/opt/cuda$PATH_SEPARATOR/usr/local/cuda])
+
+if test x$CUDA = xnvcc_not_found ; then
+	AC_MSG_FAILURE([CUDA is required to build the gpujpeg library!])
+fi
+
+CUDA=`dirname $CUDA`
+CUDA=`dirname $CUDA`
+CUDA_INSTALL_PATH=$CUDA
+
+LBITS=`getconf LONG_BIT`
+if test $LBITS = 64 ; then
+    CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib64"
+else
+    CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib"
+fi
+
+GPUJPEG_LDFLAGS+=" -L${CUDA_INSTALL_LIB} -lcudart -lnpp"
+COMMON_CFLAGS+=" -I. -I${CUDA_INSTALL_PATH}/include"
+
+AC_SUBST(CUDA_INSTALL_PATH)
+AC_SUBST(CUDA_INSTALL_LIB)
+AC_SUBST(COMMON_CFLAGS)
+AC_SUBST(GPUJPEG_CFLAGS)
+AC_SUBST(GPUJPEG_LDFLAGS)
+
+AC_CONFIG_FILES([Makefile libgpujpeg.pc test/memcheck/Makefile test/opengl_interop/Makefile ])
+AC_OUTPUT
+
+AC_MSG_RESULT([
+Configuration summary:
+
+  Target ...................... $host
+  Prefix ...................... $prefix
+  Debug ....................... $debug
+
+  Constant tables.............. $enable_constant_tables
+  NPP DCT ..................... $enable_npp_dct
+  OpenGL ...................... $enable_opengl
+
+  CUDA root ................... $CUDA_INSTALL_PATH
+  
+
+])
+
+

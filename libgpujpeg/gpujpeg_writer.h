@@ -30,7 +30,7 @@
 #ifndef GPUJPEG_WRITER_H
 #define GPUJPEG_WRITER_H
 
-#include "gpujpeg_type.h"
+#include <libgpujpeg/gpujpeg_type.h>
 
 /** JPEG encoder structure predeclaration */
 struct gpujpeg_encoder;

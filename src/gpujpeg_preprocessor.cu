@@ -28,7 +28,7 @@
  */
  
 #include "gpujpeg_preprocessor.h"
-#include "gpujpeg_util.h"
+#include <libgpujpeg/gpujpeg_util.h>
 #include "gpujpeg_colorspace.h"
 
 #define RGB_8BIT_THREADS 256

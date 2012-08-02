@@ -27,8 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "gpujpeg_table.h"
-#include "gpujpeg_util.h"
+#include <libgpujpeg/gpujpeg_table.h>
+#include <libgpujpeg/gpujpeg_util.h>
 #include <npp.h>
 
 /** Default Quantization Table for Y component (zig-zag order)*/

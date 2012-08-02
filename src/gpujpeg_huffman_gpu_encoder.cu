@@ -28,7 +28,7 @@
  */
  
 #include "gpujpeg_huffman_gpu_encoder.h"
-#include "gpujpeg_util.h"
+#include <libgpujpeg/gpujpeg_util.h>
 
 #define THREAD_BLOCK_SIZE 48
 

@@ -30,7 +30,7 @@
 #ifndef GPUJPEG_COLORSPACE_H
 #define GPUJPEG_COLORSPACE_H
 
-#include "gpujpeg_type.h"
+#include <libgpujpeg/gpujpeg_type.h>
 
 /**
  * Color transform debug info
