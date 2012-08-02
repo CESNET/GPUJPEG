@@ -30,7 +30,6 @@
 #include <libgpujpeg/gpujpeg_common.h>
 #include <libgpujpeg/gpujpeg_util.h>
 #include "gpujpeg_preprocessor.h"
-#include <npp.h>
 #include <math.h>
 #ifdef GPUJPEG_USE_OPENGL
     #define GL_GLEXT_PROTOTYPES
@@ -38,6 +37,9 @@
     #include <GL/glx.h>
 #endif
 #include <cuda_gl_interop.h>
+
+// rounds number of segment bytes up to next multiple of 128
+#define SEGMENT_ALIGN(b) (((b) + 127) & ~127)
 
 /** Documented at declaration */
 struct gpujpeg_devices_info
@@ -149,9 +151,6 @@ gpujpeg_init_device(int device_id, int flags)
         int cuda_runtime_version = 0;
         cudaRuntimeGetVersion(&cuda_runtime_version);
         printf("CUDA runtime version:  %d.%d\n", cuda_runtime_version / 1000, (cuda_runtime_version % 100) / 10);
-        
-        const NppLibraryVersion* npp_version = nppGetLibVersion();
-        printf("NPP version:           %d.%d\n", npp_version->major, npp_version->minor);
         
         printf("Using Device #%d:       %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
     }
@@ -286,6 +285,15 @@ int
 gpujpeg_coder_init(struct gpujpeg_coder* coder)
 {
     int result = 1;
+    
+    // Get info about the device
+    struct cudaDeviceProp device_properties;
+    int device_idx;
+    cudaGetDevice(&device_idx);
+    cudaGetDeviceProperties(&device_properties, device_idx);
+    gpujpeg_cuda_check_error("Device info getting");
+    coder->cuda_cc_major = device_properties.major;
+    coder->cuda_cc_minor = device_properties.minor;
     
     coder->preprocessor = NULL;
     
@@ -436,10 +444,11 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
                 coder->segment[index].scan_segment_index = index;
                 coder->segment[index].mcu_count = mcu_count;
                 coder->segment[index].data_compressed_index = data_compressed_index;
+                coder->segment[index].data_temp_index = data_compressed_index;
                 coder->segment[index].data_compressed_size = 0;
                 // Increase parameters for next segment
                 data_index += mcu_count * coder->mcu_size;
-                data_compressed_index += mcu_count * coder->mcu_compressed_size;
+                data_compressed_index += SEGMENT_ALIGN(mcu_count * coder->mcu_compressed_size);
                 mcu_index += mcu_count;
             }
         } else {
@@ -460,10 +469,11 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
                     coder->segment[index].scan_segment_index = segment;
                     coder->segment[index].mcu_count = mcu_count;
                     coder->segment[index].data_compressed_index = data_compressed_index;
+                    coder->segment[index].data_temp_index = data_compressed_index;
                     coder->segment[index].data_compressed_size = 0;
                     // Increase parameters for next segment
                     data_index += mcu_count * component->mcu_size;
-                    data_compressed_index += mcu_count * component->mcu_compressed_size;
+                    data_compressed_index += SEGMENT_ALIGN(mcu_count * component->mcu_compressed_size);
                     mcu_index += mcu_count;
                     index++;
                 }
@@ -479,10 +489,6 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     }
     //printf("Compressed size %d (segments %d)\n", coder->data_compressed_size, coder->segment_count);
         
-    // Copy segments to device memory
-    if ( cudaSuccess != cudaMemcpy(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice) )
-        result = 0;
-
     // Print allocation info
     if ( coder->param.verbose ) {
         int structures_size = 0;
@@ -493,7 +499,8 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         total_size += coder->data_raw_size;
         total_size += coder->data_size;
         total_size += coder->data_size * 2;
-        total_size += coder->data_compressed_size;
+        total_size += coder->data_compressed_size;  // for Huffman coding output
+        total_size += coder->data_compressed_size;  // for Hiffman coding temp buffer
 
         printf("\nAllocation Info:\n");
         printf("    Segment Count:            %d\n", coder->segment_count);
@@ -502,6 +509,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         printf("    Preprocessor Buffer Size: %0.1f MB\n", (double)coder->data_size / (1024.0 * 1024.0));
         printf("    DCT Buffer Size:          %0.1f MB\n", (double)2 * coder->data_size / (1024.0 * 1024.0));
         printf("    Compressed Buffer Size:   %0.1f MB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
+        printf("    Huffman Temp buffer Size: %0.1f MB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
         printf("    Structures Size:          %0.1f kB\n", (double)structures_size / (1024.0));
         printf("    Total GPU Memory Size:    %0.1f MB\n", (double)total_size / (1024.0 * 1024.0));
         printf("");
@@ -524,14 +532,17 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     uint8_t* d_comp_data = coder->d_data;
     int16_t* d_comp_data_quantized = coder->d_data_quantized;
     int16_t* comp_data_quantized = coder->data_quantized;
+    unsigned int data_quantized_index = 0;
     for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
         struct gpujpeg_component* component = &coder->component[comp];
         component->d_data = d_comp_data;
         component->d_data_quantized = d_comp_data_quantized;
+        component->data_quantized_index = data_quantized_index;
         component->data_quantized = comp_data_quantized;
         d_comp_data += component->data_width * component->data_height;
         d_comp_data_quantized += component->data_width * component->data_height;
         comp_data_quantized += component->data_width * component->data_height;
+        data_quantized_index += component->data_width * component->data_height;
      }
 
     // Copy components to device memory
@@ -542,13 +553,93 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     // Allocate compressed data
     int max_compressed_data_size = coder->data_compressed_size;
     max_compressed_data_size += GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
-    max_compressed_data_size *= 2;
+    //max_compressed_data_size *= 2;
     if ( cudaSuccess != cudaMallocHost((void**)&coder->data_compressed, max_compressed_data_size * sizeof(uint8_t)) ) 
         result = 0;   
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_compressed, max_compressed_data_size * sizeof(uint8_t)) ) 
         result = 0;   
     gpujpeg_cuda_check_error("Coder data compressed allocation");
+    
+    // Allocate Huffman coder temporary buffer
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_temp_huffman, max_compressed_data_size * sizeof(uint8_t)) ) 
+        result = 0;   
+    gpujpeg_cuda_check_error("Huffman temp buffer allocation");
      
+    // Initialize block lists in host memory
+    coder->block_count = 0;
+    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ )
+        coder->block_count += (coder->component[comp].data_width * coder->component[comp].data_height) / (8 * 8);
+    if ( cudaSuccess != cudaMallocHost((void**)&coder->block_list, coder->block_count * sizeof(*coder->block_list)) ) 
+        result = 0;   
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_block_list, coder->block_count * sizeof(*coder->d_block_list)) ) 
+        result = 0;
+    if( result == 0 )
+        return 0;
+    int block_idx = 0;
+    int comp_count = 1;
+    if ( coder->param.interleaved == 1 )
+        comp_count = coder->param_image.comp_count;
+    assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
+    for( int segment_idx = 0; segment_idx < coder->segment_count; segment_idx++ ) {
+        struct gpujpeg_segment* const segment = &coder->segment[segment_idx];
+        segment->block_index_list_begin = block_idx;
+        
+        // Non-interleaving mode
+        if ( comp_count == 1 ) {
+            // Inspect MCUs in segment
+            for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
+                // Component for the scan
+                struct gpujpeg_component* component = &coder->component[segment->scan_index];
+         
+                // Offset of component data for MCU
+                uint64_t data_index = component->data_quantized_index + (segment->scan_segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size;
+                uint64_t component_type = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00 : 0x80;
+                uint64_t dc_index = segment->scan_index;
+                coder->block_list[block_idx++] = dc_index | component_type | (data_index << 8);
+            } 
+        }
+        // Interleaving mode
+        else {
+            // Encode MCUs in segment
+            for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
+                //assert(segment->scan_index == 0);
+                for ( int comp = 0; comp < comp_count; comp++ ) {
+                    struct gpujpeg_component* component = &coder->component[comp];
+
+                    // Prepare mcu indexes
+                    int mcu_index_x = (segment->scan_segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
+                    int mcu_index_y = (segment->scan_segment_index * component->segment_mcu_count + mcu_index) / component->mcu_count_x;
+                    // Compute base data index
+                    int data_index_base = component->data_quantized_index + mcu_index_y * (component->mcu_size * component->mcu_count_x) + mcu_index_x * (component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
+                    
+                    // For all vertical 8x8 blocks
+                    for ( int y = 0; y < component->sampling_factor.vertical; y++ ) {
+                        // Compute base row data index
+                        int data_index_row = data_index_base + y * (component->mcu_count_x * component->mcu_size_x * GPUJPEG_BLOCK_SIZE);
+                        // For all horizontal 8x8 blocks
+                        for ( int x = 0; x < component->sampling_factor.horizontal; x++ ) {
+                            // Compute 8x8 block data index
+                            uint64_t data_index = data_index_row + x * GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
+                            uint64_t component_type = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00 : 0x80;
+                            uint64_t dc_index = comp;
+                            coder->block_list[block_idx++] = dc_index | component_type | (data_index << 8);
+                        }
+                    }
+                }
+            }
+        }
+        segment->block_count = block_idx - segment->block_index_list_begin;
+    }
+    assert(block_idx == coder->block_count);
+    
+    // Copy block lists to device memory
+    if ( cudaSuccess != cudaMemcpy(coder->d_block_list, coder->block_list, coder->block_count * sizeof(*coder->d_block_list), cudaMemcpyHostToDevice) )
+        result = 0;
+    
+    // Copy segments to device memory
+    if ( cudaSuccess != cudaMemcpy(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice) )
+        result = 0;
+    
     return 0;
 }
 
@@ -574,6 +665,12 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
         cudaFreeHost(coder->segment); 
     if ( coder->d_segment != NULL )
         cudaFree(coder->d_segment);
+    if ( coder->d_temp_huffman != NULL )
+        cudaFree(coder->d_temp_huffman);
+    if ( coder->block_list != NULL )
+        cudaFreeHost(coder->block_list); 
+    if ( coder->d_block_list != NULL )
+        cudaFree(coder->d_block_list); 
     return 0;
 }
 

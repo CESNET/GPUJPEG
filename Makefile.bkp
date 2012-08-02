@@ -70,7 +70,7 @@ else
     # 32bit
     LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib
 endif
-LDFLAGS += -lcudart -lnpp
+LDFLAGS += -lcudart
 
 # Build
 build: $(TARGET) $(TARGET).sh

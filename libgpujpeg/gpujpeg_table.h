@@ -87,12 +87,14 @@ struct gpujpeg_table_quantization
     uint16_t table[64];
     // Quantization forward/inverse table in device memory
     uint16_t* d_table;
+    // Quantization table for forward DCT, pre-divided with output DCT weights and transposed for coealescent access
+    float* d_table_forward;
 };
 
 /** JPEG table for huffman encoding */
 struct gpujpeg_table_huffman_encoder {
     // Code for each symbol 
-    unsigned int code[256];    
+    unsigned int code[256];
     // Length of code for each symbol 
     char size[256];
     // If no code has been allocated for a symbol S, size[S] is 0 
@@ -168,13 +170,12 @@ gpujpeg_table_quantization_print(struct gpujpeg_table_quantization* table);
  * Initialize encoder huffman DC and AC table for component type
  * 
  * @param table  Table structure
- * @param d_table  Table structure in device memory
  * @param comp_type  Component type (luminance/chrominance)
  * @param huff_type  Huffman type (DC/AC)
  * @return void
  */
 int
-gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, struct gpujpeg_table_huffman_encoder* d_table, enum gpujpeg_component_type comp_type, enum gpujpeg_huffman_type huff_type);
+gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, enum gpujpeg_component_type comp_type, enum gpujpeg_huffman_type huff_type);
 
 /**
  * Initialize decoder huffman DC and AC table for component type. It copies bit and values arrays to table and call compute routine.

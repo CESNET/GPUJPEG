@@ -95,9 +95,7 @@ struct gpujpeg_encoder
     
     // Huffman coder tables
     struct gpujpeg_table_huffman_encoder table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
-    // Huffman coder tables in device memory
-    struct gpujpeg_table_huffman_encoder* d_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
-
+    
     // Timers
     GPUJPEG_CUSTOM_TIMER_DECLARE(def)
     GPUJPEG_CUSTOM_TIMER_DECLARE(in_gpu)

@@ -54,18 +54,6 @@ if test x$enable_constant_tables = xyes ; then
 	AC_DEFINE([GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT], [1], [Build with huffmann coder tables in constant memory])
 fi
 
-# DCT from NPP library
-AC_ARG_ENABLE(npp-dct, [  --disable-npp-dct          Use DCT from NPP library (is faster but causes]
-[		color change); if disabled custom implementation is used, it]
-[		doesn't cause color change but for non-fermi GPUs it is slower] )
-if test x$enable_npp_dct = x ; then
-	enable_npp_dct=yes
-fi
-
-if test x$enable_npp_dct = xyes ; then
-	AC_DEFINE([DGPUJPEG_DCT_FROM_NPP], [1], [Build with DCT from NPP library])
-fi
-
 # opengl
 AC_ARG_ENABLE(opengl, [  --enable-opengl            enable opengl support] )
 if test x$enable_opengl = x ; then
@@ -109,7 +97,7 @@ else
     CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib"
 fi
 
-GPUJPEG_LDFLAGS+=" -L${CUDA_INSTALL_LIB} -lcudart -lnpp"
+GPUJPEG_LDFLAGS+=" -L${CUDA_INSTALL_LIB} -lcudart"
 COMMON_CFLAGS+=" -I. -I${CUDA_INSTALL_PATH}/include"
 
 AC_SUBST(CUDA_INSTALL_PATH)
@@ -129,7 +117,6 @@ Configuration summary:
   Debug ....................... $debug
 
   Constant tables.............. $enable_constant_tables
-  NPP DCT ..................... $enable_npp_dct
   OpenGL ...................... $enable_opengl
 
   CUDA root ................... $CUDA_INSTALL_PATH

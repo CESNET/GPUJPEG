@@ -36,8 +36,7 @@ OVERVIEW:
    -GPU: 
       -Preprocessing/Postprocessing (color component parsing, 
        color transformation RGB <-> YCbCr)
-      -Forward/Inverse DCT (discrete cosine transform), implementation 
-       from NVIDIA NPP library (NVIDIA Performance Primitives)
+      -Forward/Inverse DCT (discrete cosine transform)
       -Huffman encoder/decoder (when restart flags are enabled)  
 
 PERFORMANCE:
@@ -334,29 +333,21 @@ USAGE:
 REQUIREMENTS:
     To be able to build and run libgpujpeg library and gpujpeg console 
   application you need:
-  1) CUDA Toolkit (http://developer.nvidia.com/cuda-toolkit) installed 
-     (which contains NPP libraray), default installation path is 
-     /usr/local/cuda. If you have the CUDA installed somewhere else, you need
-     to specify it by environment variable CUDA_INSTALL_PATH or in Makefiles 
-     by CUDA_INSTALL_PATH variable.
+  1) CUDA Toolkit (http://developer.nvidia.com/cuda-toolkit) installed,
+     default installation path is /usr/local/cuda. If you have the CUDA 
+     installed somewhere else, you need to specify it by environment variable 
+     CUDA_INSTALL_PATH or in Makefiles by CUDA_INSTALL_PATH variable.
   2) NVIDIA developer drivers
   3) CUDA enabled NVIDIA GPU
-    The libgpujpeg library uses NVIDIA Performance Primitives library, but it is
-  included in CUDA toolkit. There were some build error in npp headers when using 
-  some specific versions of GCC and NPP library. If you encounter these kind of 
-  problem, try to use the newest version of CUDA toolkit or older version of GCC.
 
 LICENSE:
   See file LICENSE.
   This software contains source code provided by NVIDIA Corporation.
-  This software uses NVIDIA Performance Primitives library [3].
-  This software source code is based on SiGenGPU [4].
+  This software source code is based on SiGenGPU [3].
 
 REFERENCES:
   [1] http://www.w3.org/Graphics/JPEG/itu-t81.pdf
   [2] http://www.ijg.org/
-  [3] http://developer.download.nvidia.com/compute/cuda/4_0_rc2/toolkit/
-      docs/NPP_Library.pdf
-  [4] https://github.com/silicongenome/SiGenGPU
-  [5] http://www.ecma-international.org/publications/files/ECMA-TR/TR-098.pdf
+  [3] https://github.com/silicongenome/SiGenGPU
+  [4] http://www.ecma-international.org/publications/files/ECMA-TR/TR-098.pdf
   

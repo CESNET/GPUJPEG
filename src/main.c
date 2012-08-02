@@ -146,7 +146,7 @@ main(int argc, char *argv[])
         case 'C':
             param_image.comp_count = atoi(optarg);
             if ( param_image.comp_count != 1 && param_image.comp_count != 3 ) {
-                fprintf(stderr, "Component count '%d' is not available!\n", optarg);
+                fprintf(stderr, "Component count '%s' is not available!\n", optarg);
                 param_image.comp_count = 3;
             }
             break;
@@ -293,13 +293,6 @@ main(int argc, char *argv[])
         }
     }
     
-    // Adjust restart interval (when chroma subsampling and interleaving is enabled and restart interval is not changed)
-    if ( restart_interval_default == 1 && chroma_subsampled == 1 && param.interleaved == 1 ) {
-        if ( param.verbose )
-            printf("Auto-adjusting restart interval to 2 for better performance!\n");
-        param.restart_interval = 2;
-    }
-    
     // Detect color spalce
     if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV && param_image.color_space == GPUJPEG_RGB ) {
         param_image.color_space = GPUJPEG_YUV;
@@ -308,6 +301,30 @@ main(int argc, char *argv[])
     // Detect component count
     if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_GRAY && param_image.comp_count != 1 ) {
         param_image.comp_count = 1;
+    }
+
+    // Adjust restart interval
+    if ( restart_interval_default == 1 ) {
+        // when chroma subsampling and interleaving is enabled, the restart interval should be smaller
+        if ( chroma_subsampled == 1 && param.interleaved == 1 ) {
+            param.restart_interval = 2;
+        }
+        else {
+        	// Adjust according to Mpix count
+        	double coefficient = ((double)param_image.width * param_image.height * param_image.comp_count) / (1000000.0 * 3.0);
+        	if ( coefficient < 1.0 ) {
+                param.restart_interval = 4;
+            } else if ( coefficient < 3.0 ) {
+                param.restart_interval = 8;
+            } else if ( coefficient < 9.0 ) {
+                param.restart_interval = 10;
+            } else {
+                param.restart_interval = 12;
+            }
+        }
+        if ( param.verbose ) {
+            printf("\nAuto-adjusting restart interval to %d for better performance.\n", param.restart_interval);
+        }
     }
 
     if ( encode == 1 ) {

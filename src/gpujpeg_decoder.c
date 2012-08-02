@@ -34,12 +34,6 @@
 #include "gpujpeg_huffman_cpu_decoder.h"
 #include "gpujpeg_huffman_gpu_decoder.h"
 #include <libgpujpeg/gpujpeg_util.h>
-#include <npp.h>
-
-#ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
-/** Huffman tables in constant memory */
-struct gpujpeg_table_huffman_decoder (*gpujpeg_decoder_table_huffman)[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
-#endif
 
 /** Documented at declaration */
 void
@@ -223,23 +217,6 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     }
     // Perform huffman decoding on GPU (when restart interval is set)
     else {
-    #ifdef GPUJPEG_HUFFMAN_CODER_TABLES_IN_CONSTANT
-        // Copy huffman tables to constant memory
-        for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
-            for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
-                int index = (comp_type * GPUJPEG_HUFFMAN_TYPE_COUNT + huff_type);
-                cudaMemcpyToSymbol(
-                    (char*)gpujpeg_decoder_table_huffman, 
-                    &decoder->table_huffman[comp_type][huff_type], 
-                    sizeof(struct gpujpeg_table_huffman_decoder), 
-                    index * sizeof(struct gpujpeg_table_huffman_decoder), 
-                    cudaMemcpyHostToDevice
-                );
-            }
-        }
-        gpujpeg_cuda_check_error("Decoder copy huffman tables to constant memory");
-    #endif
-    
         // Reset huffman output
         cudaMemset(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t));
         
@@ -271,45 +248,8 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         GPUJPEG_CUSTOM_TIMER_START(decoder->def);
     }
     
-#ifdef GPUJPEG_DCT_FROM_NPP
-    // Perform IDCT and dequantization (implementation from NPP)
-    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
-        // Get component
-        struct gpujpeg_component* component = &coder->component[comp];
-                
-        // Determine table type
-        enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
-        
-        //gpujpeg_component_print16(component, component->d_data_quantized);
-        
-        cudaMemset(component->d_data, 0, component->data_size * sizeof(uint8_t));
-        
-        //Perform inverse DCT
-        NppiSize inv_roi;
-        inv_roi.width = component->data_width * GPUJPEG_BLOCK_SIZE;
-        inv_roi.height = component->data_height / GPUJPEG_BLOCK_SIZE;
-        assert(GPUJPEG_BLOCK_SIZE == 8);
-        NppStatus status = nppiDCTQuantInv8x8LS_JPEG_16s8u_C1R(
-            component->d_data_quantized, 
-            component->data_width * GPUJPEG_BLOCK_SIZE * sizeof(int16_t), 
-            component->d_data, 
-            component->data_width * sizeof(uint8_t), 
-            decoder->table_quantization[type].d_table, 
-            inv_roi
-        );
-        if ( status != 0 ) {
-            fprintf(stderr, "[GPUJPEG] [Error] Inverse DCT failed (error %d)!\n", status);
-        }
-            
-        //gpujpeg_component_print8(component, component->d_data);
-    }
-#else
     // Perform IDCT and dequantization (own CUDA implementation)
     gpujpeg_idct_gpu(decoder);
-    
-    // Perform IDCT and dequantization (own CPU implementation)
-    // gpujpeg_idct_cpu(decoder);
-#endif
     
     GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
     coder->duration_dct_quantization = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);

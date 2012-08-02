@@ -64,7 +64,7 @@ endif
 ifeq ($(SHARED_LIBRARY),1)
     LDFLAGS += -L../../libgpujpeg -lgpujpeg
 else
-    LDFLAGS += -lcudart -lnpp ../../libgpujpeg/libgpujpeg.a
+    LDFLAGS += -lcudart ../../libgpujpeg/libgpujpeg.a
 endif
 LDFLAGS += -lcuda -lcudart -lglut -lGLU -lGLEW -lGL -lpthread 
 

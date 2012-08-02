@@ -1,3 +1,14 @@
+2012-08-02
+----------
+Changes:
+-Added new parallel GPU Huffman encoder for compute capabilities >= 2.0
+-Rewritten GPU Huffman decoder
+-Rewritten GPU forward DCT, preserving precision of fixed point implementation 
+ and gaining better performance than NPP implementation.
+ (Both old implementations were thus removed.)
+-Rewritten GPU encoder preprocessor to remove unnecessary operations
+-Minor performance improvement in GPU encoder postprocessor
+
 2012-03-29
 ----------
 Changes:
