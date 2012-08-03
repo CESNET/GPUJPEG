@@ -63,5 +63,5 @@ tests:
 	$(NVCC) $(NVCC_CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) -c $< -o $@
 
 clean-local:
-	rm -rf src/*.cu.lo
+	rm -rf src/*.cu.lo src/*.cu.o
 
