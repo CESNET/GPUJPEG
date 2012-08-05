@@ -305,6 +305,9 @@ gpujpeg_dct_gpu(const T in0, const T in1, const T in2, const T in3, const T in4,
     out7 = odd_diff1 - odd_diff4;
 }
 
+/** Constant memory copy of transposed quantization table pre-divided with DCT output weights. */
+__constant__ float gpujpeg_dct_gpu_quantization_table_const[64];
+
 /**
  * Performs 8x8 block-wise Forward Discrete Cosine Transform of the given
  * image plane and outputs result to the array of coefficients. Short implementation.
@@ -410,7 +413,11 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
                     dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7);
     
     // apply quantization to the row of coefficients (quantization table is actually transposed in global memory for coalesced memory acceses)
-    const float * const quantization_row = quant_table + dct_idx;
+    #if __CUDA_ARCH__ < 200
+    const float * const quantization_row = gpujpeg_dct_gpu_quantization_table_const + dct_idx; // Quantization table in constant memory for CCs < 2.0
+    #else
+    const float * const quantization_row = quant_table + dct_idx; // Cached global memory reads for CCs >= 2.0
+    #endif
     const int out0 = rintf(dct0 * quantization_row[0 * 8]);
     const int out1 = rintf(dct1 * quantization_row[1 * 8]);
     const int out2 = rintf(dct2 * quantization_row[2 * 8]);
@@ -559,6 +566,19 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
         // Get quantization table
         enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
         const float* const d_quantization_table = encoder->table_quantization[type].d_table_forward;
+        
+        // copy the quantization table into constant memory for devices of CC < 2.0
+        if( encoder->coder.cuda_cc_major < 2 ) {
+            cudaMemcpyToSymbol(
+                gpujpeg_dct_gpu_quantization_table_const,
+                d_quantization_table,
+                sizeof(gpujpeg_dct_gpu_quantization_table_const),
+                0,
+                cudaMemcpyDeviceToDevice
+            );
+            cudaThreadSynchronize();
+            gpujpeg_cuda_check_error("Quantization table memcpy failed");
+        }
 
         int roi_width = component->data_width;
         int roi_height = component->data_height;
@@ -586,7 +606,7 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
             d_quantization_table
         );
         cudaThreadSynchronize();
-        gpujpeg_cuda_check_error("Forward Integer DCT failed");
+        gpujpeg_cuda_check_error("Forward DCT failed");
     }
 }
 
