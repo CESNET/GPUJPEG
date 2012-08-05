@@ -309,7 +309,7 @@ gpujpeg_huffman_encoder_encode_kernel_warp(
     const int block_idx = blockIdx.x + blockIdx.y * gridDim.x;
     const int segment_index = block_idx * WARPS_NUM + warpidx;
     
-    // fires thread initializes compact output size for next kernel
+    // first thread initializes compact output size for next kernel
     if(0 == tid && 0 == warpidx && 0 == block_idx) {
         gpujpeg_huffman_output_byte_count = 0;
     }
@@ -482,6 +482,58 @@ gpujpeg_huffman_encoder_serialization_kernel(
 #endif // #if __CUDA_ARCH__ >= 200
 }
 
+
+/**
+ * Huffman coder compact output allocation kernel - serially reserves 
+ * some space for compressed output of segments in output buffer.
+ * (For CC 1.0 - a workaround for missing atomic operations.)
+ * 
+ * Only single threadblock with 512 threads is launched.
+ */
+__global__ static void
+gpujpeg_huffman_encoder_allocation_kernel (
+    struct gpujpeg_segment* const d_segment,
+    const int segment_count
+) {
+    // offsets of segments
+    __shared__ unsigned int s_segment_offsets[512];
+    
+    // cumulative sum of bytes of all segments
+    unsigned int total_byte_count = 0;
+    
+    // iterate over all segments
+    const unsigned int segment_idx_end = (segment_count + 511) & ~511;
+    for(unsigned int segment_idx = threadIdx.x; segment_idx < segment_idx_end; segment_idx += 512) {
+        // all threads load byte sizes of their segments (rounded up to next multiple of 16 B) into the shared array 
+        s_segment_offsets[threadIdx.x] = segment_idx < segment_count
+                ? (d_segment[segment_idx].data_compressed_size + 15) & ~15
+                : 0;
+        
+        // first thread runs a sort of serial prefix sum over the segment sizes to get their offsets
+        __syncthreads();
+        if(0 == threadIdx.x) {
+            #pragma unroll 4
+            for(int i = 0; i < 512; i++) {
+                const unsigned int segment_size = s_segment_offsets[i];
+                s_segment_offsets[i] = total_byte_count;
+                total_byte_count += segment_size;
+            }
+        }
+        __syncthreads();
+        
+        // all threads write offsets back into corresponding segment structures
+        if(segment_idx < segment_count) {
+            d_segment[segment_idx].data_compressed_index = s_segment_offsets[threadIdx.x];
+        }
+    }
+    
+    // first thread finally saves the total sum of bytes needed for compressed data
+    if(threadIdx.x == 0) {
+        gpujpeg_huffman_output_byte_count = total_byte_count;
+    }
+}
+
+
 /**
  * Huffman coder output compaction kernel.
  * 
@@ -494,8 +546,6 @@ gpujpeg_huffman_encoder_compaction_kernel (
     const uint8_t* const d_src,
     uint8_t* const d_dest
 ) {
-#if __CUDA_ARCH__ >= 200
-    
     // get some segment (size of threadblocks is 32 x N, so threadIdx.y is warp index)
     const int block_idx = blockIdx.x + blockIdx.y * gridDim.x;
     const int segment_idx = threadIdx.y + block_idx * blockDim.y;
@@ -512,9 +562,14 @@ gpujpeg_huffman_encoder_compaction_kernel (
     
     // first thread of each warp reserves space in output buffer
     if(0 == threadIdx.x) {
-         const unsigned int segment_out_offset = atomicAdd(&gpujpeg_huffman_output_byte_count, segment_byte_count);
-         s_out_ptrs[threadIdx.y] = (uint4*)(d_dest + segment_out_offset);
-         d_segment[segment_idx].data_compressed_index = segment_out_offset;
+        // Either load precomputed output offset (for CC 1.0) or compute it now (for CCs with atomic operations)
+        #if __CUDA_ARCH__ == 100
+        const unsigned int segment_out_offset = d_segment[segment_idx].data_compressed_index;
+        #else
+        const unsigned int segment_out_offset = atomicAdd(&gpujpeg_huffman_output_byte_count, segment_byte_count);
+        d_segment[segment_idx].data_compressed_index = segment_out_offset;
+        #endif
+        s_out_ptrs[threadIdx.y] = (uint4*)(d_dest + segment_out_offset);
     }
     
     // all threads read output buffer offset for their segment and prepare input and output pointers and number of copy iterations
@@ -533,7 +588,6 @@ gpujpeg_huffman_encoder_compaction_kernel (
     if((threadIdx.x * 16) < (segment_byte_count & 511)) {
         *d_out = *d_in;
     }
-#endif // #if __CUDA_ARCH__ >= 200
 }
 
 // Threadblock size for CC 1.x kernel
@@ -773,6 +827,11 @@ gpujpeg_huffman_encoder_encode_kernel(
     
     struct gpujpeg_segment* segment = &d_segment[segment_index];
     
+    // first thread initializes compact output size for next kernel
+    if(0 == segment_index) {
+        gpujpeg_huffman_output_byte_count = 0;
+    }
+    
     // Initialize huffman coder
     int put_value = 0;
     int put_bits = 0;
@@ -781,7 +840,7 @@ gpujpeg_huffman_encoder_encode_kernel(
         dc[comp] = 0;
     
     // Prepare data pointers
-    uint8_t* data_compressed = &d_data_compressed[segment->data_compressed_index];
+    uint8_t* data_compressed = &d_data_compressed[segment->data_temp_index];
     uint8_t* data_compressed_start = data_compressed;
     
     // Non-interleaving mode
@@ -942,6 +1001,7 @@ gpujpeg_huffman_gpu_encoder_init(const struct gpujpeg_encoder * encoder)
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_serialization_kernel, cudaFuncCachePreferShared);
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_compaction_kernel, cudaFuncCachePreferShared);
     cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_encode_kernel, cudaFuncCachePreferShared);
+    cudaFuncSetCacheConfig(gpujpeg_huffman_encoder_allocation_kernel, cudaFuncCachePreferShared);
     
     return 0;
 }
@@ -978,7 +1038,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     
     // Select encoder kernel based on compute capability
-    if (encoder->coder.cuda_cc_major < 2) {
+    if ( encoder->coder.cuda_cc_major < 2 ) {
         // Run kernel
         dim3 thread(THREAD_BLOCK_SIZE);
         dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, thread.x));
@@ -987,13 +1047,10 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
             coder->d_segment, 
             comp_count,
             coder->segment_count, 
-            coder->d_data_compressed
+            coder->d_temp_huffman
         );
         cudaThreadSynchronize();
         gpujpeg_cuda_check_error("Huffman encoding failed");
-        
-        // set number of output bytes to be copied to host memory (whole buffer)
-        *output_byte_count = encoder->coder.data_compressed_size;
     } else {
         // Run encoder kernel
         dim3 thread(32 * WARPS_NUM);
@@ -1032,23 +1089,30 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
         );
         cudaThreadSynchronize();
         gpujpeg_cuda_check_error("Codeword serialization failed");
-        
-        // Run output compaction kernel (one warp per segment)
-        const dim3 compaction_thread(32, WARPS_NUM);
-        const dim3 compaction_grid = gpujpeg_huffman_gpu_encoder_grid_size(gpujpeg_div_and_round_up(coder->segment_count, WARPS_NUM));
-        gpujpeg_huffman_encoder_compaction_kernel<<<compaction_grid, compaction_thread>>>(
-            coder->d_segment,
-            coder->segment_count,
-            coder->d_temp_huffman,
-            coder->d_data_compressed
-        );
-        cudaThreadSynchronize();
-        gpujpeg_cuda_check_error("Huffman output compaction failed");
-        
-        // Read and return number of occupied bytes
-        cudaMemcpyFromSymbol(output_byte_count, gpujpeg_huffman_output_byte_count, sizeof(unsigned int), 0, cudaMemcpyDeviceToHost);
-        gpujpeg_cuda_check_error("Huffman output size getting failed");
     }
+    
+    // No atomic operations in CC 1.0 => run output size computation kernel to allocate the output buffer space
+    if ( encoder->coder.cuda_cc_major == 1 && encoder->coder.cuda_cc_minor == 0 ) {
+        gpujpeg_huffman_encoder_allocation_kernel<<<1, 512>>>(coder->d_segment, coder->segment_count);
+        cudaThreadSynchronize();
+        gpujpeg_cuda_check_error("Huffman encoder output allocation failed");
+    }
+    
+    // Run output compaction kernel (one warp per segment)    
+    const dim3 compaction_thread(32, WARPS_NUM);
+    const dim3 compaction_grid = gpujpeg_huffman_gpu_encoder_grid_size(gpujpeg_div_and_round_up(coder->segment_count, WARPS_NUM));
+    gpujpeg_huffman_encoder_compaction_kernel<<<compaction_grid, compaction_thread>>>(
+        coder->d_segment,
+        coder->segment_count,
+        coder->d_temp_huffman,
+        coder->d_data_compressed
+    );
+    cudaThreadSynchronize();
+    gpujpeg_cuda_check_error("Huffman output compaction failed");
+    
+    // Read and return number of occupied bytes
+    cudaMemcpyFromSymbol(output_byte_count, gpujpeg_huffman_output_byte_count, sizeof(unsigned int), 0, cudaMemcpyDeviceToHost);
+    gpujpeg_cuda_check_error("Huffman output size getting failed");
     
     // indicate success
     return 0;
