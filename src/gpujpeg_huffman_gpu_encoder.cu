@@ -400,7 +400,8 @@ __global__ static void
 gpujpeg_huffman_encoder_serialization_kernel(
     struct gpujpeg_segment* d_segment,
     int segment_count, 
-    uint8_t* d_data_compressed
+    const uint8_t* const d_src,
+    uint8_t* const d_dest
 ) {    
 #if __CUDA_ARCH__ >= 200
     // Temp buffer for all threads of the threadblock
@@ -419,9 +420,10 @@ gpujpeg_huffman_encoder_serialization_kernel(
     struct gpujpeg_segment* const segment = &d_segment[segment_index];
     
     // Input and output pointers
-    uint4 * const d_dest_stream_start = (uint4*)(d_data_compressed + segment->data_temp_index);
+    const int data_offset = segment->data_temp_index;
+    uint4 * const d_dest_stream_start = (uint4*)(d_dest + data_offset);
     uint4 * d_dest_stream = d_dest_stream_start;
-    const uint4 * d_src_codewords = d_dest_stream_start;
+    const uint4 * d_src_codewords = (uint4*)(d_src + data_offset);
     
     // number of bytes in the temp buffer, remaining bits and their count
     int byte_count = 0, bit_count = 0;
@@ -1059,7 +1061,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
             gpujpeg_huffman_encoder_encode_kernel_warp<true><<<grid, thread>>>(
                 coder->d_segment, 
                 coder->segment_count, 
-                coder->d_temp_huffman,
+                coder->d_data_compressed,
                 coder->d_block_list,
                 coder->d_data_quantized,
                 coder->d_component,
@@ -1069,7 +1071,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
             gpujpeg_huffman_encoder_encode_kernel_warp<false><<<grid, thread>>>(
                 coder->d_segment, 
                 coder->segment_count, 
-                coder->d_temp_huffman,
+                coder->d_data_compressed,
                 coder->d_block_list,
                 coder->d_data_quantized,
                 coder->d_component,
@@ -1085,6 +1087,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int
         gpujpeg_huffman_encoder_serialization_kernel<<<num_serialization_tblocks, SERIALIZATION_THREADS_PER_TBLOCK>>>(
             coder->d_segment, 
             coder->segment_count, 
+            coder->d_data_compressed,
             coder->d_temp_huffman
         );
         cudaThreadSynchronize();
