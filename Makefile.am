@@ -48,7 +48,7 @@ libgpujpeg_la_DEPENDENCIES = \
 			src/gpujpeg_huffman_gpu_decoder.cu.o
 
 libgpujpeg_la_LIBADD = $(libgpujpeg_la_DEPENDENCIES)
-libgpujpeg_la_LDFLAGS = -export-dynamic -version-info $(GPUJPEG_LIBRARY_VERSION) -release $(GPUJPEG_LIBRARY_RELEASE) @GPUJPEG_LDFLAGS@
+libgpujpeg_la_LDFLAGS = -export-dynamic -version-info $(GPUJPEG_LIBRARY_VERSION) @GPUJPEG_LDFLAGS@
 libgpujpeg_la_CFLAGS = -std=c99 @COMMON_CFLAGS@
 #libgpujpeg_la_LINK = g++ -fPIC
 
