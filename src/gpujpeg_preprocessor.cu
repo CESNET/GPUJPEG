@@ -58,6 +58,56 @@ struct gpujpeg_preprocessor_data
 typedef int gpujpeg_preprocessor_sampling_factor_t;
 
 /**
+ * Prepares fixed divisor for dividing unsigned integers up to 2^31 
+ * with unsigned integers up to 2^31.
+ * Source: http://www.hackersdelight.org/HDcode/magic.c.txt
+ * Modified for positive numbers only.
+ */
+static void
+gpujpeg_const_div_prepare(const uint32_t d, uint32_t & pre_div_mul, uint32_t & pre_div_shift) {
+    if(d > 1) {
+        uint32_t delta;
+        const uint32_t two31 = 0x80000000; // 2**31.
+        const uint32_t anc = two31 - 1 - two31 % d; // Absolute value of nc.
+        int p = 31;                        // Init. p.
+        uint32_t q1 = two31 / anc;         // Init. q1 = 2**p/|nc|.
+        uint32_t r1 = two31 - q1 * anc;    // Init. r1 = rem(2**p, |nc|).
+        uint32_t q2 = two31 / d;           // Init. q2 = 2**p/|d|.
+        uint32_t r2 = two31 - q2 * d;      // Init. r2 = rem(2**p, |d|).
+        do {
+            p = p + 1;
+            q1 = 2 * q1;                   // Update q1 = 2**p/|nc|.
+            r1 = 2 * r1;                   // Update r1 = rem(2**p, |nc|).
+            if (r1 >= anc) {               // (Must be an unsigned
+                q1 = q1 + 1;               // comparison here).
+                r1 = r1 - anc;
+            }
+            q2 = 2 * q2;                   // Update q2 = 2**p/|d|.
+            r2 = 2 * r2;                   // Update r2 = rem(2**p, |d|).
+            if (r2 >= d) {                 // (Must be an unsigned
+                q2 = q2 + 1;               // comparison here).
+                r2 = r2 - d;
+            }
+            delta = d - r2;
+        } while (q1 < delta || (q1 == delta && r1 == 0));
+        pre_div_mul = q2 + 1;
+        pre_div_shift = p - 32;            // shift amount to return.
+    } else {
+        pre_div_mul = 0;                   // special case for d = 1
+        pre_div_shift = 0;
+    }
+}
+
+
+/**
+ * Divides unsigned numerator (up to 2^31) by precomputed constant denominator.
+ */
+__device__ static uint32_t
+gpujpeg_const_div_divide(const uint32_t numerator, const uint32_t pre_div_mul, const uint32_t pre_div_shift) {
+    return pre_div_mul ? __umulhi(numerator, pre_div_mul) >> pre_div_shift : numerator;
+}
+
+/**
  * Compose sampling factor for all components to single type
  * 
  * @return integer that contains all sampling factors
@@ -99,7 +149,7 @@ gpujpeg_preprocessor_raw_to_comp_store(uint8_t value, unsigned int position_x, u
 /**
  * Kernel - Copy raw image source data into three separated component buffers
  */
-typedef void (*gpujpeg_preprocessor_encode_kernel)(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height);
+typedef void (*gpujpeg_preprocessor_encode_kernel)(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height, uint32_t width_div_mul, uint32_t width_div_shift);
  
 /** Specialization [sampling factor is 4:4:4] */
 template<
@@ -110,7 +160,7 @@ template<
     uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v
 >
 __global__ void 
-gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height)
+gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height, uint32_t width_div_mul, uint32_t width_div_shift)
 {
     int x  = threadIdx.x;
     int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
@@ -140,8 +190,8 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     
     // Position
     int image_position = gX + x;
-    int image_position_x = image_position % image_width;
-    int image_position_y = image_position / image_width;
+    int image_position_y = gpujpeg_const_div_divide(image_position, width_div_mul, width_div_shift);
+    int image_position_x = image_position - (image_position_y * image_width);
         
     // Store
     if ( image_position < (image_width * image_height) ) {
@@ -161,7 +211,7 @@ template<
     uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v
 >
 __global__ void 
-gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height)
+gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height, uint32_t width_div_mul, uint32_t width_div_shift)
 {
     int x  = threadIdx.x;
     int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
@@ -198,8 +248,8 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     
     // Position
     int image_position = gX + x;
-    int image_position_x = image_position % image_width;
-    int image_position_y = image_position / image_width;
+    int image_position_y = gpujpeg_const_div_divide(image_position, width_div_mul, width_div_shift);
+    int image_position_x = image_position - (image_position_y * image_width);
     
     // Store
     if ( image_position < (image_width * image_height) ) {
@@ -359,7 +409,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder)
     // Select kernel
     gpujpeg_preprocessor_encode_kernel kernel = (gpujpeg_preprocessor_encode_kernel)coder->preprocessor;
     assert(kernel != NULL);
-        
+         
     int image_width = coder->param_image.width;
     int image_height = coder->param_image.height;
     
@@ -381,7 +431,11 @@ gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder)
         grid.y *= 2;
         grid.x = gpujpeg_div_and_round_up(grid.x, 2);
     }
-
+    
+    // Decompose input image width for faster division using multiply-high and right shift
+    uint32_t width_div_mul, width_div_shift;
+    gpujpeg_const_div_prepare(image_width, width_div_mul, width_div_shift);
+    
     // Run kernel
     struct gpujpeg_preprocessor_data data;
     for ( int comp = 0; comp < 3; comp++ ) {
@@ -397,7 +451,9 @@ gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder)
         coder->d_data_raw,
         coder->d_data_raw + coder->data_raw_size,
         image_width,
-        image_height
+        image_height,
+        width_div_mul,
+        width_div_shift
     );
     cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Preprocessor encoding failed");
