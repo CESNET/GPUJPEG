@@ -99,7 +99,7 @@ gpujpeg_preprocessor_raw_to_comp_store(uint8_t value, unsigned int position_x, u
 /**
  * Kernel - Copy raw image source data into three separated component buffers
  */
-typedef void (*gpujpeg_preprocessor_encode_kernel)(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width, int image_height);
+typedef void (*gpujpeg_preprocessor_encode_kernel)(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height);
  
 /** Specialization [sampling factor is 4:4:4] */
 template<
@@ -110,7 +110,7 @@ template<
     uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v
 >
 __global__ void 
-gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width, int image_height)
+gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height)
 {
     int x  = threadIdx.x;
     int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
@@ -119,8 +119,10 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     __shared__ unsigned char s_data[RGB_8BIT_THREADS * 3];
     if ( (x * 4) < RGB_8BIT_THREADS * 3 ) {
         int* s = (int*)d_data_raw;
-        int* d = (int*)s_data;
-        d[x] = s[((gX * 3) >> 2) + x];
+        uint8_t* d = s_data + 4 * x;
+        if(d < d_data_raw_end) {
+            *((int*)d) = s[((gX * 3) >> 2) + x];
+        }
     }
     __syncthreads();
 
@@ -159,7 +161,7 @@ template<
     uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v
 >
 __global__ void 
-gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width, int image_height)
+gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height)
 {
     int x  = threadIdx.x;
     int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
@@ -168,8 +170,10 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     __shared__ unsigned char s_data[RGB_8BIT_THREADS * 2];
     if ( (x * 4) < RGB_8BIT_THREADS * 2 ) {
         int* s = (int*)d_data_raw;
-        int* d = (int*)s_data;
-        d[x] = s[((gX * 2) >> 2) + x];
+        uint8_t* d = s_data + 4 * x;
+        if(d < d_data_raw_end) {
+            *((int*)d) = s[((gX * 3) >> 2) + x];
+        }
     }
     __syncthreads();
 
@@ -391,6 +395,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder)
     kernel<<<grid, threads>>>(
         data,
         coder->d_data_raw,
+        coder->d_data_raw + coder->data_raw_size,
         image_width,
         image_height
     );
