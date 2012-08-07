@@ -112,17 +112,15 @@ template<
 __global__ void 
 gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width, int image_height)
 {
-    const unsigned int image_position_x = threadIdx.x + blockIdx.x * blockDim.x;
-    const unsigned int image_position_y = blockIdx.y;
-    const unsigned int x = threadIdx.x;
-    const unsigned int pix_offset = image_position_y * image_width + blockIdx.x * blockDim.x;
+    int x  = threadIdx.x;
+    int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
             
     // Load to shared
     __shared__ unsigned char s_data[RGB_8BIT_THREADS * 3];
     if ( (x * 4) < RGB_8BIT_THREADS * 3 ) {
         int* s = (int*)d_data_raw;
         int* d = (int*)s_data;
-        d[x] = s[((pix_offset * 3) >> 2) + x];
+        d[x] = s[((gX * 3) >> 2) + x];
     }
     __syncthreads();
 
@@ -138,13 +136,14 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     // Color transform
     gpujpeg_color_transform<color_space, color_space_internal>::perform(r1, r2, r3);
     
-//     // Position
-//     int image_position = gX + x;
-//     int image_position_x = image_position % image_width;
-//     int image_position_y = image_position / image_width;
+    // Position
+    int image_position = gX + x;
+    int image_position_x = image_position % image_width;
+    int image_position_y = image_position / image_width;
         
     // Store
-    if ( image_position_x < image_width ) {
+    if ( image_position < (image_width * image_height) ) {
+    
         gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(r1, image_position_x, image_position_y, data.comp[0]);
         gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(r2, image_position_x, image_position_y, data.comp[1]);
         gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>(r3, image_position_x, image_position_y, data.comp[2]);
@@ -162,17 +161,15 @@ template<
 __global__ void 
 gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width, int image_height)
 {
-    const unsigned int image_position_x = threadIdx.x + blockIdx.x * blockDim.x;
-    const unsigned int image_position_y = blockIdx.y;
-    const unsigned int x = threadIdx.x;
-    const unsigned int pix_offset = image_position_y * image_width + blockIdx.x * blockDim.x;
-        
+    int x  = threadIdx.x;
+    int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
+    
     // Load to shared
     __shared__ unsigned char s_data[RGB_8BIT_THREADS * 2];
     if ( (x * 4) < RGB_8BIT_THREADS * 2 ) {
         int* s = (int*)d_data_raw;
         int* d = (int*)s_data;
-        d[x] = s[((pix_offset * 2) >> 2) + x];
+        d[x] = s[((gX * 2) >> 2) + x];
     }
     __syncthreads();
 
@@ -181,7 +178,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     uint8_t r1;
     uint8_t r2 = s_data[offset + 1];
     uint8_t r3;
-    if ( (pix_offset + x) % 2 == 0 ) {
+    if ( (gX + x) % 2 == 0 ) {
         r1 = s_data[offset];
         r3 = s_data[offset + 2];
     } else {
@@ -195,8 +192,13 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     // Color transform
     gpujpeg_color_transform<color_space, color_space_internal>::perform(r1, r2, r3);
     
+    // Position
+    int image_position = gX + x;
+    int image_position_x = image_position % image_width;
+    int image_position_y = image_position / image_width;
+    
     // Store
-    if ( image_position_x < image_width ) {
+    if ( image_position < (image_width * image_height) ) {
         gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(r1, image_position_x, image_position_y, data.comp[0]);
         gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(r2, image_position_x, image_position_y, data.comp[1]);
         gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>(r3, image_position_x, image_position_y, data.comp[2]);
@@ -349,11 +351,11 @@ gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder)
     assert(coder->param_image.comp_count == 3);
 
     cudaMemset(coder->d_data, 0, coder->data_size * sizeof(uint8_t));
-
+    
     // Select kernel
     gpujpeg_preprocessor_encode_kernel kernel = (gpujpeg_preprocessor_encode_kernel)coder->preprocessor;
     assert(kernel != NULL);
-    
+        
     int image_width = coder->param_image.width;
     int image_height = coder->param_image.height;
     
@@ -364,10 +366,17 @@ gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder)
         
     // Prepare unit size
     assert(coder->param_image.sampling_factor == GPUJPEG_4_4_4 || coder->param_image.sampling_factor == GPUJPEG_4_2_2);
+    int unitSize = coder->param_image.sampling_factor == GPUJPEG_4_4_4 ? 3 : 2;
     
     // Prepare kernel
-    const dim3 threads (RGB_8BIT_THREADS);
-    const dim3 grid (gpujpeg_div_and_round_up(image_width, RGB_8BIT_THREADS), image_height);
+    int alignedSize = gpujpeg_div_and_round_up(image_width * image_height, RGB_8BIT_THREADS) * RGB_8BIT_THREADS * unitSize;
+    dim3 threads (RGB_8BIT_THREADS);
+    dim3 grid (alignedSize / (RGB_8BIT_THREADS * unitSize));
+    assert(alignedSize % (RGB_8BIT_THREADS * unitSize) == 0);
+    while ( grid.x > GPUJPEG_CUDA_MAXIMUM_GRID_SIZE ) {
+        grid.y *= 2;
+        grid.x = gpujpeg_div_and_round_up(grid.x, 2);
+    }
 
     // Run kernel
     struct gpujpeg_preprocessor_data data;
