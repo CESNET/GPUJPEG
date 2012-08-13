@@ -76,7 +76,7 @@ AC_ARG_WITH(cuda,
         [CUDA_INSTALL_PATH=$withval]
 )
 
-AC_PATH_PROG(CUDA, nvcc, nvcc_not_found, [$PATH$PATH_SEPARATOR$CUDA_INSTALL_PATH]dnl
+AC_PATH_PROG(CUDA, nvcc, nvcc_not_found, [$PATH$PATH_SEPARATOR$CUDA_INSTALL_PATH/bin]dnl
 	[$PATH_SEPARATOR/opt/cuda/bin$PATH_SEPARATOR/usr/local/cuda/bin])
 
 if test x$CUDA = xnvcc_not_found ; then
