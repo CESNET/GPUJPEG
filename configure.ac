@@ -106,13 +106,15 @@ else
     CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib"
 fi
 
+AM_CONDITIONAL([DARWIN], [test `uname -s` = Darwin])
+
 if test `uname -s` = 'Darwin'; then
     CFLAGS+=" -arch x86_64 -arch i386"
     LIBGPUJPEG_CUDA_OBJS=" \
-	build/universal/gpujpeg_huffman_gpu_encoder.a \
-        build/universal/gpujpeg_dct_gpu.a \
-        build/universal/gpujpeg_preprocessor.a \
-        build/universal/gpujpeg_huffman_gpu_decoder.a"
+	build/universal/gpujpeg_huffman_gpu_encoder.o \
+        build/universal/gpujpeg_dct_gpu.o \
+        build/universal/gpujpeg_preprocessor.o \
+        build/universal/gpujpeg_huffman_gpu_decoder.o"
 else
     LIBGPUJPEG_CUDA_OBJS=" \
         src/gpujpeg_huffman_gpu_encoder.cu.o \

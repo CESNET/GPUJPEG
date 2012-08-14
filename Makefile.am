@@ -55,15 +55,36 @@ tests:
 		( cd $${testdir} ; make ) \
 	done
 
+if DARWIN
+static: $(libgpujpeg_la_DEPENDENCIES) all
+	[ -d build/tmp/i386 ] || mkdir -p build/tmp/i386
+	[ -d build/tmp/x86_64 ] || mkdir -p build/tmp/x86_64
+	[ -d build/tmp/universal ] || mkdir -p build/tmp/universal
+	for arch in i386 x86_64; do \
+		lipo -thin $$arch  .libs/libgpujpeg.a  -output build/tmp/$$arch/libgpujpeg.a ; \
+		cd build/tmp/$$arch; ar x libgpujpeg.a; rm libgpujpeg; cd -; \
+		for file in $(libgpujpeg_la_DEPENDENCIES); do \
+			BASENAME=$$(basename $$file) ; \
+			lipo -thin $$arch  $$file  -output build/tmp/$$arch/$$BASENAME ; \
+			ar ru build/tmp/$$arch/libgpujpeg.a build/tmp/$$arch/$$BASENAME ; \
+		done ; \
+	done
+	for arch in i386 x86_64; do \
+		$(AR) rcu build/tmp/$$(arch)/libgpujpeg.a build/tmp/$$(arch)/* ; \
+	done
+	$(RM) .libs/libgpujpeg.a
+	lipo -create build/tmp/i386/libgpujpeg.a build/tmp/x86_64/libgpujpeg.a -output .libs/libgpujpeg.a
+else
 static: $(libgpujpeg_la_DEPENDENCIES) all
 	$(AR) ru .libs/libgpujpeg.a $(libgpujpeg_la_DEPENDENCIES)
 	$(RANLIB) .libs/libgpujpeg.a
+endif
 
 # Pattern rule for compiling CUDA files
 %.cu.o: %.cu
 	$(NVCC) $(NVCC_CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) -c $< -o $@
 
-build/universal/%.a: build/i386/%.cu.o build/x86_64/%.cu.o
+build/universal/%.o: build/i386/%.cu.o build/x86_64/%.cu.o
 	[ -d build/universal ] || mkdir -p build/universal
 	lipo -create $? -output $@
 
