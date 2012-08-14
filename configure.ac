@@ -88,10 +88,25 @@ CUDA=`dirname $CUDA`
 CUDA_INSTALL_PATH=$CUDA
 
 LBITS=`getconf LONG_BIT`
-if test $LBITS = 64 ; then
+if test $LBITS = 64 -a `uname -s` != 'Darwin'; then
     CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib64"
 else
     CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib"
+fi
+
+if test `uname -s` = 'Darwin'; then
+    CFLAGS+=" -arch x86_64 -arch i386"
+    LIBGPUJPEG_CUDA_OBJS=" \
+	build/universal/gpujpeg_huffman_gpu_encoder.a \
+        build/universal/gpujpeg_dct_gpu.a \
+        build/universal/gpujpeg_preprocessor.a \
+        build/universal/gpujpeg_huffman_gpu_decoder.a"
+else
+    LIBGPUJPEG_CUDA_OBJS=" \
+        src/gpujpeg_huffman_gpu_encoder.cu.o \
+        src/gpujpeg_dct_gpu.cu.o \
+        src/gpujpeg_preprocessor.cu.o \
+        src/gpujpeg_huffman_gpu_decoder.cu.o"
 fi
 
 GPUJPEG_LDFLAGS+=" -L${CUDA_INSTALL_LIB} -lcudart"
@@ -102,6 +117,7 @@ AC_SUBST(CUDA_INSTALL_LIB)
 AC_SUBST(COMMON_CFLAGS)
 AC_SUBST(GPUJPEG_CFLAGS)
 AC_SUBST(GPUJPEG_LDFLAGS)
+AC_SUBST(LIBGPUJPEG_CUDA_OBJS)
 
 AC_CONFIG_FILES([Makefile libgpujpeg.pc test/memcheck/Makefile test/opengl_interop/Makefile ])
 AC_OUTPUT
