@@ -4,8 +4,15 @@ test -z "$srcdir" && srcdir=.
 
 ORIGDIR=`pwd`
 
+if [ `uname -s` = "Darwin" ]; then
+    LIBTOOLIZE=glibtoolize
+else 
+    LIBTOOLIZE=libtoolize
+fi
+
 autoheader && \
-libtoolize --copy && \
+$LIBTOOLIZE --copy && \
+( [ -d m4 ] || mkdir m4 ) && \
 aclocal -I m4 && \
 automake --copy --add-missing && \
 autoconf && \
