@@ -1,7 +1,5 @@
 gpujpeg
 .libs
-test/opengl_interop/
-test/memcheck/
 src/*.o
 src/*.lo
 *.rgb
