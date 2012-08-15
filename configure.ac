@@ -35,10 +35,10 @@ if test x$enable_debug = x ; then
 fi
 
 if test x$enable_debug = xyes ; then
-	COMMON_CFLAGS+=" -g -D_DEBUG -O0"
-	NVCCFLAGS+=" -G"
+	COMMON_CFLAGS="$COMMON_CFLAGS -g -D_DEBUG -O0"
+	NVCCFLAGS="$NVCCFLAGS -G"
 else
-	COMMON_CFLAGS+=" -O2"
+	COMMON_CFLAGS="$COMMON_CFLAGS -O2"
 fi
 
 # huffmann
@@ -75,7 +75,7 @@ if test $enable_opengl = yes ; then
 
         if test "$FOUND_GLEW_L" = yes -a "$FOUND_GLEW_H" = yes ; then
                 AC_DEFINE([GPUJPEG_USE_OPENGL], [1], [Build with OpenGL support])
-                GPUJPEG_LIBS+=" -lGLEW"
+                GPUJPEG_LIBS="$GPUJPEG_LIBS -lGLEW"
         else
                 enable_opengl=no
         fi
@@ -109,7 +109,7 @@ fi
 AM_CONDITIONAL([DARWIN], [test `uname -s` = Darwin])
 
 if test `uname -s` = 'Darwin'; then
-    CFLAGS+=" -arch x86_64 -arch i386"
+    CFLAGS="$CFLAGS -arch x86_64 -arch i386"
     LIBGPUJPEG_CUDA_OBJS=" \
 	build/universal/gpujpeg_huffman_gpu_encoder.o \
         build/universal/gpujpeg_dct_gpu.o \
@@ -123,8 +123,8 @@ else
         src/gpujpeg_huffman_gpu_decoder.cu.o"
 fi
 
-GPUJPEG_LDFLAGS+=" -L${CUDA_INSTALL_LIB} -lcudart -lnpp"
-COMMON_CFLAGS+=" -I. -I${CUDA_INSTALL_PATH}/include"
+GPUJPEG_LDFLAGS="$GPUJPEG_LDFLAGS -L${CUDA_INSTALL_LIB} -lcudart -lnpp"
+COMMON_CFLAGS="$COMMON_CFLAGS -I. -I${CUDA_INSTALL_PATH}/include"
 
 AC_SUBST(CUDA_INSTALL_PATH)
 AC_SUBST(CUDA_INSTALL_LIB)
