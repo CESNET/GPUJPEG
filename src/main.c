@@ -126,7 +126,7 @@ main(int argc, char *argv[])
     char ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "hvs:q:r:ed", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:o", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'h':
             print_help();
