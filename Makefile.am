@@ -8,6 +8,7 @@ CUDA_INSTALL_PATH=@CUDA_INSTALL_PATH@
 NVCC=${CUDA_INSTALL_PATH}/bin/nvcc
 
 NVCC_CFLAGS= -Xcompiler -fPIC @COMMON_CFLAGS@ \
+	-gencode arch=compute_30,code=sm_30 \
 	-gencode arch=compute_20,code=sm_20 \
 	-gencode arch=compute_11,code=sm_11 \
 	-gencode arch=compute_10,code=sm_10
