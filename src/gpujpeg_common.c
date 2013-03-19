@@ -520,11 +520,19 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         return -1;
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t)) )
         result = 0;
-    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data, coder->data_size * sizeof(uint8_t)) )
+    
+    //for idct we must add some memory - it rounds up the block count, computes all and the extra bytes are omitted
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data, 
+      (coder->data_size + (GPUJPEG_IDCT_BLOCK_X * GPUJPEG_IDCT_BLOCK_Y * GPUJPEG_IDCT_BLOCK_Z / coder->component[0].data_width + 1)
+      * GPUJPEG_BLOCK_SIZE * coder->component[0].data_width ) * sizeof(uint8_t)) )
         result = 0;
     if ( cudaSuccess != cudaMallocHost((void**)&coder->data_quantized, coder->data_size * sizeof(int16_t)) )
         result = 0;
-    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_quantized, coder->data_size * sizeof(int16_t)) )
+    
+    //for idct we must add some memory - it rounds up the block count, computes all and the extra bytes are omitted
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_quantized,
+      (coder->data_size + (GPUJPEG_IDCT_BLOCK_X * GPUJPEG_IDCT_BLOCK_Y * GPUJPEG_IDCT_BLOCK_Z / coder->component[0].data_width + 1)
+      * GPUJPEG_BLOCK_SIZE * coder->component[0].data_width ) * sizeof(int16_t)) )
          result = 0;
     gpujpeg_cuda_check_error("Coder data allocation");
 
