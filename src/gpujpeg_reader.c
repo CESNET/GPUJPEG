@@ -122,7 +122,7 @@ gpujpeg_reader_read_app0(uint8_t** image)
         return -1;
     }
 
-    char jfif[4];
+    char jfif[5];
     jfif[0] = gpujpeg_reader_read_byte(*image);
     jfif[1] = gpujpeg_reader_read_byte(*image);
     jfif[2] = gpujpeg_reader_read_byte(*image);
