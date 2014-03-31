@@ -1,9 +1,8 @@
 AC_PREREQ([2.65])
-AC_INIT([libgpujpeg], [0.0.1], [martin.srom@mail.muni.cz], [libgpujpeg], [https://sourceforge.net/p/gpujpeg/])
+AC_INIT([libgpujpeg], [0.0.2], [martin.srom@mail.muni.cz], [libgpujpeg], [https://sourceforge.net/p/gpujpeg/])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR([.])
-AM_MAINTAINER_MODE
 AM_INIT_AUTOMAKE
 
 AC_CONFIG_HEADERS([config.h])
@@ -95,15 +94,6 @@ if test $LBITS = 64 -a `uname -s` != 'Darwin'; then
     CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib64"
 else
     CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib"
-fi
-
-NVCC=$CUDA_INSTALL_PATH/bin/nvcc
-CUDA_MAJOR=`$NVCC --version |grep release|sed  's/^.*release \(@<:@0-9@:>@@<:@0-9@:>@*\).*$/\1/'`
-CUDA_MINOR=`$NVCC --version |grep release|sed  's/^.*release @<:@^.@:>@\.\(@<:@0-9@:>@@<:@0-9@:>@*\).*$/\1/'`
-
-if test $CUDA_MAJOR -gt 4 -o \( $CUDA_MAJOR -ge 4 -a $CUDA_MINOR -ge 2 \)
-then
-        CUDA_EXTRA_ARCH="$CUDA_EXTRA_ARCH -gencode arch=compute_30,code=sm_30"
 fi
 
 AM_CONDITIONAL([DARWIN], [test `uname -s` = Darwin])

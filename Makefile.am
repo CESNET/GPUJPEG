@@ -1,4 +1,4 @@
-AUTOMAKE_OPTIONS = subdir-objects no-dependencies
+AUTOMAKE_OPTIONS = subdir-objects
 
 ACLOCAL_AMFLAGS=-I m4
 CLEANFILES=
@@ -9,10 +9,11 @@ CUDA_INSTALL_PATH=@CUDA_INSTALL_PATH@
 NVCC=${CUDA_INSTALL_PATH}/bin/nvcc
 
 NVCC_CFLAGS= -Xcompiler -fPIC -Xcompiler '@COMMON_FLAGS@' \
+	-gencode arch=compute_35,code=sm_35 \
+	-gencode arch=compute_30,code=sm_30 \
 	-gencode arch=compute_20,code=sm_20 \
 	-gencode arch=compute_11,code=sm_11 \
-	-gencode arch=compute_10,code=sm_10 \
-	@CUDA_EXTRA_ARCH@
+	-gencode arch=compute_10,code=sm_10
 
 SUFFIXES=.cu
 
