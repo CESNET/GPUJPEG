@@ -2,6 +2,8 @@ AC_PREREQ([2.65])
 AC_INIT([libgpujpeg], [0.0.1], [martin.srom@mail.muni.cz], [libgpujpeg], [https://sourceforge.net/p/gpujpeg/])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/main.c])
+AC_CONFIG_AUX_DIR([.])
+AM_MAINTAINER_MODE
 AM_INIT_AUTOMAKE
 
 AC_CONFIG_HEADERS([config.h])
@@ -35,10 +37,10 @@ if test x$enable_debug = x ; then
 fi
 
 if test x$enable_debug = xyes ; then
-	COMMON_CFLAGS="$COMMON_CFLAGS -g -D_DEBUG -O0"
+	COMMON_FLAGS="$COMMON_FLAGS -g -D_DEBUG -O0"
 	NVCCFLAGS="$NVCCFLAGS -G"
 else
-	COMMON_CFLAGS="$COMMON_CFLAGS -O2"
+	COMMON_FLAGS="$COMMON_FLAGS -O2"
 fi
 
 # huffmann
@@ -108,6 +110,7 @@ AM_CONDITIONAL([DARWIN], [test `uname -s` = Darwin])
 
 if test `uname -s` = 'Darwin'; then
     CFLAGS="$CFLAGS -arch x86_64 -arch i386"
+    CXXFLAGS="$CXXFLAGS -arch x86_64 -arch i386"
     LIBGPUJPEG_CUDA_OBJS=" \
 	build/universal/gpujpeg_huffman_gpu_encoder.o \
         build/universal/gpujpeg_dct_gpu.o \
@@ -122,12 +125,13 @@ else
 fi
 
 GPUJPEG_LDFLAGS="$GPUJPEG_LDFLAGS -L${CUDA_INSTALL_LIB} -lcudart"
-COMMON_CFLAGS="$COMMON_CFLAGS -I. -I${CUDA_INSTALL_PATH}/include"
+COMMON_FLAGS="$COMMON_FLAGS -I. -I${CUDA_INSTALL_PATH}/include"
 
 AC_SUBST(CUDA_EXTRA_ARCH)
 AC_SUBST(CUDA_INSTALL_PATH)
 AC_SUBST(CUDA_INSTALL_LIB)
-AC_SUBST(COMMON_CFLAGS)
+AC_SUBST(COMMON_FLAGS)
+AC_SUBST(GPUJPEG_LIBS)
 AC_SUBST(GPUJPEG_CFLAGS)
 AC_SUBST(GPUJPEG_LDFLAGS)
 AC_SUBST(GPUJPEG_LIBS)

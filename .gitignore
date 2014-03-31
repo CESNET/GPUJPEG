@@ -28,3 +28,11 @@ src/.dirstamp
 stamp-h1
 libgpujpeg.la
 
+# VS
+*.pdb
+*.sdf
+*.suo
+*.user
+Debug
+Release
+
