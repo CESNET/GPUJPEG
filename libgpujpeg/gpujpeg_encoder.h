@@ -49,10 +49,6 @@ extern "C" {
 
 struct gpujpeg_encoder;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * Encoder input type
  */

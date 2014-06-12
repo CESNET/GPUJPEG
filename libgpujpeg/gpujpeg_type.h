@@ -42,10 +42,6 @@
 extern "C" {
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /** Contants */
 #define GPUJPEG_BLOCK_SIZE                      8
 #define GPUJPEG_BLOCK_SQUARED_SIZE              64
