@@ -1,7 +1,8 @@
 AC_PREREQ([2.65])
-AC_INIT([libgpujpeg], [0.0.1], [martin.srom@mail.muni.cz], [libgpujpeg], [https://sourceforge.net/p/gpujpeg/])
+AC_INIT([libgpujpeg], [0.0.2], [martin.srom@mail.muni.cz], [libgpujpeg], [https://sourceforge.net/p/gpujpeg/])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/main.c])
+AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE
 
 AC_CONFIG_HEADERS([config.h])
@@ -35,10 +36,10 @@ if test x$enable_debug = x ; then
 fi
 
 if test x$enable_debug = xyes ; then
-	COMMON_CFLAGS+=" -g -D_DEBUG -O0"
-	NVCCFLAGS+=" -G"
+	COMMON_FLAGS="$COMMON_FLAGS -g -D_DEBUG -O0"
+	NVCCFLAGS="$NVCCFLAGS -G"
 else
-	COMMON_CFLAGS+=" -O2"
+	COMMON_FLAGS="$COMMON_FLAGS -O2"
 fi
 
 # huffmann
@@ -60,10 +61,11 @@ fi
 if test $enable_opengl = yes ; then
         AC_CHECK_HEADER(GL/glew.h, FOUND_GLEW_H=yes)
         AC_CHECK_LIB(GLEW, glewIsSupported, FOUND_GLEW_L=yes)
+        AC_CHECK_LIB(GL, glBindTexture, FOUND_GL_L=yes)
 
-        if test "$FOUND_GLEW_L" = yes -a "$FOUND_GLEW_H" = yes ; then
+        if test "$FOUND_GLEW_L" = yes -a "$FOUND_GLEW_H" = yes -a "$FOUND_GL_L" = yes; then
                 AC_DEFINE([GPUJPEG_USE_OPENGL], [1], [Build with OpenGL support])
-                GPUJPEG_LIBS+=" -lGLEW"
+                GPUJPEG_LIBS="$GPUJPEG_LIBS -lGLEW -lGL"
         else
                 enable_opengl=no
         fi
@@ -88,20 +90,42 @@ CUDA=`dirname $CUDA`
 CUDA_INSTALL_PATH=$CUDA
 
 LBITS=`getconf LONG_BIT`
-if test $LBITS = 64 ; then
+if test $LBITS = 64 -a `uname -s` != 'Darwin'; then
     CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib64"
 else
     CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib"
 fi
 
-GPUJPEG_LDFLAGS+=" -L${CUDA_INSTALL_LIB} -lcudart"
-COMMON_CFLAGS+=" -I. -I${CUDA_INSTALL_PATH}/include"
+AM_CONDITIONAL([DARWIN], [test `uname -s` = Darwin])
 
+if test `uname -s` = 'Darwin'; then
+    CFLAGS="$CFLAGS -arch x86_64 -arch i386"
+    CXXFLAGS="$CXXFLAGS -arch x86_64 -arch i386"
+    LIBGPUJPEG_CUDA_OBJS=" \
+	build/universal/gpujpeg_huffman_gpu_encoder.o \
+        build/universal/gpujpeg_dct_gpu.o \
+        build/universal/gpujpeg_preprocessor.o \
+        build/universal/gpujpeg_huffman_gpu_decoder.o"
+else
+    LIBGPUJPEG_CUDA_OBJS=" \
+        src/gpujpeg_huffman_gpu_encoder.cu.o \
+        src/gpujpeg_dct_gpu.cu.o \
+        src/gpujpeg_preprocessor.cu.o \
+        src/gpujpeg_huffman_gpu_decoder.cu.o"
+fi
+
+GPUJPEG_LDFLAGS="$GPUJPEG_LDFLAGS -L${CUDA_INSTALL_LIB} -lcudart"
+COMMON_FLAGS="$COMMON_FLAGS -I. -I${CUDA_INSTALL_PATH}/include"
+
+AC_SUBST(CUDA_EXTRA_ARCH)
 AC_SUBST(CUDA_INSTALL_PATH)
 AC_SUBST(CUDA_INSTALL_LIB)
-AC_SUBST(COMMON_CFLAGS)
+AC_SUBST(COMMON_FLAGS)
+AC_SUBST(GPUJPEG_LIBS)
 AC_SUBST(GPUJPEG_CFLAGS)
 AC_SUBST(GPUJPEG_LDFLAGS)
+AC_SUBST(GPUJPEG_LIBS)
+AC_SUBST(LIBGPUJPEG_CUDA_OBJS)
 
 AC_CONFIG_FILES([Makefile libgpujpeg.pc test/memcheck/Makefile test/opengl_interop/Makefile ])
 AC_OUTPUT

@@ -28,6 +28,7 @@
  */
  
 #include <libgpujpeg/gpujpeg_decoder.h>
+#include <libgpujpeg/gpujpeg_decoder_internal.h>
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_dct_cpu.h"
 #include "gpujpeg_dct_gpu.h"
@@ -64,11 +65,20 @@ gpujpeg_decoder_output_set_texture(struct gpujpeg_decoder_output* output, struct
     output->texture = texture;
 }
 
+void
+gpujpeg_decoder_output_set_cuda_buffer(struct gpujpeg_decoder_output* output)
+{
+    output->type = GPUJPEG_DECODER_OUTPUT_CUDA_BUFFER;
+    output->data = NULL;
+    output->data_size = 0;
+    output->texture = NULL;
+}
+
 /** Documented at declaration */
 struct gpujpeg_decoder*
 gpujpeg_decoder_create()
 {    
-    struct gpujpeg_decoder* decoder = malloc(sizeof(struct gpujpeg_decoder));
+    struct gpujpeg_decoder* decoder = (struct gpujpeg_decoder*) malloc(sizeof(struct gpujpeg_decoder));
     if ( decoder == NULL )
         return NULL;
         
@@ -316,12 +326,24 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
 
         GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
         coder->duration_memory_unmap = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
+    } else if ( output->type == GPUJPEG_DECODER_OUTPUT_CUDA_BUFFER ) {
+        // Copy decompressed image to texture pixel buffer object device data
+        output->data = coder->d_data_raw;
     } else {
         // Unknown output type
         assert(0);
     }
 
     return 0;
+}
+
+void
+gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
+                enum gpujpeg_color_space color_space,
+                enum gpujpeg_sampling_factor sampling_factor)
+{
+        decoder->coder.param_image.color_space = color_space;
+        decoder->coder.param_image.sampling_factor = sampling_factor;
 }
 
 /** Documented at declaration */
