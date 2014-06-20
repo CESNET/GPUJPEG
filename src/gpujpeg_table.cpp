@@ -118,8 +118,8 @@ gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table
     // Copy quantization table to constant memory
     if ( cudaSuccess != cudaMemcpy(table->d_table_forward, h_quantization_table, 64 * sizeof(float), cudaMemcpyHostToDevice) )
         return  -1;
-    gpujpeg_cuda_check_error("Copy DCT quantization table to device memory");
-    
+    gpujpeg_cuda_check_error("Copy DCT quantization table to device memory", return -1);
+
     // DCT loads the table into GPU memory itself, after premultiplying coefficients with DCT normalization constants.
     return 0;
 }

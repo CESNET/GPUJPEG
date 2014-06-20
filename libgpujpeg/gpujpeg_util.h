@@ -42,13 +42,13 @@ extern "C" {
 #endif
     
 // CUDA check error
-#define gpujpeg_cuda_check_error(msg) \
+#define gpujpeg_cuda_check_error(msg, action) \
     { \
         cudaError_t err = cudaGetLastError(); \
         if( cudaSuccess != err) { \
             fprintf(stderr, "[GPUJPEG] [Error] %s (line %i): %s: %s.\n", \
                 __FILE__, __LINE__, msg, cudaGetErrorString( err) ); \
-            exit(-1); \
+            action; \
         } \
     } \
     

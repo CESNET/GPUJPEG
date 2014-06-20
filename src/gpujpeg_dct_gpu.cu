@@ -552,7 +552,7 @@ gpujpeg_idct_gpu_kernel(int block_count_x, int block_count_y, int16_t* source, i
 }
 
 /** Documented at declaration */
-void
+int
 gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
 {
     // Get coder
@@ -577,7 +577,7 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
                 cudaMemcpyDeviceToDevice
             );
             cudaThreadSynchronize();
-            gpujpeg_cuda_check_error("Quantization table memcpy failed");
+            gpujpeg_cuda_check_error("Quantization table memcpy failed", return -1);
         }
 
         int roi_width = component->data_width;
@@ -606,12 +606,14 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
             d_quantization_table
         );
         cudaThreadSynchronize();
-        gpujpeg_cuda_check_error("Forward DCT failed");
+        gpujpeg_cuda_check_error("Forward DCT failed", return -1);
     }
+
+    return 0;
 }
 
 /** Documented at declaration */
-void
+int
 gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
 {
     // Get coder
@@ -643,7 +645,7 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
             0,
             cudaMemcpyDeviceToDevice
         );
-        gpujpeg_cuda_check_error("Copy IDCT quantization table to constant memory");
+        gpujpeg_cuda_check_error("Copy IDCT quantization table to constant memory", return -1);
 
         // Perform block-wise IDCT processing
         dim3 dct_grid(
@@ -666,6 +668,8 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
             d_quantization_table
         );
         cudaThreadSynchronize();
-        gpujpeg_cuda_check_error("Inverse Integer DCT failed");
+        gpujpeg_cuda_check_error("Inverse Integer DCT failed", return -1);
     }
+
+    return 0;
 }

@@ -147,7 +147,7 @@ gpujpeg_init_device(int device_id, int flags)
 #ifdef GPUJPEG_USE_OPENGL
     if ( flags & GPUJPEG_OPENGL_INTEROPERABILITY ) {
         cudaGLSetGLDevice(device_id);
-        gpujpeg_cuda_check_error("Enabling OpenGL interoperability");
+        gpujpeg_cuda_check_error("Enabling OpenGL interoperability", return -1);
     }
 #endif
 
@@ -164,7 +164,7 @@ gpujpeg_init_device(int device_id, int flags)
     }
     
     cudaSetDevice(device_id);
-    gpujpeg_cuda_check_error("Set CUDA device");
+    gpujpeg_cuda_check_error("Set CUDA device", return -1);
 
     // Test by simple copying that the device is ready
     uint8_t data[] = {8};
@@ -307,7 +307,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     int device_idx;
     cudaGetDevice(&device_idx);
     cudaGetDeviceProperties(&device_properties, device_idx);
-    gpujpeg_cuda_check_error("Device info getting");
+    gpujpeg_cuda_check_error("Device info getting", return -1);
     coder->cuda_cc_major = device_properties.major;
     coder->cuda_cc_minor = device_properties.minor;
     
@@ -326,7 +326,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     // Allocate color components in device memory
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_component, coder->param_image.comp_count * sizeof(struct gpujpeg_component)) )
         result = 0;
-    gpujpeg_cuda_check_error("Coder color component allocation");
+    gpujpeg_cuda_check_error("Coder color component allocation", return -1);
         
     // Initialize sampling factors and compute maximum sampling factor to coder->sampling_factor
     coder->sampling_factor.horizontal = 0;
@@ -444,7 +444,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     // Allocate segments in device memory
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_segment, coder->segment_count * sizeof(struct gpujpeg_segment)) )
         result = 0;
-    gpujpeg_cuda_check_error("Coder segment allocation");
+    gpujpeg_cuda_check_error("Coder segment allocation", return -1);
     
     // Prepare segments
     if ( result == 1 ) {            
@@ -548,7 +548,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         result = 0;
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_quantized, coder->data_size * sizeof(int16_t)) )
          result = 0;
-    gpujpeg_cuda_check_error("Coder data allocation");
+    gpujpeg_cuda_check_error("Coder data allocation", return -1);
 
     // Set data buffer to color components
     uint8_t* d_comp_data = coder->d_data;
@@ -570,7 +570,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     // Copy components to device memory
     if ( cudaSuccess != cudaMemcpy(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice) )
         result = 0;
-    gpujpeg_cuda_check_error("Coder component copy");
+    gpujpeg_cuda_check_error("Coder component copy", return -1);
         
     // Allocate compressed data
     int max_compressed_data_size = coder->data_compressed_size;
@@ -580,12 +580,12 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         result = 0;   
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_compressed, max_compressed_data_size * sizeof(uint8_t)) ) 
         result = 0;   
-    gpujpeg_cuda_check_error("Coder data compressed allocation");
+    gpujpeg_cuda_check_error("Coder data compressed allocation", return -1);
     
     // Allocate Huffman coder temporary buffer
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_temp_huffman, max_compressed_data_size * sizeof(uint8_t)) ) 
         result = 0;   
-    gpujpeg_cuda_check_error("Huffman temp buffer allocation");
+    gpujpeg_cuda_check_error("Huffman temp buffer allocation", return -1);
      
     // Initialize block lists in host memory
     coder->block_count = 0;
@@ -1066,7 +1066,7 @@ gpujpeg_opengl_texture_register(int texture_id, enum gpujpeg_opengl_texture_type
 
     // Create CUDA PBO Resource
     cudaGraphicsGLRegisterBuffer(&texture->texture_pbo_resource, texture->texture_pbo_id, cudaGraphicsMapFlagsNone);
-    gpujpeg_cuda_check_error("Register OpenGL buffer");
+    gpujpeg_cuda_check_error("Register OpenGL buffer", return NULL);
 #else
     GPUJPEG_EXIT_MISSING_OPENGL();
 #endif
@@ -1125,12 +1125,12 @@ gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_siz
 
     // Map pixel buffer object to cuda
     cudaGraphicsMapResources(1, &texture->texture_pbo_resource, 0);
-    gpujpeg_cuda_check_error("Encoder map texture PBO resource");
+    gpujpeg_cuda_check_error("Encoder map texture PBO resource", return NULL);
 
     // Get device data pointer to pixel buffer object data
     size_t d_data_size;
     cudaGraphicsResourceGetMappedPointer((void **)&d_data, &d_data_size, texture->texture_pbo_resource);
-    gpujpeg_cuda_check_error("Encoder get device pointer for texture PBO resource");
+    gpujpeg_cuda_check_error("Encoder get device pointer for texture PBO resource", return NULL);
     if ( data_size != NULL )
         *data_size = d_data_size;
 
@@ -1143,7 +1143,7 @@ gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
 {
     // Unmap pbo
     cudaGraphicsUnmapResources(1, &texture->texture_pbo_resource, 0);
-    gpujpeg_cuda_check_error("Encoder unmap texture PBO resource");
+    gpujpeg_cuda_check_error("Encoder unmap texture PBO resource", {});
 
 #ifdef GPUJPEG_USE_OPENGL
     if ( texture->texture_type == GPUJPEG_OPENGL_TEXTURE_WRITE ) {

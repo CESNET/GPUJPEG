@@ -42,7 +42,7 @@ extern "C" {
  *
  * @param decoder
  */
-void
+int
 gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder);
 
 /**
@@ -50,7 +50,7 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder);
  *
  * @param decoder
  */
-void
+int
 gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder);
 
 #ifdef __cplusplus

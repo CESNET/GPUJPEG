@@ -99,14 +99,14 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
         if ( cudaSuccess != cudaMalloc((void**)&encoder->table_quantization[comp_type].d_table_forward, 64 * sizeof(float)) )
             result = 0;
     }
-    gpujpeg_cuda_check_error("Encoder table allocation");
+    gpujpeg_cuda_check_error("Encoder table allocation", return NULL);
     
     // Init quantization tables for encoder
     for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
         if ( gpujpeg_table_quantization_encoder_init(&encoder->table_quantization[comp_type], (enum gpujpeg_component_type)comp_type, coder->param.quality) != 0 )
             result = 0;
     }
-    gpujpeg_cuda_check_error("Quantization init");
+    gpujpeg_cuda_check_error("Quantization init", return NULL);
     
     // Init huffman tables for encoder
     for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
@@ -115,7 +115,7 @@ gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_pa
                 result = 0;
         }
     }
-    gpujpeg_cuda_check_error("Encoder table init");
+    gpujpeg_cuda_check_error("Encoder table init", return NULL);
     
     // Init huffman encoder
     if ( gpujpeg_huffman_gpu_encoder_init(encoder) != 0 )
@@ -210,7 +210,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
     GPUJPEG_CUSTOM_TIMER_START(encoder->def);
         
     // Perform DCT and quantization
-    gpujpeg_dct_gpu(encoder);
+    if ( gpujpeg_dct_gpu(encoder) != 0 )
+        return -1;
 
     // If restart interval is 0 then the GPU processing is in the end (even huffman coder will be performed on CPU)
     if ( coder->param.restart_interval == 0 ) {

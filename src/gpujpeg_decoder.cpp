@@ -113,7 +113,7 @@ gpujpeg_decoder_create()
                 result = 0;
         }
     }
-    gpujpeg_cuda_check_error("Decoder table allocation");
+    gpujpeg_cuda_check_error("Decoder table allocation", return NULL);
     
     // Init huffman encoder
     if ( gpujpeg_huffman_gpu_decoder_init() != 0 )
@@ -232,11 +232,11 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         
         // Copy scan data to device memory
         cudaMemcpy(coder->d_data_compressed, coder->data_compressed, decoder->data_compressed_size * sizeof(uint8_t), cudaMemcpyHostToDevice);
-        gpujpeg_cuda_check_error("Decoder copy compressed data");
+        gpujpeg_cuda_check_error("Decoder copy compressed data", return -1);
         
         // Copy segments to device memory
         cudaMemcpy(coder->d_segment, coder->segment, decoder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice);
-        gpujpeg_cuda_check_error("Decoder copy compressed data");
+        gpujpeg_cuda_check_error("Decoder copy compressed data", return -1);
         
         // Zero output memory
         cudaMemset(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t));
@@ -259,7 +259,8 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     }
     
     // Perform IDCT and dequantization (own CUDA implementation)
-    gpujpeg_idct_gpu(decoder);
+    if ( gpujpeg_idct_gpu(decoder) != 0 )
+        return -1;
     
     GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
     coder->duration_dct_quantization = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
