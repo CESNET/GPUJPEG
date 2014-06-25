@@ -106,6 +106,7 @@ if test `uname -s` = 'Darwin'; then
         build/universal/gpujpeg_dct_gpu.o \
         build/universal/gpujpeg_preprocessor.o \
         build/universal/gpujpeg_huffman_gpu_decoder.o"
+    NVCCFLAGS="$NVCCFLAGS -Xcompiler -Wno-error=unused-command-line-argument-hard-error-in-future"
 else
     LIBGPUJPEG_CUDA_OBJS=" \
         src/gpujpeg_huffman_gpu_encoder.cu.o \
@@ -126,6 +127,7 @@ AC_SUBST(GPUJPEG_CFLAGS)
 AC_SUBST(GPUJPEG_LDFLAGS)
 AC_SUBST(GPUJPEG_LIBS)
 AC_SUBST(LIBGPUJPEG_CUDA_OBJS)
+AC_SUBST(NVCCFLAGS)
 
 AC_CONFIG_FILES([Makefile libgpujpeg.pc test/memcheck/Makefile test/opengl_interop/Makefile ])
 AC_OUTPUT

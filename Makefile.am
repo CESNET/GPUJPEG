@@ -7,7 +7,7 @@ SUBDIRS = . # test/memcheck test/opengl_interop
 CUDA_INSTALL_PATH=@CUDA_INSTALL_PATH@
 NVCC=${CUDA_INSTALL_PATH}/bin/nvcc
 
-NVCC_CFLAGS= -Xcompiler -fPIC -Xcompiler '@COMMON_FLAGS@' \
+NVCCFLAGS=@NVCCFLAGS@ -Xcompiler -fPIC -Xcompiler '@COMMON_FLAGS@' \
 	-gencode arch=compute_35,code=sm_35 \
 	-gencode arch=compute_30,code=sm_30 \
 	-gencode arch=compute_20,code=sm_20 \
@@ -84,7 +84,7 @@ endif
 
 # Pattern rule for compiling CUDA files
 %.cu.o: %.cu
-	$(NVCC) $(NVCC_CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) -c $< -o $@
+	$(NVCC) $(NVCCFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) -c $< -o $@
 
 build/universal/%.o: build/i386/%.cu.o build/x86_64/%.cu.o
 	[ -d build/universal ] || mkdir -p build/universal
@@ -92,11 +92,11 @@ build/universal/%.o: build/i386/%.cu.o build/x86_64/%.cu.o
 
 build/i386/%.cu.o: src/%.cu
 	[ -d build/i386 ] || mkdir -p build/i386
-	$(NVCC) -m32 $(NVCC_CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) -c $< -o $@
+	$(NVCC) -m32 $(NVCCFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) -c $< -o $@
 
 build/x86_64/%.cu.o: src/%.cu
 	[ -d build/x86_64 ] || mkdir -p build/x86_64
-	$(NVCC) -m64 $(NVCC_CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) -c $< -o $@
+	$(NVCC) -m64 $(NVCCFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) -c $< -o $@
 
 clean-local:
 	rm -rf src/*.cu.lo src/*.cu.o
