@@ -27,6 +27,7 @@ src/.deps/
 src/.dirstamp
 stamp-h1
 libgpujpeg.la
+test-driver
 
 # VS
 *.pdb
