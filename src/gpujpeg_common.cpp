@@ -314,7 +314,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     if ( device_properties.major < 2 ) {
             fprintf(stderr, "GPUJPEG coder is currently broken on "
                             "cards with cc < 2.0\n");
-            return 1;
+            result = 0;
     }
 
     coder->preprocessor = NULL;
