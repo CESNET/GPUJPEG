@@ -119,6 +119,7 @@ gpujpeg_init_device(int device_id, int flags)
 {
     int dev_count;
     cudaGetDeviceCount(&dev_count);
+    gpujpeg_cuda_check_error("Cannot get number of CUDA devices!", return -1);
     if ( dev_count == 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] No CUDA enabled device\n");
         return -1;
