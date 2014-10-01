@@ -58,6 +58,12 @@ if test x$enable_opengl = x ; then
 	enable_opengl=no
 fi
 
+# OS X universal build
+AC_ARG_ENABLE(osx-universal, [  --enable-osx-universal     enable OS X universal build] )
+if test x$enable_osx_universal = x ; then
+	enable_osx_universal=no
+fi
+
 if test $enable_opengl = yes ; then
         AC_CHECK_HEADER(GL/glew.h, FOUND_GLEW_H=yes)
         AC_CHECK_LIB(GLEW, glewIsSupported, FOUND_GLEW_L=yes)
@@ -98,7 +104,7 @@ fi
 
 AM_CONDITIONAL([DARWIN], [test `uname -s` = Darwin])
 
-if test `uname -s` = 'Darwin'; then
+if test $enable_osx_universal = yes; then
     CFLAGS="$CFLAGS -arch x86_64 -arch i386"
     CXXFLAGS="$CXXFLAGS -arch x86_64 -arch i386"
     LIBGPUJPEG_CUDA_OBJS=" \
