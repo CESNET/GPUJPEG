@@ -53,11 +53,9 @@ gpujpeg_get_devices_info()
 {
     struct gpujpeg_devices_info devices_info;
     
-    if ( cudaGetDeviceCount(&devices_info.device_count) != cudaSuccess ) {
-        fprintf(stderr, "[GPUJPEG] [Error] CUDA Driver and Runtime version may be mismatched.\n");
-        exit(-1);
-    }
-    
+    cudaGetDeviceCount(&devices_info.device_count);
+    gpujpeg_cuda_check_error("Cannot get number of CUDA devices", exit(-1));
+
     if ( devices_info.device_count > GPUJPEG_MAX_DEVICE_COUNT ) {
         fprintf(stderr, "[GPUJPEG] [Warning] There are available more CUDA devices (%d) than maximum count (%d).\n",
             devices_info.device_count, GPUJPEG_MAX_DEVICE_COUNT);
@@ -119,7 +117,7 @@ gpujpeg_init_device(int device_id, int flags)
 {
     int dev_count;
     cudaGetDeviceCount(&dev_count);
-    gpujpeg_cuda_check_error("Cannot get number of CUDA devices!", return -1);
+    gpujpeg_cuda_check_error("Cannot get number of CUDA devices", return -1);
     if ( dev_count == 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] No CUDA enabled device\n");
         return -1;
