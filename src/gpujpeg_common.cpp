@@ -945,7 +945,7 @@ gpujpeg_opengl_init()
 int
 gpujpeg_opengl_texture_create(int width, int height, uint8_t* data)
 {
-    int texture_id = 0;
+    GLuint texture_id = 0;
 
 #ifdef GPUJPEG_USE_OPENGL
     glGenTextures(1, &texture_id);
@@ -1016,7 +1016,7 @@ void
 gpujpeg_opengl_texture_destroy(int texture_id)
 {
 #ifdef GPUJPEG_USE_OPENGL
-    glDeleteTextures(1, &texture_id);
+     glDeleteTextures(1, (GLuint*)&texture_id);
 #else
     GPUJPEG_EXIT_MISSING_OPENGL();
 #endif
@@ -1058,7 +1058,7 @@ gpujpeg_opengl_texture_register(int texture_id, enum gpujpeg_opengl_texture_type
     }
 
     // Create PBO
-    glGenBuffers(1, &texture->texture_pbo_id);
+    glGenBuffers(1, (GLuint*)&texture->texture_pbo_id);
     glBindBuffer(texture->texture_pbo_type, texture->texture_pbo_id);
     glBufferData(texture->texture_pbo_type, texture->texture_width * texture->texture_height * 3 * sizeof(uint8_t), NULL, GL_DYNAMIC_DRAW);
     glBindBuffer(texture->texture_pbo_type, 0);
@@ -1079,7 +1079,7 @@ gpujpeg_opengl_texture_unregister(struct gpujpeg_opengl_texture* texture)
 {
 #ifdef GPUJPEG_USE_OPENGL
     if ( texture->texture_pbo_id != 0 ) {
-        glDeleteBuffers(1, &texture->texture_pbo_id);
+	 glDeleteBuffers(1, (GLuint*)&texture->texture_pbo_id);
     }
     if ( texture->texture_pbo_resource != NULL ) {
         cudaGraphicsUnregisterResource(texture->texture_pbo_resource);
