@@ -164,29 +164,29 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image)
     int length = (int)gpujpeg_reader_read_2byte(*image);
     length -= 2;
     
-    if ( length != 65 ) {
+    if ( (length % 65) != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] DQT marker length should be 65 but %d was presented!\n", length);
         return -1;
     }
-    
-    int index = gpujpeg_reader_read_byte(*image);
-    struct gpujpeg_table_quantization* table;
-    if( index == 0 ) {
-        table = &decoder->table_quantization[GPUJPEG_COMPONENT_LUMINANCE];
-    } else if ( index == 1 ) {
-        table = &decoder->table_quantization[GPUJPEG_COMPONENT_CHROMINANCE];
-    } else {
-        fprintf(stderr, "[GPUJPEG] [Error] DQT marker index should be 0 or 1 but %d was presented!\n", index);
-        return -1;
-    }
 
-    for ( int i = 0; i < 64; i++ ) {
-        table->table_raw[i] = gpujpeg_reader_read_byte(*image);
+    for (;length > 0; length-=65) {
+	int index = gpujpeg_reader_read_byte(*image);
+	struct gpujpeg_table_quantization* table;
+	if( index == 0 ) {
+	    table = &decoder->table_quantization[GPUJPEG_COMPONENT_LUMINANCE];
+	} else if ( index == 1 ) {
+	    table = &decoder->table_quantization[GPUJPEG_COMPONENT_CHROMINANCE];
+	} else {
+	    fprintf(stderr, "[GPUJPEG] [Error] DQT marker index should be 0 or 1 but %d was presented!\n", index);
+	    return -1;
+	}
+
+	for ( int i = 0; i < 64; i++ ) {
+	    table->table_raw[i] = gpujpeg_reader_read_byte(*image);
+	}
+	// Prepare quantization table for read raw table
+	gpujpeg_table_quantization_decoder_compute(table);
     }
-    
-    // Prepare quantization table for read raw table
-    gpujpeg_table_quantization_decoder_compute(table);
-    
     return 0;
 }
 
@@ -261,67 +261,61 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
 {    
     int length = (int)gpujpeg_reader_read_2byte(*image);
     length -= 2;
-    
-    int index = gpujpeg_reader_read_byte(*image);
-    struct gpujpeg_table_huffman_decoder* table = NULL;
-    struct gpujpeg_table_huffman_decoder* d_table = NULL;
-    switch(index) {
-    case 0:
-        table = &decoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
-        d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
-        break;
-    case 16:
-        table = &decoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
-        d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
-        break;
-    case 1:
-        table = &decoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
-        d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
-        break;
-    case 17:
-        table = &decoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
-        d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
-        break;
-    default:
-        fprintf(stderr, "[GPUJPEG] [Error] DHT marker index should be 0, 1, 16 or 17 but %d was presented!\n", index);
-        return -1;
-    }
-    length -= 1;
-    
-    // Read in bits[]
-    table->bits[0] = 0;
-    int count = 0;
-    for ( int i = 1; i <= 16; i++ ) {
-        table->bits[i] = gpujpeg_reader_read_byte(*image);
-        count += table->bits[i];
-        if ( length > 0 ) {
-            length--;
-        } else {
-            fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading bit counts!\n", index);
-            return -1;
-        }
-    }   
 
-    // Read in huffval
-    for ( int i = 0; i < count; i++ ){
-        table->huffval[i] = gpujpeg_reader_read_byte(*image);
-        if ( length > 0 ) {
-            length--;
-        } else {
-            fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading huffman values!\n", index);
-            return -1;
-        }
+    while (length > 0) {
+	int index = gpujpeg_reader_read_byte(*image);
+	struct gpujpeg_table_huffman_decoder* table = NULL;
+	struct gpujpeg_table_huffman_decoder* d_table = NULL;
+	switch(index) {
+	case 0:
+	    table = &decoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
+	    d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
+	    break;
+	case 16:
+	    table = &decoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
+	    d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
+	    break;
+	case 1:
+	    table = &decoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
+	    d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
+	    break;
+	case 17:
+	    table = &decoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
+	    d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
+	    break;
+	default:
+	    fprintf(stderr, "[GPUJPEG] [Error] DHT marker index should be 0, 1, 16 or 17 but %d was presented!\n", index);
+	    return -1;
+	}
+	length -= 1;
+    
+	// Read in bits[]
+	table->bits[0] = 0;
+	int count = 0;
+	for ( int i = 1; i <= 16; i++ ) {
+	    table->bits[i] = gpujpeg_reader_read_byte(*image);
+	    count += table->bits[i];
+	    if ( length > 0 ) {
+		length--;
+	    } else {
+		fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading bit counts!\n", index);
+		return -1;
+	    }
+	}   
+
+	// Read in huffval
+	for ( int i = 0; i < count; i++ ){
+	    table->huffval[i] = gpujpeg_reader_read_byte(*image);
+	    if ( length > 0 ) {
+		length--;
+	    } else {
+		fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading huffman values!\n", index);
+		return -1;
+	    }
+	}
+	// Compute huffman table for read values
+	gpujpeg_table_huffman_decoder_compute(table, d_table);
     }
-    
-    // Check length
-    if ( length > 0 ) {
-        fprintf(stderr, "[GPUJPEG] [Warning] DHT marker contains %d more bytes than needed!\n", length);
-        *image += length;
-    }
-    
-    // Compute huffman table for read values
-    gpujpeg_table_huffman_decoder_compute(table, d_table);
-    
     return 0;
 }
 
