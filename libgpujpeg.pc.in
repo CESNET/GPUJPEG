@@ -8,4 +8,4 @@ Description: The first test implementation of the JPEG image compression standar
 Requires: 
 Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -lgpujpeg  -lcudart
-Cflags:
+Cflags: -I${includedir}
