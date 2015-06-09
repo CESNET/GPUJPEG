@@ -945,9 +945,9 @@ gpujpeg_opengl_init()
 int
 gpujpeg_opengl_texture_create(int width, int height, uint8_t* data)
 {
+#ifdef GPUJPEG_USE_OPENGL
     GLuint texture_id = 0;
 
-#ifdef GPUJPEG_USE_OPENGL
     glGenTextures(1, &texture_id);
     glBindTexture(GL_TEXTURE_2D, texture_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -958,11 +958,11 @@ gpujpeg_opengl_texture_create(int width, int height, uint8_t* data)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    return texture_id;
 #else
     GPUJPEG_EXIT_MISSING_OPENGL();
 #endif
-
-    return texture_id;
 }
 
 /** Documented at declaration */
