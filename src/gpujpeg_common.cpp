@@ -533,7 +533,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
         printf("    Huffman Temp buffer Size: %0.1f MB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
         printf("    Structures Size:          %0.1f kB\n", (double)structures_size / (1024.0));
         printf("    Total GPU Memory Size:    %0.1f MB\n", (double)total_size / (1024.0 * 1024.0));
-        printf("");
+        printf("\n");
     }
 
     // Allocate data buffers for all color components
