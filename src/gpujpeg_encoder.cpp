@@ -46,6 +46,15 @@ gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* im
 
 /** Documented at declaration */
 void
+gpujpeg_encoder_input_set_gpu_image(struct gpujpeg_encoder_input* input, uint8_t* image)
+{
+    input->type = GPUJPEG_ENCODER_INPUT_GPU_IMAGE;
+    input->image = image;
+    input->texture = NULL;
+}
+
+/** Documented at declaration */
+void
 gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gpujpeg_opengl_texture* texture)
 {
     input->type = GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE;
@@ -161,6 +170,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
 
         GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
         coder->duration_memory_to = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
+    } else if (input->type == GPUJPEG_ENCODER_INPUT_GPU_IMAGE) {
+        coder->d_data_raw = input->image;
     } else
     if ( input->type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE ) {
         assert(input->texture != NULL);

@@ -57,6 +57,8 @@ enum gpujpeg_encoder_input_type {
     GPUJPEG_ENCODER_INPUT_IMAGE,
     // Encoder will use OpenGL Texture PBO Resource as input buffer
     GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE,
+    // Encoder will use custom GPU input buffer
+    GPUJPEG_ENCODER_INPUT_GPU_IMAGE,
 };
 
 /**
@@ -83,6 +85,16 @@ struct gpujpeg_encoder_input
  */
 GPUJPEG_API void
 gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* image);
+
+/**
+ * Set encoder input to GPU image data
+ *
+ * @param encoder_input  Encoder input structure
+ * @param image GPU image data
+ * @return void
+ */
+GPUJPEG_API void
+        gpujpeg_encoder_input_set_gpu_image(struct gpujpeg_encoder_input* input, uint8_t* image);
 
 /**
  * Set encoder input to OpenGL texture
