@@ -171,6 +171,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
         GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
         coder->duration_memory_to = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
     } else if (input->type == GPUJPEG_ENCODER_INPUT_GPU_IMAGE) {
+        if (cudaSuccess != cudaFree(coder->d_data_raw)) return -1;
         coder->d_data_raw = input->image;
     } else
     if ( input->type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE ) {
