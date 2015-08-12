@@ -537,10 +537,8 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder)
     }
 
     // Allocate data buffers for all color components
-    if ( cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t)) )
-        return -1;
-    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t)) )
-        result = 0;
+    coder->data_raw = NULL;
+    coder->d_data_raw_allocated = NULL;
     if ( cudaSuccess != cudaMalloc((void**)&coder->d_data, coder->data_size * sizeof(uint8_t)) )
         result = 0;
     if ( cudaSuccess != cudaMallocHost((void**)&coder->data_quantized, coder->data_size * sizeof(int16_t)) )
@@ -670,8 +668,8 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
 {
     if ( coder->data_raw != NULL )
         cudaFreeHost(coder->data_raw);
-    if ( coder->d_data_raw != NULL )
-        cudaFree(coder->d_data_raw);
+    if ( coder->d_data_raw_allocated != NULL )
+        cudaFree(coder->d_data_raw_allocated);
     if ( coder->d_data != NULL )
         cudaFree(coder->d_data);
     if ( coder->data_quantized != NULL )

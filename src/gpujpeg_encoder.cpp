@@ -164,6 +164,16 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
     if ( input->type == GPUJPEG_ENCODER_INPUT_IMAGE ) {
         GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
+        // Create buffers if not already created
+        if (coder->data_raw == NULL)
+            if ( cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t)) )
+                return -1;
+        if (coder->d_data_raw_allocated == NULL)
+            if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t)) )
+                return -1;
+
+        coder->d_data_raw = d_data_raw_allocated;
+
         // Copy image to device memory
         if ( cudaSuccess != cudaMemcpy(coder->d_data_raw, input->image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) )
             return -1;
@@ -171,7 +181,6 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
         GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
         coder->duration_memory_to = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
     } else if (input->type == GPUJPEG_ENCODER_INPUT_GPU_IMAGE) {
-        if (cudaSuccess != cudaFree(coder->d_data_raw)) return -1;
         coder->d_data_raw = input->image;
     } else
     if ( input->type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE ) {

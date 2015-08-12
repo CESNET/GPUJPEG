@@ -389,6 +389,8 @@ struct gpujpeg_coder
     uint8_t* data_raw;
     // Raw image data in device memory (loaded from file for encoder, saved to file for decoder)
     uint8_t* d_data_raw;
+    // Memory allocated by gpujpeg
+    uint8_t* d_data_raw_allocated;
     
     // Preprocessor data in device memory (output/input for encoder/decoder)
     uint8_t* d_data;
