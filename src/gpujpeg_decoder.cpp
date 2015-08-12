@@ -266,6 +266,16 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     coder->duration_dct_quantization = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
     GPUJPEG_CUSTOM_TIMER_START(decoder->def);
     
+    // Create buffers if not already created
+    if (coder->data_raw == NULL)
+    if ( cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t)) )
+        return -1;
+    if (coder->d_data_raw_allocated == NULL)
+    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t)) )
+        return -1;
+
+    coder->d_data_raw = d_data_raw_allocated;
+
     // Preprocessing
     if ( gpujpeg_preprocessor_decode(&decoder->coder) != 0 )
         return -1;

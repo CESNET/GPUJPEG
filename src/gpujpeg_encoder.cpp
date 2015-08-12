@@ -188,6 +188,16 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
 
         GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
+        // Create buffers if not already created
+        if (coder->data_raw == NULL)
+        if ( cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t)) )
+            return -1;
+        if (coder->d_data_raw_allocated == NULL)
+        if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t)) )
+            return -1;
+
+        coder->d_data_raw = d_data_raw_allocated;
+
         // Map texture to CUDA
         int data_size = 0;
         uint8_t* d_data = gpujpeg_opengl_texture_map(input->texture, &data_size);
