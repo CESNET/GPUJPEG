@@ -172,7 +172,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
             if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t)) )
                 return -1;
 
-        coder->d_data_raw = d_data_raw_allocated;
+        coder->d_data_raw = coder->d_data_raw_allocated;
 
         // Copy image to device memory
         if ( cudaSuccess != cudaMemcpy(coder->d_data_raw, input->image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) )
@@ -196,7 +196,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
         if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t)) )
             return -1;
 
-        coder->d_data_raw = d_data_raw_allocated;
+        coder->d_data_raw = coder->d_data_raw_allocated;
 
         // Map texture to CUDA
         int data_size = 0;
@@ -366,7 +366,9 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
     // Set compressed image
     *image_compressed = encoder->writer->buffer;
     *image_compressed_size = encoder->writer->buffer_current - encoder->writer->buffer;
-    
+
+    coder->d_data_raw = NULL;
+
     return 0;
 }
 

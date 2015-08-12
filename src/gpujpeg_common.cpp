@@ -856,14 +856,14 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     assert(gpujpeg_preprocessor_encoder_init(&coder) == 0);
 
     // Create buffers if not already created
-    if (coder->data_raw == NULL)
-    if ( cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t)) )
-        return -1;
-    if (coder->d_data_raw_allocated == NULL)
-    if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t)) )
-        return -1;
+    if (coder.data_raw == NULL)
+    if ( cudaSuccess != cudaMallocHost((void**)&coder.data_raw, coder.data_raw_size * sizeof(uint8_t)) )
+        return;
+    if (coder.d_data_raw_allocated == NULL)
+    if ( cudaSuccess != cudaMalloc((void**)&coder.d_data_raw_allocated, coder.data_raw_size * sizeof(uint8_t)) )
+        return;
 
-    coder.d_data_raw = d_data_raw_allocated;
+    coder.d_data_raw = coder.d_data_raw_allocated;
 
     // Perform preprocessor
     assert(cudaMemcpy(coder.d_data_raw, image, coder.data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
