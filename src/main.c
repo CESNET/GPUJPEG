@@ -35,7 +35,7 @@
 #include <getopt.h>
 
 void
-print_help() 
+print_help()
 {
     printf(
         "gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
@@ -103,11 +103,11 @@ main(int argc, char *argv[])
     // Default coder parameters
     struct gpujpeg_parameters param;
     gpujpeg_set_default_parameters(&param);
-    
+
     // Default image parameters
     struct gpujpeg_image_parameters param_image;
     gpujpeg_image_set_default_parameters(&param_image);
-    
+
     // Original image parameters in conversion
     struct gpujpeg_image_parameters param_image_original;
     gpujpeg_image_set_default_parameters(&param_image_original);
@@ -120,11 +120,11 @@ main(int argc, char *argv[])
     int component_range = 0;
     int iterate = 1;
     int use_opengl = 0;
-    
+
     // Flags
     int restart_interval_default = 1;
     int chroma_subsampled = 0;
-    
+
     // Parse command line
     char ch = '\0';
     int optindex = 0;
@@ -242,7 +242,7 @@ main(int argc, char *argv[])
     }
     argc -= optind;
     argv += optind;
-    
+
     // Show info about image samples range
     if ( component_range == 1 ) {
         // For each image
@@ -258,7 +258,7 @@ main(int argc, char *argv[])
         print_help();
         return -1;
     }
-    
+
     // Init device
     int flags = GPUJPEG_VERBOSE;
     if ( use_opengl ) {
@@ -295,12 +295,12 @@ main(int argc, char *argv[])
             return -1;
         }
     }
-    
+
     // Detect color spalce
     if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV && param_image.color_space == GPUJPEG_RGB ) {
         param_image.color_space = GPUJPEG_YUV;
     }
-    
+
     // Detect component count
     if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_GRAY && param_image.comp_count != 1 ) {
         param_image.comp_count = 1;
@@ -313,9 +313,9 @@ main(int argc, char *argv[])
             param.restart_interval = 2;
         }
         else {
-        	// Adjust according to Mpix count
-        	double coefficient = ((double)param_image.width * param_image.height * param_image.comp_count) / (1000000.0 * 3.0);
-        	if ( coefficient < 1.0 ) {
+            // Adjust according to Mpix count
+            double coefficient = ((double)param_image.width * param_image.height * param_image.comp_count) / (1000000.0 * 3.0);
+            if ( coefficient < 1.0 ) {
                 param.restart_interval = 4;
             } else if ( coefficient < 3.0 ) {
                 param.restart_interval = 8;
@@ -343,7 +343,7 @@ main(int argc, char *argv[])
         }
 
         // Create encoder
-        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&param, &param_image);
+        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create();
         if ( encoder == NULL ) {
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
@@ -365,12 +365,12 @@ main(int argc, char *argv[])
             if ( output_format != GPUJPEG_IMAGE_FILE_JPEG ) {
                 fprintf(stderr, "Encoder output file [%s] should be JPEG image (*.jpg)!\n", output);
                 return -1;
-            }                
-            
+            }
+
             // Encode image
             GPUJPEG_TIMER_INIT();
             printf("\nEncoding Image [%s]\n", input);
-        
+
             GPUJPEG_TIMER_START();
 
             // Load image
@@ -380,7 +380,7 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
                 return -1;
             }
-            
+
             GPUJPEG_TIMER_STOP();
             printf("Load Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
 
@@ -403,7 +403,7 @@ main(int argc, char *argv[])
 
                 GPUJPEG_TIMER_START();
 
-                if ( gpujpeg_encoder_encode(encoder, &encoder_input, &image_compressed, &image_compressed_size) != 0 ) {
+                if ( gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size) != 0 ) {
                     fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
                     return -1;
                 }
@@ -431,21 +431,21 @@ main(int argc, char *argv[])
             }
 
             GPUJPEG_TIMER_START();
-            
+
             // Save image
             if ( gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
                 return -1;
             }
-            
+
             GPUJPEG_TIMER_STOP();
             printf("Save Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
             printf("Compressed Size:     %10.d bytes [%s]\n", image_compressed_size, output);
-            
+
             // Destroy image
             gpujpeg_image_destroy(image);
         }
-        
+
         // Destroy OpenGL texture
         if ( use_opengl ) {
             int texture_id = texture->texture_id;
@@ -456,7 +456,7 @@ main(int argc, char *argv[])
         // Destroy encoder
         gpujpeg_encoder_destroy(encoder);
     }
-    
+
     if ( decode == 1 ) {
         // Create OpenGL texture
         struct gpujpeg_opengl_texture* texture = NULL;
@@ -475,7 +475,7 @@ main(int argc, char *argv[])
             fprintf(stderr, "Failed to create decoder!\n");
             return -1;
         }
-        
+
         // Init decoder if image size is filled
         if ( param_image.width != 0 && param_image.height != 0 ) {
             if ( gpujpeg_decoder_init(decoder, &param, &param_image) != 0 ) {
@@ -519,13 +519,13 @@ main(int argc, char *argv[])
                     return -1;
                 }
             }
-            
+
             // Decode image
             GPUJPEG_TIMER_INIT();
             GPUJPEG_TIMER_START();
-            
+
             printf("\nDecoding Image [%s]\n", input);
-        
+
             // Load image
             int image_size = 0;
             uint8_t* image = NULL;
@@ -533,7 +533,7 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
                 return -1;
             }
-            
+
             GPUJPEG_TIMER_STOP();
             printf("Load Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
 
@@ -590,7 +590,7 @@ main(int argc, char *argv[])
                 data = decoder_output.data;
                 data_size = decoder_output.data_size;
             }
-            
+
             GPUJPEG_TIMER_START();
 
             // Save image
@@ -598,15 +598,15 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
                 return -1;
             }
-            
+
             GPUJPEG_TIMER_STOP();
             printf("Save Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
             printf("Decompressed Size:   %10.d bytes [%s]\n", decoder_output.data_size, output);
-            
+
             // Destroy image
             gpujpeg_image_destroy(image);
         }
-        
+
         // Destroy OpenGL texture
         if ( use_opengl ) {
             int texture_id = texture->texture_id;

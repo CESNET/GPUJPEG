@@ -40,12 +40,14 @@ extern "C" {
 struct gpujpeg_encoder;
 
 /** JPEG writer structure */
-struct gpujpeg_writer 
+struct gpujpeg_writer
 {
     // Output buffer
     uint8_t* buffer;
     // Output buffer current position
     uint8_t* buffer_current;
+    // Allocate size of output buffer.
+    size_t buffer_allocated_size;
 
     // Segment info buffers (every buffer is placed inside another header)
     uint8_t* segment_info[GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT];
@@ -59,15 +61,25 @@ struct gpujpeg_writer
 
 /**
  * Create JPEG writer
- * 
+ *
  * @return writer structure if succeeds, otherwise NULL
  */
 struct gpujpeg_writer*
 gpujpeg_writer_create(struct gpujpeg_encoder* encoder);
 
 /**
+ * Init JPEG writer.
+ *
+ * @param writer
+ * @param param_image
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_writer_init(struct gpujpeg_writer* writer, struct gpujpeg_image_parameters* param_image);
+
+/**
  * Destroy JPEG writer
- * 
+ *
  * @param writer  Writer structure
  * @return 0 if succeeds, otherwise nonzero
  */
@@ -76,7 +88,7 @@ gpujpeg_writer_destroy(struct gpujpeg_writer* writer);
 
 /**
  * Write one byte to file
- * 
+ *
  * @param writer  Writer structure
  * @param value  Byte value to write
  * @return void
@@ -84,10 +96,10 @@ gpujpeg_writer_destroy(struct gpujpeg_writer* writer);
 #define gpujpeg_writer_emit_byte(writer, value) { \
     *writer->buffer_current = (uint8_t)(value); \
     writer->buffer_current++; }
-    
+
 /**
  * Write two bytes to file
- * 
+ *
  * @param writer  Writer structure
  * @param value  Two-byte value to write
  * @return void
@@ -97,10 +109,10 @@ gpujpeg_writer_destroy(struct gpujpeg_writer* writer);
     writer->buffer_current++; \
     *writer->buffer_current = (uint8_t)((value) & 0xFF); \
     writer->buffer_current++; }
-    
+
 /**
  * Write marker to file
- * 
+ *
  * @param writer  Writer structure
  * @oaran marker  Marker to write (JPEG_MARKER_...)
  * @return void
@@ -110,10 +122,10 @@ gpujpeg_writer_destroy(struct gpujpeg_writer* writer);
     writer->buffer_current++; \
     *writer->buffer_current = (uint8_t)(marker); \
     writer->buffer_current++; }
-    
+
 /**
  * Write JPEG header (write soi, app0, Y_dqt, CbCr_dqt, sof, 4 * dht blocks)
- * 
+ *
  * @param encoder  Encoder structure
  * @return void
  */
@@ -131,9 +143,9 @@ gpujpeg_writer_write_segment_info(struct gpujpeg_encoder* encoder);
 
 /**
  * Write scan header for one component
- * 
+ *
  * @param encoder  Encoder structure
- * @param scan_index  Scan index  
+ * @param scan_index  Scan index
  * @return void
  */
 void

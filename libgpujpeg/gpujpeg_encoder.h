@@ -108,29 +108,29 @@ gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gp
 
 /**
  * Create JPEG encoder
- * 
- * @param param  Parameters for coder
- * @param param_image  Parameters for image data
+ *
  * @return encoder structure if succeeds, otherwise NULL
  */
 GPUJPEG_API struct gpujpeg_encoder*
-gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image);
+gpujpeg_encoder_create();
 
 /**
  * Compress image by encoder
- * 
+ *
  * @param encoder  Encoder structure
+ * @param param  Parameters for coder
+ * @param param_image  Parameters for image data
  * @param image  Source image data
  * @param image_compressed  Pointer to variable where compressed image data buffer will be placed
  * @param image_compressed_size  Pointer to variable where compressed image size will be placed
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, int* image_compressed_size);
+gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, int* image_compressed_size);
 
 /**
  * Destory JPEG encoder
- * 
+ *
  * @param encoder  Encoder structure
  * @return 0 if succeeds, otherwise nonzero
  */
