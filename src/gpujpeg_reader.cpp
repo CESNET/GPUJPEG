@@ -806,6 +806,9 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
 
         case GPUJPEG_MARKER_COM:
+            gpujpeg_reader_skip_marker_content(&image);
+            break;
+
         case GPUJPEG_MARKER_DAC:
         case GPUJPEG_MARKER_DNL:
             fprintf(stderr, "[GPUJPEG] [Warning] JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
