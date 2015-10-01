@@ -39,20 +39,25 @@
 extern "C" {
 #endif
 
+struct gpujpeg_huffman_gpu_encoder;
+
 struct gpujpeg_encoder
-{   
+{
     // JPEG coder structure
     struct gpujpeg_coder coder;
-    
+
     // JPEG writer structure
     struct gpujpeg_writer* writer;
-    
+
     // Quantization tables
     struct gpujpeg_table_quantization table_quantization[GPUJPEG_COMPONENT_TYPE_COUNT];
-    
+
     // Huffman coder tables
     struct gpujpeg_table_huffman_encoder table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
-    
+
+    // Huffman GPU encoder
+    struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder;
+
     // Timers
     GPUJPEG_CUSTOM_TIMER_DECLARE(def)
     GPUJPEG_CUSTOM_TIMER_DECLARE(in_gpu)

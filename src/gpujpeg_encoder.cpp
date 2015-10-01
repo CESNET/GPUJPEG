@@ -105,8 +105,10 @@ gpujpeg_encoder_create()
     gpujpeg_cuda_check_error("Encoder table init", return NULL);
 
     // Init huffman encoder
-    if ( gpujpeg_huffman_gpu_encoder_init(encoder) != 0 )
+    encoder->huffman_gpu_encoder = gpujpeg_huffman_gpu_encoder_create(encoder);
+    if (encoder->huffman_gpu_encoder == NULL) {
         result = 0;
+    }
 
     if ( result == 0 ) {
         gpujpeg_encoder_destroy(encoder);
@@ -294,7 +296,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
     else {
         // Perform huffman coding
         unsigned int output_size;
-        if ( gpujpeg_huffman_gpu_encoder_encode(encoder, &output_size) != 0 ) {
+        if ( gpujpeg_huffman_gpu_encoder_encode(encoder, encoder->huffman_gpu_encoder, &output_size) != 0 ) {
             fprintf(stderr, "[GPUJPEG] [Error] Huffman encoder on GPU failed!\n");
             return -1;
         }
@@ -392,6 +394,10 @@ gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)
 
     GPUJPEG_CUSTOM_TIMER_DESTROY(encoder->def);
     GPUJPEG_CUSTOM_TIMER_DESTROY(encoder->in_gpu);
+
+    if (encoder->huffman_gpu_encoder != NULL) {
+        gpujpeg_huffman_gpu_encoder_destroy(encoder->huffman_gpu_encoder);
+    }
 
     if ( gpujpeg_coder_deinit(&encoder->coder) != 0 )
         return -1;

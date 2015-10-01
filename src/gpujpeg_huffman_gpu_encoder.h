@@ -36,24 +36,35 @@
 extern "C" {
 #endif
 
+struct gpujpeg_huffman_gpu_encoder;
+
 /**
- * Init huffman encoder
- * 
+ * Destroy huffman GPU encoder.
+ *
  * @param table_huffman  pointer to initialized huffman tables in CPU memory
  * @return 0 if succeeds, otherwise nonzero
  */
-int
-gpujpeg_huffman_gpu_encoder_init(const struct gpujpeg_encoder * encoder);
+struct gpujpeg_huffman_gpu_encoder *
+gpujpeg_huffman_gpu_encoder_create(const struct gpujpeg_encoder * encoder);
+
+/**
+ * Destroy huffman GPU encoder.
+ *
+ * @param huffman_gpu_encoder
+ */
+void
+gpujpeg_huffman_gpu_encoder_destroy(struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder);
 
 /**
  * Perform huffman encoding
- * 
- * @param encoder  Encoder structure
- * @param output_byte_count  pointer to place in main system memory, where size of output buffer part, which contains all output data, should be saved
+ *
+ * @param encoder              Encoder structure
+ * @param encoder_gpu_encoder
+ * @param output_byte_count    pointer to place in main system memory, where size of output buffer part, which contains all output data, should be saved
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, unsigned int * output_byte_count);
+gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder, unsigned int * output_byte_count);
 
 #ifdef __cplusplus
 }
