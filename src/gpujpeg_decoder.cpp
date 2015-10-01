@@ -170,7 +170,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
 
     // Init postprocessor
     if ( gpujpeg_preprocessor_decoder_init(&decoder->coder) != 0 ) {
-        fprintf(stderr, "Failed to init postprocessor!");
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to init postprocessor!\n");
         return -1;
     }
 

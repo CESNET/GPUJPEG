@@ -145,17 +145,20 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         }
         gpujpeg_cuda_check_error("Quantization init", return -1);
     }
-    gpujpeg_coder_init_image(coder, param, param_image);
+    if (0 != gpujpeg_coder_init_image(coder, param, param_image)) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to init image encoding!\n");
+        return -1;
+    }
 
     // (Re)initialize writer
     if (gpujpeg_writer_init(encoder->writer, &encoder->coder.param_image) != 0) {
-        fprintf(stderr, "Failed to init writer!");
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to init writer!\n");
         return -1;
     }
 
     // (Re)initialize preprocessor
     if (gpujpeg_preprocessor_encoder_init(&encoder->coder) != 0) {
-        fprintf(stderr, "Failed to init preprocessor!");
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to init preprocessor!\n");
         return -1;
     }
 
