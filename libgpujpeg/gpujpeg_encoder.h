@@ -120,24 +120,26 @@ gpujpeg_encoder_create();
  * @param encoder
  * @param param
  * @param param_image
- * @param type
+ * @param image_input_type
  * @param memory_size
  * @param max_pixels
- * @return 0 if succeeds, otherwise nonzero
+ * @return size of used device memory in bytes if succeeds, otherwise 0
  */
 GPUJPEG_API int
-gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type type, size_t memory_size, int * max_pixels);
+gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, size_t memory_size, int * max_pixels);
 
 /**
- * @brief gpujpeg_encoder_allocate
+ * Pre-allocate all encoding buffers for given image pixels.
+ *
  * @param encoder
  * @param param
  * @param param_image
- * @param type
+ * @param image_input_type
+ * @param pixels
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_encoder_allocate(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type type);
+gpujpeg_encoder_allocate(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int pixels);
 
 /**
  * Compress image by encoder

@@ -124,12 +124,16 @@ gpujpeg_encoder_create()
 }
 
 /** Documented at declaration */
-int gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type type, size_t memory_size, int * max_pixels)
+int gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, size_t memory_size, int * max_pixels)
 {
     struct gpujpeg_coder coder;
     if (0 != gpujpeg_coder_init(&coder)) {
         return 0;
     }
+
+    size_t encoder_memory_size = 0;
+    encoder_memory_size += 2 * 64 * sizeof(uint16_t); // Quantization tables
+    encoder_memory_size += 2 * 64 * sizeof(float);    // Quantization tables
 
     int current_max_pixels = 0;
     size_t current_max_pixels_memory_size = 0;
@@ -140,7 +144,12 @@ int gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg
         param_image->width = sqrt(pixels);
         param_image->height = (pixels + param_image->width - 1) / param_image->width;
         //printf("\nIteration #%d (pixels: %d, size: %dx%d)\n", iteration++, pixels, param_image->width, param_image->height);
-        size_t allocated_memory_size = gpujpeg_coder_init_image(&coder, param, param_image);
+        size_t allocated_memory_size = 0;
+        allocated_memory_size += encoder_memory_size;
+        allocated_memory_size += gpujpeg_coder_init_image(&coder, param, param_image);
+        if (image_input_type == GPUJPEG_ENCODER_INPUT_IMAGE || image_input_type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE) {
+            allocated_memory_size += coder.data_raw_size;
+        }
         if (allocated_memory_size > 0 && allocated_memory_size <= memory_size) {
             current_max_pixels = pixels;
             current_max_pixels_memory_size = allocated_memory_size;
@@ -174,8 +183,46 @@ int gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg
 }
 
 /** Documented at declaration */
-int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type type)
+int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int pixels)
 {
+    // Get coder
+    struct gpujpeg_coder* coder = &encoder->coder;
+
+    // Quality should be initialized when encoding
+    struct gpujpeg_parameters tmp_param;
+    tmp_param = *param;
+    tmp_param.quality = -1;
+
+    // Set image size from pixels
+    struct gpujpeg_image_parameters tmp_param_image;
+    tmp_param_image = *param_image;
+    tmp_param_image.width = sqrt(pixels);
+    tmp_param_image.height = (pixels + tmp_param_image.width - 1) / tmp_param_image.width;
+
+    // Allocate internal buffers
+    if (0 == gpujpeg_coder_init_image(coder, &tmp_param, &tmp_param_image)) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to pre-allocate encoding!\n");
+        return -1;
+    }
+
+    // Allocate input raw buffer
+    if (image_input_type == GPUJPEG_ENCODER_INPUT_IMAGE || image_input_type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE) {
+        // Allocate raw data internal buffer
+        if (coder->data_raw_size > coder->data_raw_allocated_size) {
+            coder->data_raw_allocated_size = 0;
+
+            // (Re)allocate raw data in device memory
+            if (coder->d_data_raw_allocated != NULL) {
+                cudaFree(coder->d_data_raw_allocated);
+                coder->d_data_raw_allocated = NULL;
+            }
+            cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size);
+            gpujpeg_cuda_check_error("Encoder raw data allocation", return -1);
+
+            coder->data_raw_allocated_size = coder->data_raw_size;
+        }
+    }
+
     return 0;
 }
 
@@ -236,15 +283,17 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
 
         // Allocate raw data internal buffer
         if (coder->data_raw_size > coder->data_raw_allocated_size) {
-            coder->data_raw_allocated_size = coder->data_raw_size;
+            coder->data_raw_allocated_size = 0;
 
             // (Re)allocate raw data in device memory
             if (coder->d_data_raw_allocated != NULL) {
                 cudaFree(coder->d_data_raw_allocated);
+                coder->d_data_raw_allocated = NULL;
             }
-            cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_allocated_size * sizeof(uint8_t));
-
+            cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size);
             gpujpeg_cuda_check_error("Encoder raw data allocation", return -1);
+
+            coder->data_raw_allocated_size = coder->data_raw_size;
         }
         // User internal buffer for raw data
         coder->d_data_raw = coder->d_data_raw_allocated;
@@ -265,10 +314,19 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
         // Create buffers if not already created
-        if (coder->d_data_raw_allocated == NULL)
-        if ( cudaSuccess != cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t)) )
-            return -1;
+        if (coder->data_raw_size > coder->data_raw_allocated_size) {
+            coder->data_raw_allocated_size = 0;
 
+            // (Re)allocate raw data in device memory
+            if (coder->d_data_raw_allocated != NULL) {
+                cudaFree(coder->d_data_raw_allocated);
+                coder->d_data_raw_allocated = NULL;
+            }
+            cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size);
+            gpujpeg_cuda_check_error("Encoder raw data allocation", return -1);
+
+            coder->data_raw_allocated_size = coder->data_raw_size;
+        }
         coder->d_data_raw = coder->d_data_raw_allocated;
 
         // Map texture to CUDA

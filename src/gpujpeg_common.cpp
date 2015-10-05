@@ -333,6 +333,7 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
     coder->data_quantized = NULL;
     coder->d_data_quantized = NULL;
     coder->data_allocated_size = 0;
+    coder->data_raw_allocated_size = 0;
     coder->data_compressed = NULL;
     coder->d_data_compressed = NULL;
     coder->d_temp_huffman = NULL;
