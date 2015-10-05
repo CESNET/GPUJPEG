@@ -94,7 +94,7 @@ gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* im
  * @return void
  */
 GPUJPEG_API void
-        gpujpeg_encoder_input_set_gpu_image(struct gpujpeg_encoder_input* input, uint8_t* image);
+gpujpeg_encoder_input_set_gpu_image(struct gpujpeg_encoder_input* input, uint8_t* image);
 
 /**
  * Set encoder input to OpenGL texture
@@ -113,6 +113,31 @@ gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gp
  */
 GPUJPEG_API struct gpujpeg_encoder*
 gpujpeg_encoder_create();
+
+/**
+ * Compute maximum number of image pixels (width x height) which can be encoded by given memory size.
+ *
+ * @param encoder
+ * @param param
+ * @param param_image
+ * @param type
+ * @param memory_size
+ * @param max_pixels
+ * @return 0 if succeeds, otherwise nonzero
+ */
+GPUJPEG_API int
+gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type type, size_t memory_size, int * max_pixels);
+
+/**
+ * @brief gpujpeg_encoder_allocate
+ * @param encoder
+ * @param param
+ * @param param_image
+ * @param type
+ * @return 0 if succeeds, otherwise nonzero
+ */
+GPUJPEG_API int
+gpujpeg_encoder_allocate(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type type);
 
 /**
  * Compress image by encoder

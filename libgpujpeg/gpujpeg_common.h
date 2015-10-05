@@ -448,10 +448,10 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder);
  * @param codec       Codec structure
  * @param param
  * @param param_image
- * @return 0 if succeeds, otherwise nonzero
+ * @return size of allocated device memory in bytes if succeeds, otherwise 0
  */
-int
-gpujpeg_coder_init_image(struct gpujpeg_coder* coder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image);
+size_t
+gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image);
 
 /**
  * Deinitialize JPEG coder (free buffers)

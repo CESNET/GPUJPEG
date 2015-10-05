@@ -33,6 +33,7 @@
 #include "gpujpeg_dct_gpu.h"
 #include "gpujpeg_huffman_cpu_encoder.h"
 #include "gpujpeg_huffman_gpu_encoder.h"
+#include <math.h>
 #include <libgpujpeg/gpujpeg_util.h>
 
 /** Documented at declaration */
@@ -123,6 +124,62 @@ gpujpeg_encoder_create()
 }
 
 /** Documented at declaration */
+int gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type type, size_t memory_size, int * max_pixels)
+{
+    struct gpujpeg_coder coder;
+    if (0 != gpujpeg_coder_init(&coder)) {
+        return 0;
+    }
+
+    int current_max_pixels = 0;
+    size_t current_max_pixels_memory_size = 0;
+    int result = 0;
+    int pixels = 10000;
+    int iteration = 0;
+    while (true) {
+        param_image->width = sqrt(pixels);
+        param_image->height = (pixels + param_image->width - 1) / param_image->width;
+        //printf("\nIteration #%d (pixels: %d, size: %dx%d)\n", iteration++, pixels, param_image->width, param_image->height);
+        size_t allocated_memory_size = gpujpeg_coder_init_image(&coder, param, param_image);
+        if (allocated_memory_size > 0 && allocated_memory_size <= memory_size) {
+            current_max_pixels = pixels;
+            current_max_pixels_memory_size = allocated_memory_size;
+
+            // TODO: increase number of pixels
+            double used_memory_size = (double) current_max_pixels_memory_size / (double) memory_size;
+            //printf("  Max Pixels: %d (used %d/%d bytes, %0.2f%%)\n", current_max_pixels, current_max_pixels_memory_size, memory_size, used_memory_size * 100.0);
+
+            // Check next
+            int next_pixels = pixels * (0.99 / used_memory_size);
+            if (next_pixels <= pixels) {
+                break;
+            }
+            pixels = next_pixels;
+        }
+        else  {
+            if (current_max_pixels == 0){
+                result = -1;
+            }
+            break;
+        }
+    }
+
+    if (0 != gpujpeg_coder_deinit(&coder)) {
+        return 0;
+    }
+    if (max_pixels != NULL) {
+        *max_pixels = current_max_pixels;
+    }
+    return current_max_pixels_memory_size;
+}
+
+/** Documented at declaration */
+int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type type)
+{
+    return 0;
+}
+
+/** Documented at declaration */
 int
 gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, int* image_compressed_size)
 {
@@ -145,7 +202,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         }
         gpujpeg_cuda_check_error("Quantization init", return -1);
     }
-    if (0 != gpujpeg_coder_init_image(coder, param, param_image)) {
+    if (0 == gpujpeg_coder_init_image(coder, param, param_image)) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to init image encoding!\n");
         return -1;
     }
