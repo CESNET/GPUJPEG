@@ -401,10 +401,12 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters
         component->type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
 
         // Set proper color component sizes in pixels based on sampling factors
+        int width = ((coder->param_image.width + coder->sampling_factor.horizontal - 1) / coder->sampling_factor.horizontal) * coder->sampling_factor.horizontal;
+        int height = ((coder->param_image.height + coder->sampling_factor.vertical - 1) / coder->sampling_factor.vertical) * coder->sampling_factor.vertical;
         int samp_factor_h = component->sampling_factor.horizontal;
         int samp_factor_v = component->sampling_factor.vertical;
-        component->width = (coder->param_image.width * samp_factor_h) / coder->sampling_factor.horizontal;
-        component->height = (coder->param_image.height * samp_factor_v) / coder->sampling_factor.vertical;
+        component->width = (width * samp_factor_h) / coder->sampling_factor.horizontal;
+        component->height = (height * samp_factor_v) / coder->sampling_factor.vertical;
 
         // Compute component MCU size
         component->mcu_size_x = GPUJPEG_BLOCK_SIZE;
