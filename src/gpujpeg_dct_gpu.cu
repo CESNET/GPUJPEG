@@ -260,7 +260,7 @@ gpujpeg_idct_gpu_kernel_inplace(uint32_t* V8)
 /**
  * 1D 8point DCT, with optional level shift (must be premultiplied).
  * Based on based on Arai, Agui, and Nakajima's DCT algorithm. (Trans. IEICE E-71(11):1095)
- * Implementation inspired by Independent JPEG Group JPEG implementation, file jfdctflt.c, 
+ * Implementation inspired by Independent JPEG Group JPEG implementation, file jfdctflt.c,
  * but optimized for CUDA (cheap floating point MAD instructions).
  */
 template <typename T>
@@ -284,7 +284,7 @@ gpujpeg_dct_gpu(const T in0, const T in1, const T in2, const T in3, const T in4,
     const float even3 = diff0 - diff3;
 
     const float even_diff = even2 + even3;
-    
+
     const float odd0 = diff4 + diff5;
     const float odd1 = diff5 + diff6;
     const float odd2 = diff6 + diff7;
@@ -330,48 +330,48 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     // each warp processes 4 8x8 blocks (horizontally neighboring)
     const int block_idx_x = threadIdx.x >> 3;
     const int block_idx_y = threadIdx.y;
-    
+
     // offset of threadblocks's blocks in the image (along both axes)
     const int block_offset_x = blockIdx.x * 4;
     const int block_offset_y = blockIdx.y * WARP_COUNT;
-    
+
     // stop if thread's block is out of image
     const bool processing = block_offset_x + block_idx_x < block_count_x
                          && block_offset_y + block_idx_y < block_count_y;
     if(!processing) {
         return;
     }
-    
+
     // index of row/column processed by this thread within its 8x8 block
     const int dct_idx = threadIdx.x & 7;
-    
+
     // data type of transformed coefficients
     typedef float dct_t;
-    
+
     // dimensions of shared buffer (compile time constants)
     enum {
         // 4 8x8 blocks, padded to odd number of 4byte banks
         SHARED_STRIDE = ((32 * sizeof(dct_t)) | 4) / sizeof(dct_t),
-        
+
         // number of shared buffer items needed for 1 warp
         SHARED_SIZE_WARP = SHARED_STRIDE * 8,
-        
+
         // total number of items in shared buffer
         SHARED_SIZE_TOTAL = SHARED_SIZE_WARP * WARP_COUNT
     };
-    
+
     // buffer for transpositions of all blocks
     __shared__ dct_t s_transposition_all[SHARED_SIZE_TOTAL];
-    
+
     // pointer to begin of transposition buffer for thread's block
     dct_t * const s_transposition = s_transposition_all + block_idx_y * SHARED_SIZE_WARP + block_idx_x * 8;
-    
+
     // input coefficients pointer (each thread loads 1 column of 8 coefficients from its 8x8 block)
     const int in_x = (block_offset_x + block_idx_x) * 8 + dct_idx;
     const int in_y = (block_offset_y + block_idx_y) * 8;
     const int in_offset = in_x + in_y * source_stride;
     const uint8_t * in = source + in_offset;
-    
+
     // load all 8 coefficients of thread's column, but do NOT apply level shift now - will be applied as part of DCT
     dct_t src0 = *in;
     in += source_stride;
@@ -388,10 +388,10 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     dct_t src6 = *in;
     in += source_stride;
     dct_t src7 = *in;
-    
+
     // destination pointer into shared transpose buffer (each thread saves one column)
     dct_t * const s_dest = s_transposition + dct_idx;
-    
+
     // transform the column (vertically) and save it into the transpose buffer
     gpujpeg_dct_gpu(src0, src1, src2, src3, src4, src5, src6, src7,
                     s_dest[SHARED_STRIDE * 0],
@@ -411,7 +411,7 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     dct_t dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7;
     gpujpeg_dct_gpu(s_src[0], s_src[1], s_src[2], s_src[3], s_src[4], s_src[5], s_src[6], s_src[7],
                     dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7);
-    
+
     // apply quantization to the row of coefficients (quantization table is actually transposed in global memory for coalesced memory acceses)
     #if __CUDA_ARCH__ < 200
     const float * const quantization_row = gpujpeg_dct_gpu_quantization_table_const + dct_idx; // Quantization table in constant memory for CCs < 2.0
@@ -426,12 +426,12 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
     const int out5 = rintf(dct5 * quantization_row[5 * 8]);
     const int out6 = rintf(dct6 * quantization_row[6 * 8]);
     const int out7 = rintf(dct7 * quantization_row[7 * 8]);
-    
+
     // using single write, save output row packed into 16 bytes
     const int out_x = (block_offset_x + block_idx_x) * 64; // 64 coefficients per one transformed and quantized block
     const int out_y = (block_offset_y + block_idx_y) * output_stride;
     ((uint4*)(output + out_x + out_y))[dct_idx] = make_uint4(
-        (out0 & 0xFFFF) + (out1 << 16), 
+        (out0 & 0xFFFF) + (out1 << 16),
         (out2 & 0xFFFF) + (out3 << 16),
         (out4 & 0xFFFF) + (out5 << 16),  // ... & 0xFFFF keeps only lower 16 bits - useful for negative numbers, which have 1s in upper bits
         (out6 & 0xFFFF) + (out7 << 16)
@@ -463,7 +463,7 @@ gpujpeg_idct_gpu_kernel(int block_count_x, int block_count_y, int16_t* source, i
 #if __CUDA_ARCH__ < 200
     quantization_table = gpujpeg_idct_gpu_quantization_table;
 #endif
-    
+
     // Shared data
     __shared__ int16_t block[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
 
@@ -479,7 +479,7 @@ gpujpeg_idct_gpu_kernel(int block_count_x, int block_count_y, int16_t* source, i
     // Determine position into shared buffer
     int16_t* block_ptr = block + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
 
-    // Determine position in source buffer and apply it    
+    // Determine position in source buffer and apply it
     int source_x = IMAD(block_x, GPUJPEG_BLOCK_SQUARED_SIZE, threadIdx.x * 2);
     int source_y = block_y;
     source += IMAD(source_y, source_stride, source_x);
@@ -539,7 +539,7 @@ gpujpeg_idct_gpu_kernel(int block_count_x, int block_count_y, int16_t* source, i
                 coefficient = 0;
             output[i * output_stride] = (uint8_t)coefficient;
         }
-        
+
 // For pre-fermi GPUs, storing to global memory by 4 bytes is faster
 #if __CUDA_ARCH__ < 200
         if ( threadIdx.x % 4 == 0 ) {
@@ -566,17 +566,17 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
         // Get quantization table
         enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
         const float* const d_quantization_table = encoder->table_quantization[type].d_table_forward;
-        
+
         // copy the quantization table into constant memory for devices of CC < 2.0
         if( encoder->coder.cuda_cc_major < 2 ) {
-            cudaMemcpyToSymbol(
+            cudaMemcpyToSymbolAsync(
                 gpujpeg_dct_gpu_quantization_table_const,
                 d_quantization_table,
                 sizeof(gpujpeg_dct_gpu_quantization_table_const),
                 0,
-                cudaMemcpyDeviceToDevice
+                cudaMemcpyDeviceToDevice,
+                *(encoder->stream)
             );
-            cudaThreadSynchronize();
             gpujpeg_cuda_check_error("Quantization table memcpy failed", return -1);
         }
 
@@ -586,9 +586,9 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
 
         int block_count_x = roi_width / GPUJPEG_BLOCK_SIZE;
         int block_count_y = roi_height / GPUJPEG_BLOCK_SIZE;
-        
+
         enum { WARP_COUNT = 4 };
-        
+
         // Perform block-wise DCT processing
         dim3 dct_grid(
             gpujpeg_div_and_round_up(block_count_x, 4),
@@ -596,7 +596,7 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
             1
         );
         dim3 dct_block(4 * 8, WARP_COUNT);
-        gpujpeg_dct_gpu_kernel<WARP_COUNT><<<dct_grid, dct_block>>>(
+        gpujpeg_dct_gpu_kernel<WARP_COUNT><<<dct_grid, dct_block, 0, *(encoder->stream)>>>(
             block_count_x,
             block_count_y,
             component->d_data,
@@ -605,8 +605,7 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
             component->data_width * GPUJPEG_BLOCK_SIZE,
             d_quantization_table
         );
-        cudaThreadSynchronize();
-        gpujpeg_cuda_check_error("Forward DCT failed", return -1);
+        gpujpeg_cuda_check_error("Quantization table memcpy failed", return -1);
     }
 
     return 0;
@@ -633,14 +632,14 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
 
         int block_count_x = roi_width / GPUJPEG_BLOCK_SIZE;
         int block_count_y = roi_height / GPUJPEG_BLOCK_SIZE;
-        
+
         // Get quantization table
         uint16_t* d_quantization_table = decoder->table_quantization[type].d_table;
-        
+
         // Copy quantization table to constant memory
         cudaMemcpyToSymbol(
             gpujpeg_idct_gpu_quantization_table,
-            d_quantization_table, 
+            d_quantization_table,
             64 * sizeof(uint16_t),
             0,
             cudaMemcpyDeviceToDevice

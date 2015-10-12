@@ -164,7 +164,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
     if ( gpujpeg_coder_init(coder) != 0 ) {
         return -1;
     }
-    if (0 == gpujpeg_coder_init_image(coder, param, param_image)) {
+    if (0 == gpujpeg_coder_init_image(coder, param, param_image, NULL)) {
         return -1;
     }
 

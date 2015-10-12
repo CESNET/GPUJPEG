@@ -31,6 +31,7 @@
 #define GPUJPEG_COMMON_H
 
 #include <stdint.h>
+#include <cuda_runtime.h>
 #include <libgpujpeg/gpujpeg_type.h>
 
 #ifdef __cplusplus
@@ -445,13 +446,14 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder);
 /**
  * Initialize JPEG coder (allocate buffers and initialize structures)
  *
- * @param codec       Codec structure
+ * @param codec        Codec structure
  * @param param
  * @param param_image
+ * @param stream       CUDA stream or NULL
  * @return size of allocated device memory in bytes if succeeds, otherwise 0
  */
 size_t
-gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image);
+gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, cudaStream_t * stream);
 
 /**
  * Deinitialize JPEG coder (free buffers)

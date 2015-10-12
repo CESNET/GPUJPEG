@@ -343,7 +343,7 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
 }
 
 size_t
-gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image)
+gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, cudaStream_t * stream)
 {
     size_t allocated_gpu_memory_size = 0;
 
@@ -773,15 +773,30 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters
     assert(block_idx == coder->block_count);
 
     // Copy components to device memory
-    cudaMemcpy(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice);
+    if (stream != NULL) {
+        cudaMemcpyAsync(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice, *stream);
+    }
+    else {
+        cudaMemcpy(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice);
+    }
     gpujpeg_cuda_check_error("Coder component copy", return 0);
 
     // Copy block lists to device memory
-    cudaMemcpy(coder->d_block_list, coder->block_list, coder->block_count * sizeof(*coder->d_block_list), cudaMemcpyHostToDevice);
+    if (stream != NULL) {
+        cudaMemcpyAsync(coder->d_block_list, coder->block_list, coder->block_count * sizeof(*coder->d_block_list), cudaMemcpyHostToDevice, *stream);
+    }
+    else {
+        cudaMemcpy(coder->d_block_list, coder->block_list, coder->block_count * sizeof(*coder->d_block_list), cudaMemcpyHostToDevice);
+    }
     gpujpeg_cuda_check_error("Coder block list copy", return 0);
 
     // Copy segments to device memory
-    cudaMemcpy(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice);
+    if (stream) {
+        cudaMemcpyAsync(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice, *stream);
+    }
+    else {
+        cudaMemcpy(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice);
+    }
     gpujpeg_cuda_check_error("Coder segment copy", return 0);
 
     return allocated_gpu_memory_size;
@@ -971,51 +986,56 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
         return;
     }
 
-    struct gpujpeg_coder coder;
-    gpujpeg_set_default_parameters(&coder.param);
-    coder.param.color_space_internal = GPUJPEG_RGB;
+    struct gpujpeg_encoder * encoder = (struct gpujpeg_encoder *) malloc(sizeof(struct gpujpeg_encoder));
+    struct gpujpeg_coder * coder = &encoder->coder;
+    gpujpeg_set_default_parameters(&coder->param);
+    coder->param.color_space_internal = GPUJPEG_RGB;
 
     // Initialize coder and preprocessor
-    coder.param_image = param_image_from;
-    assert(gpujpeg_coder_init(&coder) == 0);
-    assert(gpujpeg_preprocessor_encoder_init(&coder) == 0);
+    coder->param_image = param_image_from;
+    assert(gpujpeg_coder_init(coder) == 0);
+    assert(gpujpeg_preprocessor_encoder_init(coder) == 0);
 
     // Create buffers if not already created
-    if (coder.data_raw == NULL)
-    if ( cudaSuccess != cudaMallocHost((void**)&coder.data_raw, coder.data_raw_size * sizeof(uint8_t)) )
-        return;
-    if (coder.d_data_raw_allocated == NULL)
-    if ( cudaSuccess != cudaMalloc((void**)&coder.d_data_raw_allocated, coder.data_raw_size * sizeof(uint8_t)) )
-        return;
+    if (coder->data_raw == NULL) {
+        if (cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t))) {
+            return;
+        }
+    }
+    if (coder->d_data_raw_allocated == NULL) {
+        if (cudaSuccess != cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t))) {
+            return;
+        }
+    }
 
-    coder.d_data_raw = coder.d_data_raw_allocated;
+    coder->d_data_raw = coder->d_data_raw_allocated;
 
     // Perform preprocessor
-    assert(cudaMemcpy(coder.d_data_raw, image, coder.data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
-    assert(gpujpeg_preprocessor_encode(&coder) == 0);
+    assert(cudaMemcpy(coder->d_data_raw, image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
+    assert(gpujpeg_preprocessor_encode(encoder) == 0);
     // Save preprocessor result
     uint8_t* buffer = NULL;
-    assert(cudaMallocHost((void**)&buffer, coder.data_size * sizeof(uint8_t)) == cudaSuccess);
+    assert(cudaMallocHost((void**)&buffer, coder->data_size * sizeof(uint8_t)) == cudaSuccess);
     assert(buffer != NULL);
-    assert(cudaMemcpy(buffer, coder.d_data, coder.data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
+    assert(cudaMemcpy(buffer, coder->d_data, coder->data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
     // Deinitialize decoder
-    gpujpeg_coder_deinit(&coder);
+    gpujpeg_coder_deinit(coder);
 
     // Initialize coder and postprocessor
-    coder.param_image = param_image_to;
-    assert(gpujpeg_coder_init(&coder) == 0);
-    assert(gpujpeg_preprocessor_decoder_init(&coder) == 0);
+    coder->param_image = param_image_to;
+    assert(gpujpeg_coder_init(coder) == 0);
+    assert(gpujpeg_preprocessor_decoder_init(coder) == 0);
     // Perform postprocessor
-    assert(cudaMemcpy(coder.d_data, buffer, coder.data_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
-    assert(gpujpeg_preprocessor_decode(&coder) == 0);
+    assert(cudaMemcpy(coder->d_data, buffer, coder->data_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
+    assert(gpujpeg_preprocessor_decode(coder) == 0);
     // Save preprocessor result
-    assert(cudaMemcpy(coder.data_raw, coder.d_data_raw, coder.data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
-    if ( gpujpeg_image_save_to_file(output, coder.data_raw, coder.data_raw_size) != 0 ) {
+    assert(cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
+    if ( gpujpeg_image_save_to_file(output, coder->data_raw, coder->data_raw_size) != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to save image [%s]!\n", output);
         return;
     }
     // Deinitialize decoder
-    gpujpeg_coder_deinit(&coder);
+    gpujpeg_coder_deinit(coder);
 }
 
 /** Documented at declaration */

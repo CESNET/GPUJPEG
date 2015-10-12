@@ -39,7 +39,7 @@ extern "C" {
 
 /**
  * Init preprocessor encoder
- * 
+ *
  * @param encoder
  * @return 0 if succeeds, otherwise nonzero
  */
@@ -48,17 +48,17 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder);
 
 /**
  * Preprocessor encode
- * 
+ *
  * @param encoder  Encoder structure
  * @param image  Image source data
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_preprocessor_encode(struct gpujpeg_coder* coder);
+gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder);
 
 /**
  * Init preprocessor decoder
- * 
+ *
  * @param encoder
  * @return 0 if succeeds, otherwise nonzero
  */
@@ -67,7 +67,7 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder);
 
 /**
  * Preprocessor decode
- * 
+ *
  * @param encoder  Encoder structure
  * @param image  Image source data
  * @return 0 if succeeds, otherwise nonzero
