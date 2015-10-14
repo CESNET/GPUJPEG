@@ -60,7 +60,7 @@ gpujpeg_writer_init(gpujpeg_writer * writer, gpujpeg_image_parameters * param_im
         if (writer->buffer != NULL) {
             free(writer->buffer);
         }
-        writer->buffer = (uint8_t *) malloc(writer->buffer_allocated_size * sizeof(uint8_t));
+        writer->buffer = (uint8_t *) malloc(buffer_size * sizeof(uint8_t));
         if (writer->buffer == NULL) {
             return -1;
         }
