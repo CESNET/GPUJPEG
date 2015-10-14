@@ -42,6 +42,7 @@ gpujpeg_writer_create(struct gpujpeg_encoder* encoder)
     }
 
     writer->buffer_allocated_size = 0;
+    writer->buffer = NULL;
 
     return writer;
 }
@@ -55,11 +56,15 @@ gpujpeg_writer_init(gpujpeg_writer * writer, gpujpeg_image_parameters * param_im
     buffer_size += param_image->width * param_image->height * param_image->comp_count * 2;
 
     if (buffer_size > writer->buffer_allocated_size) {
-        writer->buffer_allocated_size = buffer_size;
+        writer->buffer_allocated_size = 0;
+        if (writer->buffer != NULL) {
+            free(writer->buffer);
+        }
         writer->buffer = (uint8_t *) malloc(writer->buffer_allocated_size * sizeof(uint8_t));
         if (writer->buffer == NULL) {
             return -1;
         }
+        writer->buffer_allocated_size = buffer_size;
     }
     writer->buffer_current = NULL;
     writer->segment_info_count = 0;
@@ -73,8 +78,9 @@ int
 gpujpeg_writer_destroy(struct gpujpeg_writer* writer)
 {
     assert(writer != NULL);
-    assert(writer->buffer != NULL);
-    free(writer->buffer);
+    if (writer->buffer != NULL) {
+        free(writer->buffer);
+    }
     free(writer);
     return 0;
 }
