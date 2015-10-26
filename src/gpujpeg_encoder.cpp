@@ -194,6 +194,35 @@ int gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg
 }
 
 /** Documented at declaration */
+int gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int max_pixels)
+{
+    struct gpujpeg_coder coder;
+    if (0 != gpujpeg_coder_init(&coder)) {
+        return 0;
+    }
+
+    size_t encoder_memory_size = 0;
+    encoder_memory_size += 2 * 64 * sizeof(uint16_t); // Quantization tables
+    encoder_memory_size += 2 * 64 * sizeof(float);    // Quantization tables
+
+    param_image->width = sqrt(max_pixels);
+    param_image->height = (max_pixels + param_image->width - 1) / param_image->width;
+
+    size_t allocated_memory_size = 0;
+    allocated_memory_size += encoder_memory_size;
+    allocated_memory_size += gpujpeg_coder_init_image(&coder, param, param_image, NULL);
+    if (image_input_type == GPUJPEG_ENCODER_INPUT_IMAGE || image_input_type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE) {
+        allocated_memory_size += coder.data_raw_size;
+    }
+
+    if (0 != gpujpeg_coder_deinit(&coder)) {
+        return 0;
+    }
+
+    return allocated_memory_size;
+}
+
+/** Documented at declaration */
 int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int pixels)
 {
     // Get coder

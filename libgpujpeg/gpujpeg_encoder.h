@@ -129,6 +129,19 @@ GPUJPEG_API int
 gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, size_t memory_size, int * max_pixels);
 
 /**
+ * Compute maximum size of device memory which will be used for encoding image with given number of pixels.
+ *
+ * @param encoder
+ * @param param
+ * @param param_image
+ * @param image_input_type
+ * @param max_pixels
+ * @return size of required device memory in bytes if succeeds, otherwise 0
+ */
+GPUJPEG_API int
+gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int max_pixels);
+
+/**
  * Pre-allocate all encoding buffers for given image pixels.
  *
  * @param encoder
