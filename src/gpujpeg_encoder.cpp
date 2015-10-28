@@ -135,7 +135,7 @@ gpujpeg_encoder_create()
 }
 
 /** Documented at declaration */
-int gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, size_t memory_size, int * max_pixels)
+size_t gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, size_t memory_size, int * max_pixels)
 {
     struct gpujpeg_coder coder;
     if (0 != gpujpeg_coder_init(&coder)) {
@@ -194,7 +194,7 @@ int gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg
 }
 
 /** Documented at declaration */
-int gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int max_pixels)
+size_t gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int max_pixels)
 {
     struct gpujpeg_coder coder;
     if (0 != gpujpeg_coder_init(&coder)) {

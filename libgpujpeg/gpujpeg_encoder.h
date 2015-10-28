@@ -125,7 +125,7 @@ gpujpeg_encoder_create();
  * @param max_pixels
  * @return size of used device memory in bytes if succeeds, otherwise 0
  */
-GPUJPEG_API int
+GPUJPEG_API size_t
 gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, size_t memory_size, int * max_pixels);
 
 /**
@@ -138,7 +138,7 @@ gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_ima
  * @param max_pixels
  * @return size of required device memory in bytes if succeeds, otherwise 0
  */
-GPUJPEG_API int
+GPUJPEG_API size_t
 gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int max_pixels);
 
 /**
