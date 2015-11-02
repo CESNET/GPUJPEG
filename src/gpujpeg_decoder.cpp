@@ -352,10 +352,10 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
 void
 gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
                 enum gpujpeg_color_space color_space,
-                enum gpujpeg_sampling_factor sampling_factor)
+                enum gpujpeg_pixel_format sampling_factor)
 {
         decoder->coder.param_image.color_space = color_space;
-        decoder->coder.param_image.sampling_factor = sampling_factor;
+        decoder->coder.param_image.pixel_format = sampling_factor;
 }
 
 /** Documented at declaration */

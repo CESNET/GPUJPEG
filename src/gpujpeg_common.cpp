@@ -200,13 +200,29 @@ gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
 
 /** Documented at declaration */
 void
-gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param)
+gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param)
 {
-    for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ ) {
-        if ( comp == 0 ) {
+    for (int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++) {
+        if (comp == 0) {
+            param->sampling_factor[comp].horizontal = 2;
+        }
+        else {
+            param->sampling_factor[comp].horizontal = 1;
+        }
+        param->sampling_factor[comp].vertical = 1;
+    }
+}
+
+/** Documented at declaration */
+void
+gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param)
+{
+    for (int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++) {
+        if (comp == 0) {
             param->sampling_factor[comp].horizontal = 2;
             param->sampling_factor[comp].vertical = 2;
-        } else {
+        }
+        else {
             param->sampling_factor[comp].horizontal = 1;
             param->sampling_factor[comp].vertical = 1;
         }
@@ -221,7 +237,7 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
     param->height = 0;
     param->comp_count = 3;
     param->color_space = GPUJPEG_RGB;
-    param->sampling_factor = GPUJPEG_4_4_4;
+    param->pixel_format = GPUJPEG_444_U8_P012;
 }
 
 /** Documented at declaration */
@@ -840,17 +856,25 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
 int
 gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
 {
-    int image_size = 0;
-    if ( param->sampling_factor == GPUJPEG_4_4_4 ) {
-        image_size = param->width * param->height * param->comp_count;
-    } else if ( param->sampling_factor == GPUJPEG_4_2_2 ) {
+    switch (param->pixel_format) {
+    case GPUJPEG_U8:
+        assert(param->comp_count == 1);
+        return param->width * param->height;
+    case GPUJPEG_444_U8_P012:
+    case GPUJPEG_444_U8_P0P1P2:
         assert(param->comp_count == 3);
-        int width = gpujpeg_div_and_round_up(param->width, 2) * 2 + 0;
-        image_size = (width * param->height) * 2;
-    } else {
+        return param->width * param->height * param->comp_count;
+    case GPUJPEG_422_U8_P1020:
+    case GPUJPEG_422_U8_P0P1P2:
+        assert(param->comp_count == 3);
+        return param->width * param->height * 2;
+    case GPUJPEG_420_U8_P0P1P2:
+        assert(param->comp_count == 3);
+        return ((param->width * param->height) * 3) / 2;
+    default:
         assert(0);
+        return 0;
     }
-    return image_size;
 }
 
 /** Documented at declaration */
@@ -914,7 +938,7 @@ gpujpeg_image_destroy(uint8_t* image)
 
 /** Documented at declaration */
 void
-gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujpeg_sampling_factor sampling_factor)
+gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujpeg_pixel_format pixel_format)
 {
     // Load image
     int image_size = 0;
@@ -927,7 +951,7 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
     int c_min[3] = {256, 256, 256};
     int c_max[3] = {0, 0, 0};
 
-    if ( sampling_factor == GPUJPEG_4_4_4 ) {
+    if ( pixel_format == GPUJPEG_444_U8_P012 ) {
         uint8_t* in_ptr = image;
         for ( int i = 0; i < width * height; i++ ) {
             for ( int c = 0; c < 3; c++ ) {
@@ -938,7 +962,8 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
             }
             in_ptr += 3;
         }
-    } else if ( sampling_factor == GPUJPEG_4_2_2 ) {
+    }
+    else if ( pixel_format == GPUJPEG_422_U8_P1020 ) {
         uint8_t* in_ptr = image;
         for ( int i = 0; i < width * height; i++ ) {
             if ( in_ptr[1] < c_min[0] )
@@ -959,8 +984,10 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
 
             in_ptr += 2;
         }
-    } else {
-        assert(0);
+    }
+    else {
+        fprintf(stderr, "TODO: implement gpujpeg_image_range_info for pixel format %d.", pixel_format);
+        return;
     }
 
     printf("Image Samples Range:\n");

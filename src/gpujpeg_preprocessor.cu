@@ -195,7 +195,6 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
 
     // Store
     if ( image_position < (image_width * image_height) ) {
-
         gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(r1, image_position_x, image_position_y, data.comp[0]);
         gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(r2, image_position_x, image_position_y, data.comp[1]);
         gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>(r3, image_position_x, image_position_y, data.comp[2]);
@@ -302,18 +301,19 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
 
     // None color space
     if ( coder->param_image.color_space == GPUJPEG_NONE ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_NONE);
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_NONE);
         } else {
             assert(false);
         }
-    }// RGB color space
+    }
+    // RGB color space
     else if ( coder->param_image.color_space == GPUJPEG_RGB ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_RGB);
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_RGB);
         } else {
             assert(false);
@@ -321,9 +321,9 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
     }
     // YCbCr color space
     else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT601 ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_YCBCR_BT601);
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_YCBCR_BT601);
         } else {
             assert(false);
@@ -331,9 +331,9 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
     }
     // YCbCr color space
     else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT601_256LVLS ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_YCBCR_BT601_256LVLS);
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_YCBCR_BT601_256LVLS);
         } else {
             assert(false);
@@ -341,9 +341,9 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
     }
     // YCbCr color space
     else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT709 ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_YCBCR_BT709);
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_YCBCR_BT709);
         } else {
             assert(false);
@@ -351,9 +351,9 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
     }
     // YUV color space
     else if ( coder->param_image.color_space == GPUJPEG_YUV ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4, GPUJPEG_YUV);
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2, GPUJPEG_YUV);
         } else {
             assert(false);
@@ -380,30 +380,40 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
 
     assert(coder->param_image.comp_count == 3);
 
-    if ( coder->param.color_space_internal == GPUJPEG_NONE ) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_NONE>(coder);
-    } else if ( coder->param.color_space_internal == GPUJPEG_RGB ) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_RGB>(coder);
-    } else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS ) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
-    } else {
-        assert(false);
+    switch (coder->param_image.pixel_format) {
+        case GPUJPEG_444_U8_P012:
+        case GPUJPEG_422_U8_P1020:
+        {
+            coder->preprocessor = NULL;
+            if (coder->param.color_space_internal == GPUJPEG_NONE) {
+                coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_NONE>(coder);
+            }
+            else if (coder->param.color_space_internal == GPUJPEG_RGB) {
+                coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_RGB>(coder);
+            }
+            else if (coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS) {
+                coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
+            }
+            else {
+                assert(false);
+            }
+            if ( coder->preprocessor == NULL ) {
+                return -1;
+            }
+        }
+        default:
+        {
+            coder->preprocessor = NULL;
+            break;
+        }
     }
-    if ( coder->preprocessor == NULL )
-        return -1;
     return 0;
 }
 
-/** Documented at declaration */
 int
-gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
+gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder* coder = &encoder->coder;
-    if ( coder->param_image.comp_count == 1 ) {
-        cudaMemcpyAsync(coder->d_data, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice, *(encoder->stream));
-        return 0;
-    }
-    assert(coder->param_image.comp_count == 3);
 
     cudaMemsetAsync(coder->d_data, 0, coder->data_size * sizeof(uint8_t), *(encoder->stream));
     gpujpeg_cuda_check_error("Preprocessor memset failed", return -1);
@@ -417,12 +427,13 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
 
     // When loading 4:2:2 data of odd width, the data in fact has even width, so round it
     // (at least imagemagick convert tool generates data stream in this way)
-    if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 )
+    if (coder->param_image.pixel_format == GPUJPEG_422_U8_P1020) {
         image_width = (coder->param_image.width + 1) & ~1;
+    }
 
     // Prepare unit size
-    assert(coder->param_image.sampling_factor == GPUJPEG_4_4_4 || coder->param_image.sampling_factor == GPUJPEG_4_2_2);
-    int unitSize = coder->param_image.sampling_factor == GPUJPEG_4_4_4 ? 3 : 2;
+    assert(coder->param_image.pixel_format == GPUJPEG_444_U8_P012 || coder->param_image.pixel_format == GPUJPEG_422_U8_P1020);
+    int unitSize = (coder->param_image.pixel_format >= GPUJPEG_444_U8_P012 && coder->param_image.pixel_format <= GPUJPEG_444_U8_P0P1P2) ? 3 : 2;
 
     // Prepare kernel
     int alignedSize = gpujpeg_div_and_round_up(image_width * image_height, RGB_8BIT_THREADS) * RGB_8BIT_THREADS * unitSize;
@@ -460,6 +471,100 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
     gpujpeg_cuda_check_error("Preprocessor encoding failed", return -1);
 
     return 0;
+}
+
+/** Documented at declaration */
+int
+gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
+{
+    struct gpujpeg_coder * coder = &encoder->coder;
+    switch (coder->param_image.pixel_format) {
+        case GPUJPEG_U8:
+        {
+            assert(coder->param_image.comp_count == 1);
+            cudaMemcpyAsync(coder->d_data, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice, *(encoder->stream));
+            return 0;
+        }
+        case GPUJPEG_444_U8_P012:
+        case GPUJPEG_422_U8_P1020:
+        {
+            assert(coder->param_image.comp_count == 3);
+            return gpujpeg_preprocessor_encode_interlaced(encoder);
+        }
+        case GPUJPEG_444_U8_P0P1P2:
+        {
+            if (coder->component[0].sampling_factor.horizontal != 1 || coder->component[0].sampling_factor.vertical != 1
+                || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
+                || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
+                fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when 4:4:4 subsampling inside JPEG is used.");
+                return -1;
+            }
+            if (coder->param_image.color_space != GPUJPEG_NONE) {
+                fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when no color transformation is required.");
+                return -1;
+            }
+            size_t data_raw_offset = 0;
+            size_t component_size = coder->param_image.width * coder->param_image.height;
+            cudaMemcpyAsync(coder->component[0].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, *(encoder->stream));
+            data_raw_offset += component_size;
+            cudaMemcpyAsync(coder->component[1].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, *(encoder->stream));
+            data_raw_offset += component_size;
+            cudaMemcpyAsync(coder->component[2].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, *(encoder->stream));
+            gpujpeg_cuda_check_error("Preprocessor copy failed", return -1);
+            return 0;
+        }
+        case GPUJPEG_422_U8_P0P1P2:
+        {
+            if (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 1
+                || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
+                || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
+                fprintf(stderr, "Encoding JPEG from pixel format 422-u8-p0p1p2 is supported only to 4:2:2 subsampling inside JPEG is used.");
+                return -1;
+            }
+            if (coder->param_image.color_space != GPUJPEG_NONE) {
+                fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only when no color transformation is required.");
+                return -1;
+            }
+            size_t data_raw_offset = 0;
+            size_t component_size_y = coder->param_image.width * coder->param_image.height;
+            size_t component_size_uv = (coder->param_image.width / 2) * coder->param_image.height;
+            cudaMemcpyAsync(coder->component[0].d_data, coder->d_data_raw + data_raw_offset, component_size_y, cudaMemcpyDeviceToDevice, *(encoder->stream));
+            data_raw_offset += component_size_y;
+            cudaMemcpyAsync(coder->component[1].d_data, coder->d_data_raw + data_raw_offset, component_size_uv, cudaMemcpyDeviceToDevice, *(encoder->stream));
+            data_raw_offset += component_size_uv;
+            cudaMemcpyAsync(coder->component[2].d_data, coder->d_data_raw + data_raw_offset, component_size_uv, cudaMemcpyDeviceToDevice, *(encoder->stream));
+            gpujpeg_cuda_check_error("Preprocessor copy failed", return -1);
+            return 0;
+        }
+        case GPUJPEG_420_U8_P0P1P2:
+        {
+            if (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 2
+                || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
+                || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
+                fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only to 4:2:0 subsampling inside JPEG is used.");
+                return -1;
+            }
+            if (coder->param_image.color_space != GPUJPEG_NONE) {
+                fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only when no color transformation is required.");
+                return -1;
+            }
+            size_t data_raw_offset = 0;
+            size_t component_size_y = coder->param_image.width * coder->param_image.height;
+            size_t component_size_uv = (coder->param_image.width / 2) * (coder->param_image.height / 2);
+            cudaMemcpyAsync(coder->component[0].d_data, coder->d_data_raw + data_raw_offset, component_size_y, cudaMemcpyDeviceToDevice, *(encoder->stream));
+            data_raw_offset += component_size_y;
+            cudaMemcpyAsync(coder->component[1].d_data, coder->d_data_raw + data_raw_offset, component_size_uv, cudaMemcpyDeviceToDevice, *(encoder->stream));
+            data_raw_offset += component_size_uv;
+            cudaMemcpyAsync(coder->component[2].d_data, coder->d_data_raw + data_raw_offset, component_size_uv, cudaMemcpyDeviceToDevice, *(encoder->stream));
+            gpujpeg_cuda_check_error("Preprocessor copy failed", return -1);
+            return 0;
+        }
+        default:
+        {
+            fprintf(stderr, "Unknown pixel format %d to be preprocessed.", coder->param_image.pixel_format);
+            return -1;
+        }
+    }
 }
 
 /**
@@ -643,9 +748,9 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 
     // None color space
     if ( coder->param_image.color_space == GPUJPEG_NONE ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_NONE)
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_NONE)
         } else {
             assert(false);
@@ -653,9 +758,9 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     }
     // RGB color space
     else if ( coder->param_image.color_space == GPUJPEG_RGB ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_RGB)
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_RGB)
         } else {
             assert(false);
@@ -663,9 +768,9 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     }
     // YCbCr color space
     else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT601 ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_YCBCR_BT601)
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_YCBCR_BT601)
         } else {
             assert(false);
@@ -673,9 +778,9 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     }
     // YCbCr color space
     else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT601_256LVLS ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_YCBCR_BT601_256LVLS)
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_YCBCR_BT601_256LVLS)
         } else {
             assert(false);
@@ -683,9 +788,9 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     }
     // YCbCr color space
     else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT709 ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_YCBCR_BT709)
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_YCBCR_BT709)
         } else {
             assert(false);
@@ -693,9 +798,9 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     }
     // YUV color space
     else if ( coder->param_image.color_space == GPUJPEG_YUV ) {
-        if ( coder->param_image.sampling_factor == GPUJPEG_4_4_4 ) {
+        if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4, GPUJPEG_YUV)
-        } else if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 ) {
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) {
             RETURN_KERNEL(gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2, GPUJPEG_YUV)
         } else {
             assert(false);
@@ -756,12 +861,12 @@ gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder)
     int image_height = coder->param_image.height;
 
     // When saving 4:2:2 data of odd width, the data should have even width, so round it
-    if ( coder->param_image.sampling_factor == GPUJPEG_4_2_2 )
+    if (coder->param_image.pixel_format == GPUJPEG_422_U8_P1020) {
         image_width = gpujpeg_div_and_round_up(coder->param_image.width, 2) * 2;
+    }
 
     // Prepare unit size
-    assert(coder->param_image.sampling_factor == GPUJPEG_4_4_4 || coder->param_image.sampling_factor == GPUJPEG_4_2_2);
-    int unitSize = coder->param_image.sampling_factor == GPUJPEG_4_4_4 ? 3 : 2;
+    int unitSize = (coder->param_image.pixel_format >= GPUJPEG_444_U8_P012 && coder->param_image.pixel_format <= GPUJPEG_444_U8_P0P1P2) ? 3 : 2;
 
     // Prepare kernel
     int alignedSize = gpujpeg_div_and_round_up(image_width * image_height, RGB_8BIT_THREADS) * RGB_8BIT_THREADS * unitSize;

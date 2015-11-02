@@ -141,7 +141,7 @@ struct gpujpeg_parameters
     // the best result is achieved when it is used in combination with "interleaved = 1" settings.
     int segment_info;
 
-    // Sampling factors for each color component
+    // Sampling factors for each color component inside JPEG stream.
     struct gpujpeg_component_sampling_factor sampling_factor[GPUJPEG_MAX_COMPONENT_COUNT];
 
     // Color space that is used inside JPEG stream = that is carried in JPEG format = to
@@ -159,19 +159,27 @@ GPUJPEG_API void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param);
 
 /**
- * Set parameters for using chroma subsampling
+ * Set parameters for using 4:2:2 chroma subsampling
  *
  * @param param  Parameters for coder
  * @return void
  */
 GPUJPEG_API void
-gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param);
+gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param);
+
+/**
+ * Set parameters for using 4:2:0 chroma subsampling
+ *
+ * @param param  Parameters for coder
+ * @return void
+ */
+GPUJPEG_API void
+gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param);
 
 /**
  * Image parameters. This structure should not be initialized only be hand,
  * but at first gpujpeg_image_set_default_parameters should be call and then
  * some parameters could be changed.
- *
  */
 struct gpujpeg_image_parameters {
     // Image data width
@@ -183,7 +191,7 @@ struct gpujpeg_image_parameters {
     // Image data color space
     enum gpujpeg_color_space color_space;
     // Image data sampling factor
-    enum gpujpeg_sampling_factor sampling_factor;
+    enum gpujpeg_pixel_format pixel_format;
 };
 
 /**
@@ -513,7 +521,7 @@ gpujpeg_image_destroy(uint8_t* image);
  * @param sampling_factor
  */
 GPUJPEG_API void
-gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujpeg_sampling_factor sampling_factor);
+gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujpeg_pixel_format sampling_factor);
 
 /**
  * Convert image
