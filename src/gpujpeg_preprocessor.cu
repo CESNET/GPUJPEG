@@ -400,6 +400,7 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
             if ( coder->preprocessor == NULL ) {
                 return -1;
             }
+            break;
         }
         default:
         {
@@ -419,7 +420,7 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
     gpujpeg_cuda_check_error("Preprocessor memset failed", return -1);
 
     // Select kernel
-    gpujpeg_preprocessor_encode_kernel kernel = (gpujpeg_preprocessor_encode_kernel)coder->preprocessor;
+    gpujpeg_preprocessor_encode_kernel kernel = (gpujpeg_preprocessor_encode_kernel) coder->preprocessor;
     assert(kernel != NULL);
 
     int image_width = coder->param_image.width;
