@@ -65,7 +65,7 @@ gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gp
 
 /** Documented at declaration */
 struct gpujpeg_encoder*
-gpujpeg_encoder_create()
+gpujpeg_encoder_create(cudaStream_t * stream)
 {
     struct gpujpeg_encoder* encoder = (struct gpujpeg_encoder*) malloc(sizeof(struct gpujpeg_encoder));
     if ( encoder == NULL ) {
@@ -114,6 +114,7 @@ gpujpeg_encoder_create()
     }
 
     // Stream
+    encoder->stream = stream;
     if (encoder->stream == NULL) {
         encoder->allocatedStream = (cudaStream_t *) malloc(sizeof(cudaStream_t));
         if (cudaSuccess != cudaStreamCreate(encoder->allocatedStream)) {

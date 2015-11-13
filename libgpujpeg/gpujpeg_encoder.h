@@ -112,7 +112,7 @@ gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gp
  * @return encoder structure if succeeds, otherwise NULL
  */
 GPUJPEG_API struct gpujpeg_encoder*
-gpujpeg_encoder_create();
+gpujpeg_encoder_create(cudaStream_t * stream);
 
 /**
  * Compute maximum number of image pixels (width x height) which can be encoded by given memory size.

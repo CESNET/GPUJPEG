@@ -368,7 +368,7 @@ main(int argc, char *argv[])
         }
 
         // Create encoder
-        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create();
+        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(NULL);
         if ( encoder == NULL ) {
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
