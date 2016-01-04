@@ -156,9 +156,13 @@ size_t gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpuj
         param_image->width = sqrt(pixels);
         param_image->height = (pixels + param_image->width - 1) / param_image->width;
         //printf("\nIteration #%d (pixels: %d, size: %dx%d)\n", iteration++, pixels, param_image->width, param_image->height);
+        size_t image_memory_size = gpujpeg_coder_init_image(&coder, param, param_image, NULL);
+        if (image_memory_size == 0) {
+            break;
+        }
         size_t allocated_memory_size = 0;
         allocated_memory_size += encoder_memory_size;
-        allocated_memory_size += gpujpeg_coder_init_image(&coder, param, param_image, NULL);
+        allocated_memory_size += image_memory_size;
         if (image_input_type == GPUJPEG_ENCODER_INPUT_IMAGE || image_input_type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE) {
             allocated_memory_size += coder.data_raw_size;
         }
@@ -209,9 +213,14 @@ size_t gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpuj
     param_image->width = sqrt(max_pixels);
     param_image->height = (max_pixels + param_image->width - 1) / param_image->width;
 
+    size_t image_memory_size = gpujpeg_coder_init_image(&coder, param, param_image, NULL);
+    if (image_memory_size == 0) {
+        return 0;
+    }
+
     size_t allocated_memory_size = 0;
     allocated_memory_size += encoder_memory_size;
-    allocated_memory_size += gpujpeg_coder_init_image(&coder, param, param_image, NULL);
+    allocated_memory_size += image_memory_size;
     if (image_input_type == GPUJPEG_ENCODER_INPUT_IMAGE || image_input_type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE) {
         allocated_memory_size += coder.data_raw_size;
     }
