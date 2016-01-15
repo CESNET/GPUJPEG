@@ -53,6 +53,18 @@ gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gp
     input->texture = texture;
 }
 
+int gpujpeg_encoder_input_copy_image(struct gpujpeg_encoder_input* input, struct gpujpeg_encoder* encoder, uint8_t* image)
+{
+    input->type = GPUJPEG_ENCODER_INPUT_INTERNAL_BUFFER;
+    input->image = NULL;
+    input->texture = NULL;
+    struct gpujpeg_coder* coder = &encoder->coder;
+    if ( cudaSuccess == cudaMemcpy(coder->d_data_raw, image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) )
+        return 0;
+    else
+        return -1;
+}
+
 /** Documented at declaration */
 struct gpujpeg_encoder*
 gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image)
@@ -190,6 +202,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_i
 
         GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
         coder->duration_memory_unmap = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
+    } else if ( input->type == GPUJPEG_ENCODER_INPUT_INTERNAL_BUFFER ) {
+        // noop, already copied
     } else {
         // Unknown output type
         assert(0);
