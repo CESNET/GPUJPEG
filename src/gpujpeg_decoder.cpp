@@ -53,6 +53,7 @@ gpujpeg_decoder_output_set_custom(struct gpujpeg_decoder_output* output, uint8_t
     output->type = GPUJPEG_DECODER_OUTPUT_CUSTOM_BUFFER;
     output->data = custom_buffer;
     output->data_size = 0;
+    output->texture = NULL;
 }
 
 /** Documented at declaration */
@@ -65,11 +66,22 @@ gpujpeg_decoder_output_set_texture(struct gpujpeg_decoder_output* output, struct
     output->texture = texture;
 }
 
+/** Documented at declaration */
 void
 gpujpeg_decoder_output_set_cuda_buffer(struct gpujpeg_decoder_output* output)
 {
     output->type = GPUJPEG_DECODER_OUTPUT_CUDA_BUFFER;
     output->data = NULL;
+    output->data_size = 0;
+    output->texture = NULL;
+}
+
+/** Documented at declaration */
+void
+gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, uint8_t* custom_cuda_buffer)
+{
+    output->type = GPUJPEG_DECODER_OUTPUT_CUSTOM_CUDA_BUFFER;
+    output->data = custom_cuda_buffer;
     output->data_size = 0;
     output->texture = NULL;
 }
@@ -182,6 +194,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
 {
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
+    uint8_t *d_data_raw_allocated;
     
     // Reset durations
     coder->duration_memory_to = 0.0;
@@ -265,6 +278,12 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
     coder->duration_dct_quantization = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
     GPUJPEG_CUSTOM_TIMER_START(decoder->def);
+
+    // Supply our custom buffer and store the allocated one
+    if (output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_CUDA_BUFFER) {
+        d_data_raw_allocated = coder->data_raw;
+        coder->d_data_raw = output->data;
+    }
     
     // Preprocessing
     if ( gpujpeg_preprocessor_decode(&decoder->coder) != 0 )
@@ -330,6 +349,9 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     } else if ( output->type == GPUJPEG_DECODER_OUTPUT_CUDA_BUFFER ) {
         // Copy decompressed image to texture pixel buffer object device data
         output->data = coder->d_data_raw;
+    } else if (output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_CUDA_BUFFER) {
+        // Restore allocated buffer
+        coder->d_data_raw = d_data_raw_allocated;
     } else {
         // Unknown output type
         assert(0);
