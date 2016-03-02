@@ -32,7 +32,9 @@
 #include <libgpujpeg/gpujpeg_decoder_internal.h> // TIMER
 #include <libgpujpeg/gpujpeg.h>
 #include <libgpujpeg/gpujpeg_util.h>
-#include <getopt.h>
+#if defined(__linux__)
+    #include <getopt.h>
+#endif
 
 void
 print_help()
@@ -75,33 +77,6 @@ print_help()
 int
 main(int argc, char *argv[])
 {
-    #define OPTION_DEVICE_INFO     1
-    #define OPTION_SUBSAMPLED      2
-    #define OPTION_CONVERT         3
-    #define OPTION_COMPONENT_RANGE 4
-
-    struct option longopts[] = {
-        {"help",                    no_argument,       0, 'h'},
-        {"verbose",                 no_argument,       0, 'v'},
-        {"device",                  required_argument, 0, 'D'},
-        {"device-list",             no_argument,       0,  OPTION_DEVICE_INFO },
-        {"size",                    required_argument, 0, 's'},
-        {"pixel-format",         required_argument, 0, 'f'},
-        {"colorspace",              required_argument, 0, 'c'},
-        {"quality",                 required_argument, 0, 'q'},
-        {"restart",                 required_argument, 0, 'r'},
-        {"segment-info",            optional_argument, 0, 'g' },
-        {"subsampled",              optional_argument, 0,  OPTION_SUBSAMPLED },
-        {"interleaved",             optional_argument, 0, 'i'},
-        {"encode",                  no_argument,       0, 'e'},
-        {"decode",                  no_argument,       0, 'd'},
-        {"convert",                 no_argument,       0,  OPTION_CONVERT },
-        {"component-range",         no_argument,       0,  OPTION_COMPONENT_RANGE },
-        {"iterate",                 required_argument, 0,  'n' },
-        {"use-opengl",              no_argument,       0,  'o' },
-        0
-    };
-
     // Default coder parameters
     struct gpujpeg_parameters param;
     gpujpeg_set_default_parameters(&param);
@@ -127,7 +102,33 @@ main(int argc, char *argv[])
     int restart_interval_default = 1;
     int chroma_subsampled = 0;
 
+#if defined(__linux__)
     // Parse command line
+    #define OPTION_DEVICE_INFO     1
+    #define OPTION_SUBSAMPLED      2
+    #define OPTION_CONVERT         3
+    #define OPTION_COMPONENT_RANGE 4
+    struct option longopts[] = {
+        {"help",                    no_argument,       0, 'h'},
+        {"verbose",                 no_argument,       0, 'v'},
+        {"device",                  required_argument, 0, 'D'},
+        {"device-list",             no_argument,       0,  OPTION_DEVICE_INFO },
+        {"size",                    required_argument, 0, 's'},
+        {"pixel-format",         required_argument, 0, 'f'},
+        {"colorspace",              required_argument, 0, 'c'},
+        {"quality",                 required_argument, 0, 'q'},
+        {"restart",                 required_argument, 0, 'r'},
+        {"segment-info",            optional_argument, 0, 'g' },
+        {"subsampled",              optional_argument, 0,  OPTION_SUBSAMPLED },
+        {"interleaved",             optional_argument, 0, 'i'},
+        {"encode",                  no_argument,       0, 'e'},
+        {"decode",                  no_argument,       0, 'd'},
+        {"convert",                 no_argument,       0,  OPTION_CONVERT },
+        {"component-range",         no_argument,       0,  OPTION_COMPONENT_RANGE },
+        {"iterate",                 required_argument, 0,  'n' },
+        {"use-opengl",              no_argument,       0,  'o' },
+        0
+    };
     char ch = '\0';
     int optindex = 0;
     char* pos = 0;
@@ -266,6 +267,10 @@ main(int argc, char *argv[])
     }
     argc -= optind;
     argv += optind;
+#else
+    fprintf(stderr, "Parsing command line options isn't implemented in current OS\n");
+    return -1;
+#endif
 
     // Show info about image samples range
     if ( component_range == 1 ) {

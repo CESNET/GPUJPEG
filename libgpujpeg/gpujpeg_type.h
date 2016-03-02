@@ -76,7 +76,7 @@ enum gpujpeg_color_space {
  *
  * @param color_space
  */
-static inline const char*
+static const char*
 gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
 {
     switch ( color_space ) {

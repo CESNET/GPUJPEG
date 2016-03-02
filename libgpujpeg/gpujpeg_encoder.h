@@ -37,16 +37,6 @@
 extern "C" {
 #endif
 
-#if defined _MSC_VER || defined __MINGW32__
-#ifdef GPUJPEG_EXPORTS
-#define GPUJPEG_API __declspec(dllexport)
-#else
-#define GPUJPEG_API __declspec(dllimport)
-#endif
-#else // other platforms
-#define GPUJPEG_API
-#endif
-
 struct gpujpeg_encoder;
 
 /**

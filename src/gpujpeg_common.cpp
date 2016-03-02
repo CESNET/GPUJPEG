@@ -38,9 +38,17 @@
 #include "gpujpeg_preprocessor.h"
 #include <math.h>
 #ifdef GPUJPEG_USE_OPENGL
+    #if defined(_MSC_VER)
+        #include "windows.h"
+    #endif
     #define GL_GLEXT_PROTOTYPES
-    #include <GL/gl.h>
-    #include <GL/glx.h>
+    #include <GL/glew.h>
+    #ifndef GL_VERSION_1_2
+        #error "OpenGL 1.2 is required"
+    #endif
+    #if defined(__linux__)
+        #include <GL/glx.h>
+    #endif
     #include <cuda_gl_interop.h>
 #endif
 
@@ -1073,52 +1081,57 @@ int
 gpujpeg_opengl_init()
 {
 #ifdef GPUJPEG_USE_OPENGL
-    // Open display
-    Display* glx_display = XOpenDisplay(0);
-    if ( glx_display == NULL ) {
-        fprintf(stderr, "[GPUJPEG] [Error] Failed to open X display!\n");
+    #if defined(__linux__)
+        // Open display
+        Display* glx_display = XOpenDisplay(0);
+        if ( glx_display == NULL ) {
+            fprintf(stderr, "[GPUJPEG] [Error] Failed to open X display!\n");
+            return -1;
+        }
+
+        // Choose visual
+        static int attributes[] = {
+            GLX_RGBA,
+            GLX_DOUBLEBUFFER,
+            GLX_RED_SIZE,   1,
+            GLX_GREEN_SIZE, 1,
+            GLX_BLUE_SIZE,  1,
+            None
+        };
+        XVisualInfo* visual = glXChooseVisual(glx_display, DefaultScreen(glx_display), attributes);
+        if ( visual == NULL ) {
+            fprintf(stderr, "[GPUJPEG] [Error] Failed to choose visual!\n");
+            return -1;
+        }
+
+        // Create OpenGL context
+        GLXContext glx_context = glXCreateContext(glx_display, visual, 0, GL_TRUE);
+        if ( glx_context == NULL ) {
+            fprintf(stderr, "[GPUJPEG] [Error] Failed to create OpenGL context!\n");
+            return -1;
+        }
+
+        // Create window
+        Colormap colormap = XCreateColormap(glx_display, RootWindow(glx_display, visual->screen), visual->visual, AllocNone);
+        XSetWindowAttributes swa;
+        swa.colormap = colormap;
+        swa.border_pixel = 0;
+        Window glx_window = XCreateWindow(
+            glx_display,
+            RootWindow(glx_display, visual->screen),
+            0, 0, 640, 480,
+            0, visual->depth, InputOutput, visual->visual,
+            CWBorderPixel | CWColormap | CWEventMask,
+            &swa
+        );
+        // Do not map window to display to keep it hidden
+        //XMapWindow(glx_display, glx_window);
+
+        glXMakeCurrent(glx_display, glx_window, glx_context);
+    #else
+        fprintf(stderr, "[GPUJPEG] [Error] gpujpeg_opengl_init not implemented in current OS!\n");
         return -1;
-    }
-
-    // Choose visual
-    static int attributes[] = {
-        GLX_RGBA,
-        GLX_DOUBLEBUFFER,
-        GLX_RED_SIZE,   1,
-        GLX_GREEN_SIZE, 1,
-        GLX_BLUE_SIZE,  1,
-        None
-    };
-    XVisualInfo* visual = glXChooseVisual(glx_display, DefaultScreen(glx_display), attributes);
-    if ( visual == NULL ) {
-        fprintf(stderr, "[GPUJPEG] [Error] Failed to choose visual!\n");
-        return -1;
-    }
-
-    // Create OpenGL context
-    GLXContext glx_context = glXCreateContext(glx_display, visual, 0, GL_TRUE);
-    if ( glx_context == NULL ) {
-        fprintf(stderr, "[GPUJPEG] [Error] Failed to create OpenGL context!\n");
-        return -1;
-    }
-
-    // Create window
-    Colormap colormap = XCreateColormap(glx_display, RootWindow(glx_display, visual->screen), visual->visual, AllocNone);
-    XSetWindowAttributes swa;
-    swa.colormap = colormap;
-    swa.border_pixel = 0;
-    Window glx_window = XCreateWindow(
-        glx_display,
-        RootWindow(glx_display, visual->screen),
-        0, 0, 640, 480,
-        0, visual->depth, InputOutput, visual->visual,
-        CWBorderPixel | CWColormap | CWEventMask,
-        &swa
-    );
-    // Do not map window to display to keep it hidden
-    //XMapWindow(glx_display, glx_window);
-
-    glXMakeCurrent(glx_display, glx_window, glx_context);
+    #endif
 #else
     GPUJPEG_EXIT_MISSING_OPENGL();
 #endif

@@ -38,14 +38,14 @@
 extern "C" {
 #endif
 
-#if defined _MSC_VER || defined __MINGW32__
-#ifdef GPUJPEG_EXPORTS
-#define GPUJPEG_API __declspec(dllexport)
+#if (defined(_MSC_VER) || defined(__MINGW32__)) && !defined(GPUJPEG_STATIC)
+    #ifdef GPUJPEG_EXPORTS
+        #define GPUJPEG_API __declspec(dllexport)
+    #else
+        #define GPUJPEG_API __declspec(dllimport)
+    #endif
 #else
-#define GPUJPEG_API __declspec(dllimport)
-#endif
-#else // other platforms
-#define GPUJPEG_API
+    #define GPUJPEG_API
 #endif
 
 /** Marker used as segment info */

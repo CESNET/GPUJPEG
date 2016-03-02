@@ -153,7 +153,7 @@ size_t gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpuj
     int pixels = 10000;
     int iteration = 0;
     while (true) {
-        param_image->width = sqrt(pixels);
+        param_image->width = (int) sqrt((float) pixels);
         param_image->height = (pixels + param_image->width - 1) / param_image->width;
         //printf("\nIteration #%d (pixels: %d, size: %dx%d)\n", iteration++, pixels, param_image->width, param_image->height);
         size_t image_memory_size = gpujpeg_coder_init_image(&coder, param, param_image, NULL);
@@ -210,7 +210,7 @@ size_t gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpuj
     encoder_memory_size += 2 * 64 * sizeof(uint16_t); // Quantization tables
     encoder_memory_size += 2 * 64 * sizeof(float);    // Quantization tables
 
-    param_image->width = sqrt(max_pixels);
+    param_image->width = (int) sqrt((float) max_pixels);
     param_image->height = (max_pixels + param_image->width - 1) / param_image->width;
 
     size_t image_memory_size = gpujpeg_coder_init_image(&coder, param, param_image, NULL);
@@ -246,7 +246,7 @@ int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, struct gpujpeg_pa
     // Set image size from pixels
     struct gpujpeg_image_parameters tmp_param_image;
     tmp_param_image = *param_image;
-    tmp_param_image.width = sqrt(pixels);
+    tmp_param_image.width = (int) sqrt((float) pixels);
     tmp_param_image.height = (pixels + tmp_param_image.width - 1) / tmp_param_image.width;
 
     // Allocate internal buffers

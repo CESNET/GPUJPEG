@@ -60,6 +60,7 @@ if(NOT OPENGL_ERROR)
 endif()
 
 # GPUJPEG library
+add_definitions("-DGPUJPEG_STATIC")
 file(GLOB H_FILES libgpujpeg/*.h)
 file(GLOB CPP_FILES src/*.cpp src/*.cu)
 cuda_add_library(src STATIC ${H_FILES} ${CPP_FILES})
