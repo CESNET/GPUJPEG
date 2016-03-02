@@ -140,6 +140,17 @@ GPUJPEG_API int
 gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image);
 
 /**
+ * Read image info from JPEG file
+ *
+ * @param image  Image data
+ * @param image_size  Image data size
+ * @param param_image
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_image_parameters * param_image);
+
+/**
  * Decompress image by decoder
  *
  * @param decoder  Decoder structure

@@ -46,29 +46,29 @@ struct gpujpeg_reader_scan
     int segment_index;
     // Segment count in scan
     int segment_count;
-};  
+};
 
 /** JPEG reader structure */
 struct gpujpeg_reader
 {
     // Parameters
     struct gpujpeg_parameters param;
-    
+
     // Parameters for image data
     struct gpujpeg_image_parameters param_image;
-    
+
     // Loaded component count
     int comp_count;
-    
+
     // Loaded scans
     struct gpujpeg_reader_scan scan[GPUJPEG_MAX_COMPONENT_COUNT];
-    
+
     // Loaded scans count
     int scan_count;
-    
+
     // Total segment count
     int segment_count;
-    
+
     // Total readed size
     int data_compressed_size;
 
@@ -82,7 +82,7 @@ struct gpujpeg_reader
 
 /**
  * Create JPEG reader
- * 
+ *
  * @return reader structure if succeeds, otherwise NULL
  */
 struct gpujpeg_reader*
@@ -90,7 +90,7 @@ gpujpeg_reader_create();
 
 /**
  * Destroy JPEG reader
- * 
+ *
  * @param reader  Reader structure
  * @return 0 if succeeds, otherwise nonzero
  */
@@ -99,7 +99,7 @@ gpujpeg_reader_destroy(struct gpujpeg_reader* reader);
 
 /**
  * Read JPEG image from data buffer
- * 
+ *
  * @param image  Image data
  * @param image_size  Image data size
  * @return 0 if succeeds, otherwise nonzero
