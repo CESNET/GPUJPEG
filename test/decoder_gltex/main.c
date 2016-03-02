@@ -1,4 +1,5 @@
 #include <libgpujpeg/gpujpeg.h>
+#include <GL/glew.h>
 #include <GL/glut.h>
 
 int g_texture_id;
@@ -20,7 +21,7 @@ int main(int argc, char *argv[])
     const char * input_filename = argv[1];
 
     // Init OpenGL
-    glutInit (&argc, argv);
+    glutInit(&argc, argv);
     glutInitWindowSize(640, 480);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
     glutCreateWindow(input_filename);
@@ -28,6 +29,11 @@ int main(int argc, char *argv[])
     glutIdleFunc(glutOnIdle);
     glutKeyboardFunc(glutOnKeyboard);
     glutReshapeFunc(glutOnReshape);
+    GLenum result = glewInit();
+    if (GLEW_OK != result) {
+        fprintf(stderr, "Failed to initialize GLEW: %s\n", glewGetErrorString(result));
+        return -1;
+    }
 
     // Init CUDA device
     int device_id = 0;
@@ -66,7 +72,15 @@ int main(int argc, char *argv[])
     // Prepare decoder output to OpenGL texture
     struct gpujpeg_opengl_texture * texture = NULL;
     int texture_id = gpujpeg_opengl_texture_create(param_image.width, param_image.height, NULL);
+    if (texture_id == 0) {
+        fprintf(stderr, "Failed to create OpenGL texture!\n");
+        return -1;
+    }
     texture = gpujpeg_opengl_texture_register(texture_id, GPUJPEG_OPENGL_TEXTURE_WRITE);
+    if (texture == NULL) {
+        fprintf(stderr, "Failed to register OpenGL texture!\n");
+        return -1;
+    }
     struct gpujpeg_decoder_output decoder_output;
     gpujpeg_decoder_output_set_texture(&decoder_output, texture);
 

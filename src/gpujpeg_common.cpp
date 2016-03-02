@@ -1146,6 +1146,9 @@ gpujpeg_opengl_texture_create(int width, int height, uint8_t* data)
     GLuint texture_id = 0;
 
     glGenTextures(1, &texture_id);
+    if (texture_id == 0) {
+        return 0;
+    }
     glBindTexture(GL_TEXTURE_2D, texture_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1255,7 +1258,15 @@ gpujpeg_opengl_texture_register(int texture_id, enum gpujpeg_opengl_texture_type
     }
 
     // Create PBO
+    if (glGenBuffers == NULL) {
+        fprintf(stderr, "GLEW wasn't initialized!\n");
+        return NULL;
+    }
     glGenBuffers(1, (GLuint*)&texture->texture_pbo_id);
+    if (texture->texture_pbo_id == 0) {
+        fprintf(stderr, "glGenBuffers returned zero!\n");
+        return NULL;
+    }
     glBindBuffer(texture->texture_pbo_type, texture->texture_pbo_id);
     glBufferData(texture->texture_pbo_type, texture->texture_width * texture->texture_height * 3 * sizeof(uint8_t), NULL, GL_DYNAMIC_DRAW);
     glBindBuffer(texture->texture_pbo_type, 0);
