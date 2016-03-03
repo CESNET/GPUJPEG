@@ -137,7 +137,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
  * @param param_image
  * @return 0 if succeeds, otherwise nonzero
  */
-int
+GPUJPEG_API int
 gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_image_parameters * param_image);
 
 /**

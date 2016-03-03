@@ -60,18 +60,17 @@ if(NOT OPENGL_ERROR)
 endif()
 
 # GPUJPEG library
-add_definitions("-DGPUJPEG_STATIC")
 file(GLOB H_FILES libgpujpeg/*.h)
 file(GLOB CPP_FILES src/*.cpp src/*.cu)
-cuda_add_library(src STATIC ${H_FILES} ${CPP_FILES})
+cuda_add_library(gpujpeg SHARED ${H_FILES} ${CPP_FILES})
 if(GPUJPEG_OPENGL_ENABLED)
-    target_link_libraries(src ${GPUJPEG_OPENGL_LIBRARIES})
+    target_link_libraries(gpujpeg ${GPUJPEG_OPENGL_LIBRARIES})
 endif()
 
 # GPUJPEG tester application
 file(GLOB C_FILES src/main.c)
-cuda_add_executable(gpujpeg ${C_FILES})
-target_link_libraries(gpujpeg src)
+cuda_add_executable(tester ${C_FILES})
+target_link_libraries(tester gpujpeg)
 
 # When OpenGL was found, include OpenGL executables
 if(GPUJPEG_OPENGL_ENABLED)
@@ -79,7 +78,7 @@ if(GPUJPEG_OPENGL_ENABLED)
     # GPUJPEG decoder to OpenGL texture
     file(GLOB C_FILES test/decoder_gltex/main.c)
     cuda_add_executable(decoder_gltex ${C_FILES})
-    target_link_libraries(decoder_gltex src)
+    target_link_libraries(decoder_gltex gpujpeg)
 
     # OpenGL interoperability example (currently not working)
     #file(GLOB FILES test/opengl_interop/*.c test/opengl_interop/*.h test/opengl_interop/*.cu)
