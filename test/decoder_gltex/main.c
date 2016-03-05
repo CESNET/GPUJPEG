@@ -1,4 +1,5 @@
 #include <libgpujpeg/gpujpeg.h>
+#include <libgpujpeg/gpujpeg_decoder_internal.h>
 #include <GL/glew.h>
 #include <GL/glut.h>
 
@@ -96,7 +97,13 @@ int main(int argc, char *argv[])
             return -1;
         }
         double endImage = getTime();
-        printf("Image decoded OK in %0.2f ms (%dx%d)\n", (endImage - startImage) * 1000.0, param_image.width, param_image.height);
+        printf("    Stream Reader:     %10.2f ms\n", decoder->coder.duration_stream);
+        printf("    Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
+        printf("    Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
+        printf("    DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
+        printf("    Postprocessing:    %10.2f ms\n", decoder->coder.duration_preprocessor);
+        printf("    Copy To Texture:   %10.2f ms\n", decoder->coder.duration_memory_from);
+        printf("Image decoded OK in %0.2f ms (%dx%d)\n", (endImage - startImage) * 1000.0, param_image.width, param_image.height);        
     }
     double end = getTime();
     printf("FPS: %0.2f\n", ((double) iterationCount) / (end - start));
