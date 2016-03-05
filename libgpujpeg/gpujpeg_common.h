@@ -48,6 +48,10 @@ extern "C" {
     #define GPUJPEG_API
 #endif
 
+/** @return current time in seconds */
+GPUJPEG_API double
+gpujpeg_get_time();
+
 /** Marker used as segment info */
 #define GPUJPEG_MARKER_SEGMENT_INFO GPUJPEG_MARKER_APP13
 
@@ -431,15 +435,12 @@ struct gpujpeg_coder
     int cuda_cc_minor;
 
     // Operation durations
-    float duration_memory_to;
     float duration_memory_from;
     float duration_memory_map;
     float duration_memory_unmap;
-    float duration_preprocessor;
-    float duration_dct_quantization;
-    float duration_huffman_coder;
     float duration_stream;
     float duration_in_gpu;
+    float duration_waiting;
 };
 
 /**

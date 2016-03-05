@@ -613,8 +613,9 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     assert(coder->param.restart_interval > 0);
     
     int comp_count = 1;
-    if ( coder->param.interleaved == 1 )
+    if (coder->param.interleaved == 1) {
         comp_count = coder->param_image.comp_count;
+    }
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     
     // Number of decoder kernel threads per each threadblock
@@ -626,37 +627,35 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_decode_kernel<false, THREADS_PER_TBLOCK>, cudaFuncCachePreferShared);
     
     // Setup GPU tables (one thread for each of 65536 entries)
-    gpujpeg_huffman_decoder_table_kernel<<<256, 256>>>(
+    gpujpeg_huffman_decoder_table_kernel<<<256, 256, 0, *(decoder->stream)>>>(
         decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC],
         decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC],
         decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC],
         decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC]
     );
-    cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman decoder table setup failed", return -1);
 
     // Get pointer to quick decoding table in device memory
     void * d_src_ptr = 0;
     cudaGetSymbolAddress(&d_src_ptr, gpujpeg_huffman_gpu_decoder_tables_quick);
-    cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman decoder table address lookup failed", return -1);
     
     // Copy quick decoding table into constant memory
-    cudaMemcpyToSymbol(
+    cudaMemcpyToSymbolAsync(
         gpujpeg_huffman_gpu_decoder_tables_quick_const,
         d_src_ptr,
         sizeof(*gpujpeg_huffman_gpu_decoder_tables_quick) * QUICK_TABLE_ITEMS,
         0,
-        cudaMemcpyDeviceToDevice
+        cudaMemcpyDeviceToDevice,
+        *(decoder->stream)
     );
-    cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman decoder table copy failed", return -1);
     
     // Run decoding kernel
     dim3 thread(THREADS_PER_TBLOCK);
     dim3 grid(gpujpeg_div_and_round_up(decoder->segment_count, THREADS_PER_TBLOCK));
     if(comp_count == 1) {
-        gpujpeg_huffman_decoder_decode_kernel<true, THREADS_PER_TBLOCK><<<grid, thread>>>(
+        gpujpeg_huffman_decoder_decode_kernel<true, THREADS_PER_TBLOCK><<<grid, thread, 0, *(decoder->stream)>>>(
             coder->d_component, 
             coder->d_segment, 
             comp_count,
@@ -666,7 +665,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
             coder->d_data_quantized
         );
     } else {
-        gpujpeg_huffman_decoder_decode_kernel<false, THREADS_PER_TBLOCK><<<grid, thread>>>(
+        gpujpeg_huffman_decoder_decode_kernel<false, THREADS_PER_TBLOCK><<<grid, thread, 0, *(decoder->stream)>>>(
             coder->d_component, 
             coder->d_segment, 
             comp_count,
@@ -676,7 +675,6 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
             coder->d_data_quantized
         );
     }
-    cudaError cuerr = cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Huffman decoding failed", return -1);
     
     return 0;

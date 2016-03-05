@@ -441,19 +441,19 @@ main(int argc, char *argv[])
                 GPUJPEG_TIMER_STOP();
                 float duration = GPUJPEG_TIMER_DURATION();
                 if ( param.verbose ) {
-                    printf(" -Copy To Device:    %10.2f ms\n", encoder->coder.duration_memory_to);
+                    //printf(" -Copy To Device:    %10.2f ms\n", encoder->coder.duration_memory_to);
                     if ( encoder->coder.duration_memory_map != 0.0 && encoder->coder.duration_memory_unmap != 0.0 ) {
                         printf(" -OpenGL Memory Map: %10.2f ms\n", encoder->coder.duration_memory_map);
                         printf(" -OpenGL Memory Unmap:%9.2f ms\n", encoder->coder.duration_memory_unmap);
                     }
-                    printf(" -Preprocessing:     %10.2f ms\n", encoder->coder.duration_preprocessor);
-                    printf(" -DCT & Quantization:%10.2f ms\n", encoder->coder.duration_dct_quantization);
-                    printf(" -Huffman Encoder:   %10.2f ms\n", encoder->coder.duration_huffman_coder);
-                    printf(" -Copy From Device:  %10.2f ms\n", encoder->coder.duration_memory_from);
+                    //printf(" -Preprocessing:     %10.2f ms\n", encoder->coder.duration_preprocessor);
+                    //printf(" -DCT & Quantization:%10.2f ms\n", encoder->coder.duration_dct_quantization);
+                    //printf(" -Huffman Encoder:   %10.2f ms\n", encoder->coder.duration_huffman_coder);
+                    //printf(" -Copy From Device:  %10.2f ms\n", encoder->coder.duration_memory_from);
                     printf(" -Stream Formatter:  %10.2f ms\n", encoder->coder.duration_stream);
                 }
                 printf("Encode Image GPU:    %10.2f ms (only in-GPU processing)\n", encoder->coder.duration_in_gpu);
-                printf("Encode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - encoder->coder.duration_memory_to - encoder->coder.duration_memory_from);
+                //printf("Encode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - encoder->coder.duration_memory_to - encoder->coder.duration_memory_from);
                 printf("Encode Image:        %10.2f ms\n", duration);
             }
             if ( iterate > 1 ) {
@@ -500,7 +500,7 @@ main(int argc, char *argv[])
         }
 
         // Create decoder
-        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create();
+        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(NULL);
         if ( decoder == NULL ) {
             fprintf(stderr, "Failed to create decoder!\n");
             return -1;
@@ -592,10 +592,10 @@ main(int argc, char *argv[])
                 float duration = GPUJPEG_TIMER_DURATION();
                 if ( param.verbose ) {
                     printf(" -Stream Reader:     %10.2f ms\n", decoder->coder.duration_stream);
-                    printf(" -Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
-                    printf(" -Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
-                    printf(" -DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
-                    printf(" -Postprocessing:    %10.2f ms\n", decoder->coder.duration_preprocessor);
+                    //printf(" -Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
+                    //printf(" -Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
+                    //printf(" -DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
+                    //printf(" -Postprocessing:    %10.2f ms\n", decoder->coder.duration_preprocessor);
                     printf(" -Copy From Device:  %10.2f ms\n", decoder->coder.duration_memory_from);
                     if ( decoder->coder.duration_memory_map != 0.0 && decoder->coder.duration_memory_unmap != 0.0 ) {
                         printf(" -OpenGL Memory Map: %10.2f ms\n", decoder->coder.duration_memory_map);
@@ -603,7 +603,7 @@ main(int argc, char *argv[])
                     }
                 }
                 printf("Decode Image GPU:    %10.2f ms (only in-GPU processing)\n", decoder->coder.duration_in_gpu);
-                printf("Decode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - decoder->coder.duration_memory_to - decoder->coder.duration_memory_from);
+                //printf("Decode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - decoder->coder.duration_memory_to - decoder->coder.duration_memory_from);
                 printf("Decode Image:        %10.2f ms\n", duration);
             }
             if ( iterate > 1 ) {

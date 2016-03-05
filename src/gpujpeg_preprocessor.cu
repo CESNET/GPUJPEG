@@ -826,37 +826,41 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
-    if ( coder->param_image.comp_count == 1 ) {
+    if (coder->param_image.comp_count == 1) {
         return 0;
     }
 
     assert(coder->param_image.comp_count == 3);
 
-    if ( coder->param.color_space_internal == GPUJPEG_NONE ) {
+    if (coder->param.color_space_internal == GPUJPEG_NONE) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_NONE>(coder);
-    } else if ( coder->param.color_space_internal == GPUJPEG_RGB ) {
+    }
+    else if (coder->param.color_space_internal == GPUJPEG_RGB) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_RGB>(coder);
-    } else if ( coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS ) {
+    }
+    else if (coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
-    } else {
+    }
+    else {
         assert(false);
     }
-    if ( coder->preprocessor == NULL )
+    if (coder->preprocessor == NULL) {
         return -1;
+    }
     return 0;
 }
 
 /** Documented at declaration */
 int
-gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder)
+gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
-    if ( coder->param_image.comp_count == 1 ) {
-        cudaMemcpy(coder->d_data_raw, coder->d_data, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice);
+    if (coder->param_image.comp_count == 1) {
+        cudaMemcpyAsync(coder->d_data_raw, coder->d_data, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice, stream);
         return 0;
     }
     assert(coder->param_image.comp_count == 3);
 
-    cudaMemset(coder->d_data_raw, 0, coder->data_raw_size * sizeof(uint8_t));
+    cudaMemsetAsync(coder->d_data_raw, 0, coder->data_raw_size * sizeof(uint8_t), stream);
 
     // Select kernel
     gpujpeg_preprocessor_decode_kernel kernel = (gpujpeg_preprocessor_decode_kernel)coder->preprocessor;
@@ -893,13 +897,12 @@ gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder)
         data.comp[comp].sampling_factor.vertical = coder->sampling_factor.vertical / coder->component[comp].sampling_factor.vertical;
         data.comp[comp].data_width = coder->component[comp].data_width;
     }
-    kernel<<<grid, threads>>>(
+    kernel<<<grid, threads, 0, stream>>>(
         data,
         coder->d_data_raw,
         image_width,
         image_height
     );
-    cudaThreadSynchronize();
     gpujpeg_cuda_check_error("Preprocessor encoding failed", return -1);
 
     return 0;

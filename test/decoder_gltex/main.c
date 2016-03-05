@@ -11,7 +11,6 @@ void glutOnDisplay(void);
 void glutOnIdle(void);
 void glutOnKeyboard(unsigned char key, int x, int y);
 void glutOnReshape(int width, int height);
-static double getTime(void);
 
 int main(int argc, char *argv[])
 {
@@ -44,7 +43,7 @@ int main(int argc, char *argv[])
     }
 
     // Create decoder
-    struct gpujpeg_decoder * decoder = gpujpeg_decoder_create();
+    struct gpujpeg_decoder * decoder = gpujpeg_decoder_create(NULL);
     if (decoder == NULL) {
         fprintf(stderr, "Failed to create decoder!\n");
         return -1;
@@ -86,26 +85,24 @@ int main(int argc, char *argv[])
     gpujpeg_decoder_output_set_texture(&decoder_output, texture);
 
     // Decode image
-    double start = getTime();
+    double start = gpujpeg_get_time();
     const int iterationCount = 20;
     for (int iteration = 0; iteration < iterationCount; iteration++)
     {
-        double startImage = getTime();
+        double startImage = gpujpeg_get_time();
         printf("Decoding Image %s\n", input_filename);
         if ( gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output) != 0 ) {
             fprintf(stderr, "Failed to decode image [%s]!\n", input_filename);
             return -1;
         }
-        double endImage = getTime();
-        printf("    Stream Reader:     %10.2f ms\n", decoder->coder.duration_stream);
-        printf("    Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
-        printf("    Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
-        printf("    DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
-        printf("    Postprocessing:    %10.2f ms\n", decoder->coder.duration_preprocessor);
-        printf("    Copy To Texture:   %10.2f ms\n", decoder->coder.duration_memory_from);
+        double endImage = gpujpeg_get_time();
+        printf("      Stream Reader: %7.2f ms\n", decoder->coder.duration_stream);
+        printf("       GPU decoding: %7.2f ms\n", decoder->coder.duration_in_gpu);
+        printf("    Waiting for GPU: %7.2f ms\n", decoder->coder.duration_waiting);
+        printf("    Copy To Texture: %7.2f ms\n", decoder->coder.duration_memory_from + decoder->coder.duration_memory_map + decoder->coder.duration_memory_unmap);
         printf("Image decoded OK in %0.2f ms (%dx%d)\n", (endImage - startImage) * 1000.0, param_image.width, param_image.height);        
     }
-    double end = getTime();
+    double end = gpujpeg_get_time();
     printf("FPS: %0.2f\n", ((double) iterationCount) / (end - start));
 
     // Get data from OpenGL texture
@@ -137,34 +134,6 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-
-#if defined(_MSC_VER)
-    static double getTime()
-    {
-        static double frequency = 0.0;
-        static LARGE_INTEGER frequencyAsInt;
-        LARGE_INTEGER timer;
-        if (frequency == 0.0) {
-            if (!QueryPerformanceFrequency(&frequencyAsInt)) {
-                return -1.0;
-            }
-            else {
-                frequency = (double)frequencyAsInt.QuadPart;
-            }
-        }
-        QueryPerformanceCounter(&timer);
-        return (double) timer.QuadPart / frequency;
-    }
-#elif defined(__linux__) || defined(__APPLE__)
-    #include <sys/time.h>
-
-    static double getTime(void)
-    {
-        struct timeval tv;
-        gettimeofday(&tv, 0);
-        return (double) tv.tv_sec + (double) tv.tv_usec * 0.000001;
-    }
-#endif
 
 void glutOnDisplay(void)
 {

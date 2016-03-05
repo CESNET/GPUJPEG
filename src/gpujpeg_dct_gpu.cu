@@ -637,12 +637,13 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
         uint16_t* d_quantization_table = decoder->table_quantization[type].d_table;
 
         // Copy quantization table to constant memory
-        cudaMemcpyToSymbol(
+        cudaMemcpyToSymbolAsync(
             gpujpeg_idct_gpu_quantization_table,
             d_quantization_table,
             64 * sizeof(uint16_t),
             0,
-            cudaMemcpyDeviceToDevice
+            cudaMemcpyDeviceToDevice,
+            *(decoder->stream)
         );
         gpujpeg_cuda_check_error("Copy IDCT quantization table to constant memory", return -1);
 
@@ -657,7 +658,7 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
             GPUJPEG_DCT_BLOCK_COUNT_X,
             GPUJPEG_DCT_BLOCK_COUNT_Y
         );
-        gpujpeg_idct_gpu_kernel<<<dct_grid, dct_block>>>(
+        gpujpeg_idct_gpu_kernel<<<dct_grid, dct_block, 0, *(decoder->stream)>>>(
             block_count_x,
             block_count_y,
             component->d_data_quantized,
@@ -666,7 +667,6 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
             component->data_width,
             d_quantization_table
         );
-        cudaThreadSynchronize();
         gpujpeg_cuda_check_error("Inverse Integer DCT failed", return -1);
     }
 

@@ -55,6 +55,36 @@
 // rounds number of segment bytes up to next multiple of 128
 #define SEGMENT_ALIGN(b) (((b) + 127) & ~127)
 
+#if defined(_MSC_VER)
+    /** Documented at declaration */
+    double gpujpeg_get_time()
+    {
+        static double frequency = 0.0;
+        static LARGE_INTEGER frequencyAsInt;
+        LARGE_INTEGER timer;
+        if (frequency == 0.0) {
+            if (!QueryPerformanceFrequency(&frequencyAsInt)) {
+                return -1.0;
+            }
+            else {
+                frequency = (double)frequencyAsInt.QuadPart;
+            }
+        }
+        QueryPerformanceCounter(&timer);
+        return (double) timer.QuadPart / frequency;
+    }
+#elif defined(__linux__) || defined(__APPLE__)
+    #include <sys/time.h>
+
+    /** Documented at declaration */
+    double gpujpeg_get_time(void)
+    {
+        struct timeval tv;
+        gettimeofday(&tv, 0);
+        return (double) tv.tv_sec + (double) tv.tv_usec * 0.000001;
+    }
+#endif
+
 /** Documented at declaration */
 struct gpujpeg_devices_info
 gpujpeg_get_devices_info()
@@ -1065,7 +1095,7 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     assert(gpujpeg_preprocessor_decoder_init(coder) == 0);
     // Perform postprocessor
     assert(cudaMemcpy(coder->d_data, buffer, coder->data_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
-    assert(gpujpeg_preprocessor_decode(coder) == 0);
+    assert(gpujpeg_preprocessor_decode(coder, NULL) == 0);
     // Save preprocessor result
     assert(cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
     if ( gpujpeg_image_save_to_file(output, coder->data_raw, coder->data_raw_size) != 0 ) {
