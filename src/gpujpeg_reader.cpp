@@ -397,11 +397,14 @@ int
 gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_t* image_end,
         struct gpujpeg_reader_scan* scan, int scan_index)
 {
+    size_t data_compressed_offset = decoder->reader->data_compressed_size;
+
     // Get first segment in scan
+    uint8_t * segment_data_start = *image;
     struct gpujpeg_segment* segment = &decoder->coder.segment[scan->segment_index];
     segment->scan_index = scan_index;
     segment->scan_segment_index = scan->segment_count;
-    segment->data_compressed_index = decoder->reader->data_compressed_size;
+    segment->data_compressed_index = data_compressed_offset;
     scan->segment_count++;
 
     // Read scan data
@@ -412,8 +415,7 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
     do {
         byte_previous = byte;
         byte = gpujpeg_reader_read_byte(*image);
-        decoder->coder.data_compressed[decoder->reader->data_compressed_size] = byte;
-        decoder->reader->data_compressed_size++;
+        data_compressed_offset++;
 
         // Check markers
         if ( byte_previous == 0xFF ) {
@@ -459,25 +461,27 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
                 // Set previous marker
                 previous_marker = byte;
 
-                decoder->reader->data_compressed_size -= 2;
-
                 // Set segment byte count
-                segment->data_compressed_size = decoder->reader->data_compressed_size - segment->data_compressed_index;
+                data_compressed_offset -= 2;
+                segment->data_compressed_size = data_compressed_offset - segment->data_compressed_index;
+                memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
 
                 // Start new segment in scan
+                segment_data_start = *image;
                 segment = &decoder->coder.segment[scan->segment_index + scan->segment_count];
                 segment->scan_index = scan_index;
                 segment->scan_segment_index = scan->segment_count;
-                segment->data_compressed_index = decoder->reader->data_compressed_size;
+                segment->data_compressed_index = data_compressed_offset;
                 scan->segment_count++;
             }
             // Check scan end
             else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS || (byte >= GPUJPEG_MARKER_APP0 && byte <= GPUJPEG_MARKER_APP15) ) {
                 *image -= 2;
-                decoder->reader->data_compressed_size -= 2;
 
                 // Set segment byte count
-                segment->data_compressed_size = decoder->reader->data_compressed_size - segment->data_compressed_index;
+                data_compressed_offset -= 2;
+                segment->data_compressed_size = data_compressed_offset - segment->data_compressed_index;
+                memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
 
                 // Add scan segment count to decoder segment count
                 decoder->reader->segment_count += scan->segment_count;
@@ -485,12 +489,15 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
                 // Successfully read end of scan, so the result is OK
                 result = 0;
                 break;
-            } else {
+            }
+            else {
                 fprintf(stderr, "[GPUJPEG] [Error] JPEG scan contains unexpected marker 0x%X!\n", byte);
                 return -1;
             }
         }
     } while( *image < image_end );
+
+    decoder->reader->data_compressed_size = data_compressed_offset;
 
     if ( result == -1) {
         fprintf(stderr, "[GPUJPEG] [Error] JPEG data unexpected ended while reading SOS marker!\n");
