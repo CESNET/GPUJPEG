@@ -76,8 +76,8 @@ target_link_libraries(tester gpujpeg)
 if(GPUJPEG_OPENGL_ENABLED)
 
     # GPUJPEG decoder to OpenGL texture
-    file(GLOB C_FILES test/decoder_gltex/main.c)
-    cuda_add_executable(decoder_gltex ${C_FILES})
+    file(GLOB FILES test/decoder_gltex/*)
+    cuda_add_executable(decoder_gltex ${FILES})
     target_link_libraries(decoder_gltex gpujpeg)
 
     # OpenGL interoperability example (currently not working)

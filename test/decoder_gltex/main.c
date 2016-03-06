@@ -1,5 +1,6 @@
 #include <libgpujpeg/gpujpeg.h>
 #include <libgpujpeg/gpujpeg_decoder_internal.h>
+#include "gpujpeg_reformat.h"
 #include <GL/glew.h>
 #include <GL/glut.h>
 
@@ -56,6 +57,15 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to load image [%s]!\n", input_filename);
         return -1;
     }
+
+    // Add segment info headers into JPEG stream
+    uint8_t * image_old = image;
+    int image_old_size = image_size;
+    double startRewrite = gpujpeg_get_time();
+    gpujpeg_reformat(image, image_size, &image, &image_size);
+    double endRewrite = gpujpeg_get_time();
+    printf("Rewritten JPEG stream in %0.2f ms (from %d bytes to %d bytes.\n", (endRewrite - startRewrite) * 1000.0, image_old_size, image_size);
+    gpujpeg_image_destroy(image_old);
 
     // Get image size and check number of color components
     struct gpujpeg_image_parameters param_image;
