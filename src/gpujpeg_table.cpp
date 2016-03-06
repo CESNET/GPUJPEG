@@ -153,11 +153,6 @@ gpujpeg_table_quantization_decoder_compute(struct gpujpeg_table_quantization* ta
     for ( int i = 0; i < 64; i++ ) {
         table->table[gpujpeg_order_natural[i]] = table->table_raw[i];
     }
-
-    // Copy tables to device memory
-    if ( cudaSuccess != cudaMemcpy(table->d_table, table->table, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
-        return -1;
-        
     return 0;
 }
 
@@ -352,14 +347,18 @@ gpujpeg_table_huffman_decoder_init(struct gpujpeg_table_huffman_decoder* table, 
             memcpy(table->huffval, gpujpeg_table_huffman_cbcr_ac_value, sizeof(table->huffval));
         }
     }
-    gpujpeg_table_huffman_decoder_compute(table, d_table);
+    gpujpeg_table_huffman_decoder_compute(table);
+
+    // Copy table to device memory
+    cudaMemcpy(d_table, table, sizeof(struct gpujpeg_table_huffman_decoder), cudaMemcpyHostToDevice);
+    gpujpeg_cuda_check_error("Decoder copy huffman table ", return -1);
         
     return 0;
 }
 
 /** Documented at declaration */
 void
-gpujpeg_table_huffman_decoder_compute(struct gpujpeg_table_huffman_decoder* table, struct gpujpeg_table_huffman_decoder* d_table)
+gpujpeg_table_huffman_decoder_compute(struct gpujpeg_table_huffman_decoder* table)
 {
     // Figure C.1: make table of Huffman code length for each symbol
     // Note that this is in code-length order.
@@ -424,7 +423,4 @@ gpujpeg_table_huffman_decoder_compute(struct gpujpeg_table_huffman_decoder* tabl
             }
         }
     }
-    
-    // Copy table to device memory
-    cudaMemcpy(d_table, table, sizeof(struct gpujpeg_table_huffman_decoder), cudaMemcpyHostToDevice);
 }

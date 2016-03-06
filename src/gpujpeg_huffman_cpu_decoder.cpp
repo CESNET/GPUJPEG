@@ -392,7 +392,7 @@ gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder)
         coder.get_bits = 0;
         for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ )
             coder.dc[comp] = 0;
-        coder.data = &decoder->coder.data_compressed[segment->data_compressed_index];
+        coder.data = &decoder->data_compressed[segment->data_compressed_index];
         coder.data_size = segment->data_compressed_size;
         
         // Decode segment MCUs
