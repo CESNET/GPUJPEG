@@ -65,11 +65,22 @@ gpujpeg_decoder_output_set_texture(struct gpujpeg_decoder_output* output, struct
     output->texture = texture;
 }
 
+/** Documented at declaration */
 void
 gpujpeg_decoder_output_set_cuda_buffer(struct gpujpeg_decoder_output* output)
 {
     output->type = GPUJPEG_DECODER_OUTPUT_CUDA_BUFFER;
     output->data = NULL;
+    output->data_size = 0;
+    output->texture = NULL;
+}
+
+/** Documented at declaration */
+void
+gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, uint8_t* d_custom_buffer)
+{
+    output->type = GPUJPEG_DECODER_OUTPUT_CUSTOM_CUDA_BUFFER;
+    output->data = d_custom_buffer;
     output->data_size = 0;
     output->texture = NULL;
 }
@@ -274,7 +285,27 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         }
     }
 
-    coder->d_data_raw = coder->d_data_raw_allocated;
+    // Select CUDA output buffer
+    if (output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_CUDA_BUFFER) {
+        // Image should be directly decoded into custom CUDA buffer
+        coder->d_data_raw = output->data;
+    }
+    else if (output->type == GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE && output->texture->texture_callback_attach_opengl == NULL) {
+        GPUJPEG_CUSTOM_TIMER_START(decoder->def);
+
+        // Use OpenGL texture as decoding destination
+        int data_size = 0;
+        uint8_t* d_data = gpujpeg_opengl_texture_map(output->texture, &data_size);
+        assert(data_size == coder->data_raw_size);
+        coder->d_data_raw = d_data;
+
+        GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
+        coder->duration_memory_map = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
+    }
+    else {
+        // Use internal CUDA buffer as decoding destination
+        coder->d_data_raw = coder->d_data_raw_allocated;
+    }
 
     // Preprocessing
     if (0 != gpujpeg_preprocessor_decode(&decoder->coder, *(decoder->stream))) {
@@ -318,23 +349,26 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         coder->duration_memory_from = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
     }
     else if (output->type == GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE) {
-        GPUJPEG_CUSTOM_TIMER_START(decoder->def);
+        // If OpenGL texture wasn't mapped and used directly for decoding into it
+        if (output->texture->texture_callback_attach_opengl != NULL) {
+            GPUJPEG_CUSTOM_TIMER_START(decoder->def);
 
-        // Map OpenGL texture
-        int data_size = 0;
-        uint8_t* d_data = gpujpeg_opengl_texture_map(output->texture, &data_size);
-        assert(data_size == coder->data_raw_size);
+            // Map OpenGL texture
+            int data_size = 0;
+            uint8_t* d_data = gpujpeg_opengl_texture_map(output->texture, &data_size);
+            assert(data_size == coder->data_raw_size);
 
-        GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
-        coder->duration_memory_map = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
+            GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
+            coder->duration_memory_map = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
 
-        GPUJPEG_CUSTOM_TIMER_START(decoder->def);
+            GPUJPEG_CUSTOM_TIMER_START(decoder->def);
 
-        // Copy decompressed image to texture pixel buffer object device data
-        cudaMemcpy(d_data, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice);
+            // Copy decompressed image to texture pixel buffer object device data
+            cudaMemcpy(d_data, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice);
 
-        GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
-        coder->duration_memory_from = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
+            GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
+            coder->duration_memory_from = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
+        }
 
         GPUJPEG_CUSTOM_TIMER_START(decoder->def);
 
@@ -346,6 +380,10 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     }
     else if (output->type == GPUJPEG_DECODER_OUTPUT_CUDA_BUFFER) {
         // Copy decompressed image to texture pixel buffer object device data
+        output->data = coder->d_data_raw;
+    }
+    else if (output->type == GPUJPEG_DECODER_OUTPUT_CUSTOM_CUDA_BUFFER) {
+        // Image was already directly decoded into custom CUDA buffer
         output->data = coder->d_data_raw;
     }
     else {

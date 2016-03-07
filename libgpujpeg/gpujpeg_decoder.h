@@ -52,6 +52,8 @@ enum gpujpeg_decoder_output_type {
     GPUJPEG_DECODER_OUTPUT_OPENGL_TEXTURE,
     // Decoder will use CUDA buffer as output buffer
     GPUJPEG_DECODER_OUTPUT_CUDA_BUFFER,
+    // Decoder will use cust CUDA output buffer
+    GPUJPEG_DECODER_OUTPUT_CUSTOM_CUDA_BUFFER
 };
 
 /**
@@ -107,6 +109,16 @@ gpujpeg_decoder_output_set_texture(struct gpujpeg_decoder_output* output, struct
  */
 GPUJPEG_API void
 gpujpeg_decoder_output_set_cuda_buffer(struct gpujpeg_decoder_output* output);
+
+/**
+ * Setup decoder output to custom CUDA buffer
+ *
+ * @param output          Decoder output structure
+ * @param d_custom_buffer Custom buffer in CUDA device memory
+ * @return void
+ */
+GPUJPEG_API void
+gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, uint8_t* d_custom_buffer);
 
 /**
  * Create JPEG decoder

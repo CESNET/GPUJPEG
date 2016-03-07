@@ -664,7 +664,7 @@ gpujpeg_opengl_texture_unregister(struct gpujpeg_opengl_texture* texture);
  * @param copy_from_texture  Specifies whether memory copy from texture
  *                           should be performed
  */
-uint8_t*
+GPUJPEG_API uint8_t*
 gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_size);
 
 /**
@@ -675,7 +675,7 @@ gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_siz
  * @param copy_to_texture  Specifies whether memoryc copy to texture
  *                         should be performed
  */
-void
+GPUJPEG_API void
 gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture);
 
 #ifdef __cplusplus
