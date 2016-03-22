@@ -7,5 +7,5 @@ Name: GPUjpeg
 Description: The first test implementation of the JPEG image compression standard for NVIDIA GPUs used for real-time transmission of high-definition video.
 Requires: 
 Version: @PACKAGE_VERSION@
-Libs: -L${libdir} -lgpujpeg  -lcudart
+Libs: -L${libdir} -lgpujpeg
 Cflags: -I${includedir}
