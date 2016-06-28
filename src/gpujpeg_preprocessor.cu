@@ -168,10 +168,10 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     // Load to shared
     __shared__ unsigned char s_data[RGB_8BIT_THREADS * 3];
     if ( (x * 4) < RGB_8BIT_THREADS * 3 ) {
-        int* s = (int*)d_data_raw;
-        uint8_t* d = s_data + 4 * x;
-        if(d < d_data_raw_end) {
-            *((int*)d) = s[((gX * 3) >> 2) + x];
+        uint32_t* s = (uint32_t *) d_data_raw + ((gX * 3) >> 2) + x;
+        uint32_t* d = (uint32_t *) s_data + x;
+        if ((uint8_t *) s < d_data_raw_end) {
+            *d = *s;
         }
     }
     __syncthreads();
@@ -219,10 +219,10 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     // Load to shared
     __shared__ unsigned char s_data[RGB_8BIT_THREADS * 2];
     if ( (x * 4) < RGB_8BIT_THREADS * 2 ) {
-        int* s = (int*)d_data_raw;
-        uint8_t* d = s_data + 4 * x;
-        if(d < d_data_raw_end) {
-            *((int*)d) = s[((gX * 2) >> 2) + x];
+        uint32_t* s = (uint32_t *) d_data_raw + ((gX * 2) >> 2) + x;
+        uint32_t* d = (uint32_t *) s_data + x;
+        if ((uint8_t *) s < d_data_raw_end) {
+            *d = *s;
         }
     }
     __syncthreads();
