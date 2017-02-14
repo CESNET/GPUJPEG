@@ -3,6 +3,11 @@ GPUJPEG
 
 AUTHOR:
   Martin Srom, CESNET z.s.p.o
+  Jan Brothánek
+  Martin Jirman
+  Jiri Matela
+  Martin Pulec
+  Petr Holub
 
 DESCRIPTION:
   The first test implementation of the JPEG image compression standard for 
