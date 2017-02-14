@@ -1,0 +1,6 @@
+libgpujpeg (1.0.0-20131023u1404) unstable; urgency=low
+
+  * the gpujpeg library is now considered stable enough to claim 1.0.0 version
+  * pure upstream
+
+ -- SITOLA repository (maintainer) <xrucka@fi.muni.cz>  Wed, 23 Oct 2013 16:17:00 +0200

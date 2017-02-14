@@ -1,0 +1,5 @@
+addFilter("libgpujpeg-tools.* shlib-policy-missing-lib")
+addFilter("libgpujpeg-tools.* no-manual-page-for-binary")
+addFilter("libgpujpeg.* shlib-policy-nonversioned-dir")
+addFilter("libgpujpeg.* shlib-policy-name-error")
+addFilter("libgpujpeg.* shared-lib-calls-exit")

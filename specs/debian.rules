@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+SHELL=/bin/bash
+#export LD_LIBRARY_PATH+=:/usr/local/cuda-7.0/lib64:/usr/local/cuda-7.0/lib
+#export PATH+=:/usr/local/cuda/bin
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	./autogen.sh
+	dh_auto_configure -- --disable-static --enable-opengl
+
+override_dh_shlibdeps:
+	env LD_LIBRARY_PATH=$${LD_LIBRARY_PATH}:$$((find /usr/local -maxdepth 1 -type d -iname "*cuda*" ; echo /usr) | sort -r -n)/lib64:$$((find /usr/local -maxdepth 1 -type d -iname "*cuda*" ; echo /usr) | sort -r -n)/lib dh_shlibdeps -- --ignore-missing-info
+
