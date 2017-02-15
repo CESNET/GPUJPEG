@@ -1,0 +1,13 @@
+--- a/debian/rules	2017-02-15 19:25:34.069217998 +0100
++++ b/debian/rules	2017-02-15 21:23:51.883976299 +0100
+@@ -8,8 +8,8 @@ SHELL=/bin/bash
+ 	dh $@
+ 
+ override_dh_auto_configure:
+-	./autogen.sh
+-	dh_auto_configure -- --disable-static --enable-opengl
++	./autogen.sh || true
++	dh_auto_configure -- --disable-static --enable-opengl --with-cuda-host-compiler=clang
+ 
+ override_dh_shlibdeps:
+ 	env LD_LIBRARY_PATH=$${LD_LIBRARY_PATH}:$$((find /usr/local -maxdepth 1 -type d -iname "*cuda*" ; echo /usr) | sort -r -n)/lib64:$$((find /usr/local -maxdepth 1 -type d -iname "*cuda*" ; echo /usr) | sort -r -n)/lib dh_shlibdeps -- --ignore-missing-info
