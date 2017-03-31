@@ -1,16 +1,22 @@
 #!/usr/bin/make -f
 
 SHELL=/bin/bash
-#export LD_LIBRARY_PATH+=:/usr/local/cuda-7.0/lib64:/usr/local/cuda-7.0/lib
-#export PATH+=:/usr/local/cuda/bin
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+LIBDIR=/usr/lib/$(DEB_HOST_MULTIARCH)
+#JPEGLIBDIR=$(LIBDIR)/libgpujpeg
 
 %:
 	dh $@
 
 override_dh_auto_configure:
-	./autogen.sh
-	dh_auto_configure -- --disable-static --enable-opengl
+	./autogen.sh || true
+	dh_auto_configure -- --disable-static --enable-opengl --libdir=$(LIBDIR) # LDFLAGS="$(LDFLAGS) -Wl,-rpath=$(JPEGLIBDIR)"
+
+#override_dh_auto_install:
+#	dh_auto_install
+#	mkdir -p debian/tmp/$(JPEGLIBDIR)
+#	sh -c "$$(ldd bin/gpujpeg $$(find . -name '*.so*') 2>/dev/null | grep cuda | grep -E '^[[:space:]]+' | sed -r 's#[[:space:]]+([^[:space:]]+)[[:space:]]+=>[[:space:]]+([^[:space:]].*)[[:space:]]+[(][^)]+[)]#cp "$$(realpath "\2")" debian/tmp$(JPEGLIBDIR)/\1#g' | uniq | tr $$'\n' ';')"
 
 override_dh_shlibdeps:
-	env LD_LIBRARY_PATH=$${LD_LIBRARY_PATH}:$$((find /usr/local -maxdepth 1 -type d -iname "*cuda*" ; echo /usr) | sort -r -n)/lib64:$$((find /usr/local -maxdepth 1 -type d -iname "*cuda*" ; echo /usr) | sort -r -n)/lib dh_shlibdeps -- --ignore-missing-info
+	dh_shlibdeps -- --ignore-missing-info
 

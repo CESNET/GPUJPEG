@@ -1,5 +1,5 @@
 Name:	libgpujpeg
-Version:	20170209
+Version:	20170331
 Release:	00%{?dist}
 Summary:	Experimental GPU JPEG codec implementation
 Group:	Development/Libraries
@@ -55,18 +55,23 @@ Summary:	Wrapper for libgpujpeg
 %description	tools
 Simple wrapper binary for libgpujpeg.
 
+%define JPEGLIBDIR %{_libdir}/libgpujpeg
+
 %prep
 %setup -q
 
 %build
 ./autogen.sh || true
 %configure --docdir=%{_docdir} --disable-static --enable-opengl --with-cuda-host-compiler=clang --with-cuda=/usr/local/cuda-8.0
-make %{?_smp_mflags}
+make %{?_smp_mflags} LDFLAGS="$LDFLAGS -Wl,-rpath=%{JPEGLIBDIR}"
 
 %install
 #export QA_RPATHS=0x0001
 rm -rf $RPM_BUILD_ROOT
 %makeinstall
+
+# copy the real cudart to our rpath
+sh -c "$(ldd bin/gpujpeg $(find . -name '*.so*') 2>/dev/null | grep cuda | grep -E '^[[:space:]]+' | sed -r "s#[[:space:]]+([^[:space:]]+)[[:space:]]+=>[[:space:]]+([^[:space:]].*)[[:space:]]+[(][^)]+[)]#cp \"\$(realpath '\2')\" '${RPM_BUILD_ROOT}/%{JPEGLIBDIR}/\1'#g" | uniq | tr $'\n' ';')"
 
 %post -p /sbin/ldconfig
 
@@ -76,6 +81,8 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc AUTHORS ChangeLog COPYING NEWS README
 %{_libdir}/libgpujpeg*.so.*
+%dir %{_libdir}/libgpujpeg
+%{_libdir}/libgpujpeg/*cuda*
 
 %files tools
 %defattr(-,root,root,-)
@@ -87,11 +94,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/libgpujpeg
 %{_libdir}/libgpujpeg.so
 %{_libdir}/pkgconfig/%{name}.pc
-%{_libdir}/libgpujpeg
+%dir %{_libdir}/libgpujpeg
 %{_libdir}/libgpujpeg/config.h
 
 %changelog
-* Tue Feb 14 2017 Lukas Rucka <xrucka@fi.muni.cz> 20170209
+* Tue Feb 14 2017 Lukas Rucka <xrucka@fi.muni.cz> 20170331
 - integrated build patches into upstream, merged package specifications
 
 * Wed Mar 4 2015 Lukas Rucka <xrucka@fi.muni.cz>

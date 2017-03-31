@@ -1,7 +1,6 @@
-diff -rupN a/configure.ac b/configure.ac
---- a/configure.ac	2016-04-27 23:19:57.123865479 +0200
-+++ b/configure.ac	2016-04-27 23:20:57.070948431 +0200
-@@ -123,6 +123,7 @@ fi
+--- a/configure.ac	2017-03-30 21:35:41.568748653 +0200
++++ b/configure.ac	2017-03-31 21:19:48.760531894 +0200
+@@ -134,6 +134,7 @@ fi
  
  GPUJPEG_LDFLAGS="$GPUJPEG_LDFLAGS -L${CUDA_INSTALL_LIB} -lcudart"
  COMMON_FLAGS="$COMMON_FLAGS -I. -I${CUDA_INSTALL_PATH}/include"

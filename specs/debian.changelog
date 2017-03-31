@@ -1,3 +1,9 @@
+libgpujpeg (20170331-1) unstable; urgency=low
+
+  * adopt debian multilib
+
+ -- SITOLA repository (maintainer) <xrucka@fi.muni.cz>  Fri, 31 Mar 2017 17:21:00 +0200
+
 libgpujpeg (1.0.0-20131023u1404) unstable; urgency=low
 
   * the gpujpeg library is now considered stable enough to claim 1.0.0 version

@@ -1,13 +1,11 @@
---- a/debian/rules	2017-02-15 19:25:34.069217998 +0100
-+++ b/debian/rules	2017-02-15 21:23:51.883976299 +0100
-@@ -8,8 +8,8 @@ SHELL=/bin/bash
- 	dh $@
+--- a/debian/rules	2017-04-06 11:27:10.682100692 +0200
++++ b/debian/rules	2017-04-06 11:27:47.386780364 +0200
+@@ -10,7 +10,7 @@ LIBDIR=/usr/lib/$(DEB_HOST_MULTIARCH)
  
  override_dh_auto_configure:
--	./autogen.sh
--	dh_auto_configure -- --disable-static --enable-opengl
-+	./autogen.sh || true
-+	dh_auto_configure -- --disable-static --enable-opengl --with-cuda-host-compiler=clang
+ 	./autogen.sh || true
+-	dh_auto_configure -- --disable-static --enable-opengl --libdir=$(LIBDIR) # LDFLAGS="$(LDFLAGS) -Wl,-rpath=$(JPEGLIBDIR)"
++	dh_auto_configure -- --disable-static --enable-opengl --libdir=$(LIBDIR) --with-cuda-host-compiler=clang # LDFLAGS="$(LDFLAGS) -Wl,-rpath=$(JPEGLIBDIR)"
  
- override_dh_shlibdeps:
- 	env LD_LIBRARY_PATH=$${LD_LIBRARY_PATH}:$$((find /usr/local -maxdepth 1 -type d -iname "*cuda*" ; echo /usr) | sort -r -n)/lib64:$$((find /usr/local -maxdepth 1 -type d -iname "*cuda*" ; echo /usr) | sort -r -n)/lib dh_shlibdeps -- --ignore-missing-info
+ #override_dh_auto_install:
+ #	dh_auto_install

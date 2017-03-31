@@ -2,7 +2,7 @@
 	<service name="tar_scm">
 		<param name="scm">git</param>
 		<param name="url">https://github.com/CESNET/GPUJPEG.git</param>
-		<param name="version">20170209</param>
+		<param name="version">20170331</param>
 		<param name="revision">master</param>
 		<param name="filename">libgpujpeg</param>
 		<param name="package-meta">yes</param>

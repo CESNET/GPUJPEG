@@ -4,13 +4,14 @@ Maintainer: 	Lukas Rucka <xrucka@fi.muni.cz>
 Standards-Version: 3.9.6
 Homepage: 	https://sourceforge.net/p/gpujpeg
 Architecture: 	any
-Build-Depends: debhelper (>= 7.0.50~)
+Build-Depends: debhelper (>= 9)
 
 Package: 	libgpujpeg
 Section:	contrib/libs
 #resi libgpujpeg.dsc
 Depends: 	${shlibs:Depends}, ${misc:Depends}
 Architecture: 	any
+Multi-Arch:	same
 Description: 	Experimental GPU JPEG codec implementation
  The first test implementation of the JPEG image compression
  standard for NVIDIA GPUs used for real-time transmission
@@ -21,12 +22,14 @@ Package:	libgpujpeg-dev
 Section:	contrib/libdevel
 Depends:	${shlibs:Depends}, ${misc:Depends}, libgpujpeg (= ${binary:Version})
 Architecture: 	any
+Multi-Arch:	foreign
 Description:	Development files for libgpujpeg
  Headers for libgpujpeg.
 
 Package:	libgpujpeg-tools
 Section:	contrib/utils
 Architecture: 	any
+Multi-Arch:	allowed
 Depends:	${shlibs:Depends}, ${misc:Depends}, libgpujpeg (= ${binary:Version})
 Description:	Wrapper for libgpujpeg
  Simple wrapper binary for libgpujpeg.
