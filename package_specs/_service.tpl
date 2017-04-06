@@ -10,7 +10,7 @@
 	</service>
 	<service name="extract_file">
 		<param name="archive">*libgpujpeg*.tar</param>
-		<param name="files">*/specs/*</param>
+		<param name="files">*/package_specs/*</param>
 	</service>
 	<service name="recompress">
 		<param name="file">*libgpujpeg*.tar</param>
