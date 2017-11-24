@@ -37,7 +37,7 @@ fi
 
 if test x$enable_debug = xyes ; then
 	COMMON_FLAGS="$COMMON_FLAGS -g -D_DEBUG -O0"
-	NVCCFLAGS="$NVCCFLAGS -G"
+	CUDA_FLAGS="$CUDA_FLAGS -G"
 else
 	COMMON_FLAGS="$COMMON_FLAGS -O2"
 fi
@@ -79,6 +79,27 @@ fi
 
 
 # CUDA
+CUDA_COMPUTE_ARGS=""
+CUDA_COMPILER=""
+
+AC_ARG_WITH(cuda-compiler,
+              AS_HELP_STRING([--with-cuda-compileri=compiler], [select compiler to compile cuda code with; suported: clang, nvcc; default: nvcc]),
+              [CUDA_COMPILER="$withval"],
+              [CUDA_COMPILER=nvcc])
+
+case "$CUDA_COMPILER" in
+        *nvcc*)
+                CUDA_COMPUTE_ARGS="-gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35 -gencode arch=compute_35,code=compute_35"
+                ;;
+        *clang*)
+                CUDA_COMPUTE_ARGS="--cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35"
+                CUDA_FLAGS+=" --cuda-path=$CUDA_INSTALL_PATH"
+                ;;
+        *)
+                AC_MSG_ERROR([Unsupported cuda compiler $CUDA_COMPILER])
+                ;;
+esac
+
 AC_ARG_WITH(cuda,
 	AC_HELP_STRING([--with-cuda=DIR], [specify cuda root]),
 	CUDA_INSTALL_PATH=$withval
@@ -109,7 +130,7 @@ if test $enable_osx_universal = yes; then
 		build/universal/gpujpeg_dct_gpu.o \
 		build/universal/gpujpeg_preprocessor.o \
 		build/universal/gpujpeg_huffman_gpu_decoder.o"
-	NVCCFLAGS="$NVCCFLAGS -Xcompiler -Wno-error=unused-command-line-argument-hard-error-in-future"
+	CUDA_FLAGS="$CUDA_FLAGS -Xcompiler -Wno-error=unused-command-line-argument-hard-error-in-future"
 else
 	LIBGPUJPEG_CUDA_OBJS=" \
 		src/gpujpeg_huffman_gpu_encoder.cu.o \
@@ -124,7 +145,7 @@ AC_ARG_WITH(cuda-host-compiler,
 if test "x${with_cuda_host_compiler}" != "x" ; then
 	AC_CHECK_PROG([cuda_host_cc], [${with_cuda_host_compiler}],[yes])
 	if test "x${cuda_host_cc}" = "xyes" ; then
-		NVCCFLAGS+=" -ccbin ${with_cuda_host_compiler}"
+		CUDA_FLAGS+=" -ccbin ${with_cuda_host_compiler}"
 	else
 		AC_MSG_FAILURE([Binary ${with_cuda_host_compiler} given as cuda host compiler, yet not found!])
 	fi
@@ -144,7 +165,9 @@ AC_SUBST(GPUJPEG_CFLAGS)
 AC_SUBST(GPUJPEG_LDFLAGS)
 AC_SUBST(GPUJPEG_LIBS)
 AC_SUBST(LIBGPUJPEG_CUDA_OBJS)
-AC_SUBST(NVCCFLAGS)
+AC_SUBST(CUDA_FLAGS)
+AC_SUBST(CUDA_COMPILER)
+AC_SUBST(CUDA_COMPUTE_ARGS)
 
 AC_CONFIG_FILES([Makefile libgpujpeg.pc test/memcheck/Makefile test/opengl_interop/Makefile ])
 AC_OUTPUT
@@ -159,6 +182,7 @@ Configuration summary:
   Constant tables.............. $enable_constant_tables
   OpenGL ...................... $enable_opengl
   Host compiler ............... $with_cuda_host_compiler
+  Cuda compiler ............... $CUDA_COMPILER
 
   CUDA root ................... $CUDA_INSTALL_PATH
 

@@ -1,4 +1,4 @@
-NVCC=@CUDA_INSTALL_PATH@/bin/nvcc
+CUDA_COMPILER=@CUDA_COMPILER@
 CUDA_MEMCHECK=@CUDA_INSTALL_PATH@/bin/cuda-memcheck
 
 TESTS=memcheck_local.sh memcheck_cuda.sh
@@ -8,7 +8,7 @@ all-local: tests
 tests: check-TESTS
 
 memcheck:
-	${NVCC} memcheck.cu -o memcheck
+	${CUDA_COMPILER} memcheck.cu -o memcheck
 
 memcheck_local.sh: memcheck
 	@echo "echo '+-------------------------------------------------------+'" > memcheck_local.sh
