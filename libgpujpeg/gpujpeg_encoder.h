@@ -37,28 +37,18 @@
 extern "C" {
 #endif
 
-#if defined _MSC_VER || defined __MINGW32__
-#ifdef GPUJPEG_EXPORTS
-#define GPUJPEG_API __declspec(dllexport)
-#else
-#define GPUJPEG_API __declspec(dllimport)
-#endif
-#else // other platforms
-#define GPUJPEG_API
-#endif
-
 struct gpujpeg_encoder;
 
 /**
  * Encoder input type
  */
 enum gpujpeg_encoder_input_type {
-    // Encoder will use it's internal output buffer
-    GPUJPEG_ENCODER_INPUT_INTERNAL_BUFFER,
     // Encoder will use custom input buffer
     GPUJPEG_ENCODER_INPUT_IMAGE,
     // Encoder will use OpenGL Texture PBO Resource as input buffer
     GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE,
+    // Encoder will use custom GPU input buffer
+    GPUJPEG_ENCODER_INPUT_GPU_IMAGE,
 };
 
 /**
@@ -87,6 +77,16 @@ GPUJPEG_API void
 gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* image);
 
 /**
+ * Set encoder input to GPU image data
+ *
+ * @param encoder_input  Encoder input structure
+ * @param image GPU image data
+ * @return void
+ */
+GPUJPEG_API void
+gpujpeg_encoder_input_set_gpu_image(struct gpujpeg_encoder_input* input, uint8_t* image);
+
+/**
  * Set encoder input to OpenGL texture
  *
  * @param encoder_input  Encoder input structure
@@ -97,42 +97,70 @@ GPUJPEG_API void
 gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gpujpeg_opengl_texture* texture);
 
 /**
- * Copies image to internal buffer and sets it as a input
- *
- * @param encoder_input  Encoder input structure
- * @param encoder        Encoder structure to which internal buffer will be the image copied
- * @param image  Input image data
- * @retval  0 if copied successfully
- * @retval -1 if failed
- */
-GPUJPEG_API int
-gpujpeg_encoder_input_copy_image(struct gpujpeg_encoder_input* input, struct gpujpeg_encoder* encoder, uint8_t* image);
-
-/**
  * Create JPEG encoder
- * 
- * @param param  Parameters for coder
- * @param param_image  Parameters for image data
+ *
  * @return encoder structure if succeeds, otherwise NULL
  */
 GPUJPEG_API struct gpujpeg_encoder*
-gpujpeg_encoder_create(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image);
+gpujpeg_encoder_create(cudaStream_t * stream);
+
+/**
+ * Compute maximum number of image pixels (width x height) which can be encoded by given memory size.
+ *
+ * @param encoder
+ * @param param
+ * @param param_image
+ * @param image_input_type
+ * @param memory_size
+ * @param max_pixels
+ * @return size of used device memory in bytes if succeeds, otherwise 0
+ */
+GPUJPEG_API size_t
+gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, size_t memory_size, int * max_pixels);
+
+/**
+ * Compute maximum size of device memory which will be used for encoding image with given number of pixels.
+ *
+ * @param encoder
+ * @param param
+ * @param param_image
+ * @param image_input_type
+ * @param max_pixels
+ * @return size of required device memory in bytes if succeeds, otherwise 0
+ */
+GPUJPEG_API size_t
+gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int max_pixels);
+
+/**
+ * Pre-allocate all encoding buffers for given image pixels.
+ *
+ * @param encoder
+ * @param param
+ * @param param_image
+ * @param image_input_type
+ * @param pixels
+ * @return 0 if succeeds, otherwise nonzero
+ */
+GPUJPEG_API int
+gpujpeg_encoder_allocate(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int pixels);
 
 /**
  * Compress image by encoder
- * 
+ *
  * @param encoder  Encoder structure
+ * @param param  Parameters for coder
+ * @param param_image  Parameters for image data
  * @param image  Source image data
  * @param image_compressed  Pointer to variable where compressed image data buffer will be placed
  * @param image_compressed_size  Pointer to variable where compressed image size will be placed
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, int* image_compressed_size);
+gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, int* image_compressed_size);
 
 /**
  * Destory JPEG encoder
- * 
+ *
  * @param encoder  Encoder structure
  * @return 0 if succeeds, otherwise nonzero
  */

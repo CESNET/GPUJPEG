@@ -76,7 +76,7 @@ enum gpujpeg_color_space {
  *
  * @param color_space
  */
-static inline const char*
+static const char*
 gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
 {
     switch ( color_space ) {
@@ -98,11 +98,28 @@ gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
 }
 
 /**
- * Sampling factor for image data
+ * Pixel format for input/output image data.
  */
-enum gpujpeg_sampling_factor {
-    GPUJPEG_4_4_4 = ((4 << 16) | (4 << 8) | 4),
-    GPUJPEG_4_2_2 = ((4 << 16) | (2 << 8) | 2),
+enum gpujpeg_pixel_format {
+    /// 8bit unsigned samples, 1 component
+    GPUJPEG_U8 =  0,
+
+    /// 8bit unsigned samples, 3 components, 4:4:4 sampling,
+    /// sample order: comp#0 comp#1 comp#2, interleaved
+    GPUJPEG_444_U8_P012 =  1,
+
+    /// 8bit unsigned samples, 3 components, 4:4:4, planar
+    GPUJPEG_444_U8_P0P1P2 = 2,
+
+    /// 8bit unsigned samples, 3 components, 4:2:2,
+    /// order of samples: comp#1 comp#0 comp#2 comp#0, interleaved
+    GPUJPEG_422_U8_P1020 = 3,
+
+    /// 8bit unsigned samples, planar, 3 components, 4:2:2, planar
+    GPUJPEG_422_U8_P0P1P2 = 4,
+
+    /// 8bit unsigned samples, planar, 3 components, 4:2:0, planar
+    GPUJPEG_420_U8_P0P1P2 = 5
 };
 
 /**
@@ -123,8 +140,8 @@ enum gpujpeg_component_type {
     GPUJPEG_COMPONENT_TYPE_COUNT = 2
 };
 
-/** 
- * JPEG huffman type 
+/**
+ * JPEG huffman type
  */
 enum gpujpeg_huffman_type {
     GPUJPEG_HUFFMAN_DC = 0,
@@ -134,32 +151,32 @@ enum gpujpeg_huffman_type {
 
 #include <stdio.h>
 
-/** 
- * JPEG marker codes 
+/**
+ * JPEG marker codes
  */
-enum gpujpeg_marker_code {        
+enum gpujpeg_marker_code {
     GPUJPEG_MARKER_SOF0  = 0xc0,
     GPUJPEG_MARKER_SOF1  = 0xc1,
     GPUJPEG_MARKER_SOF2  = 0xc2,
     GPUJPEG_MARKER_SOF3  = 0xc3,
-  
+
     GPUJPEG_MARKER_SOF5  = 0xc5,
     GPUJPEG_MARKER_SOF6  = 0xc6,
     GPUJPEG_MARKER_SOF7  = 0xc7,
-  
+
     GPUJPEG_MARKER_JPG   = 0xc8,
     GPUJPEG_MARKER_SOF9  = 0xc9,
     GPUJPEG_MARKER_SOF10 = 0xca,
     GPUJPEG_MARKER_SOF11 = 0xcb,
-  
+
     GPUJPEG_MARKER_SOF13 = 0xcd,
     GPUJPEG_MARKER_SOF14 = 0xce,
     GPUJPEG_MARKER_SOF15 = 0xcf,
-  
+
     GPUJPEG_MARKER_DHT   = 0xc4,
-  
+
     GPUJPEG_MARKER_DAC   = 0xcc,
-  
+
     GPUJPEG_MARKER_RST0  = 0xd0,
     GPUJPEG_MARKER_RST1  = 0xd1,
     GPUJPEG_MARKER_RST2  = 0xd2,
@@ -168,7 +185,7 @@ enum gpujpeg_marker_code {
     GPUJPEG_MARKER_RST5  = 0xd5,
     GPUJPEG_MARKER_RST6  = 0xd6,
     GPUJPEG_MARKER_RST7  = 0xd7,
-  
+
     GPUJPEG_MARKER_SOI   = 0xd8,
     GPUJPEG_MARKER_EOI   = 0xd9,
     GPUJPEG_MARKER_SOS   = 0xda,
@@ -177,7 +194,7 @@ enum gpujpeg_marker_code {
     GPUJPEG_MARKER_DRI   = 0xdd,
     GPUJPEG_MARKER_DHP   = 0xde,
     GPUJPEG_MARKER_EXP   = 0xdf,
-  
+
     GPUJPEG_MARKER_APP0  = 0xe0,
     GPUJPEG_MARKER_APP1  = 0xe1,
     GPUJPEG_MARKER_APP2  = 0xe2,
@@ -194,26 +211,26 @@ enum gpujpeg_marker_code {
     GPUJPEG_MARKER_APP13 = 0xed,
     GPUJPEG_MARKER_APP14 = 0xee,
     GPUJPEG_MARKER_APP15 = 0xef,
-  
+
     GPUJPEG_MARKER_JPG0  = 0xf0,
     GPUJPEG_MARKER_JPG13 = 0xfd,
     GPUJPEG_MARKER_COM   = 0xfe,
-  
+
     GPUJPEG_MARKER_TEM   = 0x01,
-  
+
     GPUJPEG_MARKER_ERROR = 0x100
 };
 
-static const char* 
+static const char*
 gpujpeg_marker_name(enum gpujpeg_marker_code code) ATTRIBUTE_UNUSED;
 
 /**
  * Get marker name from code
- * 
+ *
  * @param code
  * @return marker name
  */
-static const char* 
+static const char*
 gpujpeg_marker_name(enum gpujpeg_marker_code code)
 {
     switch (code) {
@@ -270,7 +287,7 @@ gpujpeg_marker_name(enum gpujpeg_marker_code code)
         case GPUJPEG_MARKER_COM: return "COM";
         case GPUJPEG_MARKER_TEM: return "TEM";
         case GPUJPEG_MARKER_ERROR: return "ERROR";
-        default: 
+        default:
         {
             static char buffer[255];
             sprintf(buffer, "Unknown (0x%X)", code);

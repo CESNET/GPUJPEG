@@ -56,9 +56,16 @@ struct gpujpeg_decoder
     
     // Current segment count for decoded image
     int segment_count;
+
+    // Current data compressed for decoded image
+    uint8_t * data_compressed;
     
     // Current data compressed size for decoded image
     int data_compressed_size;
+
+    // Stream
+    cudaStream_t * stream;
+    cudaStream_t * allocatedStream;
 
     // Timers
     GPUJPEG_CUSTOM_TIMER_DECLARE(def)

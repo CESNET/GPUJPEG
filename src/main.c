@@ -32,59 +32,89 @@
 #include <libgpujpeg/gpujpeg_decoder_internal.h> // TIMER
 #include <libgpujpeg/gpujpeg.h>
 #include <libgpujpeg/gpujpeg_util.h>
-#include <getopt.h>
+#if defined(__linux__)
+    #include <getopt.h>
+#endif
 
 void
-print_help() 
+print_help()
 {
-    printf(
-        "gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
-        "   -h, --help             print help\n"
-        "   -v, --verbose          verbose output\n"
-        "   -D, --device           set cuda device id (default 0)\n"
-        "       --device-list      list cuda devices\n"
-        "\n"
-        "   -s, --size             set input image size in pixels, e.g. 1920x1080\n"
-        "   -C, --comp-count       set input/output image number of components (1 or 3)\n"
-        "   -f, --sampling-factor  set input/output image sampling factor, e.g. 4:2:2\n"
-        "   -c, --colorspace       set input/output image colorspace, e.g. rgb, yuv,\n"
-        "                          ycbcr, ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
-        "\n"
-        "   -q, --quality          set JPEG encoder quality level 0-100 (default 75)\n"
-        "   -r, --restart          set JPEG encoder restart interval (default 8)\n"
-        "       --subsampled       set JPEG encoder to use chroma subsampling\n"
-        "   -i  --interleaved      set JPEG encoder to use interleaved stream\n"
-        "   -g  --segment-info     set JPEG encoder to use segment info in stream\n"
-        "                          for fast decoding\n"
-        "\n"
-        "   -e, --encode           perform JPEG encoding\n"
-        "   -d, --decode           perform JPEG decoding\n"
-        "       --convert          convert input image to output image (change\n"
-        "                          color space and/or sampling factor)\n"
-        "       --component-range  show samples range for each component in image\n"
-        "\n"
-        "   -n  --iterate          perform encoding/decoding in specified number of\n"
-        "                          iterations for each image\n"
-        "   -o  --use-opengl       use an OpenGL texture as input/output\n"
-    );
+    printf("gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
+           "   -h, --help             print help\n"
+           "   -v, --verbose          verbose output\n"
+           "   -D, --device           set cuda device id (default 0)\n"
+           "       --device-list      list cuda devices\n"
+           "\n");
+    printf("   -s, --size             set input image size in pixels, e.g. 1920x1080\n"
+           "   -f, --pixel-format     set input/output image pixel format, one of the following:\n"
+           "\n"
+           "                          u8               422-u8-p1020\n"
+           "                          444-u8-p012      422-u8-p0p1p2\n"
+           "                          444-u8-p0p1p2    420-u8-p0p1p2\n"
+           "\n"
+           "   -c, --colorspace       set input/output image colorspace, e.g. rgb, yuv,\n"
+           "                          ycbcr, ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
+           "\n");
+    printf("   -q, --quality          set JPEG encoder quality level 0-100 (default 75)\n"
+           "   -r, --restart          set JPEG encoder restart interval (default 8)\n"
+           "       --subsampled       set JPEG encoder to use chroma subsampling\n"
+           "   -i  --interleaved      set JPEG encoder to use interleaved stream\n"
+           "   -g  --segment-info     set JPEG encoder to use segment info in stream\n"
+           "                          for fast decoding\n"
+           "\n");
+    printf("   -e, --encode           perform JPEG encoding\n"
+           "   -d, --decode           perform JPEG decoding\n"
+           "       --convert          convert input image to output image (change\n"
+           "                          color space and/or sampling factor)\n"
+           "       --component-range  show samples range for each component in image\n"
+           "\n");
+    printf("   -n  --iterate          perform encoding/decoding in specified number of\n"
+           "                          iterations for each image\n"
+           "   -o  --use-opengl       use an OpenGL texture as input/output\n"
+           "\n");
 }
 
 int
 main(int argc, char *argv[])
 {
+    // Default coder parameters
+    struct gpujpeg_parameters param;
+    gpujpeg_set_default_parameters(&param);
+
+    // Default image parameters
+    struct gpujpeg_image_parameters param_image;
+    gpujpeg_image_set_default_parameters(&param_image);
+
+    // Original image parameters in conversion
+    struct gpujpeg_image_parameters param_image_original;
+    gpujpeg_image_set_default_parameters(&param_image_original);
+
+    // Other parameters
+    int device_id = 0;
+    int encode = 0;
+    int decode = 0;
+    int convert = 0;
+    int component_range = 0;
+    int iterate = 1;
+    int use_opengl = 0;
+
+    // Flags
+    int restart_interval_default = 1;
+    int chroma_subsampled = 0;
+
+#if defined(__linux__)
+    // Parse command line
     #define OPTION_DEVICE_INFO     1
     #define OPTION_SUBSAMPLED      2
     #define OPTION_CONVERT         3
     #define OPTION_COMPONENT_RANGE 4
-
     struct option longopts[] = {
         {"help",                    no_argument,       0, 'h'},
         {"verbose",                 no_argument,       0, 'v'},
         {"device",                  required_argument, 0, 'D'},
         {"device-list",             no_argument,       0,  OPTION_DEVICE_INFO },
         {"size",                    required_argument, 0, 's'},
-        {"comp-count",              required_argument, 0, 'C'},
-        {"sampling-factor",         required_argument, 0, 'f'},
+        {"pixel-format",         required_argument, 0, 'f'},
         {"colorspace",              required_argument, 0, 'c'},
         {"quality",                 required_argument, 0, 'q'},
         {"restart",                 required_argument, 0, 'r'},
@@ -99,33 +129,6 @@ main(int argc, char *argv[])
         {"use-opengl",              no_argument,       0,  'o' },
         0
     };
-
-    // Default coder parameters
-    struct gpujpeg_parameters param;
-    gpujpeg_set_default_parameters(&param);
-    
-    // Default image parameters
-    struct gpujpeg_image_parameters param_image;
-    gpujpeg_image_set_default_parameters(&param_image);
-    
-    // Original image parameters in conversion
-    struct gpujpeg_image_parameters param_image_original;
-    gpujpeg_image_set_default_parameters(&param_image_original);
-
-    // Other parameters
-    int device_id = 0;
-    int encode = 0;
-    int decode = 0;
-    int convert = 0;
-    int component_range = 0;
-    int iterate = 1;
-    int use_opengl = 0;
-    
-    // Flags
-    int restart_interval_default = 1;
-    int chroma_subsampled = 0;
-    
-    // Parse command line
     char ch = '\0';
     int optindex = 0;
     char* pos = 0;
@@ -146,13 +149,6 @@ main(int argc, char *argv[])
             }
             param_image.height = atoi(pos + 1);
             break;
-        case 'C':
-            param_image.comp_count = atoi(optarg);
-            if ( param_image.comp_count != 1 && param_image.comp_count != 3 ) {
-                fprintf(stderr, "Component count '%s' is not available!\n", optarg);
-                param_image.comp_count = 3;
-            }
-            break;
         case 'c':
             if ( strcmp(optarg, "none") == 0 )
                 param_image.color_space = GPUJPEG_NONE;
@@ -172,12 +168,41 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Colorspace '%s' is not available!\n", optarg);
             break;
         case 'f':
-            if ( strcmp(optarg, "4:4:4") == 0 )
-                param_image.sampling_factor = GPUJPEG_4_4_4;
-            else if ( strcmp(optarg, "4:2:2") == 0 )
-                param_image.sampling_factor = GPUJPEG_4_2_2;
-            else
-                fprintf(stderr, "Sampling factor '%s' is not available!\n", optarg);
+            if ( strcmp(optarg, "u8") == 0 ) {
+                param_image.comp_count = 1;
+                param_image.pixel_format = GPUJPEG_U8;
+            }
+            else if ( strcmp(optarg, "444-u8-p012") == 0 )   {
+                param_image.comp_count = 3;
+                param_image.pixel_format = GPUJPEG_444_U8_P012;
+            }
+            else if ( strcmp(optarg, "444-u8-p0p1p2") == 0 ) {
+                param_image.comp_count = 3;
+                param_image.pixel_format = GPUJPEG_444_U8_P0P1P2;
+                param_image.color_space = GPUJPEG_NONE;
+            }
+            else if ( strcmp(optarg, "422-u8-p1020") == 0 )  {
+                param_image.comp_count = 3;
+                param_image.pixel_format = GPUJPEG_422_U8_P1020;
+                param_image.color_space = GPUJPEG_NONE;
+                gpujpeg_parameters_chroma_subsampling_422(&param);
+                chroma_subsampled = 1;
+            }
+            else if ( strcmp(optarg, "422-u8-p0p1p2") == 0 ) {
+                param_image.comp_count = 3;
+                param_image.pixel_format = GPUJPEG_422_U8_P0P1P2;
+                param_image.color_space = GPUJPEG_NONE;
+                gpujpeg_parameters_chroma_subsampling_422(&param);
+                chroma_subsampled = 1;
+            }
+            else if ( strcmp(optarg, "420-u8-p0p1p2") == 0 ) {
+                param_image.comp_count = 3;
+                param_image.pixel_format = GPUJPEG_420_U8_P0P1P2;
+                param_image.color_space = GPUJPEG_NONE;
+                gpujpeg_parameters_chroma_subsampling_420(&param);
+                chroma_subsampled = 1;
+            }
+            else { fprintf(stderr, "Unknown pixel format '%s'!\n", optarg); }
             break;
         case 'q':
             param.quality = atoi(optarg);
@@ -199,7 +224,7 @@ main(int argc, char *argv[])
                 param.segment_info = 0;
             break;
         case OPTION_SUBSAMPLED:
-            gpujpeg_parameters_chroma_subsampling(&param);
+            gpujpeg_parameters_chroma_subsampling_420(&param);
             chroma_subsampled = 1;
             break;
         case OPTION_DEVICE_INFO:
@@ -242,12 +267,16 @@ main(int argc, char *argv[])
     }
     argc -= optind;
     argv += optind;
-    
+#else
+    fprintf(stderr, "Parsing command line options isn't implemented in current OS\n");
+    return -1;
+#endif
+
     // Show info about image samples range
     if ( component_range == 1 ) {
         // For each image
         for ( int index = 0; index < argc; index++ ) {
-            gpujpeg_image_range_info(argv[index], param_image.width, param_image.height, param_image.sampling_factor);
+            gpujpeg_image_range_info(argv[index], param_image.width, param_image.height, param_image.pixel_format);
         }
         return 0;
     }
@@ -258,7 +287,7 @@ main(int argc, char *argv[])
         print_help();
         return -1;
     }
-    
+
     // Init device
     int flags = GPUJPEG_VERBOSE;
     if ( use_opengl ) {
@@ -295,14 +324,15 @@ main(int argc, char *argv[])
             return -1;
         }
     }
-    
+
     // Detect color spalce
     if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV && param_image.color_space == GPUJPEG_RGB ) {
         param_image.color_space = GPUJPEG_YUV;
     }
-    
+
     // Detect component count
     if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_GRAY && param_image.comp_count != 1 ) {
+        param_image.pixel_format = GPUJPEG_U8;
         param_image.comp_count = 1;
     }
 
@@ -313,9 +343,9 @@ main(int argc, char *argv[])
             param.restart_interval = 2;
         }
         else {
-        	// Adjust according to Mpix count
-        	double coefficient = ((double)param_image.width * param_image.height * param_image.comp_count) / (1000000.0 * 3.0);
-        	if ( coefficient < 1.0 ) {
+            // Adjust according to Mpix count
+            double coefficient = ((double)param_image.width * param_image.height * param_image.comp_count) / (1000000.0 * 3.0);
+            if ( coefficient < 1.0 ) {
                 param.restart_interval = 4;
             } else if ( coefficient < 3.0 ) {
                 param.restart_interval = 8;
@@ -334,7 +364,7 @@ main(int argc, char *argv[])
         // Create OpenGL texture
         struct gpujpeg_opengl_texture* texture = NULL;
         if ( use_opengl ) {
-            assert(param_image.sampling_factor == GPUJPEG_4_4_4);
+            assert(param_image.pixel_format == GPUJPEG_444_U8_P012);
             int texture_id = gpujpeg_opengl_texture_create(param_image.width, param_image.height, NULL);
             assert(texture_id != 0);
 
@@ -343,7 +373,7 @@ main(int argc, char *argv[])
         }
 
         // Create encoder
-        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&param, &param_image);
+        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(NULL);
         if ( encoder == NULL ) {
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
@@ -365,12 +395,12 @@ main(int argc, char *argv[])
             if ( output_format != GPUJPEG_IMAGE_FILE_JPEG ) {
                 fprintf(stderr, "Encoder output file [%s] should be JPEG image (*.jpg)!\n", output);
                 return -1;
-            }                
-            
+            }
+
             // Encode image
             GPUJPEG_TIMER_INIT();
             printf("\nEncoding Image [%s]\n", input);
-        
+
             GPUJPEG_TIMER_START();
 
             // Load image
@@ -380,7 +410,7 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
                 return -1;
             }
-            
+
             GPUJPEG_TIMER_STOP();
             printf("Load Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
 
@@ -403,7 +433,7 @@ main(int argc, char *argv[])
 
                 GPUJPEG_TIMER_START();
 
-                if ( gpujpeg_encoder_encode(encoder, &encoder_input, &image_compressed, &image_compressed_size) != 0 ) {
+                if ( gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size) != 0 ) {
                     fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
                     return -1;
                 }
@@ -411,19 +441,19 @@ main(int argc, char *argv[])
                 GPUJPEG_TIMER_STOP();
                 float duration = GPUJPEG_TIMER_DURATION();
                 if ( param.verbose ) {
-                    printf(" -Copy To Device:    %10.2f ms\n", encoder->coder.duration_memory_to);
+                    //printf(" -Copy To Device:    %10.2f ms\n", encoder->coder.duration_memory_to);
                     if ( encoder->coder.duration_memory_map != 0.0 && encoder->coder.duration_memory_unmap != 0.0 ) {
                         printf(" -OpenGL Memory Map: %10.2f ms\n", encoder->coder.duration_memory_map);
                         printf(" -OpenGL Memory Unmap:%9.2f ms\n", encoder->coder.duration_memory_unmap);
                     }
-                    printf(" -Preprocessing:     %10.2f ms\n", encoder->coder.duration_preprocessor);
-                    printf(" -DCT & Quantization:%10.2f ms\n", encoder->coder.duration_dct_quantization);
-                    printf(" -Huffman Encoder:   %10.2f ms\n", encoder->coder.duration_huffman_coder);
-                    printf(" -Copy From Device:  %10.2f ms\n", encoder->coder.duration_memory_from);
+                    //printf(" -Preprocessing:     %10.2f ms\n", encoder->coder.duration_preprocessor);
+                    //printf(" -DCT & Quantization:%10.2f ms\n", encoder->coder.duration_dct_quantization);
+                    //printf(" -Huffman Encoder:   %10.2f ms\n", encoder->coder.duration_huffman_coder);
+                    //printf(" -Copy From Device:  %10.2f ms\n", encoder->coder.duration_memory_from);
                     printf(" -Stream Formatter:  %10.2f ms\n", encoder->coder.duration_stream);
                 }
                 printf("Encode Image GPU:    %10.2f ms (only in-GPU processing)\n", encoder->coder.duration_in_gpu);
-                printf("Encode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - encoder->coder.duration_memory_to - encoder->coder.duration_memory_from);
+                //printf("Encode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - encoder->coder.duration_memory_to - encoder->coder.duration_memory_from);
                 printf("Encode Image:        %10.2f ms\n", duration);
             }
             if ( iterate > 1 ) {
@@ -431,21 +461,21 @@ main(int argc, char *argv[])
             }
 
             GPUJPEG_TIMER_START();
-            
+
             // Save image
             if ( gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
                 return -1;
             }
-            
+
             GPUJPEG_TIMER_STOP();
             printf("Save Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
             printf("Compressed Size:     %10.d bytes [%s]\n", image_compressed_size, output);
-            
+
             // Destroy image
             gpujpeg_image_destroy(image);
         }
-        
+
         // Destroy OpenGL texture
         if ( use_opengl ) {
             int texture_id = texture->texture_id;
@@ -456,12 +486,12 @@ main(int argc, char *argv[])
         // Destroy encoder
         gpujpeg_encoder_destroy(encoder);
     }
-    
+
     if ( decode == 1 ) {
         // Create OpenGL texture
         struct gpujpeg_opengl_texture* texture = NULL;
         if ( use_opengl ) {
-            assert(param_image.sampling_factor == GPUJPEG_4_4_4);
+            assert(param_image.pixel_format == GPUJPEG_444_U8_P012);
             int texture_id = gpujpeg_opengl_texture_create(param_image.width, param_image.height, NULL);
             assert(texture_id != 0);
 
@@ -470,12 +500,12 @@ main(int argc, char *argv[])
         }
 
         // Create decoder
-        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create();
+        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(NULL);
         if ( decoder == NULL ) {
             fprintf(stderr, "Failed to create decoder!\n");
             return -1;
         }
-        
+
         // Init decoder if image size is filled
         if ( param_image.width != 0 && param_image.height != 0 ) {
             if ( gpujpeg_decoder_init(decoder, &param, &param_image) != 0 ) {
@@ -484,7 +514,7 @@ main(int argc, char *argv[])
             }
         } else {
             decoder->coder.param_image.color_space = param_image.color_space;
-            decoder->coder.param_image.sampling_factor = param_image.sampling_factor;
+            decoder->coder.param_image.pixel_format = param_image.pixel_format;
         }
 
         // Decode images
@@ -519,13 +549,13 @@ main(int argc, char *argv[])
                     return -1;
                 }
             }
-            
+
             // Decode image
             GPUJPEG_TIMER_INIT();
             GPUJPEG_TIMER_START();
-            
+
             printf("\nDecoding Image [%s]\n", input);
-        
+
             // Load image
             int image_size = 0;
             uint8_t* image = NULL;
@@ -533,7 +563,7 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
                 return -1;
             }
-            
+
             GPUJPEG_TIMER_STOP();
             printf("Load Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
 
@@ -562,10 +592,10 @@ main(int argc, char *argv[])
                 float duration = GPUJPEG_TIMER_DURATION();
                 if ( param.verbose ) {
                     printf(" -Stream Reader:     %10.2f ms\n", decoder->coder.duration_stream);
-                    printf(" -Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
-                    printf(" -Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
-                    printf(" -DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
-                    printf(" -Postprocessing:    %10.2f ms\n", decoder->coder.duration_preprocessor);
+                    //printf(" -Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
+                    //printf(" -Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
+                    //printf(" -DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
+                    //printf(" -Postprocessing:    %10.2f ms\n", decoder->coder.duration_preprocessor);
                     printf(" -Copy From Device:  %10.2f ms\n", decoder->coder.duration_memory_from);
                     if ( decoder->coder.duration_memory_map != 0.0 && decoder->coder.duration_memory_unmap != 0.0 ) {
                         printf(" -OpenGL Memory Map: %10.2f ms\n", decoder->coder.duration_memory_map);
@@ -573,7 +603,7 @@ main(int argc, char *argv[])
                     }
                 }
                 printf("Decode Image GPU:    %10.2f ms (only in-GPU processing)\n", decoder->coder.duration_in_gpu);
-                printf("Decode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - decoder->coder.duration_memory_to - decoder->coder.duration_memory_from);
+                //printf("Decode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - decoder->coder.duration_memory_to - decoder->coder.duration_memory_from);
                 printf("Decode Image:        %10.2f ms\n", duration);
             }
             if ( iterate > 1 ) {
@@ -590,7 +620,7 @@ main(int argc, char *argv[])
                 data = decoder_output.data;
                 data_size = decoder_output.data_size;
             }
-            
+
             GPUJPEG_TIMER_START();
 
             // Save image
@@ -598,15 +628,15 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
                 return -1;
             }
-            
+
             GPUJPEG_TIMER_STOP();
             printf("Save Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
             printf("Decompressed Size:   %10.d bytes [%s]\n", decoder_output.data_size, output);
-            
+
             // Destroy image
             gpujpeg_image_destroy(image);
         }
-        
+
         // Destroy OpenGL texture
         if ( use_opengl ) {
             int texture_id = texture->texture_id;

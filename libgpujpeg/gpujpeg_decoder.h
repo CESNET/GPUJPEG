@@ -73,20 +73,20 @@ struct gpujpeg_decoder_output
 {
     // Output type
     enum gpujpeg_decoder_output_type type;
-    
+
     // Compressed data
     uint8_t* data;
-    
+
     // Compressed data size
     int data_size;
-    
+
     // OpenGL texture
     struct gpujpeg_opengl_texture* texture;
 };
 
 /**
  * Set default parameters to decoder output structure
- * 
+ *
  * @param output  Decoder output structure
  * @return void
  */
@@ -114,7 +114,7 @@ gpujpeg_decoder_output_set_texture(struct gpujpeg_decoder_output* output, struct
 
 /**
  * Sets output to CUDA buffer
- * 
+ *
  * @param output  Decoder output structure
  */
 GPUJPEG_API void
@@ -123,26 +123,26 @@ gpujpeg_decoder_output_set_cuda_buffer(struct gpujpeg_decoder_output* output);
 /**
  * Setup decoder output to custom CUDA buffer
  *
- * @param output        Decoder output structure
- * @param custom_buffer Custom CUDA buffer
+ * @param output          Decoder output structure
+ * @param d_custom_buffer Custom buffer in CUDA device memory
  * @return void
  */
 GPUJPEG_API void
-gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, uint8_t* custom_buffer);
+gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, uint8_t* d_custom_buffer);
 
 /**
  * Create JPEG decoder
- * 
+ *
  * @param param  Parameters for coder
  * @param param_image  Parameters for image data
  * @return decoder structure if succeeds, otherwise NULL
  */
 GPUJPEG_API struct gpujpeg_decoder*
-gpujpeg_decoder_create();
+gpujpeg_decoder_create(cudaStream_t * stream);
 
 /**
  * Init JPEG decoder for specific image size
- * 
+ *
  * @param decoder  Decoder structure
  * @param param  Parameters for coder
  * @param param_image  Parameters for image data
@@ -152,8 +152,19 @@ GPUJPEG_API int
 gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image);
 
 /**
+ * Read image info from JPEG file
+ *
+ * @param image  Image data
+ * @param image_size  Image data size
+ * @param param_image
+ * @return 0 if succeeds, otherwise nonzero
+ */
+GPUJPEG_API int
+gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_image_parameters * param_image);
+
+/**
  * Decompress image by decoder
- * 
+ *
  * @param decoder  Decoder structure
  * @param image  Source image data
  * @param image_size  Source image data size
@@ -166,7 +177,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
 
 /**
  * Destory JPEG decoder
- * 
+ *
  * @param decoder  Decoder structure
  * @return 0 if succeeds, otherwise nonzero
  */
@@ -183,7 +194,7 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder);
 GPUJPEG_API void
 gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
                 enum gpujpeg_color_space color_space,
-                enum gpujpeg_sampling_factor sampling_factor);
+                enum gpujpeg_pixel_format sampling_factor);
 
 #ifdef __cplusplus
 }

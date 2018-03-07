@@ -38,18 +38,7 @@
  * @param name
  */
 #define GPUJPEG_CUSTOM_TIMER_DECLARE(name) \
-    cudaEvent_t name ## _start__; \
-    cudaEvent_t name ## _stop__; \
-    float name ## _elapsedTime__; \
-
-/**
- * Create timer
- *
- * @param name
- */
-#define GPUJPEG_CUSTOM_TIMER_CREATE(name) \
-    cudaEventCreate(&name ## _start__); \
-    cudaEventCreate(&name ## _stop__); \
+    double name ## _elapsedTime__;
 
 /**
  * Start timer
@@ -57,7 +46,7 @@
  * @param name
  */
 #define GPUJPEG_CUSTOM_TIMER_START(name) \
-    cudaEventRecord(name ## _start__, 0) \
+    name ## _elapsedTime__ = gpujpeg_get_time();
 
 /**
  * Stop timer
@@ -65,16 +54,14 @@
  * @param name
  */
 #define GPUJPEG_CUSTOM_TIMER_STOP(name) \
-    cudaEventRecord(name ## _stop__, 0); \
-    cudaEventSynchronize(name ## _stop__); \
-    cudaEventElapsedTime(&name ## _elapsedTime__, name ## _start__, name ## _stop__) \
+    name ## _elapsedTime__ = gpujpeg_get_time() - name ## _elapsedTime__;
 
 /**
  * Get duration for timer
  *
  * @param name
  */
-#define GPUJPEG_CUSTOM_TIMER_DURATION(name) name ## _elapsedTime__
+#define GPUJPEG_CUSTOM_TIMER_DURATION(name) (name ## _elapsedTime__ * 1000.0)
 
 /**
  * Stop timer and print result
@@ -84,27 +71,16 @@
  */
 #define GPUJPEG_CUSTOM_TIMER_STOP_PRINT(name, text) \
     GPUJPEG_CUSTOM_TIMER_STOP(name); \
-    printf("%s %f ms\n", text, name ## _elapsedTime__) \
-
-/**
- * Destroy timer
- *
- * @param name
- */
-#define GPUJPEG_CUSTOM_TIMER_DESTROY(name) \
-    cudaEventDestroy(name ## _start__); \
-    cudaEventDestroy(name ## _stop__); \
+    printf("%s %0.2f ms\n", text, (name ## _elapsedTime__ * 1000.0))
 
 /**
  * Default timer implementation
  */
 #define GPUJPEG_TIMER_INIT() \
-    GPUJPEG_CUSTOM_TIMER_DECLARE(def) \
-    GPUJPEG_CUSTOM_TIMER_CREATE(def)
+    GPUJPEG_CUSTOM_TIMER_DECLARE(def)
 #define GPUJPEG_TIMER_START() GPUJPEG_CUSTOM_TIMER_START(def)
 #define GPUJPEG_TIMER_STOP() GPUJPEG_CUSTOM_TIMER_STOP(def)
 #define GPUJPEG_TIMER_DURATION() GPUJPEG_CUSTOM_TIMER_DURATION(def)
 #define GPUJPEG_TIMER_STOP_PRINT(text) GPUJPEG_CUSTOM_TIMER_STOP_PRINT(def, text)
-#define GPUJPEG_TIMER_DEINIT() GPUJPEG_CUSTOM_TIMER_DESTROY(def)
 
 #endif // GPUJPEG_COMMON_INTERNAL_H

@@ -201,7 +201,7 @@ gpujpeg_table_huffman_decoder_init(struct gpujpeg_table_huffman_decoder* table, 
  * @return void
  */
 void
-gpujpeg_table_huffman_decoder_compute(struct gpujpeg_table_huffman_decoder* table, struct gpujpeg_table_huffman_decoder* d_table);
+gpujpeg_table_huffman_decoder_compute(struct gpujpeg_table_huffman_decoder* table);
 
 #ifdef __cplusplus
 }
