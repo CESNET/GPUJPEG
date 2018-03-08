@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, CESNET z.s.p.o
+ * Copyright (c) 2016-2018, CESNET z.s.p.o
  *
  * All rights reserved.
  *
@@ -29,6 +29,6 @@
 #ifndef GPUJPEG_VERSION_H
 #define GPUJPEG_VERSION_H
 
-#define LIBGPUJPEG_API_VERSION 2
+#define LIBGPUJPEG_API_VERSION 3
 
 #endif // GPUJPEG_VERSION_H
