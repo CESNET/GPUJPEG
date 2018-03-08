@@ -43,7 +43,7 @@
 
 //PTX code for IDCT (GPUJPEG_IDCT_GPU_KERNEL_INPLACE macro) should be a bit faster
 //but maybe won't work for newer CCs
-#define GPUJPEG_IDCT_USE_ASM 1
+#define GPUJPEG_IDCT_USE_ASM 0
 
 /** Fast integer multiplication */
 #define FMUL(x,y)   (__mul24(x,y))
