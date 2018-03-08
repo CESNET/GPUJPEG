@@ -58,6 +58,10 @@ gpujpeg_get_time();
 /** Maximum number of devices for get device info */
 #define GPUJPEG_MAX_DEVICE_COUNT 10
 
+#define GPUJPEG_IDCT_BLOCK_X	8
+#define GPUJPEG_IDCT_BLOCK_Y 	8
+#define GPUJPEG_IDCT_BLOCK_Z 	2
+
 /** Device info for one device */
 struct gpujpeg_device_info
 {

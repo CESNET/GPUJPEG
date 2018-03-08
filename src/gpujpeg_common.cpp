@@ -657,7 +657,11 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters
     // Allocate data buffers for all color components
     coder->data_raw = NULL;
     coder->d_data_raw = NULL;
-    if (coder->data_size > coder->data_allocated_size) {
+
+    //for idct we must add some memory - it rounds up the block count, computes all and the extra bytes are omitted
+    int idct_overhead = (GPUJPEG_IDCT_BLOCK_X * GPUJPEG_IDCT_BLOCK_Y * GPUJPEG_IDCT_BLOCK_Z / coder->component[0].data_width + 1)
+      * GPUJPEG_BLOCK_SIZE * coder->component[0].data_width;
+    if (coder->data_size + idct_overhead > coder->data_allocated_size) {
         coder->data_allocated_size = 0;
 
         // (Re)allocate preprocessor data in device memory
@@ -665,7 +669,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters
             cudaFree(coder->d_data);
             coder->d_data = NULL;
         }
-        cudaMalloc((void**)&coder->d_data, coder->data_size * sizeof(uint8_t));
+        cudaMalloc((void**)&coder->d_data, (coder->data_size + idct_overhead) * sizeof(uint8_t));
         gpujpeg_cuda_check_error("Coder data device allocation", return 0);
 
         // (Re)allocated DCT and quantizer data in host memory
@@ -681,10 +685,10 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters
             cudaFree(coder->d_data_quantized);
             coder->d_data_quantized = NULL;
         }
-        cudaMalloc((void**)&coder->d_data_quantized, coder->data_size * sizeof(int16_t));
+        cudaMalloc((void**)&coder->d_data_quantized, (coder->data_size + idct_overhead) * sizeof(int16_t));
         gpujpeg_cuda_check_error("Coder quantized data device allocation", return 0);
 
-        coder->data_allocated_size = coder->data_size;
+        coder->data_allocated_size = coder->data_size + idct_overhead;
     }
     allocated_gpu_memory_size += coder->data_allocated_size * sizeof(uint8_t);
     allocated_gpu_memory_size += coder->data_allocated_size * sizeof(int16_t);

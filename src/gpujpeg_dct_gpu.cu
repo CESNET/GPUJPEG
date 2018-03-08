@@ -41,6 +41,10 @@
  *
  */
 
+//PTX code for IDCT (GPUJPEG_IDCT_GPU_KERNEL_INPLACE macro) should be a bit faster
+//but maybe won't work for newer CCs
+#define GPUJPEG_IDCT_USE_ASM 1
+
 /** Fast integer multiplication */
 #define FMUL(x,y)   (__mul24(x,y))
 //#define FMUL(x,y)   ((x)*(y))
@@ -106,156 +110,6 @@ unfixo(int x)
 {
     return (x + 0x1000) >> 13;
 }
-
-/**
- * Performs in-place IDCT of vector of 8 elements (used to access columns in shared memory).
- *
- * @param SrcDst [IN/OUT] - Pointer to the first element of vector
- * @param Stride [IN] - Value to add to ptr to access other elements
- * @return None
- */
-__device__ void
-gpujpeg_idct_gpu_kernel_inplace(int16_t* SrcDst, int Stride)
-{
-    int in0, in1, in2, in3, in4, in5, in6, in7;
-    int tmp10, tmp11, tmp12, tmp13;
-    int tmp20, tmp21, tmp22, tmp23;
-    int tmp30, tmp31;
-    int tmp40, tmp41, tmp42, tmp43;
-    int tmp50, tmp51, tmp52, tmp53;
-
-    int16_t *DstPtr = SrcDst;
-    in0 = *DstPtr;
-    DstPtr += Stride;
-    in1 = *DstPtr;
-    DstPtr += Stride;
-    in2 = *DstPtr;
-    DstPtr += Stride;
-    in3 = *DstPtr;
-    DstPtr += Stride;
-    in4 = *DstPtr;
-    DstPtr += Stride;
-    in5 = *DstPtr;
-    DstPtr += Stride;
-    in6 = *DstPtr;
-    DstPtr += Stride;
-    in7 = *DstPtr;
-
-    tmp10 = FMUL(in0 + in4, COS_1_4);
-    tmp11 = FMUL(in0 - in4, COS_1_4);
-    tmp12 = FMUL(in2, SIN_1_8) - FMUL(in6, COS_1_8);
-    tmp13 = FMUL(in6, SIN_1_8) + FMUL(in2, COS_1_8);
-
-    tmp20 = tmp10 + tmp13;
-    tmp21 = tmp11 + tmp12;
-    tmp22 = tmp11 - tmp12;
-    tmp23 = tmp10 - tmp13;
-
-    tmp30 = unfixo(FMUL(in3 + in5, COS_1_4));
-    tmp31 = unfixo(FMUL(in3 - in5, COS_1_4));
-
-    in1 <<= 2;
-    in7 <<= 2;
-
-    tmp40 = in1 + tmp30;
-    tmp41 = in7 + tmp31;
-    tmp42 = in1 - tmp30;
-    tmp43 = in7 - tmp31;
-
-    tmp50 = FMUL(tmp40, OCOS_1_16) + FMUL(tmp41, OSIN_1_16);
-    tmp51 = FMUL(tmp40, OSIN_1_16) - FMUL(tmp41, OCOS_1_16);
-    tmp52 = FMUL(tmp42, OCOS_5_16) + FMUL(tmp43, OSIN_5_16);
-    tmp53 = FMUL(tmp42, OSIN_5_16) - FMUL(tmp43, OCOS_5_16);
-
-    DstPtr = SrcDst;
-    *DstPtr = unfixh(tmp20 + tmp50);
-    DstPtr += Stride;
-    *DstPtr = unfixh(tmp21 + tmp53);
-    DstPtr += Stride;
-    *DstPtr = unfixh(tmp22 + tmp52);
-    DstPtr += Stride;
-    *DstPtr = unfixh(tmp23 + tmp51);
-    DstPtr += Stride;
-    *DstPtr = unfixh(tmp23 - tmp51);
-    DstPtr += Stride;
-    *DstPtr = unfixh(tmp22 - tmp52);
-    DstPtr += Stride;
-    *DstPtr = unfixh(tmp21 - tmp53);
-    DstPtr += Stride;
-    *DstPtr = unfixh(tmp20 - tmp50);
-}
-
-/**
- * Performs in-place IDCT of vector of 8 elements (used to access rows in shared memory).
- *
- * @param V8 [IN/OUT] - Pointer to the first two elements of vector
- * @return None
- */
-__device__ void
-gpujpeg_idct_gpu_kernel_inplace(uint32_t* V8)
-{
-    int in0, in1, in2, in3, in4, in5, in6, in7;
-    int tmp10, tmp11, tmp12, tmp13;
-    int tmp20, tmp21, tmp22, tmp23;
-    int tmp30, tmp31;
-    int tmp40, tmp41, tmp42, tmp43;
-    int tmp50, tmp51, tmp52, tmp53;
-    PackedInteger sh0, sh1, sh2, sh3;
-
-    sh0.hInt = V8[0];
-    sh1.hInt = V8[1];
-    sh2.hInt = V8[2];
-    sh3.hInt = V8[3];
-    in0 = sh0.hShort1;
-    in1 = sh0.hShort2;
-    in2 = sh1.hShort1;
-    in3 = sh1.hShort2;
-    in4 = sh2.hShort1;
-    in5 = sh2.hShort2;
-    in6 = sh3.hShort1;
-    in7 = sh3.hShort2;
-
-    tmp10 = FMUL(in0 + in4, COS_1_4);
-    tmp11 = FMUL(in0 - in4, COS_1_4);
-    tmp12 = FMUL(in2, SIN_1_8) - FMUL(in6, COS_1_8);
-    tmp13 = FMUL(in6, SIN_1_8) + FMUL(in2, COS_1_8);
-
-    tmp20 = tmp10 + tmp13;
-    tmp21 = tmp11 + tmp12;
-    tmp22 = tmp11 - tmp12;
-    tmp23 = tmp10 - tmp13;
-
-    tmp30 = unfixo(FMUL(in3 + in5, COS_1_4));
-    tmp31 = unfixo(FMUL(in3 - in5, COS_1_4));
-
-    in1 <<= 2;
-    in7 <<= 2;
-
-    tmp40 = in1 + tmp30;
-    tmp41 = in7 + tmp31;
-    tmp42 = in1 - tmp30;
-    tmp43 = in7 - tmp31;
-
-    tmp50 = FMUL(tmp40, OCOS_1_16) + FMUL(tmp41, OSIN_1_16);
-    tmp51 = FMUL(tmp40, OSIN_1_16) - FMUL(tmp41, OCOS_1_16);
-    tmp52 = FMUL(tmp42, OCOS_5_16) + FMUL(tmp43, OSIN_5_16);
-    tmp53 = FMUL(tmp42, OSIN_5_16) - FMUL(tmp43, OCOS_5_16);
-
-    sh0.hShort1 = unfixh(tmp20 + tmp50);
-    sh0.hShort2 = unfixh(tmp21 + tmp53);
-    sh1.hShort1 = unfixh(tmp22 + tmp52);
-    sh1.hShort2 = unfixh(tmp23 + tmp51);
-    sh2.hShort1 = unfixh(tmp23 - tmp51);
-    sh2.hShort2 = unfixh(tmp22 - tmp52);
-    sh3.hShort1 = unfixh(tmp21 - tmp53);
-    sh3.hShort2 = unfixh(tmp20 - tmp50);
-
-    V8[0] = sh0.hInt;
-    V8[1] = sh1.hInt;
-    V8[2] = sh2.hInt;
-    V8[3] = sh3.hInt;
-}
-
 
 /**
  * 1D 8point DCT, with optional level shift (must be premultiplied).
@@ -439,116 +293,321 @@ gpujpeg_dct_gpu_kernel(int block_count_x, int block_count_y, uint8_t* source, co
 }
 
 /** Quantization table */
+//TODO zmenit na float
 __constant__ uint16_t gpujpeg_idct_gpu_quantization_table[64];
+
+#if !GPUJPEG_IDCT_USE_ASM
+
+/**
+ * Performs in-place IDCT of vector of 8 elements (used to access rows 
+ * or columns in a vector).
+ * With a use of a scheme presented in Jie Liang - Approximating the DCT 
+ * with the lifting scheme: systematic design and applications; online:
+ * http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=910943
+ *
+ * @param V8 [IN/OUT] - Pointer to the first element of vector
+ * @return None
+ */
+__device__ void
+gpujpeg_idct_gpu_kernel_inplace(float* V8)
+{
+	//costants which are used more than once
+	const float koeficient[6] = {0.4142135623f, 0.3535533905f, 0.4619397662f, 0.1989123673f, 0.7071067811f, -2.0f};
+	
+	V8[2] *= 0.5411961f;
+	V8[4] *= 0.509795579f;
+	V8[5] *= 0.601344887f;
+	
+	V8[1] = (V8[0] - V8[1]) * koeficient[1];
+	V8[0] = V8[0] * koeficient[4] - V8[1];
+
+	V8[3] = V8[2] * koeficient[1] + V8[3] * koeficient[2];
+	V8[2] = V8[3] * koeficient[0] - V8[2];
+
+	V8[6] = V8[5] * koeficient[2] + V8[6] * koeficient[0];
+	V8[5] = -0.6681786379f * V8[6] + V8[5];
+
+	V8[7] = V8[4] * koeficient[3] + V8[7] * 0.49039264f;
+	V8[4] = V8[7] * koeficient[3] - V8[4];
+
+	//instead of float tmp = V8[1]; V8[1] = V8[2] + V8[1]; V8[2] = tmp - V8[2];
+	//we use this two operations (with a use of a multiply-add instruction)
+	V8[1] = V8[2] + V8[1];
+	V8[2] = koeficient[5] * V8[2] + V8[1];
+
+	V8[4] = V8[5] + V8[4];
+	V8[5] = 2.0f * V8[5] - V8[4];
+
+	V8[7] = V8[6] + V8[7];
+	V8[6] = koeficient[5] * V8[6] + V8[7];
+
+	V8[0] = V8[3] + V8[0];
+	V8[3] = koeficient[5] * V8[3] + V8[0];
+
+	V8[5] = V8[6] * koeficient[0] + V8[5];
+	V8[6] = V8[5] * -koeficient[4] + V8[6];
+	V8[5] = V8[6] * koeficient[0] + V8[5];
+
+	V8[3] = V8[3] + V8[4];
+	V8[4] = koeficient[5] * V8[4] + V8[3];
+
+	V8[2] = V8[2] + V8[5];
+	V8[5] = koeficient[5] * V8[5] + V8[2];
+
+	V8[1] = V8[6] + V8[1];
+	V8[6] = koeficient[5] * V8[6] + V8[1];
+
+	V8[0] = V8[0] + V8[7];
+	V8[7] = koeficient[5] * V8[7] + V8[0];
+}
+#else
+
+#if __CUDA_ARCH__ >= 200
+#define MULTIPLY_ADD "fma.rn.f32	"
+#else
+#define MULTIPLY_ADD "mad.f32	"
+#endif
+
+//instead of float tmp = V8[1]; V8[1] = V8[2] + V8[1]; V8[2] = tmp - V8[2];
+//we use this two operations (with a use of a multiply-add instruction)
+#define ASM_X_PLUS_Y_SIMULTANEOUSLY_WITH_X_MINUS_Y(x, y) \
+	"add.f32	" #x ", " #x ", " #y ";	\n\t"	\
+	MULTIPLY_ADD #y ", " #y ", 0fc0000000, " #x ";	\n\t"
+
+/**
+ * Performs in-place IDCT of 8 elements (rows or columns). A PTX implementation.
+ * With a use of a scheme presented in Jie Liang - Approximating the DCT 
+ * with the lifting scheme: systematic design and applications; online:
+ * http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=910943
+ */
+#define GPUJPEG_IDCT_GPU_KERNEL_INPLACE(in0, in1, in2, in3, in4, in5, in6, in7, \
+		out0, out1, out2, out3, out4, out5, out6, out7)	\
+		asm( \
+			/* negreg register used for negating variables (e.g. for */	\
+			/* a * b - c we neagte c into negreg and use multiply-add) */	\
+			"{.reg .f32 negreg;	\n\t"	\
+\
+			"mul.f32	%9, %9, 0fbeb504f3;	\n\t"	\
+			MULTIPLY_ADD "%9, %8, 0f3eb504f3, %9;	\n\t"	\
+			"neg.f32 	negreg, %9;	\n\t"	\
+			MULTIPLY_ADD "%8, %8, 0f3f3504f3, negreg;	\n\t"	\
+\
+			"mul.f32	%10, %10, 0f3f0a8bd4;	\n\t"	\
+			"mul.f32	%11, %11, 0f3eec835e;	\n\t"	\
+			MULTIPLY_ADD "%11, %10, 0f3eb504f3, %11;	\n\t"	\
+			"neg.f32	%10, %10;	\n\t"	\
+			MULTIPLY_ADD "%10, %11, 0f3ed413cd, %10;	\n\t"	\
+\
+			"mul.f32	%13, %13, 0f3f19f1bd;	\n\t"	\
+			"mul.f32	%14, %14, 0f3ed4db31;	\n\t"	\
+			MULTIPLY_ADD "%14, %13, 0f3eec835e, %14;	\n\t"	\
+			MULTIPLY_ADD "%13, %14, 0fbf2b0dc7, %13;	\n\t"	\
+\
+			"mul.f32	%12, %12, 0f3f0281f7;	\n\t"	\
+			"mul.f32	%15, %15, 0f3efb14be;	\n\t"	\
+			MULTIPLY_ADD "%15, %12, 0f3e4bafaf, %15;	\n\t"	\
+			"neg.f32	%12, %12;	\n\t"	\
+			MULTIPLY_ADD "%12, %15, 0f3e4bafaf, %12;	\n\t"	\
+\
+			ASM_X_PLUS_Y_SIMULTANEOUSLY_WITH_X_MINUS_Y(%9, %10) \
+\
+			ASM_X_PLUS_Y_SIMULTANEOUSLY_WITH_X_MINUS_Y(%12, %13) \
+\
+			ASM_X_PLUS_Y_SIMULTANEOUSLY_WITH_X_MINUS_Y(%8, %11) \
+\
+			ASM_X_PLUS_Y_SIMULTANEOUSLY_WITH_X_MINUS_Y(%15, %14) \
+\
+			MULTIPLY_ADD "%13, %14, 0fbed413db, %13;	\n\t"	\
+			MULTIPLY_ADD "%14, %13, 0f3f3504f3, %14;	\n\t"	\
+			"neg.f32 negreg, %13;	\n\t"	\
+			MULTIPLY_ADD "%13, %14, 0f3ed413cd, negreg;	\n\t"	\
+\
+			/* writing into output registers */	\
+			"add.f32	%3, %11, %12;	\n\t"	\
+			"sub.f32	%4, %11, %12;	\n\t"	\
+\
+			"add.f32	%2, %10, %13;	\n\t"	\
+			"sub.f32	%5, %10, %13;	\n\t"	\
+\
+			"add.f32	%1, %14, %9;	\n\t"	\
+			"sub.f32	%6, %9, %14;	\n\t"	\
+\
+			"add.f32	%0, %8, %15;	\n\t"	\
+			"sub.f32	%7, %8, %15;	\n\t"	\
+			"}"	\
+\
+			: "=f"((out0)),	\
+			"=f"((out1)),	\
+			"=f"((out2)),	\
+			"=f"((out3)),	\
+			"=f"((out4)),	\
+			"=f"((out5)),	\
+			"=f"((out6)),	\
+			"=f"((out7))	\
+			: "f"((in0)),	\
+			"f"((in1)),	\
+			"f"((in2)),	\
+			"f"((in3)),	\
+			"f"((in4)),	\
+			"f"((in5)),	\
+			"f"((in6)),	\
+			"f"((in7))	\
+	);
+
+#endif
 
 /**
  * Performs 8x8 block-wise Inverse Discrete Cosine Transform of the given
- * image plane and outputs result to the array of coefficients. Short implementation.
+ * image plane and outputs result to the array of coefficients. Float implementation.
  * This kernel is designed to process image by blocks of blocks8x8 that
- * utilize maximum warps capacity, assuming that it is enough of 8 threads
- * per block8x8.
+ * utilize maximum warps capacity. Prepared for 8*8*2 threads in a block
  *
- * @param source        [IN]  - Source coefficients
- * @param source_stride [IN]  - Stride of source
- * @param output        [OUT] - Source coefficients
- * @param output_stride [OUT] - Stride of source
- * @param table         [IN]  - Quantization table
+ * @param source             [IN]  - Source coefficients
+ * @param output             [OUT] - Result coefficients
+ * @param output_stride      [OUT] - Stride of result (image width)
+ * @param quantization_table [IN]  - Quantization table
  * @return None
  */
 __global__ void
-gpujpeg_idct_gpu_kernel(int block_count_x, int block_count_y, int16_t* source, int source_stride,
-                        uint8_t* output, int output_stride, uint16_t* quantization_table)
+gpujpeg_idct_gpu_kernel(int16_t* source, uint8_t* result, int output_stride, uint16_t* quantization_table)
 {
-// For pre-fermi GPUs, quantization table in constant memory is faster
-#if __CUDA_ARCH__ < 200
-    quantization_table = gpujpeg_idct_gpu_quantization_table;
+	//here the grid is assumed to be only in x - it saves a few operations; if a larger
+	//block count is used (e. g. GPUJPEG_IDCT_BLOCK_Z == 1), it would need to be adjusted,
+	//the blockIdx.x not to exceed 65535. In the current state this function is good 
+	//enough for a 67.1 MPix picture (8K is 33.1 MPix)
+
+	//the first block of picture processed in this thread block
+	unsigned int picBlockNumber = (blockIdx.x) * GPUJPEG_IDCT_BLOCK_Y * GPUJPEG_IDCT_BLOCK_X
+			* GPUJPEG_IDCT_BLOCK_Z;
+
+	//pointer to the begin of data for this thread block
+	int16_t* sourcePtr = (int16_t*) (source) + picBlockNumber * 8;
+
+	__shared__ float data[GPUJPEG_IDCT_BLOCK_Z][8][GPUJPEG_IDCT_BLOCK_Y][GPUJPEG_IDCT_BLOCK_X + 1];
+
+	//variables to be used later more times (only one multiplication here)
+	unsigned int z64 = threadIdx.z * 64;
+	unsigned int x8 = threadIdx.x * 8;
+
+	//data copying global -> shared, type casting int16_t -> float and dequantization.
+	//16b reading gives only 50% efectivity but another ways are too complicated 
+	//so this proves to be the fastest way
+#pragma unroll
+	for (int i = 0; i < 8; i++) {
+		data[threadIdx.z][i][threadIdx.x][threadIdx.y] = sourcePtr[x8
+				+ threadIdx.y + i * GPUJPEG_IDCT_BLOCK_X * GPUJPEG_IDCT_BLOCK_Y + z64 * 8]
+				* quantization_table[threadIdx.x * 8 + threadIdx.y];
+	}
+	
+	__syncthreads();
+
+	float x[8];
+
+	//kompilator delal hrozne psi kusy - zbytecne kopirovani konstant do
+	//registru atp., bylo jednodussi napsat to v assembleru nez snazit se ho
+	//presvedcit, aby nedelal blbosti; vsechny konstanty se pouzivaji primo
+	//hodnotou, nestrkaji se zbytecne do registru
+
+	//here the data are being processed by columns - each thread processes one column
+#if GPUJPEG_IDCT_USE_ASM
+	GPUJPEG_IDCT_GPU_KERNEL_INPLACE(data[threadIdx.z][threadIdx.x][0][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][4][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][6][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][2][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][7][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][5][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][3][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][1][threadIdx.y],
+
+			data[threadIdx.z][threadIdx.x][0][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][1][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][2][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][3][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][4][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][5][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][6][threadIdx.y],
+			data[threadIdx.z][threadIdx.x][7][threadIdx.y])
+#else
+	x[0] = data[threadIdx.z][threadIdx.x][0][threadIdx.y];
+	x[1] = data[threadIdx.z][threadIdx.x][4][threadIdx.y];
+	x[2] = data[threadIdx.z][threadIdx.x][6][threadIdx.y];
+	x[3] = data[threadIdx.z][threadIdx.x][2][threadIdx.y];
+	x[4] = data[threadIdx.z][threadIdx.x][7][threadIdx.y];
+	x[5] = data[threadIdx.z][threadIdx.x][5][threadIdx.y];
+	x[6] = data[threadIdx.z][threadIdx.x][3][threadIdx.y];
+	x[7] = data[threadIdx.z][threadIdx.x][1][threadIdx.y];
+	
+	gpujpeg_idct_gpu_kernel_inplace(x);
+
+	data[threadIdx.z][threadIdx.x][0][threadIdx.y] = x[0];
+	data[threadIdx.z][threadIdx.x][1][threadIdx.y] = x[1];
+	data[threadIdx.z][threadIdx.x][2][threadIdx.y] = x[2];
+	data[threadIdx.z][threadIdx.x][3][threadIdx.y] = x[3];
+	data[threadIdx.z][threadIdx.x][4][threadIdx.y] = x[4];
+	data[threadIdx.z][threadIdx.x][5][threadIdx.y] = x[5];
+	data[threadIdx.z][threadIdx.x][6][threadIdx.y] = x[6];
+	data[threadIdx.z][threadIdx.x][7][threadIdx.y] = x[7];
+#endif
+	//between data writing and sync it's good to compute something useful 
+	// - the sync will be shorter.
+	
+	//output pointer (the begin for this thread block)
+	unsigned int firstByteOfActualBlock = x8 + z64 + picBlockNumber;
+
+	//output pointer for this thread + output row shift; each thread writes 1 row of an 
+	//output block (8B), threads [0 - 7] in threadIdx.x write blocks next to each other,
+	//threads [1 - 7] in threadIdx.y write next rows of a block; threads [0 - 1] in 
+	//threadIdx.z write next 8 blocks
+	uint8_t* resultPtr = ((uint8_t*) result) + firstByteOfActualBlock
+			+ (threadIdx.y + ((firstByteOfActualBlock / output_stride) * 7))
+					* output_stride;
+
+	__syncthreads();
+
+#if GPUJPEG_IDCT_USE_ASM
+	//here the data are being processed by rows - each thread processes one row
+	GPUJPEG_IDCT_GPU_KERNEL_INPLACE(data[threadIdx.z][threadIdx.x][threadIdx.y][0],
+			data[threadIdx.z][threadIdx.x][threadIdx.y][4],
+			data[threadIdx.z][threadIdx.x][threadIdx.y][6],
+			data[threadIdx.z][threadIdx.x][threadIdx.y][2],
+			data[threadIdx.z][threadIdx.x][threadIdx.y][7],
+			data[threadIdx.z][threadIdx.x][threadIdx.y][5],
+			data[threadIdx.z][threadIdx.x][threadIdx.y][3],
+			data[threadIdx.z][threadIdx.x][threadIdx.y][1],
+
+			x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7])
+#else
+	x[0] = data[threadIdx.z][threadIdx.x][threadIdx.y][0];
+	x[1] = data[threadIdx.z][threadIdx.x][threadIdx.y][4];
+	x[2] = data[threadIdx.z][threadIdx.x][threadIdx.y][6];
+	x[3] = data[threadIdx.z][threadIdx.x][threadIdx.y][2];
+	x[4] = data[threadIdx.z][threadIdx.x][threadIdx.y][7];
+	x[5] = data[threadIdx.z][threadIdx.x][threadIdx.y][5];
+	x[6] = data[threadIdx.z][threadIdx.x][threadIdx.y][3];
+	x[7] = data[threadIdx.z][threadIdx.x][threadIdx.y][1];
+
+	gpujpeg_idct_gpu_kernel_inplace(x);
 #endif
 
-    // Shared data
-    __shared__ int16_t block[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
+	//output will be written by 8B (one row) which is the most effective way
+	uint64_t tempResult;
+	uint64_t* tempResultP = &tempResult;
 
-    // Block position
-    int block_x = IMAD(blockIdx.x, GPUJPEG_DCT_BLOCK_COUNT_X, threadIdx.y);
-    int block_y = IMAD(blockIdx.y, GPUJPEG_DCT_BLOCK_COUNT_Y, threadIdx.z);
+#pragma unroll
+	for (int i = 0; i < 8; i++) {
+		//this would be faster but will work only for 100% quality otherwise some values overflow 255
+		//((uint8_t*) tempResultP)[i] = __float2uint_rz(x[i] + ((float) 128.0));
 
-    // Thread position in thread block
-    int thread_x = IMAD(threadIdx.y, GPUJPEG_BLOCK_SIZE, threadIdx.x);
-    int thread_y = IMUL(threadIdx.z, GPUJPEG_BLOCK_SIZE);
-    int thread_x_permutated = (thread_x & 0xFFFFFFE0) | (((thread_x << 1) | ((thread_x >> 4) & 0x1)) & 0x1F);
+		//cast float to uint8_t with saturation (.sat) which cuts values higher than 
+		//255 to 255 and smaller than 0 to 0; cuda can't use a reg smaller than 32b 
+		//(though it can convert to 8b for the saturation purposes and save to 32b reg)
+		uint32_t save;
+		asm("cvt.rni.u8.f32.sat	%0, %1;" : "=r"(save) : "f"(x[i] + ((float) 128.0)));
+		((uint8_t*) tempResultP)[i] = save;
+	}
 
-    // Determine position into shared buffer
-    int16_t* block_ptr = block + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
-
-    // Determine position in source buffer and apply it
-    int source_x = IMAD(block_x, GPUJPEG_BLOCK_SQUARED_SIZE, threadIdx.x * 2);
-    int source_y = block_y;
-    source += IMAD(source_y, source_stride, source_x);
-
-    // Load data to shared memory, only half of threads in each cell performs data moving (each thread moves 2 shorts)
-    if ( block_x < block_count_x && block_y < block_count_y ) {
-        int16_t* block_load_ptr = block_ptr + threadIdx.x; // Shortcut for "IMAD(..., threadIdx.x * 2)"
-        if ( threadIdx.x < (GPUJPEG_BLOCK_SIZE / 2) ) {
-            #pragma unroll
-            for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
-                ((int*)block_load_ptr)[i * (GPUJPEG_DCT_THREAD_BLOCK_STRIDE / 2)] = ((int*)source)[i * (GPUJPEG_BLOCK_SIZE / 2)];
-        }
-    }
-    __syncthreads();
-
-    // Quantization
-    for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-        int16_t quantization = quantization_table[i * GPUJPEG_BLOCK_SIZE + threadIdx.x];
-        int16_t coefficient = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
-
-        coefficient = coefficient * quantization;
-
-        block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE] = coefficient;
-    }
-
-    // Perform IDCT
-    __syncthreads();
-    gpujpeg_idct_gpu_kernel_inplace(block + thread_y * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + thread_x_permutated, GPUJPEG_DCT_THREAD_BLOCK_STRIDE);
-    __syncthreads();
-    gpujpeg_idct_gpu_kernel_inplace((uint32_t*)(block + (thread_y + threadIdx.x) * GPUJPEG_DCT_THREAD_BLOCK_STRIDE + threadIdx.y * GPUJPEG_BLOCK_SIZE));
-    __syncthreads();
-
-     // Determine position in output buffer and apply it
-    int output_x = IMAD(blockIdx.x, GPUJPEG_DCT_THREAD_BLOCK_WIDTH, thread_x);
-    int output_y = IMAD(blockIdx.y, GPUJPEG_DCT_THREAD_BLOCK_HEIGHT, thread_y);
-    output += IMAD(output_y, output_stride, output_x);
-
-// For pre-fermi GPUs, storing to global memory by 4 bytes is faster
-#if __CUDA_ARCH__ < 200
-    __shared__ uint8_t block_byte[GPUJPEG_DCT_THREAD_BLOCK_HEIGHT * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
-    uint8_t* block_byte_ptr = block_byte + IMAD(thread_y, GPUJPEG_DCT_THREAD_BLOCK_STRIDE, thread_x);
-    uint8_t* __output = output;
-    int __output_stride = output_stride;
-    output = block_byte_ptr;
-    output_stride = GPUJPEG_DCT_THREAD_BLOCK_STRIDE;
-#endif
-
-    // Store data to global memory
-    if ( block_x < block_count_x && block_y < block_count_y ) {
-        #pragma unroll
-        for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++) {
-            int16_t coefficient = block_ptr[i * GPUJPEG_DCT_THREAD_BLOCK_STRIDE];
-            coefficient += 128;
-            if ( coefficient > 255 )
-                coefficient = 255;
-            if ( coefficient < 0 )
-                coefficient = 0;
-            output[i * output_stride] = (uint8_t)coefficient;
-        }
-
-// For pre-fermi GPUs, storing to global memory by 4 bytes is faster
-#if __CUDA_ARCH__ < 200
-        if ( threadIdx.x % 4 == 0 ) {
-            #pragma unroll
-            for(int i = 0; i < GPUJPEG_BLOCK_SIZE; i++)
-                ((uint32_t*)__output)[i * (__output_stride / 4)] = ((uint32_t*)block_byte_ptr)[i * (GPUJPEG_DCT_THREAD_BLOCK_STRIDE / 4)];
-        }
-#endif
-    }
+	//writing result - one row of a picture block by a thread
+	*((uint64_t*) resultPtr) = tempResult;
 }
 
 /** Documented at declaration */
@@ -647,22 +706,12 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
         );
         gpujpeg_cuda_check_error("Copy IDCT quantization table to constant memory", return -1);
 
-        // Perform block-wise IDCT processing
-        dim3 dct_grid(
-            gpujpeg_div_and_round_up(block_count_x, GPUJPEG_DCT_BLOCK_COUNT_X),
-            gpujpeg_div_and_round_up(block_count_y, GPUJPEG_DCT_BLOCK_COUNT_Y),
-            1
-        );
-        dim3 dct_block(
-            GPUJPEG_BLOCK_SIZE,
-            GPUJPEG_DCT_BLOCK_COUNT_X,
-            GPUJPEG_DCT_BLOCK_COUNT_Y
-        );
+        dim3 dct_grid(gpujpeg_div_and_round_up(block_count_x * block_count_y,
+				(GPUJPEG_IDCT_BLOCK_X * GPUJPEG_IDCT_BLOCK_Y * GPUJPEG_IDCT_BLOCK_Z) / GPUJPEG_BLOCK_SIZE), 1);
+        dim3 dct_block(GPUJPEG_IDCT_BLOCK_X, GPUJPEG_IDCT_BLOCK_Y, GPUJPEG_IDCT_BLOCK_Z);
+ 
         gpujpeg_idct_gpu_kernel<<<dct_grid, dct_block, 0, *(decoder->stream)>>>(
-            block_count_x,
-            block_count_y,
             component->d_data_quantized,
-            component->data_width * GPUJPEG_BLOCK_SIZE,
             component->d_data,
             component->data_width,
             d_quantization_table
