@@ -56,6 +56,7 @@
 #define SEGMENT_ALIGN(b) (((b) + 127) & ~127)
 
 #if defined(_MSC_VER)
+#include <Windows.h>
     /** Documented at declaration */
     double gpujpeg_get_time()
     {
