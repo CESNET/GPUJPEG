@@ -210,21 +210,6 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     coder->duration_in_gpu = 0.0;
     coder->duration_waiting = 0.0;
 
-    // Start copying compressed data to device memory
-    decoder->data_compressed = image;
-    decoder->data_compressed_size = image_size;
-    if (decoder->data_compressed_size > coder->data_compressed_allocated_size) {
-        if (coder->d_data_compressed != NULL) {
-            cudaFree(coder->d_data_compressed);
-            coder->d_data_compressed = NULL;
-        }
-        cudaMalloc((void**)&coder->d_data_compressed, decoder->data_compressed_size * sizeof(uint8_t));
-        gpujpeg_cuda_check_error("Coder data compressed device allocation", return 0);
-        coder->data_compressed_allocated_size = decoder->data_compressed_size;
-    }
-    cudaMemcpyAsync(coder->d_data_compressed, decoder->data_compressed, decoder->data_compressed_size * sizeof(uint8_t), cudaMemcpyHostToDevice, *(decoder->stream));
-    gpujpeg_cuda_check_error("Decoder copy compressed data", return -1);
-
     GPUJPEG_CUSTOM_TIMER_START(decoder->def);
 
     // Read JPEG image data
@@ -254,6 +239,10 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
 
         // Reset huffman output
         cudaMemsetAsync(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t), *(decoder->stream));
+
+        // Copy scan data to device memory
+        cudaMemcpyAsync(coder->d_data_compressed, coder->data_compressed, decoder->data_compressed_size * sizeof(uint8_t), cudaMemcpyHostToDevice, *(decoder->stream));
+        gpujpeg_cuda_check_error("Decoder copy compressed data", return -1);
 
         // Copy segments to device memory
         cudaMemcpyAsync(coder->d_segment, coder->segment, decoder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice, *(decoder->stream));

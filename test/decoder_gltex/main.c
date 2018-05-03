@@ -59,15 +59,13 @@ int main(int argc, char *argv[])
     }
 
     // Add segment info headers into JPEG stream
+    uint8_t * image_old = image;
+    int image_old_size = image_size;
     double startRewrite = gpujpeg_get_time();
-    uint8_t * reformatted_image;
-    int reformatted_image_size;
-    gpujpeg_reformat(image, image_size, &reformatted_image, &reformatted_image_size);
+    gpujpeg_reformat(image, image_size, &image, &image_size);
     double endRewrite = gpujpeg_get_time();
-    printf("Rewritten JPEG stream in %0.2f ms (from %d bytes to %d bytes.\n", (endRewrite - startRewrite) * 1000.0, image_size, reformatted_image_size);
-    gpujpeg_image_destroy(image);
-    image = reformatted_image;
-    image_size = reformatted_image_size;
+    printf("Rewritten JPEG stream in %0.2f ms (from %d bytes to %d bytes.\n", (endRewrite - startRewrite) * 1000.0, image_old_size, image_size);
+    gpujpeg_image_destroy(image_old);
 
     // Get image size and check number of color components
     struct gpujpeg_image_parameters param_image;
@@ -133,7 +131,7 @@ int main(int argc, char *argv[])
     }
 
     // Clean up decoder
-    free(image);
+    gpujpeg_image_destroy(image);
     gpujpeg_decoder_destroy(decoder);
 
     // Show texture

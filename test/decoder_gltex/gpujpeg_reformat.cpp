@@ -427,13 +427,14 @@ gpujpeg_reformat_read_sos(struct gpujpeg_rewriter * rewriter, uint8_t** image, u
         return -1;
     }
 
-    // Prepare scan
-    size_t scan_data_offset = 0;
     struct gpujpeg_reformat_scan * scan = &rewriter->scans[rewriter->scan_count];
     rewriter->scan_count++;
 
+    // TODO: get current offset
+    size_t current_data_offset = 0;
+
     // First segment
-    scan->segment_offset[scan->segment_index] = scan_data_offset;
+    scan->segment_offset[scan->segment_index] = current_data_offset;
     scan->segment_index++;
 
     // Read scan data
@@ -444,7 +445,7 @@ gpujpeg_reformat_read_sos(struct gpujpeg_rewriter * rewriter, uint8_t** image, u
     do {
         byte_previous = byte;
         byte = gpujpeg_reformat_read_byte(*image);
-        scan_data_offset++;
+        current_data_offset++;
 
         // Check markers
         if ( byte_previous == 0xFF ) {
@@ -491,16 +492,16 @@ gpujpeg_reformat_read_sos(struct gpujpeg_rewriter * rewriter, uint8_t** image, u
                 previous_marker = byte;
 
                 // Next segment
-                scan->segment_offset[scan->segment_index] = scan_data_offset;
+                scan->segment_offset[scan->segment_index] = current_data_offset;
                 scan->segment_index++;
             }
             // Check scan end
             else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS || (byte >= GPUJPEG_MARKER_APP0 && byte <= GPUJPEG_MARKER_APP15) ) {
                 *image -= 2;
-                scan_data_offset -= 2;
+                current_data_offset -= 2;
 
-                // Offset after the last segment (total size of the scan)
-                scan->segment_offset[scan->segment_index] = scan_data_offset;
+                // Offset after the last segment
+                scan->segment_offset[scan->segment_index] = current_data_offset;
 
                 // Successfully read end of scan, so the result is OK
                 result = 0;
@@ -609,10 +610,10 @@ gpujpeg_reformat(uint8_t * in_image, int in_image_size, uint8_t ** out_image, in
     // Write new headers for each scan
     for (int scan_index = 0; scan_index < rewriter.scan_count; scan_index++) {
         struct gpujpeg_reformat_scan * scan = &rewriter.scans[scan_index];
-        int data_size = (scan->segment_count + 1) * 4; // Number of segments plus one (representing total size of scan)
+        int data_size = (scan->segment_count + 1) * 4;
         int segment_index = 0;
 
-        // Emit APP13 marker segments (each header can have data size of only 2^16)
+        // Emit headers (each header can have data size of only 2^16)        
         while (data_size > 0) {
             // Determine current header size
             int header_size = data_size;
@@ -621,12 +622,14 @@ gpujpeg_reformat(uint8_t * in_image, int in_image_size, uint8_t ** out_image, in
             }
             data_size -= header_size;
 
-            // Write marker segment APP13 which is used by GPUJPEG decoder to read offsets for segments
+            // Header marker
             gpujpeg_reformat_emit_marker(image, GPUJPEG_MARKER_APP13);
+
+            // Write custom application header
             gpujpeg_reformat_emit_2byte(image, 3 + header_size);
             gpujpeg_reformat_emit_byte(image, scan_index);
 
-            // Write segment offsets
+            // Write segments
             while (header_size > 0) {
                 int segment_offset = scan->segment_offset[segment_index];
                 gpujpeg_reformat_emit_byte(image, (uint8_t)(((segment_offset) >> 24) & 0xFF));
@@ -638,7 +641,7 @@ gpujpeg_reformat(uint8_t * in_image, int in_image_size, uint8_t ** out_image, in
             }
         }
 
-        // Write the original scan
+        // Write scan
         int scan_size = (((scan_index + 1) < rewriter.scan_count) ? rewriter.scans[scan_index + 1].offset : in_image_size) - scan->offset;
         memcpy(image, in_image + scan->offset, scan_size);
         image += scan_size;

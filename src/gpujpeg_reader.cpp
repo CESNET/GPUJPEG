@@ -170,26 +170,22 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image)
     }
 
     for (;length > 0; length-=65) {
-        int index = gpujpeg_reader_read_byte(*image);
-        struct gpujpeg_table_quantization* table;
-        if( index == 0 ) {
-            table = &decoder->table_quantization[GPUJPEG_COMPONENT_LUMINANCE];
-        } else if ( index == 1 ) {
-            table = &decoder->table_quantization[GPUJPEG_COMPONENT_CHROMINANCE];
-        } else {
-            fprintf(stderr, "[GPUJPEG] [Error] DQT marker index should be 0 or 1 but %d was presented!\n", index);
-            return -1;
-        }
+    int index = gpujpeg_reader_read_byte(*image);
+    struct gpujpeg_table_quantization* table;
+    if( index == 0 ) {
+        table = &decoder->table_quantization[GPUJPEG_COMPONENT_LUMINANCE];
+    } else if ( index == 1 ) {
+        table = &decoder->table_quantization[GPUJPEG_COMPONENT_CHROMINANCE];
+    } else {
+        fprintf(stderr, "[GPUJPEG] [Error] DQT marker index should be 0 or 1 but %d was presented!\n", index);
+        return -1;
+    }
 
-        for ( int i = 0; i < 64; i++ ) {
-            table->table_raw[i] = gpujpeg_reader_read_byte(*image);
-        }
-        // Prepare quantization table for read raw table
-        gpujpeg_table_quantization_decoder_compute(table);
-
-        // Copy tables to device memory
-        cudaMemcpyAsync(table->d_table, table->table, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice, *(decoder->stream));
-        gpujpeg_cuda_check_error("Decoder copy quantization table ", return -1);
+    for ( int i = 0; i < 64; i++ ) {
+        table->table_raw[i] = gpujpeg_reader_read_byte(*image);
+    }
+    // Prepare quantization table for read raw table
+    gpujpeg_table_quantization_decoder_compute(table);
     }
     return 0;
 }
@@ -267,62 +263,58 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
     length -= 2;
 
     while (length > 0) {
-        int index = gpujpeg_reader_read_byte(*image);
-        struct gpujpeg_table_huffman_decoder* table = NULL;
-        struct gpujpeg_table_huffman_decoder* d_table = NULL;
-        switch(index) {
-        case 0:
-            table = &decoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
-            d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
-            break;
-        case 16:
-            table = &decoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
-            d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
-            break;
-        case 1:
-            table = &decoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
-            d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
-            break;
-        case 17:
-            table = &decoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
-            d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
-            break;
-        default:
-            fprintf(stderr, "[GPUJPEG] [Error] DHT marker index should be 0, 1, 16 or 17 but %d was presented!\n", index);
-            return -1;
-        }
-        length -= 1;
+    int index = gpujpeg_reader_read_byte(*image);
+    struct gpujpeg_table_huffman_decoder* table = NULL;
+    struct gpujpeg_table_huffman_decoder* d_table = NULL;
+    switch(index) {
+    case 0:
+        table = &decoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
+        d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
+        break;
+    case 16:
+        table = &decoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
+        d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
+        break;
+    case 1:
+        table = &decoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
+        d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
+        break;
+    case 17:
+        table = &decoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
+        d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
+        break;
+    default:
+        fprintf(stderr, "[GPUJPEG] [Error] DHT marker index should be 0, 1, 16 or 17 but %d was presented!\n", index);
+        return -1;
+    }
+    length -= 1;
 
-        // Read in bits[]
-        table->bits[0] = 0;
-        int count = 0;
-        for ( int i = 1; i <= 16; i++ ) {
-            table->bits[i] = gpujpeg_reader_read_byte(*image);
-            count += table->bits[i];
-            if ( length > 0 ) {
-            length--;
-            } else {
-            fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading bit counts!\n", index);
-            return -1;
-            }
+    // Read in bits[]
+    table->bits[0] = 0;
+    int count = 0;
+    for ( int i = 1; i <= 16; i++ ) {
+        table->bits[i] = gpujpeg_reader_read_byte(*image);
+        count += table->bits[i];
+        if ( length > 0 ) {
+        length--;
+        } else {
+        fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading bit counts!\n", index);
+        return -1;
         }
+    }
 
-        // Read in huffval
-        for ( int i = 0; i < count; i++ ){
-            table->huffval[i] = gpujpeg_reader_read_byte(*image);
-            if ( length > 0 ) {
-            length--;
-            } else {
-            fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading huffman values!\n", index);
-            return -1;
-            }
+    // Read in huffval
+    for ( int i = 0; i < count; i++ ){
+        table->huffval[i] = gpujpeg_reader_read_byte(*image);
+        if ( length > 0 ) {
+        length--;
+        } else {
+        fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading huffman values!\n", index);
+        return -1;
         }
-        // Compute huffman table for read values
-        gpujpeg_table_huffman_decoder_compute(table);
-
-        // Copy table to device memory
-        cudaMemcpyAsync(d_table, table, sizeof(struct gpujpeg_table_huffman_decoder), cudaMemcpyHostToDevice, *(decoder->stream));
-        gpujpeg_cuda_check_error("Decoder copy huffman table ", return -1);
+    }
+    // Compute huffman table for read values
+    gpujpeg_table_huffman_decoder_compute(table, d_table);
     }
     return 0;
 }
@@ -402,10 +394,10 @@ gpujpeg_reader_read_segment_info(struct gpujpeg_decoder* decoder, uint8_t** imag
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_t* image_begin, uint8_t* image_end,
+gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_t* image_end,
         struct gpujpeg_reader_scan* scan, int scan_index)
 {
-    size_t data_compressed_offset = *image - image_begin;
+    size_t data_compressed_offset = decoder->reader->data_compressed_size;
 
     // Get first segment in scan
     uint8_t * segment_data_start = *image;
@@ -470,7 +462,9 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
                 previous_marker = byte;
 
                 // Set segment byte count
+                data_compressed_offset -= 2;
                 segment->data_compressed_size = data_compressed_offset - segment->data_compressed_index;
+                memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
 
                 // Start new segment in scan
                 segment_data_start = *image;
@@ -487,6 +481,7 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
                 // Set segment byte count
                 data_compressed_offset -= 2;
                 segment->data_compressed_size = data_compressed_offset - segment->data_compressed_index;
+                memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
 
                 // Add scan segment count to decoder segment count
                 decoder->reader->segment_count += scan->segment_count;
@@ -501,6 +496,8 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
             }
         }
     } while( *image < image_end );
+
+    decoder->reader->data_compressed_size = data_compressed_offset;
 
     if ( result == -1) {
         fprintf(stderr, "[GPUJPEG] [Error] JPEG data unexpected ended while reading SOS marker!\n");
@@ -519,11 +516,9 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_t* image_begin, uint8_t* image_end,
+gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_t* image_end,
         struct gpujpeg_reader_scan* scan, int scan_index)
 {
-    size_t data_compressed_offset = *image - image_begin;
-
     // Calculate segment count
     int segment_count = decoder->reader->segment_info_size / 4 - 1;
 
@@ -551,8 +546,8 @@ gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder
         struct gpujpeg_segment* segment = &decoder->coder.segment[scan->segment_index + segment_index];
         segment->scan_index = scan_index;
         segment->scan_segment_index = segment_index;
-        segment->data_compressed_index = data_compressed_offset + scan_start;
-        segment->data_compressed_size = data_compressed_offset + scan_end - segment->data_compressed_index;
+        segment->data_compressed_index = decoder->reader->data_compressed_size + scan_start;
+        segment->data_compressed_size = decoder->reader->data_compressed_size + scan_end - segment->data_compressed_index;
 
         // If segment is not last it contains restart marker at the end so remove it
         if ( (segment_index + 1) < segment_count ) {
@@ -569,8 +564,14 @@ gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder
     // Increase number of segment count in reader
     decoder->reader->segment_count += scan->segment_count;
 
-    // Skip scan data
+    // Copy scan data to buffer
+    memcpy(
+        &decoder->coder.data_compressed[decoder->reader->data_compressed_size],
+        *image,
+        scan_start
+    );
     *image += scan_start;
+    decoder->reader->data_compressed_size += scan_start;
 
     // Reset segment info, for next scan it has to be loaded again from other header
     decoder->reader->segment_info_count = 0;
@@ -588,7 +589,7 @@ gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_t* image_begin, uint8_t* image_end)
+gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_t* image_end)
 {
     int length = (int)gpujpeg_reader_read_2byte(*image);
     length -= 2;
@@ -668,11 +669,11 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     // Read scan content
     if ( decoder->reader->segment_info_count > 0 ) {
         // Read scan content by segment info contained in special header
-        if ( gpujpeg_reader_read_scan_content_by_segment_info(decoder, image, image_begin, image_end, scan, scan_index) != 0 )
+        if ( gpujpeg_reader_read_scan_content_by_segment_info(decoder, image, image_end, scan, scan_index) != 0 )
             return -1;
     } else {
         // Read scan content byte-by-byte
-        if ( gpujpeg_reader_read_scan_content_by_parsing(decoder, image, image_begin, image_end, scan, scan_index) != 0 )
+        if ( gpujpeg_reader_read_scan_content_by_parsing(decoder, image, image_end, scan, scan_index) != 0 )
             return -1;
     }
 
@@ -689,12 +690,12 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     decoder->reader->comp_count = 0;
     decoder->reader->scan_count = 0;
     decoder->reader->segment_count = 0;
+    decoder->reader->data_compressed_size = 0;
     decoder->reader->segment_info_count = 0;
     decoder->reader->segment_info_size = 0;
 
     // Get image end
-    uint8_t * image_begin = image;
-    uint8_t * image_end = image + image_size;
+    uint8_t* image_end = image + image_size;
 
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image);
@@ -803,7 +804,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
 
         case GPUJPEG_MARKER_SOS:
-            if ( gpujpeg_reader_read_sos(decoder, &image, image_begin, image_end) != 0 )
+            if ( gpujpeg_reader_read_sos(decoder, &image, image_end) != 0 )
                 return -1;
             break;
 
@@ -836,6 +837,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
 
     // Set decoder parameters
     decoder->segment_count = decoder->reader->segment_count;
+    decoder->data_compressed_size = decoder->reader->data_compressed_size;
 
     if ( decoder->segment_count > decoder->coder.segment_count ) {
         fprintf(stderr, "[GPUJPEG] [Error] Decoder can't decode image that has segment count %d (maximum segment count for specified parameters is %d)!\n",
