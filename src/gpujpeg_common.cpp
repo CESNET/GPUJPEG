@@ -37,10 +37,10 @@
 #include <libgpujpeg/gpujpeg_util.h>
 #include "gpujpeg_preprocessor.h"
 #include <math.h>
+#if defined(_MSC_VER)
+  #include <windows.h>
+#endif
 #ifdef GPUJPEG_USE_OPENGL
-    #if defined(_MSC_VER)
-        #include "windows.h"
-    #endif
     #define GL_GLEXT_PROTOTYPES
     #include <GL/glew.h>
     #ifndef GL_VERSION_1_2
