@@ -361,6 +361,9 @@ main(int argc, char *argv[])
     }
 
     if ( encode == 1 ) {
+        if (param_image.width <= 0 || param_image.height <= 0) {
+            fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
+        }
         // Create OpenGL texture
         struct gpujpeg_opengl_texture* texture = NULL;
         if ( use_opengl ) {
