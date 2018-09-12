@@ -82,24 +82,6 @@ fi
 CUDA_COMPUTE_ARGS=""
 CUDA_COMPILER=""
 
-AC_ARG_WITH(cuda-compiler,
-              AS_HELP_STRING([--with-cuda-compileri=compiler], [select compiler to compile cuda code with; suported: clang, nvcc; default: nvcc]),
-              [CUDA_COMPILER="$withval"],
-              [CUDA_COMPILER=nvcc])
-
-case "$CUDA_COMPILER" in
-        *nvcc*)
-                CUDA_COMPUTE_ARGS="-gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35 -gencode arch=compute_35,code=compute_35"
-                ;;
-        *clang*)
-                CUDA_COMPUTE_ARGS="--cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35"
-                CUDA_FLAGS+=" --cuda-path=$CUDA_INSTALL_PATH"
-                ;;
-        *)
-                AC_MSG_ERROR([Unsupported cuda compiler $CUDA_COMPILER])
-                ;;
-esac
-
 AC_ARG_WITH(cuda,
 	AC_HELP_STRING([--with-cuda=DIR], [specify cuda root]),
 	CUDA_INSTALL_PATH=$withval
@@ -108,6 +90,7 @@ AC_PATH_PROG(CUDA, nvcc, nvcc_not_found, [${CUDA_INSTALL_PATH}/bin${PATH_SEPARAT
 if test x$CUDA = xnvcc_not_found ; then
 	AC_MSG_FAILURE([CUDA is required to build the gpujpeg library!])
 fi
+CUDA_COMPILER="$CUDA"
 
 CUDA=`dirname $CUDA`
 CUDA=`dirname $CUDA`
@@ -138,6 +121,23 @@ else
 		src/gpujpeg_preprocessor.cu.o \
 		src/gpujpeg_huffman_gpu_decoder.cu.o"
 fi
+
+AC_ARG_WITH(cuda-compiler,
+              AS_HELP_STRING([--with-cuda-compiler=compiler], [select compiler to compile cuda code with; suported: clang, nvcc; default: nvcc autodetected from cuda]),
+              [CUDA_COMPILER="$withval"])
+
+case "$CUDA_COMPILER" in
+        *nvcc*)
+                CUDA_COMPUTE_ARGS="-gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35 -gencode arch=compute_35,code=compute_35"
+                ;;
+        *clang*)
+                CUDA_COMPUTE_ARGS="--cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35"
+                CUDA_FLAGS+=" --cuda-path=$CUDA_INSTALL_PATH"
+                ;;
+        *)
+                AC_MSG_ERROR([Unsupported cuda compiler $CUDA_COMPILER])
+                ;;
+esac
 
 # CUDA host compiler
 AC_ARG_WITH(cuda-host-compiler, 
