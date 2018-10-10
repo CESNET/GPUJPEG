@@ -35,6 +35,8 @@ if test x$enable_debug = x ; then
 	enable_debug=no
 fi
 
+AC_ARG_VAR([CUDA_FLAGS], [Flags passed to nvcc])
+
 if test x$enable_debug = xyes ; then
 	COMMON_FLAGS="$COMMON_FLAGS -g -D_DEBUG -O0"
 	CUDA_FLAGS="$CUDA_FLAGS -G"
