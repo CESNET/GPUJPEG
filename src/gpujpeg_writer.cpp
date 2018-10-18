@@ -283,6 +283,23 @@ gpujpeg_writer_write_dri(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_emit_2byte(encoder->writer, encoder->coder.param.restart_interval);
 }
 
+/**
+ * Write encoding library in comment marker
+ */
+static void
+gpujpeg_writer_write_com(struct gpujpeg_encoder* encoder)
+{
+    const char *creator = "Written by GPUJPEG";
+    gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_COM);
+
+    // Length
+    gpujpeg_writer_emit_2byte(encoder->writer, 2 + strlen(creator));
+
+    for ( int i = 0; i < strlen(creator); i++ )  {
+        gpujpeg_writer_emit_byte(encoder->writer, creator[i]);
+    }
+}
+
 /** Documented at declaration */
 void
 gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
@@ -305,6 +322,8 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
     }
 
     gpujpeg_writer_write_dri(encoder);
+
+    gpujpeg_writer_write_com(encoder);
 }
 
 /** Documented at declaration */
