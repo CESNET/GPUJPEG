@@ -142,6 +142,34 @@ void gpujpeg_writer_write_app0(struct gpujpeg_writer* writer)
 }
 
 /**
+ * Write APP14 block
+ *
+ * This marker is used for RGB images - JFIF supports only YCbCr. This Apple
+ * marker allows us to store RGB files. Inspired by libjpeg-turbo.
+ *
+ * @param writer  Writer structure
+ */
+static void gpujpeg_writer_write_app14(struct gpujpeg_writer* writer)
+{
+    gpujpeg_writer_emit_marker(writer, GPUJPEG_MARKER_APP14);
+
+    // Length
+    gpujpeg_writer_emit_2byte(writer, 2 + 5 + 2 + 2 + 2 + 1)
+
+    // Identifier: ASCII "Adobe"
+    gpujpeg_writer_emit_byte(writer, 0x41);
+    gpujpeg_writer_emit_byte(writer, 0x64);
+    gpujpeg_writer_emit_byte(writer, 0x6F);
+    gpujpeg_writer_emit_byte(writer, 0x62);
+    gpujpeg_writer_emit_byte(writer, 0x65);
+
+    gpujpeg_writer_emit_2byte(writer, 100); // Version
+    gpujpeg_writer_emit_2byte(writer, 0);   // Flags0
+    gpujpeg_writer_emit_2byte(writer, 0);   // Flags1
+    gpujpeg_writer_emit_byte(writer, 0);    // Color transform - 1 YCbCr, 2 YCCK, 0 otherwise (RGB or CMYK)
+}
+
+/**
  * Write DQT block
  *
  * @param encoder  Encoder structure
@@ -305,7 +333,11 @@ void
 gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 {
     gpujpeg_writer_write_soi(encoder->writer);
-    gpujpeg_writer_write_app0(encoder->writer);
+    if (encoder->coder.param.color_space_internal == GPUJPEG_RGB) {
+        gpujpeg_writer_write_app14(encoder->writer);
+    } else { // ordinal JFIF
+        gpujpeg_writer_write_app0(encoder->writer);
+    }
 
     gpujpeg_writer_write_dqt(encoder, GPUJPEG_COMPONENT_LUMINANCE);
     if ( encoder->coder.param_image.comp_count > 1 ) {
