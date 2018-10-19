@@ -166,6 +166,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
     change |= coder->param_image.comp_count != param_image->comp_count;
     change |= coder->param.restart_interval != param->restart_interval;
     change |= coder->param.interleaved != param->interleaved;
+    change |= coder->param.color_space_internal != param->color_space_internal;
     for ( int comp = 0; comp < param_image->comp_count; comp++ ) {
         change |= coder->param.sampling_factor[comp].horizontal != param->sampling_factor[comp].horizontal;
         change |= coder->param.sampling_factor[comp].vertical != param->sampling_factor[comp].vertical;

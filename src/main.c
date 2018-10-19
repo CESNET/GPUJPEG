@@ -71,7 +71,45 @@ print_help()
     printf("   -n  --iterate          perform encoding/decoding in specified number of\n"
            "                          iterations for each image\n"
            "   -o  --use-opengl       use an OpenGL texture as input/output\n"
+           "   -I  --info             print JPEG file info\n"
            "\n");
+}
+
+int print_image_info(const char *filename) {
+    if (!filename) {
+        fprintf(stderr, "Missing filename!\n");
+        return 1;
+    }
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
+        perror("Cannot open");
+        return 1;
+    }
+    fseek(f, 0L, SEEK_END);
+    long int len = ftell(f);
+    fseek(f, 0L, SEEK_SET);
+    char *jpeg = malloc(len);
+    fread(jpeg, len, 1, f);
+    fclose(f);
+    struct gpujpeg_image_parameters params;
+    memset(&params, 0, sizeof params);
+    if (gpujpeg_decoder_get_image_info(jpeg, len, &params) == 0) {
+        if (params.width) {
+            printf("width: %d\n", params.width);
+        }
+        if (params.height) {
+            printf("height: %d\n", params.height);
+        }
+        if (params.comp_count) {
+            printf("component count: %d\n", params.comp_count);
+        }
+        if (params.color_space) {
+            printf("color space: %s\n", gpujpeg_color_space_get_name(params.color_space));
+        }
+    }
+    free(jpeg);
+
+    return 0;
 }
 
 int
@@ -127,12 +165,13 @@ main(int argc, char *argv[])
         {"component-range",         no_argument,       0,  OPTION_COMPONENT_RANGE },
         {"iterate",                 required_argument, 0,  'n' },
         {"use-opengl",              no_argument,       0,  'o' },
+        {"info",                    required_argument, 0,  'I' },
         0
     };
     char ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:o", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:oI:", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'h':
             print_help();
@@ -258,6 +297,8 @@ main(int argc, char *argv[])
         case 'o':
             use_opengl = 1;
             break;
+        case 'I':
+            return print_image_info(optarg);
         case '?':
             return -1;
         default:
@@ -653,3 +694,5 @@ main(int argc, char *argv[])
 
     return 0;
 }
+
+/* vim: set expandtab sw=4: */

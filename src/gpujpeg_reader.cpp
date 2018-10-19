@@ -153,6 +153,55 @@ gpujpeg_reader_read_app0(uint8_t** image)
 }
 
 /**
+ * Read Adobe APP14 marker (used for RGB images by GPUJPEG)
+ *
+ * Obtains colorspace from APP14.
+ *
+ * @param image decoder state
+ * @param image JPEG data
+ * @return 0 if succeeds, otherwise nonzero
+ */
+static int
+gpujpeg_reader_read_app14(uint8_t** image, enum gpujpeg_color_space *color_space)
+{
+    int length = gpujpeg_reader_read_2byte(*image);
+    if (length != 14) {
+        fprintf(stderr, "[GPUJPEG] [Error] APP14 marker length should be 14 but %d was presented!\n", length);
+        return -1;
+    }
+
+    char adobe[6] = "";
+    adobe[0] = gpujpeg_reader_read_byte(*image);
+    adobe[1] = gpujpeg_reader_read_byte(*image);
+    adobe[2] = gpujpeg_reader_read_byte(*image);
+    adobe[3] = gpujpeg_reader_read_byte(*image);
+    adobe[4] = gpujpeg_reader_read_byte(*image);
+    if (strcmp(adobe, "Adobe") != 0) {
+        fprintf(stderr, "[GPUJPEG] [Error] APP14 marker identifier should be 'Adobe' but '%s' was presented!\n", adobe);
+        return -1;
+    }
+
+    int version = gpujpeg_reader_read_2byte(*image);
+    int flags0 = gpujpeg_reader_read_2byte(*image);
+    int flags1 = gpujpeg_reader_read_2byte(*image);
+    int color_transform = gpujpeg_reader_read_byte(*image);
+
+    if (color_transform == 0) {
+        *color_space = GPUJPEG_RGB;
+    } else if (color_transform == 1) {
+        *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+    } else if (color_transform == 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Unsupported YCCK color transformation was presented!\n");
+        return -1;
+    } else {
+        fprintf(stderr, "[GPUJPEG] [Error] Unsupported color transformation value '%d' was presented in APP14 marker!\n", color_transform);
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
  * Read quantization table definition block from image
  *
  * @param decoder
@@ -725,6 +774,10 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             if ( gpujpeg_reader_read_app0(&image) != 0 )
                 return -1;
             break;
+        case GPUJPEG_MARKER_APP14:
+            if ( gpujpeg_reader_read_app14(&image, &decoder->reader->param.color_space_internal) != 0 )
+                return -1;
+            break;
         case GPUJPEG_MARKER_APP1:
         case GPUJPEG_MARKER_APP2:
         case GPUJPEG_MARKER_APP3:
@@ -738,7 +791,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         case GPUJPEG_MARKER_APP11:
         case GPUJPEG_MARKER_APP12:
         //case GPUJPEG_MARKER_APP13:
-        case GPUJPEG_MARKER_APP14:
         case GPUJPEG_MARKER_APP15:
             fprintf(stderr, "[GPUJPEG] [Warning] JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
             gpujpeg_reader_skip_marker_content(&image);
@@ -871,6 +923,23 @@ gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_im
         // Read more info according to the marker
         switch (marker)
         {
+        case GPUJPEG_MARKER_APP0:
+        {
+            if (gpujpeg_reader_read_app0(&image) == 0) {
+                // if the marker defines a valid JFIF, it is YCbCr (CCIR 601-256 levels)
+                param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+            } else {
+                return -1;
+            }
+            break;
+        }
+        case GPUJPEG_MARKER_APP14:
+        {
+            if (gpujpeg_reader_read_app14(&image, &param_image->color_space) != 0) {
+                return -1;
+            }
+            break;
+        }
         case GPUJPEG_MARKER_SOF0: // Baseline
         case GPUJPEG_MARKER_SOF1: // Extended sequential with Huffman coder
         {
@@ -880,6 +949,22 @@ gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_im
             }
             return 0;
         }
+        case GPUJPEG_MARKER_SOF2:
+        case GPUJPEG_MARKER_SOF3:
+        case GPUJPEG_MARKER_SOF5:
+        case GPUJPEG_MARKER_SOF6:
+        case GPUJPEG_MARKER_SOF7:
+        case GPUJPEG_MARKER_SOF9:
+        case GPUJPEG_MARKER_SOF10:
+        case GPUJPEG_MARKER_SOF11:
+        case GPUJPEG_MARKER_SOF13:
+        case GPUJPEG_MARKER_SOF14:
+        case GPUJPEG_MARKER_SOF15:
+        {
+            fprintf(stderr, "Unsupported encoding process!\n");
+            return -1;
+        }
+
         case GPUJPEG_MARKER_EOI:
         {
             eoi_presented = 1;
@@ -892,3 +977,5 @@ gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_im
     }
     return 0;
 }
+
+/* vim: set expandtab sw=4: */

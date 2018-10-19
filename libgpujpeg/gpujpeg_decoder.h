@@ -154,9 +154,14 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
 /**
  * Read image info from JPEG file
  *
+ * Values read (if present) are: width, height, comp_count, color_space.
+ * If a value of a parameter cannot be read/deduced, corresponding member
+ * of gpujpeg_image_parameters is not modified. Thus the caller may initialize
+ * the members with some distictive values to detect this.
+ *
  * @param image  Image data
  * @param image_size  Image data size
- * @param param_image
+ * @param param_image parameters obtained from image
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
