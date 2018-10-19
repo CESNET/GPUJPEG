@@ -943,6 +943,7 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
 
     uint8_t* data = NULL;
     cudaMallocHost((void**)&data, *image_size * sizeof(uint8_t));
+    gpujpeg_cuda_check_error("Initialize CUDA host buffer", return -1);
     if ( *image_size != fread(data, sizeof(uint8_t), *image_size, file) ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to load image data [%d bytes] from file %s!\n", *image_size, filename);
         return -1;

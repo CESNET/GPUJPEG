@@ -489,9 +489,9 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param);
 /**
  * Load RGB image from file
  *
- * @param filaname  Image filename
- * @param image  Image data buffer
- * @param image_size  Image data buffer size (can be specified for verification or 0 for retrieval)
+ * @param         filaname    Image filename
+ * @param[out]    image       Image data buffer allocated as CUDA host buffer
+ * @param[in,out] image_size  Image data buffer size (can be specified for verification or 0 for retrieval)
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int

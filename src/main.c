@@ -75,7 +75,7 @@ print_help()
            "\n");
 }
 
-int print_image_info(const char *filename) {
+static int print_image_info(const char *filename) {
     if (!filename) {
         fprintf(stderr, "Missing filename!\n");
         return 1;
