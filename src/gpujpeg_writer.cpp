@@ -317,13 +317,15 @@ gpujpeg_writer_write_dri(struct gpujpeg_encoder* encoder)
 static void
 gpujpeg_writer_write_com(struct gpujpeg_encoder* encoder)
 {
-    const char *creator = "Written by GPUJPEG";
+    char creator[] = "CREATOR: GPUJPEG, quality = \0\0\0";
+    snprintf(creator + strlen(creator), sizeof creator - strlen(creator), "%d",
+                    encoder->coder.param.quality);
+
     gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_COM);
-
     // Length
-    gpujpeg_writer_emit_2byte(encoder->writer, 2 + strlen(creator));
+    gpujpeg_writer_emit_2byte(encoder->writer, 2 + strlen(creator) + 1);
 
-    for ( int i = 0; i < strlen(creator); i++ )  {
+    for ( int i = 0; i <= strlen(creator); i++ )  { // include terminating '\0'
         gpujpeg_writer_emit_byte(encoder->writer, creator[i]);
     }
 }
