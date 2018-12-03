@@ -140,6 +140,8 @@ main(int argc, char *argv[])
     int restart_interval_default = 1;
     int chroma_subsampled = 0;
 
+    param_image.color_space = GPUJPEG_NONE;
+
 #if defined(__linux__)
     // Parse command line
     #define OPTION_DEVICE_INFO     1
@@ -189,9 +191,7 @@ main(int argc, char *argv[])
             param_image.height = atoi(pos + 1);
             break;
         case 'c':
-            if ( strcmp(optarg, "none") == 0 )
-                param_image.color_space = GPUJPEG_NONE;
-            else if ( strcmp(optarg, "rgb") == 0 )
+            if ( strcmp(optarg, "rgb") == 0 )
                 param_image.color_space = GPUJPEG_RGB;
             else if ( strcmp(optarg, "yuv") == 0 )
                 param_image.color_space = GPUJPEG_YUV;
@@ -218,26 +218,22 @@ main(int argc, char *argv[])
             else if ( strcmp(optarg, "444-u8-p0p1p2") == 0 ) {
                 param_image.comp_count = 3;
                 param_image.pixel_format = GPUJPEG_444_U8_P0P1P2;
-                param_image.color_space = GPUJPEG_NONE;
             }
             else if ( strcmp(optarg, "422-u8-p1020") == 0 )  {
                 param_image.comp_count = 3;
                 param_image.pixel_format = GPUJPEG_422_U8_P1020;
-                param_image.color_space = GPUJPEG_NONE;
                 gpujpeg_parameters_chroma_subsampling_422(&param);
                 chroma_subsampled = 1;
             }
             else if ( strcmp(optarg, "422-u8-p0p1p2") == 0 ) {
                 param_image.comp_count = 3;
                 param_image.pixel_format = GPUJPEG_422_U8_P0P1P2;
-                param_image.color_space = GPUJPEG_NONE;
                 gpujpeg_parameters_chroma_subsampling_422(&param);
                 chroma_subsampled = 1;
             }
             else if ( strcmp(optarg, "420-u8-p0p1p2") == 0 ) {
                 param_image.comp_count = 3;
                 param_image.pixel_format = GPUJPEG_420_U8_P0P1P2;
-                param_image.color_space = GPUJPEG_NONE;
                 gpujpeg_parameters_chroma_subsampling_420(&param);
                 chroma_subsampled = 1;
             }
@@ -367,8 +363,12 @@ main(int argc, char *argv[])
     }
 
     // Detect color spalce
-    if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV && param_image.color_space == GPUJPEG_RGB ) {
-        param_image.color_space = GPUJPEG_YUV;
+    if ( param_image.color_space == GPUJPEG_NONE ) {
+        if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV ) {
+            param_image.color_space = GPUJPEG_YUV;
+        } else {
+            param_image.color_space = GPUJPEG_RGB;
+        }
     }
 
     // Detect component count
