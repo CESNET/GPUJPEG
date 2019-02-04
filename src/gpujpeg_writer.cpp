@@ -32,6 +32,10 @@
 #include <libgpujpeg/gpujpeg_encoder_internal.h>
 #include <libgpujpeg/gpujpeg_util.h>
 
+#if defined _MSC_VER && _MSC_VER < 1900 // VS 2015
+#define snprintf _snprintf
+#endif
+
 /** Documented at declaration */
 struct gpujpeg_writer*
 gpujpeg_writer_create(struct gpujpeg_encoder* encoder)
