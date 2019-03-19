@@ -90,8 +90,12 @@ static int print_image_info(const char *filename) {
     long int len = ftell(f);
     fseek(f, 0L, SEEK_SET);
     char *jpeg = malloc(len);
-    fread(jpeg, len, 1, f);
+    size_t ret = fread(jpeg, len, 1, f);
     fclose(f);
+    if (ret == 0) {
+        fprintf(stderr, "Cannot read image contents.\n");
+        return 1;
+    }
     struct gpujpeg_image_parameters params;
     memset(&params, 0, sizeof params);
     if (gpujpeg_decoder_get_image_info(jpeg, len, &params) == 0) {
