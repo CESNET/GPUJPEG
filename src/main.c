@@ -72,6 +72,7 @@ print_help()
            "                          iterations for each image\n"
            "   -o  --use-opengl       use an OpenGL texture as input/output\n"
            "   -I  --info             print JPEG file info\n"
+           "   -R  --rgb              create RGB JPEG\n"
            "\n");
 }
 
@@ -168,12 +169,13 @@ main(int argc, char *argv[])
         {"iterate",                 required_argument, 0,  'n' },
         {"use-opengl",              no_argument,       0,  'o' },
         {"info",                    required_argument, 0,  'I' },
+        {"rgb",                     no_argument,       0,  'R' },
         0
     };
     char ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:oI:", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:oI:R", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'h':
             print_help();
@@ -295,6 +297,9 @@ main(int argc, char *argv[])
             break;
         case 'I':
             return print_image_info(optarg);
+        case 'R':
+            param.color_space_internal = GPUJPEG_RGB;
+            break;
         case '?':
             return -1;
         default:
