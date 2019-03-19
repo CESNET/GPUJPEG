@@ -459,7 +459,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         GPUJPEG_CUSTOM_TIMER_STOP(encoder->in_gpu);
         coder->duration_in_gpu = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->in_gpu);
 
-        GPUJPEG_CUSTOM_TIMER_START(encoder->in_gpu);
+        GPUJPEG_CUSTOM_TIMER_START(encoder->def);
         if ( coder->param.interleaved == 1 ) {
             // Write scan header (only one scan is written, that contains all color components data)
             gpujpeg_writer_write_scan_header(encoder, 0);
