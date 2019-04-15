@@ -581,6 +581,9 @@ gpujpeg_huffman_encoder_compaction_kernel (
         s_out_ptrs[threadIdx.y] = (uint4*)(d_dest + segment_out_offset);
     }
 
+    // we need to synchronize all our warps here to ensure s_out_ptrs is guaranteed to be provided on any thread.
+    __syncthreads();
+
     // all threads read output buffer offset for their segment and prepare input and output pointers and number of copy iterations
     const uint4 * d_in = threadIdx.x + (uint4*)(d_src + segment_in_offset);
     uint4 * d_out = threadIdx.x + s_out_ptrs[threadIdx.y];
