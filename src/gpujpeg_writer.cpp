@@ -202,6 +202,16 @@ gpujpeg_writer_write_dqt(struct gpujpeg_encoder* encoder, enum gpujpeg_component
     }
 }
 
+static uint8_t gpujpeg_writer_get_component_id(int index, enum gpujpeg_color_space color_space) {
+    if (color_space == GPUJPEG_RGB) {
+            assert(index < 3);
+            static const uint8_t rgb_ids[3] = { 'R', 'G', 'B' };
+            return rgb_ids[index];
+    } else {
+            return index + 1;
+    }
+}
+
 /**
  * Currently support GPUJPEG_MARKER_SOF0 baseline implementation
  *
@@ -230,8 +240,8 @@ gpujpeg_writer_write_sof0(struct gpujpeg_encoder* encoder)
         // Get component
         struct gpujpeg_component* component = &encoder->coder.component[comp_index];
 
-        // Component index
-        gpujpeg_writer_emit_byte(encoder->writer, comp_index + 1);
+        // Component ID
+        gpujpeg_writer_emit_byte(encoder->writer, gpujpeg_writer_get_component_id(comp_index, encoder->coder.param.color_space_internal));
 
         // Sampling factors (1 << 4) + 1 (sampling h: 1, v: 1)
         gpujpeg_writer_emit_byte(encoder->writer, (component->sampling_factor.horizontal << 4) + component->sampling_factor.vertical);
@@ -461,8 +471,8 @@ gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int scan_index
             // Get component
             struct gpujpeg_component* component = &encoder->coder.component[comp_index];
 
-            // Component index
-            gpujpeg_writer_emit_byte(encoder->writer, comp_index + 1);
+            // Component ID
+            gpujpeg_writer_emit_byte(encoder->writer, gpujpeg_writer_get_component_id(comp_index, encoder->coder.param.color_space_internal));
 
             // Component DC and AC entropy coding table indexes
             if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
@@ -487,7 +497,7 @@ gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int scan_index
         gpujpeg_writer_emit_byte(encoder->writer, 1);
 
         // Component index
-        gpujpeg_writer_emit_byte(encoder->writer, comp_index + 1);
+        gpujpeg_writer_emit_byte(encoder->writer, gpujpeg_writer_get_component_id(comp_index, encoder->coder.param.color_space_internal));
 
         // Component DC and AC entropy coding table indexes
         if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
