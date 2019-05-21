@@ -957,6 +957,20 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
 
 /** Documented at declaration */
 int
+gpujpeg_image_load_from_memory(const uint8_t*image_src , uint8_t** image, int image_size)
+{
+    uint8_t* data = NULL;
+    cudaMallocHost((void**)&data, image_size * sizeof(uint8_t));
+    gpujpeg_cuda_check_error("Initialize CUDA host buffer", return -1);
+    memcpy(data, image_src, image_size);
+
+    *image = data;
+
+    return 0;
+}
+
+/** Documented at declaration */
+int
 gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
 {
     FILE* file;

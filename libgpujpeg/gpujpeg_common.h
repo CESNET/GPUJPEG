@@ -498,6 +498,17 @@ GPUJPEG_API int
 gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size);
 
 /**
+ * Load RGB image from memory
+ *
+ * @param[in]     image_src   Image data buffer from memory
+ * @param[out]    image       Image data buffer allocated as CUDA host buffer
+ * @param[in]     image_size  Image data buffer size
+ * @return 0 if succeeds, otherwise nonzero
+ */
+GPUJPEG_API int
+gpujpeg_image_load_from_memory(const uint8_t*image_src , uint8_t** image, int image_size);
+
+/**
  * Save RGB image to file
  *
  * @param filaname  Image filename
