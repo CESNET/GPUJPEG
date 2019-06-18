@@ -346,10 +346,10 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
         table->bits[i] = gpujpeg_reader_read_byte(*image);
         count += table->bits[i];
         if ( length > 0 ) {
-        length--;
+            length--;
         } else {
-        fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading bit counts!\n", index);
-        return -1;
+            fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading bit counts!\n");
+            return -1;
         }
     }
 
@@ -357,10 +357,10 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
     for ( int i = 0; i < count; i++ ){
         table->huffval[i] = gpujpeg_reader_read_byte(*image);
         if ( length > 0 ) {
-        length--;
+            length--;
         } else {
-        fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading huffman values!\n", index);
-        return -1;
+            fprintf(stderr, "[GPUJPEG] [Error] DHT marker unexpected end when reading huffman values!\n");
+            return -1;
         }
     }
     // Compute huffman table for read values
@@ -490,7 +490,7 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
                         if ( byte_previous == 0xFF ) {
                             // Expected marker was found so notify about it
                             if ( byte == expected_marker ) {
-                                fprintf(stderr, "[GPUJPEG] [Recovery] Skipping %d bytes of data until marker 0x%X was found!\n", skip_count, expected_marker, byte);
+                                fprintf(stderr, "[GPUJPEG] [Recovery] Skipping %d bytes of data until marker 0x%X was found!\n", skip_count, expected_marker);
                                 found_expected_marker = 1;
                                 break;
                             } else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {
@@ -808,7 +808,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
         case GPUJPEG_MARKER_SOF1:
             // Extended sequential with Huffman coder
-            fprintf(stderr, "[GPUJPEG] [Warning] Reading SOF1 as it was SOF0 marker (should work but verify it)!\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
+            fprintf(stderr, "[GPUJPEG] [Warning] Reading SOF1 as it was SOF0 marker (should work but verify it)!\n");
             if ( gpujpeg_reader_read_sof0(&decoder->reader->param, &decoder->reader->param_image, &image) != 0 )
                 return -1;
             break;

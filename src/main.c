@@ -89,7 +89,7 @@ static int print_image_info(const char *filename) {
     fseek(f, 0L, SEEK_END);
     long int len = ftell(f);
     fseek(f, 0L, SEEK_SET);
-    char *jpeg = malloc(len);
+    uint8_t *jpeg = malloc(len);
     size_t ret = fread(jpeg, len, 1, f);
     fclose(f);
     if (ret == 0) {
