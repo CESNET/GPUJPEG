@@ -919,6 +919,8 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
 int
 gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_image_parameters * param_image)
 {
+    struct gpujpeg_parameters param{};
+
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image);
     if (marker_soi != GPUJPEG_MARKER_SOI) {
@@ -957,7 +959,7 @@ gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_im
         case GPUJPEG_MARKER_SOF0: // Baseline
         case GPUJPEG_MARKER_SOF1: // Extended sequential with Huffman coder
         {
-            struct gpujpeg_parameters param;
+            param.color_space_internal = param_image->color_space;
             if (gpujpeg_reader_read_sof0(&param, param_image, &image) != 0) {
                 return -1;
             }
@@ -989,6 +991,7 @@ gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_im
             break;
         }
     }
+
     return 0;
 }
 
