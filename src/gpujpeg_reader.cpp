@@ -241,6 +241,19 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image)
 }
 
 /**
+ * Return component ID that matches given index and color space.
+ */
+static uint8_t gpujpeg_reader_get_component_id(int index, enum gpujpeg_color_space color_space) {
+    if (color_space == GPUJPEG_RGB) {
+            assert(index < 3);
+            static const uint8_t rgb_ids[3] = { 'R', 'G', 'B' };
+            return rgb_ids[index];
+    } else {
+            return index + 1;
+    }
+}
+
+/**
  * Read start of frame block from image
  *
  * @param image
@@ -268,9 +281,10 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
     length -= 6;
 
     for ( int comp = 0; comp < param_image->comp_count; comp++ ) {
-        int index = (int)gpujpeg_reader_read_byte(*image);
-        if ( index != (comp + 1) ) {
-            fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker component %d id should be %d but %d was presented!\n", comp, comp + 1, index);
+        int id = (int)gpujpeg_reader_read_byte(*image);
+        int expected_id = gpujpeg_reader_get_component_id(comp, param->color_space_internal);
+        if ( id != expected_id ) {
+            fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker component %d id should be %d but %d was presented!\n", comp, expected_id, id);
             return -1;
         }
 
