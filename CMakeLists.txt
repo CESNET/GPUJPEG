@@ -61,8 +61,8 @@ endif()
 
 # GPUJPEG library
 file(GLOB H_FILES libgpujpeg/*.h)
-file(GLOB CPP_FILES src/*.cpp src/*.cu)
-cuda_add_library(gpujpeg SHARED ${H_FILES} ${CPP_FILES})
+file(GLOB C_FILES src/*.c src/*.cu)
+cuda_add_library(gpujpeg SHARED ${H_FILES} ${C_FILES})
 if(GPUJPEG_OPENGL_ENABLED)
     target_link_libraries(gpujpeg ${GPUJPEG_OPENGL_LIBRARIES})
 endif()

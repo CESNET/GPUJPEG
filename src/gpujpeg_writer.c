@@ -53,7 +53,7 @@ gpujpeg_writer_create(struct gpujpeg_encoder* encoder)
 
 /** Documented at declaration */
 int
-gpujpeg_writer_init(gpujpeg_writer * writer, gpujpeg_image_parameters * param_image)
+gpujpeg_writer_init(struct gpujpeg_writer * writer, struct gpujpeg_image_parameters * param_image)
 {
     // Allocate output buffer
     int buffer_size = 1000;

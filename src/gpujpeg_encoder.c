@@ -27,6 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdbool.h>
 #include <string.h>
 #include <libgpujpeg/gpujpeg_encoder.h>
 #include "gpujpeg_preprocessor.h"

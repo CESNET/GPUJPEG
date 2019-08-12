@@ -919,7 +919,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
 int
 gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_image_parameters * param_image)
 {
-    struct gpujpeg_parameters param{};
+    struct gpujpeg_parameters param = {0};
 
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image);

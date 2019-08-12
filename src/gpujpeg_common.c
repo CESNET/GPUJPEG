@@ -31,7 +31,6 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <algorithm>
 #include <ctype.h>
 #include <libgpujpeg/gpujpeg_common.h>
 #include <libgpujpeg/gpujpeg_util.h>
@@ -39,6 +38,7 @@
 #include <math.h>
 #if defined(_MSC_VER)
   #include <windows.h>
+  #define strncasecmp _strnicmp
 #endif
 #ifdef GPUJPEG_USE_OPENGL
     #define GL_GLEXT_PROTOTYPES
@@ -296,11 +296,8 @@ gpujpeg_image_get_file_format(const char* filename)
     if ( ext == NULL )
         return GPUJPEG_IMAGE_FILE_UNKNOWN;
     ext++;
-    char ext_lc[3];
-    strncpy(ext_lc, ext, 3);
-    std::transform(ext_lc, ext_lc + sizeof(ext_lc), ext_lc, ::tolower);
     for ( int i = 0; i < sizeof(format) / sizeof(*format); i++ ) {
-        if ( strncmp(ext_lc, extension[i], 3) == 0 ) {
+        if ( strncasecmp(ext, extension[i], 3) == 0 ) {
             return format[i];
         }
     }
