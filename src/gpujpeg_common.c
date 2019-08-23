@@ -39,6 +39,8 @@
 #if defined(_MSC_VER)
   #include <windows.h>
   #define strncasecmp _strnicmp
+#else
+  #include <strings.h>
 #endif
 #ifdef GPUJPEG_USE_OPENGL
     #define GL_GLEXT_PROTOTYPES

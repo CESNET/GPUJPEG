@@ -38,6 +38,7 @@ extern "C" {
 
 /** JPEG encoder structure predeclaration */
 struct gpujpeg_encoder;
+struct gpujpeg_image_parameters;
 
 /** JPEG writer structure */
 struct gpujpeg_writer
