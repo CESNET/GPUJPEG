@@ -63,9 +63,17 @@ endif()
 file(GLOB H_FILES libgpujpeg/*.h)
 file(GLOB C_FILES src/*.c src/*.cu)
 cuda_add_library(gpujpeg SHARED ${H_FILES} ${C_FILES})
+SET_TARGET_PROPERTIES(
+  gpujpeg
+PROPERTIES
+  PUBLIC_HEADER "${H_FILES}"
+)
 if(GPUJPEG_OPENGL_ENABLED)
     target_link_libraries(gpujpeg ${GPUJPEG_OPENGL_LIBRARIES})
 endif()
+install(TARGETS gpujpeg
+        LIBRARY DESTINATION lib
+        PUBLIC_HEADER DESTINATION include/libgpujpeg)
 
 # GPUJPEG tester application
 file(GLOB C_FILES src/main.c)
