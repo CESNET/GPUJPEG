@@ -51,6 +51,12 @@ extern "C" {
             action; \
         } \
     } \
+
+#define GPUJPEG_CHECK_EX(cmd, msg, action) do {\
+        cmd;\
+        gpujpeg_cuda_check_error(msg, action)\
+} while(0)
+#define GPUJPEG_CHECK(cmd, action) GPUJPEG_CHECK_EX(cmd, #cmd, action)
     
 // Divide and round up
 #define gpujpeg_div_and_round_up(value, div) \

@@ -356,7 +356,7 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
     // Get info about the device
     struct cudaDeviceProp device_properties;
     int device_idx;
-    cudaGetDevice(&device_idx);
+    GPUJPEG_CHECK(cudaGetDevice(&device_idx), return -1);
     cudaGetDeviceProperties(&device_properties, device_idx);
     gpujpeg_cuda_check_error("Device info getting", return -1);
     coder->cuda_cc_major = device_properties.major;
