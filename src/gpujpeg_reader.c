@@ -917,9 +917,10 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
 
 /** Documented at declaration */
 int
-gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_image_parameters * param_image)
+gpujpeg_decoder_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count)
 {
     struct gpujpeg_parameters param = {0};
+    int segments = 0;
 
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image);
@@ -963,7 +964,7 @@ gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_im
             if (gpujpeg_reader_read_sof0(&param, param_image, &image) != 0) {
                 return -1;
             }
-            return 0;
+            break;
         }
         case GPUJPEG_MARKER_SOF2:
         case GPUJPEG_MARKER_SOF3:
@@ -980,6 +981,20 @@ gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_im
             fprintf(stderr, "Unsupported encoding process!\n");
             return -1;
         }
+        case GPUJPEG_MARKER_RST0:
+        case GPUJPEG_MARKER_RST1:
+        case GPUJPEG_MARKER_RST2:
+        case GPUJPEG_MARKER_RST3:
+        case GPUJPEG_MARKER_RST4:
+        case GPUJPEG_MARKER_RST5:
+        case GPUJPEG_MARKER_RST6:
+        case GPUJPEG_MARKER_RST7:
+        case GPUJPEG_MARKER_SOS:
+        {
+            segments++;
+            while (*image != 0xff || (*image == 0xff && image[1] == 0x00)) { if (*image == 0xff) image++; image++; }
+            break;
+        }
 
         case GPUJPEG_MARKER_EOI:
         {
@@ -990,6 +1005,10 @@ gpujpeg_decoder_get_image_info(uint8_t* image, int image_size, struct gpujpeg_im
             gpujpeg_reader_skip_marker_content(&image);
             break;
         }
+    }
+
+    if (segment_count != NULL) {
+        *segment_count = segments;
     }
 
     return 0;

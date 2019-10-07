@@ -97,8 +97,9 @@ static int print_image_info(const char *filename) {
         return 1;
     }
     struct gpujpeg_image_parameters params;
+    int segment_count = 0;
     memset(&params, 0, sizeof params);
-    if (gpujpeg_decoder_get_image_info(jpeg, len, &params) == 0) {
+    if (gpujpeg_decoder_get_image_info(jpeg, len, &params, &segment_count) == 0) {
         if (params.width) {
             printf("width: %d\n", params.width);
         }
@@ -110,6 +111,9 @@ static int print_image_info(const char *filename) {
         }
         if (params.color_space) {
             printf("color space: %s\n", gpujpeg_color_space_get_name(params.color_space));
+        }
+        if (segment_count) {
+            printf("segment count: %d\n", segment_count);
         }
     }
     free(jpeg);
