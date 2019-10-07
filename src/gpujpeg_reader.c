@@ -917,7 +917,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
 
 /** Documented at declaration */
 int
-gpujpeg_decoder_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count)
+gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count)
 {
     struct gpujpeg_parameters param = {0};
     int segments = 0;

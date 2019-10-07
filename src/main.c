@@ -99,7 +99,7 @@ static int print_image_info(const char *filename) {
     struct gpujpeg_image_parameters params;
     int segment_count = 0;
     memset(&params, 0, sizeof params);
-    if (gpujpeg_decoder_get_image_info(jpeg, len, &params, &segment_count) == 0) {
+    if (gpujpeg_reader_get_image_info(jpeg, len, &params, &segment_count) == 0) {
         if (params.width) {
             printf("width: %d\n", params.width);
         }
