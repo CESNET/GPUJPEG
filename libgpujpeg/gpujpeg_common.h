@@ -439,6 +439,7 @@ struct gpujpeg_coder
     int cuda_cc_minor;
 
     // Operation durations
+    float duration_huffman_cpu;
     float duration_memory_from;
     float duration_memory_map;
     float duration_memory_unmap;

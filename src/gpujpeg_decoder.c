@@ -40,6 +40,7 @@
 void
 gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* output)
 {
+
     output->type = GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER;
     output->data = NULL;
     output->data_size = 0;
@@ -205,6 +206,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     struct gpujpeg_coder* coder = &decoder->coder;
 
     // Reset durations
+    coder->duration_huffman_cpu = 0.0;
     coder->duration_memory_map = 0.0;
     coder->duration_memory_unmap = 0.0;
     coder->duration_stream = 0.0;
@@ -224,10 +226,13 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
 
     // Perform huffman decoding on CPU (when there are not enough segments to saturate GPU)
     if (coder->segment_count < 256) {
+        GPUJPEG_CUSTOM_TIMER_START(decoder->def);
         if (0 != gpujpeg_huffman_cpu_decoder_decode(decoder)) {
             fprintf(stderr, "[GPUJPEG] [Error] Huffman decoder failed!\n");
             return -1;
         }
+        GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
+        coder->duration_huffman_cpu = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
 
         // Copy quantized data to device memory from cpu memory
         cudaMemcpyAsync(coder->d_data_quantized, coder->data_quantized, coder->data_size * sizeof(int16_t), cudaMemcpyHostToDevice, *(decoder->stream));
@@ -425,3 +430,5 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
 
     return 0;
 }
+
+/* vi: set expandtab sw=4 : */

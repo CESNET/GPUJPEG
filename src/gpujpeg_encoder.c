@@ -316,6 +316,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
 
     // Reset durations
     coder->duration_memory_map = 0.0;
+    coder->duration_huffman_cpu = 0.0;
     coder->duration_memory_unmap = 0.0;
     coder->duration_stream = 0.0;
     coder->duration_in_gpu = 0.0;
@@ -427,11 +428,14 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         // Wait for async operations before the coding
         cudaStreamSynchronize(*(encoder->stream));
 
+        GPUJPEG_CUSTOM_TIMER_START(encoder->def);
         // Perform huffman coding
         if ( gpujpeg_huffman_cpu_encoder_encode(encoder) != 0 ) {
             fprintf(stderr, "[GPUJPEG] [Error] Huffman encoder on CPU failed!\n");
             return -1;
         }
+        GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
+        coder->duration_huffman_cpu = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
     }
     // Perform huffman coding on GPU (when restart interval is set)
     else {

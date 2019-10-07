@@ -501,7 +501,7 @@ main(int argc, char *argv[])
                     }
                     //printf(" -Preprocessing:     %10.2f ms\n", encoder->coder.duration_preprocessor);
                     //printf(" -DCT & Quantization:%10.2f ms\n", encoder->coder.duration_dct_quantization);
-                    //printf(" -Huffman Encoder:   %10.2f ms\n", encoder->coder.duration_huffman_coder);
+                    printf(" -Huffman CPU Encoder: %8.2f ms\n", encoder->coder.duration_huffman_cpu);
                     //printf(" -Copy From Device:  %10.2f ms\n", encoder->coder.duration_memory_from);
                     printf(" -Stream Formatter:  %10.2f ms\n", encoder->coder.duration_stream);
                 }
@@ -646,7 +646,7 @@ main(int argc, char *argv[])
                 if ( param.verbose ) {
                     printf(" -Stream Reader:     %10.2f ms\n", decoder->coder.duration_stream);
                     //printf(" -Copy To Device:    %10.2f ms\n", decoder->coder.duration_memory_to);
-                    //printf(" -Huffman Decoder:   %10.2f ms\n", decoder->coder.duration_huffman_coder);
+                    printf(" -Huffman CPU Decoder: %8.2f ms\n", decoder->coder.duration_huffman_cpu);
                     //printf(" -DCT & Quantization:%10.2f ms\n", decoder->coder.duration_dct_quantization);
                     //printf(" -Postprocessing:    %10.2f ms\n", decoder->coder.duration_preprocessor);
                     printf(" -Copy From Device:  %10.2f ms\n", decoder->coder.duration_memory_from);
