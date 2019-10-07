@@ -62,23 +62,25 @@ endif()
 # GPUJPEG library
 file(GLOB H_FILES libgpujpeg/*.h)
 file(GLOB C_FILES src/*.c src/*.cu)
-cuda_add_library(gpujpeg SHARED ${H_FILES} ${C_FILES})
+cuda_add_library(libgpujpeg SHARED ${H_FILES} ${C_FILES})
 SET_TARGET_PROPERTIES(
-  gpujpeg
+  libgpujpeg
 PROPERTIES
   PUBLIC_HEADER "${H_FILES}"
 )
 if(GPUJPEG_OPENGL_ENABLED)
-    target_link_libraries(gpujpeg ${GPUJPEG_OPENGL_LIBRARIES})
+    target_link_libraries(libgpujpeg ${GPUJPEG_OPENGL_LIBRARIES})
 endif()
-install(TARGETS gpujpeg
+install(TARGETS libgpujpeg
         LIBRARY DESTINATION lib
         PUBLIC_HEADER DESTINATION include/libgpujpeg)
 
-# GPUJPEG tester application
+# GPUJPEG commmand-line application
 file(GLOB C_FILES src/main.c)
-cuda_add_executable(tester ${C_FILES})
-target_link_libraries(tester gpujpeg)
+cuda_add_executable(gpujpeg ${C_FILES})
+target_link_libraries(gpujpeg libgpujpeg)
+install(TARGETS gpujpeg
+        RUNTIME DESTINATION bin)
 
 # When OpenGL was found, include OpenGL executables
 if(GPUJPEG_OPENGL_ENABLED)
@@ -86,7 +88,7 @@ if(GPUJPEG_OPENGL_ENABLED)
     # GPUJPEG decoder to OpenGL texture
     file(GLOB FILES test/decoder_gltex/*)
     cuda_add_executable(decoder_gltex ${FILES})
-    target_link_libraries(decoder_gltex gpujpeg)
+    target_link_libraries(decoder_gltex libgpujpeg)
 
     # OpenGL interoperability example (currently not working)
     #file(GLOB FILES test/opengl_interop/*.c test/opengl_interop/*.h test/opengl_interop/*.cu)
