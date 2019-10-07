@@ -680,7 +680,8 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     // We must init decoder before data is loaded into it
     if ( decoder->reader->comp_count == 0 ) {
         // Init decoder
-        gpujpeg_decoder_init(decoder, &decoder->reader->param, &decoder->reader->param_image);
+        GPUJPEG_CHECK_EX(gpujpeg_decoder_init(decoder, &decoder->reader->param, &decoder->reader->param_image),
+                "Cannot initialize decoder!", return -1);
     }
 
     // Check maximum component count
