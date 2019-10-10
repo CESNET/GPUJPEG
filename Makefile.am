@@ -96,3 +96,6 @@ build/x86_64/%.cu.o: src/%.cu
 clean-local:
 	rm -rf src/*.cu.lo src/*.cu.o
 	rm -rf build
+
+cscope:
+	cscope -bv $(srcdir)/src/*cu $(srcdir)/src/*c $(srcdir)/libgpujpeg/*h
