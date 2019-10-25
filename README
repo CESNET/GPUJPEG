@@ -196,7 +196,7 @@ USAGE:
       if ( gpujpeg_init_device(device_id, 0) )
           return -1;
         
-      struct gpujpeg_decoder* decoder = gpujpeg_decoder_create();
+      struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(NULL);
       if ( decoder == NULL )
           return -1;
             
@@ -214,9 +214,9 @@ USAGE:
       
       struct gpujpeg_image_parameters param_image;
       gpujpeg_image_set_default_parameters(&param_image);
-      param_image->width = 1920;
-      param_image->height = 1080;
-      param_image->comp_count = 3;
+      param_image.width = 1920;
+      param_image.height = 1080;
+      param_image.comp_count = 3;
     
       // Pre initialize decoder before decoding
       gpujpeg_decoder_init(decoder, &param, &param_image);
@@ -227,12 +227,9 @@ USAGE:
     postpone this initialization process to the first image, you have no
     other option than specify them in this way:
     
-      decoder->coder.param_image.color_space = GPUJPEG_RGB;
-      // or GPUJPEG_YCBCR_ITU_R or GPUJPEG_YCBCR_JPEG
-      // (default value is GPUJPEG_RGB)
-      decoder->coder.param_image.sampling_factor = GPUJPEG_4_4_4;
-      // or GPUJPEG_4_2_2
-      // (default value is GPUJPEG_4_4_4)
+      gpujpeg_decoder_set_output_format(decoder, GPUJPEG_RGB,
+                      GPUJPEG_444_U8_P012);
+      // or eg. GPUJPEG_YCBCR_JPEG and GPUJPEG_422_U8_P1020
             
     Next we have to load JPEG image data from file and decoded it to raw 
     image data:
