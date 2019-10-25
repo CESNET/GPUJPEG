@@ -533,8 +533,8 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 return -1;
             }
             size_t data_raw_offset = 0;
-            size_t component_size_y = coder->component[0].data_width * coder->component[0].data_height;
-            size_t component_size_uv = coder->component[1].data_width * coder->component[1].data_height;
+            size_t component_size_y = coder->component[0].width * coder->component[0].height;
+            size_t component_size_uv = coder->component[1].width * coder->component[1].height;
             assert(coder->component[1].data_width == coder->component[2].data_width);
             assert(coder->component[1].data_height == coder->component[2].data_height);
             cudaMemcpyAsync(coder->component[0].d_data, coder->d_data_raw + data_raw_offset, component_size_y, cudaMemcpyDeviceToDevice, *(encoder->stream));
@@ -561,8 +561,8 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 return -1;
             }
             size_t data_raw_offset = 0;
-            size_t component_size_y = coder->component[0].data_width * coder->component[0].data_height;
-            size_t component_size_uv = coder->component[1].data_width * coder->component[1].data_height;
+            size_t component_size_y = coder->component[0].width * coder->component[0].height;
+            size_t component_size_uv = coder->component[1].width * coder->component[1].height;
             assert(coder->component[1].data_width == coder->component[2].data_width);
             assert(coder->component[1].data_height == coder->component[2].data_height);
             cudaMemcpyAsync(coder->component[0].d_data, coder->d_data_raw + data_raw_offset, component_size_y, cudaMemcpyDeviceToDevice, *(encoder->stream));
