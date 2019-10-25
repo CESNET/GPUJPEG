@@ -497,11 +497,14 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
             if (coder->component[0].sampling_factor.horizontal != 1 || coder->component[0].sampling_factor.vertical != 1
                 || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
                 || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
-                fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when 4:4:4 subsampling inside JPEG is used.");
+                fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when 4:4:4 subsampling inside JPEG is used.\n");
                 return -1;
             }
-            if (coder->param_image.color_space != GPUJPEG_NONE) {
-                fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when no color transformation is required.");
+            if (coder->param_image.color_space != coder->param.color_space_internal) {
+                fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when no color transformation is required. "
+                                "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
+                                gpujpeg_color_space_get_name(coder->param.color_space_internal),
+                                gpujpeg_color_space_get_name(coder->param_image.color_space));
                 return -1;
             }
             size_t data_raw_offset = 0;
@@ -519,11 +522,14 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
             if (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 1
                 || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
                 || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
-                fprintf(stderr, "Encoding JPEG from pixel format 422-u8-p0p1p2 is supported only to 4:2:2 subsampling inside JPEG is used.");
+                fprintf(stderr, "Encoding JPEG from pixel format 422-u8-p0p1p2 is supported only to 4:2:2 subsampling inside JPEG is used.\n");
                 return -1;
             }
-            if (coder->param_image.color_space != GPUJPEG_NONE) {
-                fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only when no color transformation is required.");
+            if (coder->param_image.color_space != coder->param.color_space_internal) { //GPUJPEG_YCBCR_BT601_256LVLS
+                fprintf(stderr, "Encoding JPEG from pixel format 422-u8-p0p1p2 is supported only when no color transformation is required. "
+                                "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
+                                gpujpeg_color_space_get_name(coder->param.color_space_internal),
+                                gpujpeg_color_space_get_name(coder->param_image.color_space));
                 return -1;
             }
             size_t data_raw_offset = 0;
@@ -547,8 +553,11 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only to 4:2:0 subsampling inside JPEG is used.");
                 return -1;
             }
-            if (coder->param_image.color_space != GPUJPEG_NONE) {
-                fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only when no color transformation is required.");
+            if (coder->param_image.color_space != coder->param.color_space_internal) {
+                fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only when no color transformation is required. "
+                                "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
+                                gpujpeg_color_space_get_name(coder->param.color_space_internal),
+                                gpujpeg_color_space_get_name(coder->param_image.color_space));
                 return -1;
             }
             size_t data_raw_offset = 0;
