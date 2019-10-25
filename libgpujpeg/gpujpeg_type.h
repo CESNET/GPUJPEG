@@ -66,6 +66,7 @@ enum gpujpeg_color_space {
     GPUJPEG_RGB = 1,
     GPUJPEG_YCBCR_BT601 = 2,
     GPUJPEG_YCBCR_BT601_256LVLS = 3,
+    GPUJPEG_YCBCR_JPEG = GPUJPEG_YCBCR_BT601_256LVLS,
     GPUJPEG_YCBCR_BT709 = 4,
     GPUJPEG_YCBCR = GPUJPEG_YCBCR_BT709,
     GPUJPEG_YUV = 5
@@ -89,7 +90,7 @@ gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
     case GPUJPEG_YCBCR_BT601:
         return "YCbCr BT.601";
     case GPUJPEG_YCBCR_BT601_256LVLS:
-        return "YCbCr BT.601 256 Levels";
+        return "YCbCr BT.601 256 Levels (YCbCr JPEG)";
     case GPUJPEG_YCBCR_BT709:
         return "YCbCr BT.709";
     default:

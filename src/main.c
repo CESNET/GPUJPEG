@@ -52,7 +52,7 @@ print_help()
            "                          444-u8-p012      422-u8-p0p1p2\n"
            "                          444-u8-p0p1p2    420-u8-p0p1p2\n"
            "\n"
-           "   -c, --colorspace       set input/output image colorspace, e.g. rgb, yuv,\n"
+           "   -c, --colorspace       set input/output image colorspace, e.g. rgb,\n"
            "                          ycbcr, ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
            "\n");
     printf("   -q, --quality          set JPEG encoder quality level 0-100 (default 75)\n"
@@ -378,7 +378,7 @@ main(int argc, char *argv[])
     // Detect color spalce
     if ( param_image.color_space == GPUJPEG_NONE ) {
         if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV ) {
-            param_image.color_space = GPUJPEG_YUV;
+            param_image.color_space = GPUJPEG_YCBCR_JPEG;
         } else {
             param_image.color_space = GPUJPEG_RGB;
         }
