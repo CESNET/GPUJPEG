@@ -474,6 +474,52 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
     return 0;
 }
 
+/**
+ * Copies raw data from source image to GPU memory without running
+ * any preprocessor kernel.
+ *
+ * This assumes that the JPEG has same color space as input raw image and
+ * currently also that the component subsampling correspond between raw and
+ * JPEG (although at least different horizontal subsampling can be quite
+ * easily done).
+ *
+ * @todo
+ * Use preprocessing kernels as for packed formats.
+ */
+static int
+gpujpeg_preprocessor_copy_planar_data(struct gpujpeg_encoder * encoder)
+{
+    struct gpujpeg_coder * coder = &encoder->coder;
+    assert(coder->param_image.comp_count == 3);
+    if (coder->param_image.color_space != coder->param.color_space_internal) {
+            fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when no color transformation is required. "
+                            "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
+                            gpujpeg_color_space_get_name(coder->param.color_space_internal),
+                            gpujpeg_color_space_get_name(coder->param_image.color_space));
+            return -1;
+    }
+    size_t data_raw_offset = 0;
+    if (coder->component[0].width == coder->component[0].data_width &&
+                    coder->component[1].width == coder->component[1].data_width &&
+                    coder->component[2].width == coder->component[2].data_width) {
+            for (int i = 0; i < 3; ++i) {
+                    size_t component_size = coder->component[i].width * coder->component[i].height;
+                    cudaMemcpyAsync(coder->component[i].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, *(encoder->stream));
+                    data_raw_offset += component_size;
+            }
+    } else {
+            for (int i = 0; i < 3; ++i) {
+                    int spitch = coder->component[i].width;
+                    int dpitch = coder->component[i].data_width;
+                    size_t component_size = spitch * coder->component[i].height;
+                    cudaMemcpy2DAsync(coder->component[i].d_data, dpitch, coder->d_data_raw + data_raw_offset, spitch, spitch, coder->component[i].height, cudaMemcpyDeviceToDevice, *(encoder->stream));
+                    data_raw_offset += component_size;
+            }
+    }
+    gpujpeg_cuda_check_error("Preprocessor copy failed", return -1);
+    return 0;
+}
+
 /** Documented at declaration */
 int
 gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
@@ -500,22 +546,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when 4:4:4 subsampling inside JPEG is used.\n");
                 return -1;
             }
-            if (coder->param_image.color_space != coder->param.color_space_internal) {
-                fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when no color transformation is required. "
-                                "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
-                                gpujpeg_color_space_get_name(coder->param.color_space_internal),
-                                gpujpeg_color_space_get_name(coder->param_image.color_space));
-                return -1;
-            }
-            size_t data_raw_offset = 0;
-            size_t component_size = coder->param_image.width * coder->param_image.height;
-            cudaMemcpyAsync(coder->component[0].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, *(encoder->stream));
-            data_raw_offset += component_size;
-            cudaMemcpyAsync(coder->component[1].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, *(encoder->stream));
-            data_raw_offset += component_size;
-            cudaMemcpyAsync(coder->component[2].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, *(encoder->stream));
-            gpujpeg_cuda_check_error("Preprocessor copy failed", return -1);
-            return 0;
+            return gpujpeg_preprocessor_copy_planar_data(encoder);
         }
         case GPUJPEG_422_U8_P0P1P2:
         {
@@ -525,25 +556,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 fprintf(stderr, "Encoding JPEG from pixel format 422-u8-p0p1p2 is supported only to 4:2:2 subsampling inside JPEG is used.\n");
                 return -1;
             }
-            if (coder->param_image.color_space != coder->param.color_space_internal) { //GPUJPEG_YCBCR_BT601_256LVLS
-                fprintf(stderr, "Encoding JPEG from pixel format 422-u8-p0p1p2 is supported only when no color transformation is required. "
-                                "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
-                                gpujpeg_color_space_get_name(coder->param.color_space_internal),
-                                gpujpeg_color_space_get_name(coder->param_image.color_space));
-                return -1;
-            }
-            size_t data_raw_offset = 0;
-            size_t component_size_y = coder->component[0].width * coder->component[0].height;
-            size_t component_size_uv = coder->component[1].width * coder->component[1].height;
-            assert(coder->component[1].data_width == coder->component[2].data_width);
-            assert(coder->component[1].data_height == coder->component[2].data_height);
-            cudaMemcpyAsync(coder->component[0].d_data, coder->d_data_raw + data_raw_offset, component_size_y, cudaMemcpyDeviceToDevice, *(encoder->stream));
-            data_raw_offset += component_size_y;
-            cudaMemcpyAsync(coder->component[1].d_data, coder->d_data_raw + data_raw_offset, component_size_uv, cudaMemcpyDeviceToDevice, *(encoder->stream));
-            data_raw_offset += component_size_uv;
-            cudaMemcpyAsync(coder->component[2].d_data, coder->d_data_raw + data_raw_offset, component_size_uv, cudaMemcpyDeviceToDevice, *(encoder->stream));
-            gpujpeg_cuda_check_error("Preprocessor copy failed", return -1);
-            return 0;
+            return gpujpeg_preprocessor_copy_planar_data(encoder);
         }
         case GPUJPEG_420_U8_P0P1P2:
         {
@@ -553,25 +566,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only to 4:2:0 subsampling inside JPEG is used.");
                 return -1;
             }
-            if (coder->param_image.color_space != coder->param.color_space_internal) {
-                fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only when no color transformation is required. "
-                                "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
-                                gpujpeg_color_space_get_name(coder->param.color_space_internal),
-                                gpujpeg_color_space_get_name(coder->param_image.color_space));
-                return -1;
-            }
-            size_t data_raw_offset = 0;
-            size_t component_size_y = coder->component[0].width * coder->component[0].height;
-            size_t component_size_uv = coder->component[1].width * coder->component[1].height;
-            assert(coder->component[1].data_width == coder->component[2].data_width);
-            assert(coder->component[1].data_height == coder->component[2].data_height);
-            cudaMemcpyAsync(coder->component[0].d_data, coder->d_data_raw + data_raw_offset, component_size_y, cudaMemcpyDeviceToDevice, *(encoder->stream));
-            data_raw_offset += component_size_y;
-            cudaMemcpyAsync(coder->component[1].d_data, coder->d_data_raw + data_raw_offset, component_size_uv, cudaMemcpyDeviceToDevice, *(encoder->stream));
-            data_raw_offset += component_size_uv;
-            cudaMemcpyAsync(coder->component[2].d_data, coder->d_data_raw + data_raw_offset, component_size_uv, cudaMemcpyDeviceToDevice, *(encoder->stream));
-            gpujpeg_cuda_check_error("Preprocessor copy failed", return -1);
-            return 0;
+            return gpujpeg_preprocessor_copy_planar_data(encoder);
         }
         default:
         {
