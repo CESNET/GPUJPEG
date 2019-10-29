@@ -176,6 +176,11 @@ gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned
 #define FULL_MASK 0xffffffffu
 #endif
 
+// compat
+#if CUDART_VERSION < 9000
+#define __ballot_sync(set, pred) __ballot(pred)
+#endif
+
 /**
  * Encode one 8x8 block  (CC >= 2.0)
  *
