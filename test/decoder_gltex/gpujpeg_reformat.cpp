@@ -470,7 +470,7 @@ gpujpeg_reformat_read_sos(struct gpujpeg_rewriter * rewriter, uint8_t** image, u
                         if ( byte_previous == 0xFF ) {
                             // Expected marker was found so notify about it
                             if ( byte == expected_marker ) {
-                                fprintf(stderr, "[GPUJPEG] [Recovery] Skipping %d bytes of data until marker 0x%X was found!\n", skip_count, expected_marker, byte);
+                                fprintf(stderr, "[GPUJPEG] [Recovery] Skipping %d bytes of data until marker 0x%X was found!\n", skip_count, expected_marker);
                                 found_expected_marker = 1;
                                 break;
                             } else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {

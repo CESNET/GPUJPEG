@@ -172,6 +172,10 @@ gpujpeg_huffman_gpu_encoder_flush_codewords(unsigned int * const s_out, unsigned
     }
 }
 
+#ifndef FULL_MASK
+#define FULL_MASK 0xffffffffu
+#endif
+
 /**
  * Encode one 8x8 block  (CC >= 2.0)
  *
@@ -188,8 +192,8 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
 
     // compute preceding zero count for even coefficient (actually compute the count multiplied by 16)
     const unsigned int nonzero_mask = (1 << tid) - 1;
-    const unsigned int nonzero_bitmap_0 = 1 | __ballot(in_even);  // DC is always treated as nonzero
-    const unsigned int nonzero_bitmap_1 = __ballot(in_odd);
+    const unsigned int nonzero_bitmap_0 = 1 | __ballot_sync(FULL_MASK, in_even);  // DC is always treated as nonzero
+    const unsigned int nonzero_bitmap_1 = __ballot_sync(FULL_MASK, in_odd);
     const unsigned int nonzero_bitmap_pairs = nonzero_bitmap_0 | nonzero_bitmap_1;
 
     const int zero_pair_count = __clz(nonzero_bitmap_pairs & nonzero_mask);
@@ -247,8 +251,8 @@ gpujpeg_huffman_gpu_encoder_encode_block(const int16_t * block, unsigned int * &
     }
 
     // each thread get number of preceding nonzero codewords and total number of nonzero codewords in this block
-    const unsigned int even_codeword_presence = __ballot(even_code);
-    const unsigned int odd_codeword_presence = __ballot(odd_code);
+    const unsigned int even_codeword_presence = __ballot_sync(FULL_MASK, even_code);
+    const unsigned int odd_codeword_presence = __ballot_sync(FULL_MASK, odd_code);
     const int codeword_offset = __popc(nonzero_mask & even_codeword_presence)
                               + __popc(nonzero_mask & odd_codeword_presence);
 

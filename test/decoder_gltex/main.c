@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
     // Save image
     char output_filename[255];
     sprintf(output_filename, "%s.raw", input_filename);
-    printf("Saving Image %s (%lu bytes)\n", output_filename, data_size);
+    printf("Saving Image %s (%u bytes)\n", output_filename, data_size);
     if ( gpujpeg_image_save_to_file(output_filename, data, data_size) != 0 ) {
         fprintf(stderr, "Failed to save image [%s]!\n", output_filename);
         return -1;

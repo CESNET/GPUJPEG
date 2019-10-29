@@ -184,9 +184,9 @@ gpujpeg_init_device(int device_id, int flags)
         return -1;
     }
 
-#ifdef GPUJPEG_USE_OPENGL
+#if defined GPUJPEG_USE_OPENGL && CUDART_VERSION < 5000
     if ( flags & GPUJPEG_OPENGL_INTEROPERABILITY ) {
-        cudaGLSetGLDevice(device_id);
+        cudaGLSetGLDevice(device_id); // not needed since CUDA 5.0
         gpujpeg_cuda_check_error("Enabling OpenGL interoperability", return -1);
     }
 #endif

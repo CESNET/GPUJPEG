@@ -108,9 +108,9 @@ gpujpeg_color_transform_to(uint8_t & c1, uint8_t & c2, uint8_t & c3, const doubl
     // Prepare integer matrix
     const int max = 1 << bit_depth;
     const int matrix_int[] = {
-        round(matrix[0] * max), round(matrix[1] * max), round(matrix[2] * max),
-        round(matrix[3] * max), round(matrix[4] * max), round(matrix[5] * max),
-        round(matrix[6] * max), round(matrix[7] * max), round(matrix[8] * max),
+        (int) round(matrix[0] * max), (int) round(matrix[1] * max), (int) round(matrix[2] * max),
+        (int) round(matrix[3] * max), (int) round(matrix[4] * max), (int) round(matrix[5] * max),
+        (int) round(matrix[6] * max), (int) round(matrix[7] * max), (int) round(matrix[8] * max),
     };
 // #if __CUDA_ARCH__ >= 200
 //     if ( threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0 && blockIdx.y == 0 ) {
@@ -135,9 +135,9 @@ gpujpeg_color_transform_from(uint8_t & c1, uint8_t & c2, uint8_t & c3, const dou
     // Prepare integer matrix
     const int max = 1 << bit_depth;
     const int matrix_int[] = {
-        round(matrix[0] * max), round(matrix[1] * max), round(matrix[2] * max),
-        round(matrix[3] * max), round(matrix[4] * max), round(matrix[5] * max),
-        round(matrix[6] * max), round(matrix[7] * max), round(matrix[8] * max),
+        (int) round(matrix[0] * max), (int) round(matrix[1] * max), (int) round(matrix[2] * max),
+        (int) round(matrix[3] * max), (int) round(matrix[4] * max), (int) round(matrix[5] * max),
+        (int) round(matrix[6] * max), (int) round(matrix[7] * max), (int) round(matrix[8] * max),
     };
 // #if __CUDA_ARCH__ >= 200
 //     if ( threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0 && blockIdx.y == 0 ) {
