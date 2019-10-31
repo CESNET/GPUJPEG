@@ -3,6 +3,8 @@ gpujpeg
 src/*.o
 src/*.lo
 *.rgb
+*.vim
+/build*/
 configure
 Makefile
 Makefile.in
@@ -16,6 +18,7 @@ config.h.in~
 config.log
 config.status
 config.sub
+cscope.out
 depcomp
 install-sh
 libgpujpeg.pc
