@@ -139,7 +139,7 @@ gpujpeg_reader_read_app0(uint8_t** image)
     int version_major = gpujpeg_reader_read_byte(*image);
     int version_minor = gpujpeg_reader_read_byte(*image);
     if ( version_major != 1 || version_minor != 1 ) {
-        fprintf(stderr, "[GPUJPEG] [Error] APP0 marker version should be 1.1 but %d.%d was presented!\n", version_major, version_minor);
+        fprintf(stderr, "[GPUJPEG] [Error] JFIF marker version should be 1.01 but %d.%02d was presented!\n", version_major, version_minor);
         return -1;
     }
 
