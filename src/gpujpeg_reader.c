@@ -110,32 +110,12 @@ gpujpeg_reader_skip_marker_content(uint8_t** image)
     *image += length - 2;
 }
 
-/**
- * Read application ifno block from image
- *
- * @param image
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-gpujpeg_reader_read_app0(uint8_t** image)
+int gpujpeg_reader_read_jfif(uint8_t** image, int length)
 {
-    int length = (int)gpujpeg_reader_read_2byte(*image);
-
-    char jfif[5];
-    jfif[0] = gpujpeg_reader_read_byte(*image);
-    jfif[1] = gpujpeg_reader_read_byte(*image);
-    jfif[2] = gpujpeg_reader_read_byte(*image);
-    jfif[3] = gpujpeg_reader_read_byte(*image);
-    jfif[4] = gpujpeg_reader_read_byte(*image);
-    if ( strcmp(jfif, "JFIF") != 0 ) {
-        fprintf(stderr, "[GPUJPEG] [Error] APP0 marker identifier should be 'JFIF' but '%s' was presented!\n", jfif);
-        return -1;
-    }
-
     int version_major = gpujpeg_reader_read_byte(*image);
     int version_minor = gpujpeg_reader_read_byte(*image);
-    if ( version_major != 1 || ( version_minor != 0 && version_minor != 1) ) {
-        fprintf(stderr, "[GPUJPEG] [Error] JFIF marker version should be 1.00 or 1.01 but %d.%02d was presented!\n", version_major, version_minor);
+    if ( version_major != 1 || ( version_minor < 0 || version_minor > 2) ) {
+        fprintf(stderr, "[GPUJPEG] [Error] JFIF marker version should be 1.00 to 1.02 but %d.%02d was presented!\n", version_major, version_minor);
         return -1;
     }
 
@@ -154,8 +134,41 @@ gpujpeg_reader_read_app0(uint8_t** image)
     }
 
     *image += thumbnail_length;
+    return 0;
+}
+
+static int gpujpeg_reader_skip_jfxx(uint8_t** image, int length)
+{
+    *image += length - 7;
 
     return 0;
+}
+
+/**
+ * Read application ifno block from image
+ *
+ * @param image
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_reader_read_app0(uint8_t** image)
+{
+    int length = (int)gpujpeg_reader_read_2byte(*image);
+
+    char marker[5];
+    marker[0] = gpujpeg_reader_read_byte(*image);
+    marker[1] = gpujpeg_reader_read_byte(*image);
+    marker[2] = gpujpeg_reader_read_byte(*image);
+    marker[3] = gpujpeg_reader_read_byte(*image);
+    marker[4] = gpujpeg_reader_read_byte(*image);
+    if ( strcmp(marker, "JFIF") == 0 ) {
+        return gpujpeg_reader_read_jfif(image, length);
+    } else if ( strcmp(marker, "JFXX") == 0 ) {
+        return gpujpeg_reader_skip_jfxx(image, length);
+    } else {
+        fprintf(stderr, "[GPUJPEG] [Error] APP0 marker identifier should be 'JFIF' or 'JFXX' but '%s' was presented!\n", marker);
+        return -1;
+    }
 }
 
 /**
