@@ -110,6 +110,9 @@ gpujpeg_reader_skip_marker_content(uint8_t** image)
     *image += length - 2;
 }
 
+/**
+ * @param length  length field of the marker
+ */
 int gpujpeg_reader_read_jfif(uint8_t** image, int length)
 {
     int version_major = gpujpeg_reader_read_byte(*image);
@@ -128,15 +131,17 @@ int gpujpeg_reader_read_jfif(uint8_t** image, int length)
     int thumbnail_length = thumbnail_width * thumbnail_height * 3;
     int expected_length = 16 + thumbnail_length;
     if ( length != expected_length ) {
-        fprintf(stderr, "[GPUJPEG] [Error] APP0 marker length should be %d (thumbnail %dx%d) but %d was presented!\n",
+        fprintf(stderr, "[GPUJPEG] [Warning] JFIF marker length should be %d (with thumbnail %dx%d) but %d was presented!\n",
                 expected_length, thumbnail_width, thumbnail_height, length);
-        return -1;
     }
 
-    *image += thumbnail_length;
+    *image += length - 16;
     return 0;
 }
 
+/**
+ * @param length  length field of the marker
+ */
 static int gpujpeg_reader_skip_jfxx(uint8_t** image, int length)
 {
     *image += length - 7;
@@ -560,6 +565,11 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
             // Check scan end
             else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS || (byte >= GPUJPEG_MARKER_APP0 && byte <= GPUJPEG_MARKER_APP15) ) {
                 *image -= 2;
+
+                if ( previous_marker >= GPUJPEG_MARKER_RST0 && previous_marker <= GPUJPEG_MARKER_RST7 ) {
+                    fprintf(stderr, "[GPUJPEG] [Warning] JPEG scan contains no data after last restart marker!\n");
+                    scan->segment_count -= 1;
+                }
 
                 // Set segment byte count
                 data_compressed_offset -= 2;
