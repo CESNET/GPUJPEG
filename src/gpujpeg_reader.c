@@ -120,10 +120,6 @@ int
 gpujpeg_reader_read_app0(uint8_t** image)
 {
     int length = (int)gpujpeg_reader_read_2byte(*image);
-    if ( length != 16 ) {
-        fprintf(stderr, "[GPUJPEG] [Error] APP0 marker length should be 16 but %d was presented!\n", length);
-        return -1;
-    }
 
     char jfif[5];
     jfif[0] = gpujpeg_reader_read_byte(*image);
@@ -148,6 +144,16 @@ gpujpeg_reader_read_app0(uint8_t** image)
     int pixel_ydpu = gpujpeg_reader_read_2byte(*image);
     int thumbnail_width = gpujpeg_reader_read_byte(*image);
     int thumbnail_height = gpujpeg_reader_read_byte(*image);
+
+    int thumbnail_length = thumbnail_width * thumbnail_height * 3;
+    int expected_length = 16 + thumbnail_length;
+    if ( length != expected_length ) {
+        fprintf(stderr, "[GPUJPEG] [Error] APP0 marker length should be %d (thumbnail %dx%d) but %d was presented!\n",
+                expected_length, thumbnail_width, thumbnail_height, length);
+        return -1;
+    }
+
+    *image += thumbnail_length;
 
     return 0;
 }
