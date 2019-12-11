@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -94,7 +95,7 @@ gpujpeg_table_quantization_apply_quality(uint8_t* table_raw, int quality)
     }
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality)
 {
@@ -124,7 +125,7 @@ gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_table_quantization_decoder_init(struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality)
 {
@@ -161,7 +162,7 @@ gpujpeg_table_quantization_decoder_compute(struct gpujpeg_table_quantization* ta
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_table_quantization_print(struct gpujpeg_table_quantization* table)
 {
@@ -301,7 +302,7 @@ gpujpeg_table_huffman_encoder_compute(struct gpujpeg_table_huffman_encoder* tabl
     }
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, enum gpujpeg_component_type comp_type, enum gpujpeg_huffman_type huff_type)
 {
@@ -329,7 +330,7 @@ gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, 
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_table_huffman_decoder_init(struct gpujpeg_table_huffman_decoder* table, struct gpujpeg_table_huffman_decoder* d_table, enum gpujpeg_component_type comp_type, enum gpujpeg_huffman_type huff_type)
 {
@@ -357,7 +358,7 @@ gpujpeg_table_huffman_decoder_init(struct gpujpeg_table_huffman_decoder* table, 
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_table_huffman_decoder_compute(struct gpujpeg_table_huffman_decoder* table, struct gpujpeg_table_huffman_decoder* d_table)
 {

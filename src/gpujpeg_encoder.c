@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -38,7 +39,7 @@
 #include <math.h>
 #include <libgpujpeg/gpujpeg_util.h>
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* image)
 {
@@ -47,7 +48,7 @@ gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* im
     input->texture = NULL;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_encoder_input_set_gpu_image(struct gpujpeg_encoder_input* input, uint8_t* image)
 {
@@ -56,7 +57,7 @@ gpujpeg_encoder_input_set_gpu_image(struct gpujpeg_encoder_input* input, uint8_t
     input->texture = NULL;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gpujpeg_opengl_texture* texture)
 {
@@ -65,7 +66,7 @@ gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gp
     input->texture = texture;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 struct gpujpeg_encoder*
 gpujpeg_encoder_create(cudaStream_t * stream)
 {
@@ -133,7 +134,7 @@ gpujpeg_encoder_create(cudaStream_t * stream)
     return encoder;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 size_t gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, size_t memory_size, int * max_pixels)
 {
     struct gpujpeg_coder coder;
@@ -196,7 +197,7 @@ size_t gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpuj
     return current_max_pixels_memory_size;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 size_t gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int max_pixels)
 {
     struct gpujpeg_coder coder;
@@ -230,7 +231,7 @@ size_t gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpuj
     return allocated_memory_size;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int pixels)
 {
     // Get coder
@@ -274,7 +275,7 @@ int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, struct gpujpeg_pa
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, int* image_compressed_size)
 {
@@ -532,7 +533,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)
 {

@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -36,7 +37,7 @@
 #define snprintf _snprintf
 #endif
 
-/** Documented at declaration */
+/* Documented at declaration */
 struct gpujpeg_writer*
 gpujpeg_writer_create(struct gpujpeg_encoder* encoder)
 {
@@ -51,7 +52,7 @@ gpujpeg_writer_create(struct gpujpeg_encoder* encoder)
     return writer;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_writer_init(struct gpujpeg_writer * writer, struct gpujpeg_image_parameters * param_image)
 {
@@ -77,7 +78,7 @@ gpujpeg_writer_init(struct gpujpeg_writer * writer, struct gpujpeg_image_paramet
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_writer_destroy(struct gpujpeg_writer* writer)
 {
@@ -344,7 +345,7 @@ gpujpeg_writer_write_com(struct gpujpeg_encoder* encoder)
     }
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 {
@@ -374,7 +375,7 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_write_com(encoder);
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_writer_write_segment_info(struct gpujpeg_encoder* encoder)
 {
@@ -402,7 +403,7 @@ gpujpeg_writer_write_segment_info(struct gpujpeg_encoder* encoder)
     }
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int scan_index)
 {

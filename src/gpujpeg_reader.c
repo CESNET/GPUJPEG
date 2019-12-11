@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -33,7 +34,7 @@
 #include <libgpujpeg/gpujpeg_decoder_internal.h>
 #include <libgpujpeg/gpujpeg_util.h>
 
-/** Documented at declaration */
+/* Documented at declaration */
 struct gpujpeg_reader*
 gpujpeg_reader_create()
 {
@@ -50,7 +51,7 @@ gpujpeg_reader_create()
     return reader;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_reader_destroy(struct gpujpeg_reader* reader)
 {
@@ -774,7 +775,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size)
 {
@@ -945,7 +946,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count)
 {

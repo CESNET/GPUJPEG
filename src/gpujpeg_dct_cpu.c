@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -198,7 +199,7 @@ void gpujpeg_idct_cpu_init()
         iclp[i] = (i < -256) ? -256 : ((i > 255) ? 255 : i);
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_idct_cpu(struct gpujpeg_decoder* decoder)
 {

@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -370,7 +371,7 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
     return NULL;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
 {
@@ -520,7 +521,7 @@ gpujpeg_preprocessor_copy_planar_data(struct gpujpeg_encoder * encoder)
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
 {
@@ -826,7 +827,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     return NULL;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
@@ -854,7 +855,7 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {

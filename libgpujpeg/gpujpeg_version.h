@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2016-2018, CESNET z.s.p.o
  *
  * All rights reserved.

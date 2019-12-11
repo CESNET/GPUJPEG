@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -36,7 +37,7 @@
 #include "gpujpeg_huffman_gpu_decoder.h"
 #include <libgpujpeg/gpujpeg_util.h>
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* output)
 {
@@ -47,7 +48,7 @@ gpujpeg_decoder_output_set_default(struct gpujpeg_decoder_output* output)
     output->texture = NULL;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_decoder_output_set_custom(struct gpujpeg_decoder_output* output, uint8_t* custom_buffer)
 {
@@ -57,7 +58,7 @@ gpujpeg_decoder_output_set_custom(struct gpujpeg_decoder_output* output, uint8_t
     output->texture = NULL;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_decoder_output_set_texture(struct gpujpeg_decoder_output* output, struct gpujpeg_opengl_texture* texture)
 {
@@ -67,7 +68,7 @@ gpujpeg_decoder_output_set_texture(struct gpujpeg_decoder_output* output, struct
     output->texture = texture;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_decoder_output_set_cuda_buffer(struct gpujpeg_decoder_output* output)
 {
@@ -77,7 +78,7 @@ gpujpeg_decoder_output_set_cuda_buffer(struct gpujpeg_decoder_output* output)
     output->texture = NULL;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, uint8_t* d_custom_buffer)
 {
@@ -87,7 +88,7 @@ gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, ui
     output->texture = NULL;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 struct gpujpeg_decoder*
 gpujpeg_decoder_create(cudaStream_t * stream)
 {
@@ -151,7 +152,7 @@ gpujpeg_decoder_create(cudaStream_t * stream)
     return decoder;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image)
 {
@@ -198,7 +199,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, struct gpujpeg_decoder_output* output)
 {
@@ -399,7 +400,7 @@ gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
         decoder->coder.param_image.pixel_format = sampling_factor;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
 {

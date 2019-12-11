@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -610,7 +611,7 @@ gpujpeg_idct_gpu_kernel(int16_t* source, uint8_t* result, int output_stride, uin
 	*((uint64_t*) resultPtr) = tempResult;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
 {
@@ -670,7 +671,7 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
 {

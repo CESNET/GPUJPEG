@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -59,7 +60,7 @@
 
 #if defined(_MSC_VER)
 #include <Windows.h>
-    /** Documented at declaration */
+    /* Documented at declaration */
     double gpujpeg_get_time()
     {
         static double frequency = 0.0;
@@ -79,7 +80,7 @@
 #elif defined(__linux__) || defined(__APPLE__)
     #include <sys/time.h>
 
-    /** Documented at declaration */
+    /* Documented at declaration */
     double gpujpeg_get_time(void)
     {
         struct timeval tv;
@@ -88,7 +89,7 @@
     }
 #endif
 
-/** Documented at declaration */
+/* Documented at declaration */
 struct gpujpeg_devices_info
 gpujpeg_get_devices_info()
 {
@@ -126,7 +127,7 @@ gpujpeg_get_devices_info()
     return devices_info;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_print_devices_info()
 {
@@ -152,7 +153,7 @@ gpujpeg_print_devices_info()
     }
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_init_device(int device_id, int flags)
 {
@@ -223,7 +224,7 @@ gpujpeg_init_device(int device_id, int flags)
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
 {
@@ -239,7 +240,7 @@ gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
     param->color_space_internal = GPUJPEG_YCBCR_BT601_256LVLS;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param)
 {
@@ -254,7 +255,7 @@ gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param)
     }
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param)
 {
@@ -270,7 +271,7 @@ gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param)
     }
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
 {
@@ -281,7 +282,7 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
     param->pixel_format = GPUJPEG_444_U8_P012;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 enum gpujpeg_image_file_format
 gpujpeg_image_get_file_format(const char* filename)
 {
@@ -311,7 +312,7 @@ void gpujpeg_set_device(int index)
     cudaSetDevice(index);
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_component_print8(struct gpujpeg_component* component, uint8_t* d_data)
 {
@@ -330,7 +331,7 @@ gpujpeg_component_print8(struct gpujpeg_component* component, uint8_t* d_data)
     cudaFreeHost(data);
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_component_print16(struct gpujpeg_component* component, int16_t* d_data)
 {
@@ -349,7 +350,7 @@ gpujpeg_component_print16(struct gpujpeg_component* component, int16_t* d_data)
     cudaFreeHost(data);
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_coder_init(struct gpujpeg_coder * coder)
 {
@@ -867,7 +868,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters
     return allocated_gpu_memory_size;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
 {
@@ -898,7 +899,7 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
 {
@@ -923,7 +924,7 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
     }
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size)
 {
@@ -954,7 +955,7 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
 {
@@ -974,7 +975,7 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_image_destroy(uint8_t* image)
 {
@@ -983,7 +984,7 @@ gpujpeg_image_destroy(uint8_t* image)
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujpeg_pixel_format pixel_format)
 {
@@ -1046,7 +1047,7 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
     gpujpeg_image_destroy(image);
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_image_parameters param_image_from,
         struct gpujpeg_image_parameters param_image_to)
@@ -1115,7 +1116,7 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     gpujpeg_coder_deinit(coder);
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_opengl_init()
 {
@@ -1177,7 +1178,7 @@ gpujpeg_opengl_init()
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_opengl_texture_create(int width, int height, uint8_t* data)
 {
@@ -1204,7 +1205,7 @@ gpujpeg_opengl_texture_create(int width, int height, uint8_t* data)
 #endif
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_opengl_texture_set_data(int texture_id, uint8_t* data)
 {
@@ -1226,7 +1227,7 @@ gpujpeg_opengl_texture_set_data(int texture_id, uint8_t* data)
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_opengl_texture_get_data(int texture_id, uint8_t* data, int* data_size)
 {
@@ -1250,7 +1251,7 @@ gpujpeg_opengl_texture_get_data(int texture_id, uint8_t* data, int* data_size)
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_opengl_texture_destroy(int texture_id)
 {
@@ -1261,7 +1262,7 @@ gpujpeg_opengl_texture_destroy(int texture_id)
 #endif
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 struct gpujpeg_opengl_texture*
 gpujpeg_opengl_texture_register(int texture_id, enum gpujpeg_opengl_texture_type texture_type)
 {
@@ -1320,7 +1321,7 @@ gpujpeg_opengl_texture_register(int texture_id, enum gpujpeg_opengl_texture_type
     return texture;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_opengl_texture_unregister(struct gpujpeg_opengl_texture* texture)
 {
@@ -1339,7 +1340,7 @@ gpujpeg_opengl_texture_unregister(struct gpujpeg_opengl_texture* texture)
     cudaFreeHost(texture);
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 uint8_t*
 gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_size)
 {
@@ -1383,7 +1384,7 @@ gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_siz
     return d_data;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 void
 gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
 {

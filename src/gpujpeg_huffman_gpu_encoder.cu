@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -965,7 +966,7 @@ gpujpeg_huffman_gpu_add_packed_table(uint32_t * const dest, const struct gpujpeg
     }
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 struct gpujpeg_huffman_gpu_encoder *
 gpujpeg_huffman_gpu_encoder_create(const struct gpujpeg_encoder * encoder)
 {
@@ -1060,7 +1061,7 @@ gpujpeg_huffman_gpu_encoder_grid_size(int tblock_count)
     return size;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder, unsigned int * output_byte_count)
 {

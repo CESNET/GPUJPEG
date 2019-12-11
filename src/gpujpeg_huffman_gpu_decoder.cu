@@ -1,4 +1,5 @@
 /**
+ * @file
  * Copyright (c) 2011, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -40,19 +41,21 @@ struct gpujpeg_table_huffman_decoder_entry {
 
 /**
  * 4 pre-built tables for faster Huffman decoding (codewords up-to 16 bit length):
- *   0x00000 to 0x0ffff: luminance DC table
- *   0x10000 to 0x1ffff: luminance AC table
- *   0x20000 to 0x2ffff: chrominance DC table
- *   0x30000 to 0x3ffff: chrominance AC table
+ *   - 0x00000 to 0x0ffff: luminance DC table
+ *   - 0x10000 to 0x1ffff: luminance AC table
+ *   - 0x20000 to 0x2ffff: chrominance DC table
+ *   - 0x30000 to 0x3ffff: chrominance AC table
  * 
  * Each entry consists of:
  *   - Number of bits of code corresponding to this entry (0 - 16, both inclusive) - bits 4 to 8
  *   - Number of run-length coded zeros before currently decoded coefficient + 1 (1 - 64, both inclusive) - bits 9 to 15
  *   - Number of bits representing the value of currently decoded coefficient (0 - 15, both inclusive) - bits 0 to 3
+ * @code
  * bit #:    15                      9   8               4   3           0
  *         +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
  * value:  |      RLE zero count       |   code bit size   | value bit size|
  *         +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ * @endcode
  */
 __device__ uint16_t gpujpeg_huffman_gpu_decoder_tables_full[4 * (1 << 16)];
 
@@ -586,7 +589,7 @@ gpujpeg_huffman_decoder_table_kernel(
     gpujpeg_huffman_gpu_decoder_table_setup(idx, d_table_cbcr_ac, 3);
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_huffman_gpu_decoder_init()
 {
@@ -603,7 +606,7 @@ gpujpeg_huffman_gpu_decoder_init()
     return 0;
 }
 
-/** Documented at declaration */
+/* Documented at declaration */
 int
 gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
 {    
