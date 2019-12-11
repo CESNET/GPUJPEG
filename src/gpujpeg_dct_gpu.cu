@@ -683,9 +683,6 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
         // Get component
         struct gpujpeg_component* component = &coder->component[comp];
 
-        // Determine table type
-        enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
-
         int roi_width = component->data_width;
         int roi_height = component->data_height;
         assert(GPUJPEG_BLOCK_SIZE == 8);
@@ -694,7 +691,7 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
         int block_count_y = roi_height / GPUJPEG_BLOCK_SIZE;
 
         // Get quantization table
-        uint16_t* d_quantization_table = decoder->table_quantization[type].d_table;
+        uint16_t* d_quantization_table = decoder->table_quantization[decoder->comp_table_quantization_map[comp]].d_table;
 
         // Copy quantization table to constant memory
         cudaMemcpyToSymbolAsync(

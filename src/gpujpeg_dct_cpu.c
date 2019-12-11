@@ -213,9 +213,6 @@ gpujpeg_idct_cpu(struct gpujpeg_decoder* decoder)
         // Get component
         struct gpujpeg_component* component = &coder->component[comp];
 
-        // Determine table type
-        enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
-
         // Copy data to host
         cudaMemcpy(component->data_quantized, component->d_data_quantized, component->data_size * sizeof(uint16_t), cudaMemcpyDeviceToHost);
 
@@ -227,7 +224,7 @@ gpujpeg_idct_cpu(struct gpujpeg_decoder* decoder)
                 int index = y * width + x;
                 gpujpeg_idct_cpu_perform(
                     &component->data_quantized[index * 64],
-                    (int16_t *) decoder->table_quantization[type].table
+                    (int16_t *) decoder->table_quantization[decoder->comp_table_quantization_map[comp]].table
                 );
             }
         }

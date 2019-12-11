@@ -46,14 +46,18 @@ struct gpujpeg_decoder
     
     /// JPEG reader structure
     struct gpujpeg_reader* reader;
+
+    uint8_t comp_id[GPUJPEG_MAX_COMPONENT_COUNT]; /// component IDs defined by SOF
     
     /// Quantization tables
-    struct gpujpeg_table_quantization table_quantization[GPUJPEG_COMPONENT_TYPE_COUNT];
+    struct gpujpeg_table_quantization table_quantization[GPUJPEG_MAX_COMPONENT_COUNT];
+    int comp_table_quantization_map[GPUJPEG_MAX_COMPONENT_COUNT]; ///< mapping component -> index to table_quantization
     
     /// Huffman coder tables
-    struct gpujpeg_table_huffman_decoder table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
-    /// Huffman coder tables in device memory
-    struct gpujpeg_table_huffman_decoder* d_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
+    struct gpujpeg_table_huffman_decoder table_huffman[GPUJPEG_MAX_COMPONENT_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
+    // Huffman coder tables in device memory
+    struct gpujpeg_table_huffman_decoder* d_table_huffman[GPUJPEG_MAX_COMPONENT_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
+    int comp_table_huffman_map[GPUJPEG_MAX_COMPONENT_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT]; ///< mapping component -> indices (AC/DC) to table_huffman
     
     /// Current segment count for decoded image
     int segment_count;

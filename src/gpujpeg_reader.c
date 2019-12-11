@@ -306,14 +306,17 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image)
     for (;length > 0; length-=65) {
         int index = gpujpeg_reader_read_byte(*image);
         struct gpujpeg_table_quantization* table;
-        if( index == 0 ) {
-            table = &decoder->table_quantization[GPUJPEG_COMPONENT_LUMINANCE];
-        } else if ( index == 1 ) {
-            table = &decoder->table_quantization[GPUJPEG_COMPONENT_CHROMINANCE];
-        } else {
-            fprintf(stderr, "[GPUJPEG] [Error] DQT marker index should be 0 or 1 but %d was presented!\n", index);
+        int Pq = index >> 4; // precision - 0 for 8-bit, 1 for 16-bit
+        int Tq = index & 0xF; // destination (0-3)
+        if (Pq != 0 && Pq != 1) {
+            fprintf(stderr, "[GPUJPEG] [Error] DQT marker Pq should be 0 or 1 (8 or 16-bit) but %d was presented!\n", Pq);
             return -1;
         }
+        if (Pq != 0) {
+            fprintf(stderr, "[GPUJPEG] [Error] Unsupported DQT Pq 1 (16-bit table) presented!\n");
+            return -1;
+        }
+        table = &decoder->table_quantization[Tq];
 
         for ( int i = 0; i < 64; i++ ) {
             table->table_raw[i] = gpujpeg_reader_read_byte(*image);
@@ -343,8 +346,8 @@ static uint8_t gpujpeg_reader_get_component_id(int index, enum gpujpeg_color_spa
  * @param image
  * @return 0 if succeeds, otherwise nonzero
  */
-int
-gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, uint8_t** image)
+static int
+gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, int quant_map[4], uint8_t comp_id[4], uint8_t** image)
 {
     int length = (int)gpujpeg_reader_read_2byte(*image);
     if ( length < 6 ) {
@@ -371,20 +374,18 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
             fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker component %d id should be %d but %d was presented!\n", comp, expected_id, id);
             return -1;
         }
+        comp_id[comp] = id;
 
         int sampling = (int)gpujpeg_reader_read_byte(*image);
         param->sampling_factor[comp].horizontal = (sampling >> 4) & 15;
         param->sampling_factor[comp].vertical = (sampling) & 15;
 
         int table_index = (int)gpujpeg_reader_read_byte(*image);
-        if ( comp == 0 && table_index != 0 ) {
-            fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker component Y should have quantization table index 0 but %d was presented!\n", table_index);
+        if ( table_index < 0 || table_index > 3 ) {
+            fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker contains unexpected quantization table index %d!\n", table_index);
             return -1;
         }
-        if ( (comp == 1 || comp == 2) && table_index != 1 ) {
-            fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker component Cb or Cr should have quantization table index 1 but %d was presented!\n", table_index);
-            return -1;
-        }
+        quant_map[comp] = table_index;
         length -= 3;
     }
 
@@ -414,27 +415,14 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
         int index = gpujpeg_reader_read_byte(*image);
         struct gpujpeg_table_huffman_decoder* table = NULL;
         struct gpujpeg_table_huffman_decoder* d_table = NULL;
-        switch(index) {
-        case 0:
-            table = &decoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
-            d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC];
-            break;
-        case 16:
-            table = &decoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
-            d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC];
-            break;
-        case 1:
-            table = &decoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
-            d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC];
-            break;
-        case 17:
-            table = &decoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
-            d_table = decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_AC];
-            break;
-        default:
-            fprintf(stderr, "[GPUJPEG] [Error] DHT marker index should be 0, 1, 16 or 17 but %d was presented!\n", index);
+        int Tc = index >> 4; // class - 0 = DC, 1 = AC
+        int Th = index & 0xF; // destination (0-1 baseline, 0-3 extended), usually 0 = luminance, 1 = chrominance
+        if (Tc != 0 && Tc != 1) {
+            fprintf(stderr, "[GPUJPEG] [Error] DHT marker Tc should be 0 or 1 but %d was presented!\n", Tc);
             return -1;
         }
+        table = &decoder->table_huffman[Th][Tc];
+        d_table = decoder->d_table_huffman[Th][Tc];
         length -= 1;
 
         // Read in bits[]
@@ -755,19 +743,35 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     // Collect the component-spec parameters
     for ( int comp = 0; comp < comp_count; comp++ )
     {
-        int index = (int)gpujpeg_reader_read_byte(*image);
+        int comp_id = (int)gpujpeg_reader_read_byte(*image);
         int table = (int)gpujpeg_reader_read_byte(*image);
         int table_dc = (table >> 4) & 15;
         int table_ac = table & 15;
 
-        if ( index == 1 && (table_ac != 0 || table_dc != 0) ) {
-            fprintf(stderr, "[GPUJPEG] [Error] SOS marker for Y should have huffman tables 0,0 but %d,%d was presented!\n", table_dc, table_ac);
+        int component_index = -1;
+        for ( int i = 0; i < decoder->reader->param_image.comp_count; ++i ) {
+            if (decoder->comp_id[i] == comp_id) {
+                component_index = i;
+                break;
+            }
+        }
+        if ( component_index == -1 ) {
+            fprintf(stderr, "[GPUJPEG] [Error] Unexpected component ID '%d' present SOS marker (not defined by SOF marker)!\n", comp_id);
             return -1;
         }
-        if ( (index == 2 || index == 3) && (table_ac != 1 || table_dc != 1) ) {
-            fprintf(stderr, "[GPUJPEG] [Error] SOS marker for Cb or Cr should have huffman tables 1,1 but %d,%d was presented!\n", table_dc, table_ac);
+
+        if ( table_dc != table_ac ) {
+            fprintf(stderr, "[GPUJPEG] [Error] Using different table indices (%d and %d) for component %d (ID %d)! Please report to GPUJPEG developers.\n", table_ac, table_dc, comp, comp_id);
             return -1;
         }
+
+        if ( table_dc > 1 ||  table_ac > 1 ) {
+            fprintf(stderr, "[GPUJPEG] [Error] Using Huffman tables (%d, %d) implies extended process! Please report to GPUJPEG developers.\n", table_ac, table_dc);
+            return -1;
+        }
+
+        decoder->comp_table_huffman_map[component_index][GPUJPEG_HUFFMAN_DC] = table_dc;
+        decoder->comp_table_huffman_map[component_index][GPUJPEG_HUFFMAN_AC] = table_ac;
     }
 
     // Collect the additional scan parameters Ss, Se, Ah/Al.
@@ -877,13 +881,15 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
 
         case GPUJPEG_MARKER_SOF0:
             // Baseline
-            if ( gpujpeg_reader_read_sof0(&decoder->reader->param, &decoder->reader->param_image, &image) != 0 )
+            if ( gpujpeg_reader_read_sof0(&decoder->reader->param, &decoder->reader->param_image, decoder->comp_table_quantization_map,
+                       decoder->comp_id, &image) != 0 )
                 return -1;
             break;
         case GPUJPEG_MARKER_SOF1:
             // Extended sequential with Huffman coder
             fprintf(stderr, "[GPUJPEG] [Warning] Reading SOF1 as it was SOF0 marker (should work but verify it)!\n");
-            if ( gpujpeg_reader_read_sof0(&decoder->reader->param, &decoder->reader->param_image, &image) != 0 )
+            if ( gpujpeg_reader_read_sof0(&decoder->reader->param, &decoder->reader->param_image, decoder->comp_table_quantization_map,
+                        decoder->comp_id, &image) != 0 )
                 return -1;
             break;
         case GPUJPEG_MARKER_SOF2:
@@ -981,6 +987,8 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
 {
     struct gpujpeg_parameters param = {0};
     int segments = 0;
+    int unused[4];
+    uint8_t unused2[4];
 
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image);
@@ -1021,7 +1029,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         case GPUJPEG_MARKER_SOF1: // Extended sequential with Huffman coder
         {
             param.color_space_internal = param_image->color_space;
-            if (gpujpeg_reader_read_sof0(&param, param_image, &image) != 0) {
+            if (gpujpeg_reader_read_sof0(&param, param_image, unused, unused2, &image) != 0) {
                 return -1;
             }
             break;
