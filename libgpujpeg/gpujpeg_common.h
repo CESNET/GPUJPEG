@@ -324,6 +324,9 @@ struct gpujpeg_component
     int16_t* d_data_quantized;
     /// Index of DCT and quantizer data in device and host buffers
     unsigned int data_quantized_index;
+
+    int dc_huff_idx; ///< Huffman DC table index
+    int ac_huff_idx; ///< Huffman AC table index
 };
 
 /**

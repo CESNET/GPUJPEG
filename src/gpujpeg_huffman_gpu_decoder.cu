@@ -312,7 +312,7 @@ gpujpeg_huffman_gpu_decoder_get_coefficient(
  */
 __device__ inline int
 gpujpeg_huffman_gpu_decoder_decode_block(
-    int & dc, int16_t* const data_output, const unsigned int table_offset,
+    int & dc, int16_t* const data_output, const unsigned int dc_table_offset, const unsigned int ac_table_offset,
     unsigned int & r_bit, unsigned int & r_bit_count, uint4* const s_byte,
     unsigned int & s_byte_idx, const uint4* & d_byte, unsigned int & d_byte_chunk_count)
 {
@@ -323,7 +323,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(
     
     // Section F.2.2.1: decode the DC coefficient difference
     // Get the coefficient value (using DC coding table)
-    int dc_coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, table_offset, coefficient_idx);
+    int dc_coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, dc_table_offset, coefficient_idx);
 
     // Convert DC difference to actual value, update last_dc_val
     dc = dc_coefficient_value += dc;
@@ -352,7 +352,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(
         }
         
         // decode next coefficient, updating its destination index
-        const int coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, table_offset + 0x10000, coefficient_idx);
+        const int coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(r_bit, r_bit_count, s_byte, s_byte_idx, ac_table_offset, coefficient_idx);
         
         // stop with this block if have all coefficients
         if(coefficient_idx > 64) {
@@ -429,8 +429,9 @@ gpujpeg_huffman_decoder_decode_kernel(
         const struct gpujpeg_component* const component = d_component + segment->scan_index; 
         
         // Get huffman tables offset
-        const unsigned int table_offset = component->type == GPUJPEG_COMPONENT_LUMINANCE ? 0x00000 : 0x20000;
-        
+        const unsigned int dc_table_offset = component->dc_huff_idx * 0x20000;
+        const unsigned int ac_table_offset = component->ac_huff_idx * 0x20000 + 0x10000;
+
         // Size of MCUs in this segment's component
         const int component_mcu_size = component->mcu_size;
         
@@ -440,7 +441,7 @@ gpujpeg_huffman_decoder_decode_kernel(
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
             // Encode 8x8 block
-            if ( gpujpeg_huffman_gpu_decoder_decode_block(dc[0], block, table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count) != 0 )
+            if ( gpujpeg_huffman_gpu_decoder_decode_block(dc[0], block, dc_table_offset, ac_table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count) != 0 )
                 break;
             
             // advance to next block
@@ -461,13 +462,14 @@ gpujpeg_huffman_decoder_decode_kernel(
             const int last_dc_idx = packed_block_info & 0x7f;
             
             // Get offset to right part of huffman table
-            const unsigned int huffman_table_offset = packed_block_info & 0x80 ? 0x20000 : 0x00000;
+            const unsigned int dc_huffman_table_offset = d_component[last_dc_idx].dc_huff_idx * 0x20000;
+            const unsigned int ac_huffman_table_offset = d_component[last_dc_idx].ac_huff_idx * 0x20000 + 0x10000;
             
             // Source data pointer
             int16_t* block = d_data_quantized + (packed_block_info >> 8);
             
             // Encode 8x8 block
-            gpujpeg_huffman_gpu_decoder_decode_block(dc[last_dc_idx], block, huffman_table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+            gpujpeg_huffman_gpu_decoder_decode_block(dc[last_dc_idx], block, dc_huffman_table_offset, ac_huffman_table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
         }
         
         
@@ -653,6 +655,14 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
         *(decoder->stream)
     );
     gpujpeg_cuda_check_error("Huffman decoder table copy failed", return -1);
+
+    for (int comp = 0; comp < coder->param_image.comp_count; comp++) {
+        coder->component[comp].dc_huff_idx = decoder->comp_table_huffman_map[comp][GPUJPEG_HUFFMAN_DC];
+        coder->component[comp].ac_huff_idx = decoder->comp_table_huffman_map[comp][GPUJPEG_HUFFMAN_AC];
+    }
+    // Copy updated components to device memory
+    cudaMemcpyAsync(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice, *(decoder->stream));
+    gpujpeg_cuda_check_error("Coder component copy", return 0);
     
     // Run decoding kernel
     dim3 thread(THREADS_PER_TBLOCK);
@@ -682,3 +692,5 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     
     return 0;
 }
+
+/* vi: set expandtab sw=4 : */
