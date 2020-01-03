@@ -151,7 +151,38 @@ static int gpujpeg_reader_skip_jfxx(uint8_t** image, int length)
 }
 
 /**
- * Read application ifno block from image
+ * Read segment info for following scan
+ *
+ * @param decoder
+ * @param image
+ * @param length length of the marker
+ * @return 0 if succeeds, otherwise nonzero
+ */
+static int
+gpujpeg_reader_read_segment_info(struct gpujpeg_decoder* decoder, uint8_t** image, int length)
+{
+    int scan_index = (int)gpujpeg_reader_read_byte(*image);
+    int data_size = length - 3;
+    if ( scan_index != decoder->reader->scan_count ) {
+        fprintf(stderr, "[GPUJPEG] [Warning] %s marker (segment info) scan index should be %d but %d was presented!"
+                " (marker not a segment info?)\n",
+                gpujpeg_marker_name(GPUJPEG_MARKER_SEGMENT_INFO), decoder->reader->scan_count, scan_index);
+        *image += data_size;
+        //return -1;
+        return 0;
+    }
+
+    decoder->reader->segment_info[decoder->reader->segment_info_count] = *image;
+    decoder->reader->segment_info_count++;
+    decoder->reader->segment_info_size += data_size;
+
+    *image += data_size;
+
+    return 0;
+}
+
+/**
+ * Read application info block from image
  *
  * @param image
  * @return 0 if succeeds, otherwise nonzero
@@ -178,13 +209,41 @@ gpujpeg_reader_read_app0(uint8_t** image)
 }
 
 /**
+ * Read Adobe APP13 marker (used as a segment info by GPUJPEG)
+ *
+ * @param decoder decoder state
+ * @param image   JPEG data
+ * @return        0 if succeeds, otherwise nonzero
+ */
+static int
+gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
+{
+    int length = (int)gpujpeg_reader_read_2byte(*image);
+    if ( length <= 3 ) {
+        fprintf(stderr, "[GPUJPEG] [Error] APP13 marker (segment info) length should be greater than 3 but %d was presented!\n",
+                length);
+        return -1;
+    }
+    char photoshop[] = "Photoshop 3.0";
+    if (length > 2 + strlen(photoshop) && strncmp((char *) image, photoshop, strlen(photoshop))) {
+        fprintf(stderr, "[GPUJPEG] [Warning] Skipping unsupported Photoshop IRB APP13 marker!\n");
+        *image += length - 2;
+        return 0;
+    } else { // suppose segment info marker
+        /// @todo segment info should have an identifying header like other application markers
+        /// (see http://www.ozhiker.com/electronics/pjmt/jpeg_info/app_segments.html)
+        return gpujpeg_reader_read_segment_info(decoder, image, length);
+    }
+}
+
+/**
  * Read Adobe APP14 marker (used for RGB images by GPUJPEG)
  *
  * Obtains colorspace from APP14.
  *
- * @param image decoder state
- * @param image JPEG data
- * @return 0 if succeeds, otherwise nonzero
+ * @param decoder decoder state
+ * @param image   JPEG data
+ * @return        0 if succeeds, otherwise nonzero
  */
 static int
 gpujpeg_reader_read_app14(uint8_t** image, enum gpujpeg_color_space *color_space)
@@ -435,39 +494,6 @@ gpujpeg_reader_read_dri(struct gpujpeg_decoder* decoder, uint8_t** image)
     }
 
     decoder->reader->param.restart_interval = restart_interval;
-
-    return 0;
-}
-
-/**
- * Read segment info for following scan
- *
- * @param decoder
- * @param image
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-gpujpeg_reader_read_segment_info(struct gpujpeg_decoder* decoder, uint8_t** image)
-{
-    int length = (int)gpujpeg_reader_read_2byte(*image);
-    int scan_index = (int)gpujpeg_reader_read_byte(*image);
-    if ( length <= 3 ) {
-        fprintf(stderr, "[GPUJPEG] [Error] %s marker (segment info) length should be greater than 3 but %d was presented!\n",
-                gpujpeg_marker_name(GPUJPEG_MARKER_SEGMENT_INFO), length);
-        return -1;
-    }
-    if ( scan_index != decoder->reader->scan_count ) {
-        fprintf(stderr, "[GPUJPEG] [Error] %s marker (segment info) scan index should be %d but %d was presented!\n",
-                gpujpeg_marker_name(GPUJPEG_MARKER_SEGMENT_INFO), decoder->reader->scan_count, scan_index);
-        return -1;
-    }
-
-    int data_size = length - 3;
-    decoder->reader->segment_info[decoder->reader->segment_info_count] = *image;
-    decoder->reader->segment_info_count++;
-    decoder->reader->segment_info_size += data_size;
-
-    *image += data_size;
 
     return 0;
 }
@@ -810,13 +836,12 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         // Read more info according to the marker
         switch (marker)
         {
-        case GPUJPEG_MARKER_SEGMENT_INFO:
-            if ( gpujpeg_reader_read_segment_info(decoder, &image) != 0 )
-                return -1;
-            break;
-
         case GPUJPEG_MARKER_APP0:
             if ( gpujpeg_reader_read_app0(&image) != 0 )
+                return -1;
+            break;
+        case GPUJPEG_MARKER_APP13:
+            if ( gpujpeg_reader_read_app13(decoder, &image) != 0 )
                 return -1;
             break;
         case GPUJPEG_MARKER_APP14:
@@ -835,7 +860,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         case GPUJPEG_MARKER_APP10:
         case GPUJPEG_MARKER_APP11:
         case GPUJPEG_MARKER_APP12:
-        //case GPUJPEG_MARKER_APP13:
         case GPUJPEG_MARKER_APP15:
             fprintf(stderr, "[GPUJPEG] [Warning] JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
             gpujpeg_reader_skip_marker_content(&image);
