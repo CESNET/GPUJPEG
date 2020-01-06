@@ -225,7 +225,7 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
         return -1;
     }
     char photoshop[] = "Photoshop 3.0";
-    if (length > 2 + strlen(photoshop) && strncmp((char *) image, photoshop, strlen(photoshop))) {
+    if (length > 2 + strlen(photoshop) && strncmp((char *) image, photoshop, strlen(photoshop)) == 0) {
         fprintf(stderr, "[GPUJPEG] [Warning] Skipping unsupported Photoshop IRB APP13 marker!\n");
         *image += length - 2;
         return 0;
@@ -593,15 +593,15 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
             else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS || (byte >= GPUJPEG_MARKER_APP0 && byte <= GPUJPEG_MARKER_APP15) ) {
                 *image -= 2;
 
-                if ( previous_marker >= GPUJPEG_MARKER_RST0 && previous_marker <= GPUJPEG_MARKER_RST7 ) {
-                    fprintf(stderr, "[GPUJPEG] [Warning] JPEG scan contains no data after last restart marker!\n");
-                    scan->segment_count -= 1;
-                }
-
                 // Set segment byte count
                 data_compressed_offset -= 2;
                 segment->data_compressed_size = data_compressed_offset - segment->data_compressed_index;
                 memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
+
+                if ( segment->data_compressed_size == 0 ) { // skip FFMPEG empty segments after last RST before EOF (FF bug #8412)
+                    fprintf(stderr, "[GPUJPEG] [Warning] Empty segment detected!\n");
+                    scan->segment_count -= 1;
+                }
 
                 // Add scan segment count to decoder segment count
                 decoder->reader->segment_count += scan->segment_count;
