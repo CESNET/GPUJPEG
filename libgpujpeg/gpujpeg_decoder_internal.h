@@ -41,24 +41,24 @@
  */
 struct gpujpeg_decoder
 {
-    // JPEG coder structure
+    /// JPEG coder structure
     struct gpujpeg_coder coder;
     
-    // JPEG reader structure
+    /// JPEG reader structure
     struct gpujpeg_reader* reader;
     
-    // Quantization tables
+    /// Quantization tables
     struct gpujpeg_table_quantization table_quantization[GPUJPEG_COMPONENT_TYPE_COUNT];
     
-    // Huffman coder tables
+    /// Huffman coder tables
     struct gpujpeg_table_huffman_decoder table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
-    // Huffman coder tables in device memory
+    /// Huffman coder tables in device memory
     struct gpujpeg_table_huffman_decoder* d_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
     
-    // Current segment count for decoded image
+    /// Current segment count for decoded image
     int segment_count;
     
-    // Current data compressed size for decoded image
+    /// Current data compressed size for decoded image
     int data_compressed_size;
 
     // Stream

@@ -86,48 +86,48 @@ static const int gpujpeg_order_natural[GPUJPEG_ORDER_NATURAL_SIZE] = {
 /** JPEG quantization table structure */
 struct gpujpeg_table_quantization
 {
-    // Quantization raw table
+    /// Quantization raw table
     uint8_t table_raw[64];
-    // Quantization forward/inverse table
+    /// Quantization forward/inverse table
     uint16_t table[64];
-    // Quantization forward/inverse table in device memory
+    /// Quantization forward/inverse table in device memory
     uint16_t* d_table;
-    // Quantization table for forward DCT, pre-divided with output DCT weights and transposed for coealescent access
+    /// Quantization table for forward DCT, pre-divided with output DCT weights and transposed for coealescent access
     float* d_table_forward;
 };
 
 /** JPEG table for huffman encoding */
 struct gpujpeg_table_huffman_encoder {
-    // Code for each symbol 
+    /// Code for each symbol
     unsigned int code[256];
-    // Length of code for each symbol 
+    /// Length of code for each symbol
     char size[256];
-    // If no code has been allocated for a symbol S, size[S] is 0 
+    /// If no code has been allocated for a symbol S, size[S] is 0
 
-    // These two fields directly represent the contents of a JPEG DHT marker
-    // bits[k] = # of symbols with codes of length k bits; bits[0] is unused
+    /// These two fields directly represent the contents of a JPEG DHT marker
+    /// bits[k] = # of symbols with codes of length k bits; bits[0] is unused
     unsigned char bits[17];
-    // The symbols, in order of incr code length
+    /// The symbols, in order of incr code length
     unsigned char huffval[256];
 };
 
 /** JPEG table for huffman decoding */
 struct gpujpeg_table_huffman_decoder {
-    // Smallest code of length k
+    /// Smallest code of length k
     int mincode[17]; 
-    // Largest code of length k (-1 if none) 
+    /// Largest code of length k (-1 if none)
     int maxcode[18];
-    // Huffval[] index of 1st symbol of length k
+    /// Huffval[] index of 1st symbol of length k
     int valptr[17];
-    // # bits, or 0 if too long
+    /// # bits, or 0 if too long
     int look_nbits[256];
-    // Symbol, or unused
+    /// Symbol, or unused
     unsigned char look_sym[256];
     
-    // These two fields directly represent the contents of a JPEG DHT marker
-    // bits[k] = # of symbols with codes of 
+    /// These two fields directly represent the contents of a JPEG DHT marker
+    /// bits[k] = # of symbols with codes of
     unsigned char bits[17];
-    // The symbols, in order of incr code length 
+    /// The symbols, in order of incr code length
     unsigned char huffval[256];
 };
 

@@ -44,11 +44,11 @@ struct gpujpeg_encoder;
  * Encoder input type
  */
 enum gpujpeg_encoder_input_type {
-    // Encoder will use custom input buffer
+    /// Encoder will use custom input buffer
     GPUJPEG_ENCODER_INPUT_IMAGE,
-    // Encoder will use OpenGL Texture PBO Resource as input buffer
+    /// Encoder will use OpenGL Texture PBO Resource as input buffer
     GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE,
-    // Encoder will use custom GPU input buffer
+    /// Encoder will use custom GPU input buffer
     GPUJPEG_ENCODER_INPUT_GPU_IMAGE,
 };
 
@@ -57,13 +57,13 @@ enum gpujpeg_encoder_input_type {
  */
 struct gpujpeg_encoder_input
 {
-    // Output type
+    /// Output type
     enum gpujpeg_encoder_input_type type;
 
-    // Image data
+    /// Image data
     uint8_t* image;
 
-    // Registered OpenGL Texture
+    /// Registered OpenGL Texture
     struct gpujpeg_opengl_texture* texture;
 };
 
