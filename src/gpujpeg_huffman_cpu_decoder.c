@@ -306,8 +306,8 @@ gpujpeg_huffman_cpu_decoder_decode_mcu(struct gpujpeg_huffman_cpu_decoder* coder
         
         // Get coder parameters
         int* dc = &coder->dc[coder->scan_index];
-        struct gpujpeg_table_huffman_decoder* table_dc = coder->table_dc[component->type];
-        struct gpujpeg_table_huffman_decoder* table_ac = coder->table_ac[component->type];
+        struct gpujpeg_table_huffman_decoder* table_dc = coder->table_dc[component->dc_huff_idx];
+        struct gpujpeg_table_huffman_decoder* table_ac = coder->table_ac[component->ac_huff_idx];
         
         // Encode 8x8 block
         if ( gpujpeg_huffman_cpu_decoder_decode_block(coder, block, dc, table_dc, table_ac) != 0 )
@@ -340,8 +340,8 @@ gpujpeg_huffman_cpu_decoder_decode_mcu(struct gpujpeg_huffman_cpu_decoder* coder
                     
                     // Get coder parameters
                     int* dc = &coder->dc[comp];
-                    struct gpujpeg_table_huffman_decoder* table_dc = coder->table_dc[component->type];
-                    struct gpujpeg_table_huffman_decoder* table_ac = coder->table_ac[component->type];
+                    struct gpujpeg_table_huffman_decoder* table_dc = coder->table_dc[component->dc_huff_idx];
+                    struct gpujpeg_table_huffman_decoder* table_ac = coder->table_ac[component->ac_huff_idx];
                     
                     // Encode 8x8 block
                     if ( gpujpeg_huffman_cpu_decoder_decode_block(coder, block, dc, table_dc, table_ac) != 0 )
