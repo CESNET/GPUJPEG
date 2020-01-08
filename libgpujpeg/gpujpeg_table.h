@@ -192,17 +192,15 @@ gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, 
  * @return void
  */
 int
-gpujpeg_table_huffman_decoder_init(struct gpujpeg_table_huffman_decoder* table, struct gpujpeg_table_huffman_decoder* d_table, enum gpujpeg_component_type comp_type, enum gpujpeg_huffman_type huff_type);
+gpujpeg_table_huffman_decoder_init(struct gpujpeg_table_huffman_decoder* table, enum gpujpeg_component_type comp_type, enum gpujpeg_huffman_type huff_type);
 
 /** 
  * Compute decoder huffman table from bits and values arrays (that are already set in table)
  * 
  * @param table
- * @param d_table
- * @return void
  */
 void
-gpujpeg_table_huffman_decoder_compute(struct gpujpeg_table_huffman_decoder* table, struct gpujpeg_table_huffman_decoder* d_table);
+gpujpeg_table_huffman_decoder_compute(struct gpujpeg_table_huffman_decoder* table);
 
 #ifdef __cplusplus
 }

@@ -462,7 +462,11 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
             }
         }
         // Compute huffman table for read values
-        gpujpeg_table_huffman_decoder_compute(table, d_table);
+        gpujpeg_table_huffman_decoder_compute(table);
+
+        // Copy table to device memory
+        cudaMemcpyAsync(d_table, table, sizeof(struct gpujpeg_table_huffman_decoder), cudaMemcpyHostToDevice, *(decoder->stream));
+        gpujpeg_cuda_check_error("Decoder copy huffman table ", return -1);
     }
     return 0;
 }
