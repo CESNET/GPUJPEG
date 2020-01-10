@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011-2020, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #include "gpujpeg_huffman_cpu_decoder.h"
 #include <libgpujpeg/gpujpeg_util.h>
 

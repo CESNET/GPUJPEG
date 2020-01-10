@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2016-2018, CESNET z.s.p.o
+ * Copyright (c) 2016-2019, CESNET z.s.p.o
  *
  * All rights reserved.
  *
