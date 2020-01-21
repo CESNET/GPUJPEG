@@ -338,8 +338,8 @@ All supported parameters for console application are following:
     --size=1920x1080
         Input image size in pixels, e.g. 1920x1080
     --pixel-format=444-u8-p012
-        Input/output image pixel format ('u8', '444-u8-p012', '444-u8-p0p1p2',
-        '422-u8-p1020', '422-u8-p0p1p2' or '420-u8-p0p1p2')
+        Input/output image pixel format ('u8', '444-u8-p012', '444-u8-p012z',
+        '444-u8-p0p1p2', '422-u8-p1020', '422-u8-p0p1p2' or '420-u8-p0p1p2')
     --colorspace=rgb
         Input image colorspace (supported are 'rgb', 'yuv' and 'ycbcr-jpeg',
         where 'yuv' means YCbCr ITU-R BT.601), when *.yuv file is specified,

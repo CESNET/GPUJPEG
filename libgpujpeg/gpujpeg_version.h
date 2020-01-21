@@ -32,7 +32,7 @@
 
 #include "gpujpeg_common.h"
 
-#define LIBGPUJPEG_API_VERSION 6
+#define LIBGPUJPEG_API_VERSION 7
 
 #ifdef __cplusplus
 extern "C" {

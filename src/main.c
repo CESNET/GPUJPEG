@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2019, CESNET z.s.p.o
+ * Copyright (c) 2011-2020, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -47,11 +47,12 @@ print_help()
            "       --device-list      list cuda devices\n"
            "\n");
     printf("   -s, --size             set input image size in pixels, e.g. 1920x1080\n"
-           "   -f, --pixel-format     set input/output image pixel format, one of the following:\n"
-           "\n"
+           "   -f, --pixel-format     set input/output image pixel format, one of the\n"
+           "                          following:\n"
            "                          u8               422-u8-p1020\n"
            "                          444-u8-p012      422-u8-p0p1p2\n"
-           "                          444-u8-p0p1p2    420-u8-p0p1p2\n"
+           "                          444-u8-p012z     420-u8-p0p1p2\n"
+           "                          444-u8-p0p1p2\n"
            "\n"
            "   -c, --colorspace       set input/output image colorspace, e.g. rgb,\n"
            "                          ycbcr, ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
@@ -225,6 +226,10 @@ main(int argc, char *argv[])
             else if ( strcmp(optarg, "444-u8-p012") == 0 )   {
                 param_image.comp_count = 3;
                 param_image.pixel_format = GPUJPEG_444_U8_P012;
+            }
+            else if ( strcmp(optarg, "444-u8-p012z") == 0 )   {
+                param_image.comp_count = 3;
+                param_image.pixel_format = GPUJPEG_444_U8_P012Z;
             }
             else if ( strcmp(optarg, "444-u8-p0p1p2") == 0 ) {
                 param_image.comp_count = 3;
