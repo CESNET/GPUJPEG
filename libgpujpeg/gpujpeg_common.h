@@ -75,11 +75,11 @@ struct gpujpeg_device_info
     /// Compute capability minor version
     int cc_minor;
     /// Amount of global memory
-    long global_memory;
+    size_t global_memory;
     /// Amount of constant memory
-    long constant_memory;
+    size_t constant_memory;
     /// Amount of shared memory
-    long shared_memory;
+    size_t shared_memory;
     /// Number of registers per block
     int register_count;
     /// Number of multiprocessors
