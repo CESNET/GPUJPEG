@@ -103,6 +103,8 @@ gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
  * Pixel format for input/output image data.
  */
 enum gpujpeg_pixel_format {
+    GPUJPEG_PIXFMT_NONE = -1,
+
     /// 8bit unsigned samples, 1 component
     GPUJPEG_U8 =  0,
 

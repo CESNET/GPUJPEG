@@ -152,6 +152,7 @@ main(int argc, char *argv[])
     int chroma_subsampled = 0;
 
     param_image.color_space = GPUJPEG_NONE;
+    param_image.pixel_format = GPUJPEG_PIXFMT_NONE;
 
 #if defined(__linux__)
     // Parse command line
@@ -387,6 +388,14 @@ main(int argc, char *argv[])
             param_image.color_space = GPUJPEG_YCBCR_JPEG;
         } else {
             param_image.color_space = GPUJPEG_RGB;
+        }
+    }
+
+    if ( param_image.pixel_format == GPUJPEG_PIXFMT_NONE ) {
+        if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_RGBA ) {
+            param_image.pixel_format = GPUJPEG_444_U8_P012Z;
+        } else {
+            param_image.pixel_format = GPUJPEG_444_U8_P012;
         }
     }
 

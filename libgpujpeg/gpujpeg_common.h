@@ -225,7 +225,9 @@ enum gpujpeg_image_file_format {
     /// YUV file format, simple data format without header [Y U V] [Y U V] ...
     GPUJPEG_IMAGE_FILE_YUV = 1 | 8,
     /// Gray file format
-    GPUJPEG_IMAGE_FILE_GRAY = 1 | 16
+    GPUJPEG_IMAGE_FILE_GRAY = 1 | 16,
+    /// RGBX file format, simple data format without header [R G B X] [R G B X] ...
+    GPUJPEG_IMAGE_FILE_RGBA = 1 | 32,
 };
 
 /**

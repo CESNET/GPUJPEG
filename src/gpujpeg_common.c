@@ -40,7 +40,7 @@
 #include <math.h>
 #if defined(_MSC_VER)
   #include <windows.h>
-  #define strncasecmp _strnicmp
+  #define strcasecmp _stricmp
 #else
   #include <strings.h>
 #endif
@@ -287,10 +287,11 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
 enum gpujpeg_image_file_format
 gpujpeg_image_get_file_format(const char* filename)
 {
-    static const char *extension[] = { "raw", "rgb", "yuv", "r", "jpg" };
+    static const char *extension[] = { "raw", "rgb", "rgba", "yuv", "r", "jpg" };
     static const enum gpujpeg_image_file_format format[] = {
         GPUJPEG_IMAGE_FILE_RAW,
         GPUJPEG_IMAGE_FILE_RGB,
+        GPUJPEG_IMAGE_FILE_RGBA,
         GPUJPEG_IMAGE_FILE_YUV,
         GPUJPEG_IMAGE_FILE_GRAY,
         GPUJPEG_IMAGE_FILE_JPEG
@@ -301,7 +302,7 @@ gpujpeg_image_get_file_format(const char* filename)
         return GPUJPEG_IMAGE_FILE_UNKNOWN;
     ext++;
     for ( int i = 0; i < sizeof(format) / sizeof(*format); i++ ) {
-        if ( strncasecmp(ext, extension[i], 3) == 0 ) {
+        if ( strcasecmp(ext, extension[i]) == 0 ) {
             return format[i];
         }
     }
