@@ -384,7 +384,7 @@ main(int argc, char *argv[])
 
     // Detect color spalce
     if ( param_image.color_space == GPUJPEG_NONE ) {
-        if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_YUV ) {
+        if ( gpujpeg_image_get_file_format(argv[encode ? 0 : 1]) == GPUJPEG_IMAGE_FILE_YUV ) {
             param_image.color_space = GPUJPEG_YCBCR_JPEG;
         } else {
             param_image.color_space = GPUJPEG_RGB;
@@ -392,7 +392,7 @@ main(int argc, char *argv[])
     }
 
     if ( param_image.pixel_format == GPUJPEG_PIXFMT_NONE ) {
-        if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_RGBA ) {
+        if ( gpujpeg_image_get_file_format(argv[encode ? 0 : 1]) == GPUJPEG_IMAGE_FILE_RGBA ) {
             param_image.pixel_format = GPUJPEG_444_U8_P012Z;
         } else {
             param_image.pixel_format = GPUJPEG_444_U8_P012;
@@ -400,7 +400,7 @@ main(int argc, char *argv[])
     }
 
     // Detect component count
-    if ( gpujpeg_image_get_file_format(argv[0]) == GPUJPEG_IMAGE_FILE_GRAY && param_image.comp_count != 1 ) {
+    if ( gpujpeg_image_get_file_format(argv[encode ? 0 : 1]) == GPUJPEG_IMAGE_FILE_GRAY && param_image.comp_count != 1 ) {
         param_image.pixel_format = GPUJPEG_U8;
         param_image.comp_count = 1;
     }
