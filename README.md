@@ -11,6 +11,7 @@ Table of contents
 - [Performance](#performance)
   * [Encoding 4K (4096x2160) and HD (1920x1080)](#encoding-4k-4096x2160-and-hd-1920x1080)
   * [Decoding 4K (4096x2160) and HD (1920x1080)](#decoding-4k-4096x2160-and-hd-1920x1080)
+- [Compile](#compile)
 - [Usage](#usage)
   * [libgpujpeg library](#libgpujpeg-library)
     + [Encoding](#encoding)
@@ -100,14 +101,33 @@ images, each of them multiple times):
    90    |   19.99 ms  | 42.83 dB | 2441.40 kB |    7.48 ms  | 39.84 dB |  768.40 kB
   100    |   46.45 ms  | 47.09 dB | 7798.70 kB |   16.42 ms  | 47.21 dB | 2499.60 kB
 
+Compile
+-------
+To build console application check [Requirements](#requirements) and go
+to `gpujpeg` directory (where [README.md](README.md) and [COPYING](COPYING)
+files are placed) and run `autogen.sh` and `make` command. It builds
+libgpugjpeg library in subdirectory `.libs` and it creates script `gpujpeg`
+which runs executable file linked to runtime library _libgpujpeg.so_
+(which is placed in `.libs` subdirectory).
+
+You can also use **CMake** to crate build recipe for the library and the
+application (including project file for MSVS) or a plain old _Makefile.bkp_.
+
+In _Windows_ you may want to avoid using build system at all and use the
+following command directly:
+
+    nvcc -I. -DGPUJPEG_EXPORTS -o gpujpeg.dll --shared src/gpujpeg_*c src/gpujpeg*cu
+
+or (in _Linux_):
+
+    nvcc -I. -Xcompiler -fPIC -o gpujpeg.so --shared src/gpujpeg_*c src/gpujpeg*cu # library
+    nvcc -o gpujpeg src/*c src/*cu # console application
+
 Usage
 -----
 
 ### libgpujpeg library
-To build _libgpujpeg_ library check [Requirements](#requirements), go to
-`gpujpeg` directory and run `autogen.sh` and `make` commands. The static and
-shared library object will be built in _.libs_ subdirectory. You can also use
-**CMake** or a plain old _Makefile.bkp_.
+To build _libgpujpeg_ library check [Compile](#compile).
 
 To use library in your project you have to include library to your
 sources and linked shared library object to your executable:
@@ -279,17 +299,7 @@ Now we can save decoded raw image data to file and perform cleanup:
 
 ### GPUJPEG console application
 The console application gpujpeg uses _libgpujpeg_ library to demonstrate
-it's functions.
-
-To build console application check [Requirements](#requirements) and go
-to `gpujpeg` directory (where [README.md](README.md) and [COPYING](COPYING)
-files are placed) and run `autogen.sh` and `make` command. It builds
-libgpugjpeg library in subdirectory `.libs` and it creates script `gpujpeg`
-which runs executable file linked to runtime library _libgpujpeg.so_
-(which is placed in `.libs` subdirectory).
-
-You can also use **CMake** to crate build recipe for the library and the
-application (including project file for MSVS).
+it's functions. To build console application check [Compile](#compile).
 
 To encode image from raw RGB image file to JPEG image file use following
 command:
