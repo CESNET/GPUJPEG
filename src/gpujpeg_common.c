@@ -35,6 +35,7 @@
 #include <ctype.h>
 #include <libgpujpeg/gpujpeg_common.h>
 #include <libgpujpeg/gpujpeg_util.h>
+#include <libgpujpeg/gpujpeg_version.h>
 #include "gpujpeg_preprocessor.h"
 #include <math.h>
 #if defined(_MSC_VER)
@@ -1413,3 +1414,10 @@ gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
     if ( texture->texture_callback_detach_opengl != NULL )
         texture->texture_callback_detach_opengl(texture->texture_callback_param);
 }
+
+int gpujpeg_version()
+{
+    return LIBGPUJPEG_API_VERSION;
+}
+
+/* vi: set expandtab sw=4 : */

@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2016-2019, CESNET z.s.p.o
+ * Copyright (c) 2016-2020, CESNET z.s.p.o
  *
  * All rights reserved.
  *
@@ -30,6 +30,21 @@
 #ifndef GPUJPEG_VERSION_H
 #define GPUJPEG_VERSION_H
 
+#include "gpujpeg_common.h"
+
 #define LIBGPUJPEG_API_VERSION 6
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * Returns runtime version of the GPUJPEG library.
+ */
+GPUJPEG_API int gpujpeg_version(void);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // GPUJPEG_VERSION_H
