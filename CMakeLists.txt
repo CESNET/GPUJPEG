@@ -63,6 +63,7 @@ endif()
 file(GLOB H_FILES libgpujpeg/*.h)
 file(GLOB C_FILES src/*.c src/*.cu)
 cuda_add_library(gpujpeg SHARED ${H_FILES} ${C_FILES})
+set_target_properties(gpujpeg PROPERTIES SOVERSION 0)
 SET_TARGET_PROPERTIES(
   gpujpeg
 PROPERTIES
