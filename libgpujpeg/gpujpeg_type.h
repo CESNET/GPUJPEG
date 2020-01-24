@@ -59,6 +59,12 @@ extern "C" {
 /** Maximum number of segment info header in stream */
 #define GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT   100
 
+#if __cplusplus >= 201703L
+#define MAYBE_UNUSED [[maybe_unused]]
+#else
+#define MAYBE_UNUSED
+#endif
+
 /**
  * Color spaces for JPEG codec
  */
@@ -78,6 +84,7 @@ enum gpujpeg_color_space {
  *
  * @param color_space
  */
+MAYBE_UNUSED
 static const char*
 gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
 {
@@ -128,7 +135,6 @@ enum gpujpeg_pixel_format {
     /// 8bit unsigned samples, 3 components, each pixel padded to 32bits
     /// with zero byte, 4:4:4 sampling, interleaved
     GPUJPEG_444_U8_P012Z =  6,
-
 };
 
 /**

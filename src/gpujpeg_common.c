@@ -56,6 +56,12 @@
     #include <cuda_gl_interop.h>
 #endif
 
+#if _STDC_VERSION__ >= 201112L
+#include <threads.h>
+#elif __cplusplus < 201103L
+#define thread_local
+#endif
+
 // rounds number of segment bytes up to next multiple of 128
 #define SEGMENT_ALIGN(b) (((b) + 127) & ~127)
 
@@ -1422,6 +1428,29 @@ gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
 int gpujpeg_version()
 {
     return LIBGPUJPEG_API_VERSION;
+}
+
+const char*
+gpujpeg_subsampling_get_name(int comp_count, struct gpujpeg_component *components)
+{
+    thread_local static char buf[128];
+    if (comp_count == 3 && components[1].sampling_factor.horizontal == components[2].sampling_factor.horizontal
+            && components[1].sampling_factor.vertical == components[2].sampling_factor.horizontal) {
+        int J = 4;
+        int a = J / components[0].sampling_factor.horizontal * components[1].sampling_factor.horizontal;
+        int vert_change = 2 / components[0].sampling_factor.vertical * components[1].sampling_factor.vertical == 2;
+        int b = J * vert_change;
+        snprintf(buf, sizeof buf, "%d:%d:%d", J, a, b);
+        return buf;
+    }
+
+    buf[0] = '\0';
+    for (int i = 0; i < comp_count; ++i) {
+        snprintf(buf + strlen(buf), sizeof buf - strlen(buf), "%s%d:%d", i != 0 ? ":" : "",
+                components[i].sampling_factor.horizontal, components[i].sampling_factor.vertical);
+    }
+
+    return buf;
 }
 
 /* vi: set expandtab sw=4 : */

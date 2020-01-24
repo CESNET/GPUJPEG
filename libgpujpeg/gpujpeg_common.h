@@ -688,6 +688,14 @@ gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_siz
 GPUJPEG_API void
 gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture);
 
+
+/**
+ * Returns convenient name for subsampling (4:2:0 etc.). If it cannot be constructed
+ * returns the format W1xH1:W2xH2:W3xH3.
+ */
+GPUJPEG_API const char*
+gpujpeg_subsampling_get_name(int comp_count, struct gpujpeg_component *components);
+
 #ifdef __cplusplus
 }
 #endif
