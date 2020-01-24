@@ -115,6 +115,9 @@ static int print_image_info(const char *filename) {
         if (params.color_space) {
             printf("color space: %s\n", gpujpeg_color_space_get_name(params.color_space));
         }
+        if (params.pixel_format) {
+            printf("internal representation: %s\n", gpujpeg_pixel_format_get_name(params.pixel_format));
+        }
         if (segment_count) {
             printf("segment count: %d\n", segment_count);
         }

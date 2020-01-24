@@ -987,6 +987,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
 {
     struct gpujpeg_parameters param = {0};
     int segments = 0;
+    int interleaved = 0;
     int unused[4];
     uint8_t unused2[4];
 
@@ -1060,6 +1061,14 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         case GPUJPEG_MARKER_SOS:
         {
             segments++;
+            if (marker == GPUJPEG_MARKER_SOS) {
+                int length = (int) gpujpeg_reader_read_2byte(image); // length
+                assert(length > 3);
+                int comp_count = (int) gpujpeg_reader_read_byte(image); // comp count in the segment
+                if (comp_count > 1) {
+                    interleaved = 1;
+                }
+            }
             while (*image != 0xff || (*image == 0xff && image[1] == 0x00)) { if (*image == 0xff) image++; image++; }
             break;
         }
@@ -1077,6 +1086,23 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
 
     if (segment_count != NULL) {
         *segment_count = segments;
+    }
+
+    param_image->pixel_format = GPUJPEG_PIXFMT_NONE;
+    if (param_image->comp_count == 1) {
+        param_image->pixel_format = GPUJPEG_U8;
+    } else if (param_image->comp_count == 3
+            && param.sampling_factor[1].horizontal == 1 && param.sampling_factor[1].vertical == 1
+            && param.sampling_factor[2].horizontal == 1 && param.sampling_factor[2].vertical == 1) {
+        int sum = interleaved << 16 | param.sampling_factor[0].horizontal << 8 |  param.sampling_factor[0].vertical;
+        switch (sum) {
+        case 1<<16 | 1<<8 | 1: param_image->pixel_format = GPUJPEG_444_U8_P012; break;
+        case 0<<16 | 1<<8 | 1: param_image->pixel_format = GPUJPEG_444_U8_P0P1P2; break;
+        case 1<<16 | 2<<8 | 1: param_image->pixel_format = GPUJPEG_422_U8_P1020; break;
+        case 0<<16 | 2<<8 | 1: param_image->pixel_format = GPUJPEG_422_U8_P0P1P2; break;
+        case 1<<16 | 2<<8 | 2: // we have only one pixfmt for 420, so use for both
+        case 0<<16 | 2<<8 | 2: param_image->pixel_format = GPUJPEG_420_U8_P0P1P2; break;
+        }
     }
 
     return 0;
