@@ -864,8 +864,9 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
             || (coder->param_image.pixel_format == GPUJPEG_420_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 2))
                 || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
                 || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
-        fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s).\n",
-                gpujpeg_subsampling_get_name(coder->param_image.comp_count, coder->component));
+        fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s to %s).\n",
+                gpujpeg_subsampling_get_name(coder->param_image.comp_count, coder->component),
+                gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));
         return -1;
     }
 

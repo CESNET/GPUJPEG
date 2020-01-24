@@ -32,6 +32,7 @@
 #include <libgpujpeg/gpujpeg_encoder_internal.h> // TIMER
 #include <libgpujpeg/gpujpeg_decoder_internal.h> // TIMER
 #include <libgpujpeg/gpujpeg.h>
+#include <libgpujpeg/gpujpeg_common.h>
 #include <libgpujpeg/gpujpeg_util.h>
 #if defined(__linux__)
     #include <getopt.h>
@@ -220,41 +221,13 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Colorspace '%s' is not available!\n", optarg);
             break;
         case 'f':
-            if ( strcmp(optarg, "u8") == 0 ) {
-                param_image.comp_count = 1;
-                param_image.pixel_format = GPUJPEG_U8;
+            param_image.pixel_format = gpujpeg_pixel_format_by_name(optarg);
+            if (param_image.pixel_format == GPUJPEG_PIXFMT_NONE) {
+                fprintf(stderr, "Unknown pixel format '%s'!\n", optarg);
+                return 1;
             }
-            else if ( strcmp(optarg, "444-u8-p012") == 0 )   {
-                param_image.comp_count = 3;
-                param_image.pixel_format = GPUJPEG_444_U8_P012;
-            }
-            else if ( strcmp(optarg, "444-u8-p012z") == 0 )   {
-                param_image.comp_count = 3;
-                param_image.pixel_format = GPUJPEG_444_U8_P012Z;
-            }
-            else if ( strcmp(optarg, "444-u8-p0p1p2") == 0 ) {
-                param_image.comp_count = 3;
-                param_image.pixel_format = GPUJPEG_444_U8_P0P1P2;
-            }
-            else if ( strcmp(optarg, "422-u8-p1020") == 0 )  {
-                param_image.comp_count = 3;
-                param_image.pixel_format = GPUJPEG_422_U8_P1020;
-                gpujpeg_parameters_chroma_subsampling_422(&param);
-                chroma_subsampled = 1;
-            }
-            else if ( strcmp(optarg, "422-u8-p0p1p2") == 0 ) {
-                param_image.comp_count = 3;
-                param_image.pixel_format = GPUJPEG_422_U8_P0P1P2;
-                gpujpeg_parameters_chroma_subsampling_422(&param);
-                chroma_subsampled = 1;
-            }
-            else if ( strcmp(optarg, "420-u8-p0p1p2") == 0 ) {
-                param_image.comp_count = 3;
-                param_image.pixel_format = GPUJPEG_420_U8_P0P1P2;
-                gpujpeg_parameters_chroma_subsampling_420(&param);
-                chroma_subsampled = 1;
-            }
-            else { fprintf(stderr, "Unknown pixel format '%s'!\n", optarg); }
+            param_image.comp_count = gpujpeg_pixel_format_get_comp_count(param_image.pixel_format);
+            chroma_subsampled = gpujpeg_pixel_format_is_subsampled(param_image.pixel_format);
             break;
         case 'q':
             param.quality = atoi(optarg);
