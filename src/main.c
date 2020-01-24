@@ -392,9 +392,15 @@ main(int argc, char *argv[])
     }
 
     if ( param_image.pixel_format == GPUJPEG_PIXFMT_NONE ) {
-        if ( gpujpeg_image_get_file_format(argv[encode ? 0 : 1]) == GPUJPEG_IMAGE_FILE_RGBA ) {
+        enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(argv[encode ? 0 : 1]);
+        switch (format) {
+        case GPUJPEG_IMAGE_FILE_RGBA:
             param_image.pixel_format = GPUJPEG_444_U8_P012Z;
-        } else {
+            break;
+        case GPUJPEG_IMAGE_FILE_I420:
+            param_image.pixel_format = GPUJPEG_420_U8_P0P1P2;
+            break;
+        default:
             param_image.pixel_format = GPUJPEG_444_U8_P012;
         }
     }

@@ -293,12 +293,13 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
 enum gpujpeg_image_file_format
 gpujpeg_image_get_file_format(const char* filename)
 {
-    static const char *extension[] = { "raw", "rgb", "rgba", "yuv", "r", "jpg" };
+    static const char *extension[] = { "raw", "rgb", "rgba", "yuv", "i420", "r", "jpg" };
     static const enum gpujpeg_image_file_format format[] = {
         GPUJPEG_IMAGE_FILE_RAW,
         GPUJPEG_IMAGE_FILE_RGB,
         GPUJPEG_IMAGE_FILE_RGBA,
         GPUJPEG_IMAGE_FILE_YUV,
+        GPUJPEG_IMAGE_FILE_I420,
         GPUJPEG_IMAGE_FILE_GRAY,
         GPUJPEG_IMAGE_FILE_JPEG
     };

@@ -212,7 +212,12 @@ struct gpujpeg_image_parameters {
 GPUJPEG_API void
 gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param);
 
-/** Image file formats */
+/**
+ * Image file formats
+ *
+ * If running out numbers, the representation may be more dense, eg. lower 2 bits for RAW/JPEG
+ * and then GRAY -> 1|12, then 1|16, 1|20, 1|24 etc.
+ */
 enum gpujpeg_image_file_format {
     /// Unknown image file format
     GPUJPEG_IMAGE_FILE_UNKNOWN = 0,
@@ -228,6 +233,8 @@ enum gpujpeg_image_file_format {
     GPUJPEG_IMAGE_FILE_GRAY = 1 | 16,
     /// RGBX file format, simple data format without header [R G B X] [R G B X] ...
     GPUJPEG_IMAGE_FILE_RGBA = 1 | 32,
+    /// i420 file format
+    GPUJPEG_IMAGE_FILE_I420 = 1 | 64,
 };
 
 /**
