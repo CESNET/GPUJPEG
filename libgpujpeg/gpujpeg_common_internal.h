@@ -1,5 +1,4 @@
-/**
- * @file
+/*
  * Copyright (c) 2011-2019, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
@@ -27,11 +26,17 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * @file
+ * This file contains common definitions and declarations that doesn't need to
+ * be exposed to public API.
+ */
  
 #ifndef GPUJPEG_COMMON_INTERNAL_H
 #define GPUJPEG_COMMON_INTERNAL_H
 
-#include "cuda_runtime.h"
+#include <cuda_runtime.h>
+#include "libgpujpeg/gpujpeg_type.h"
 
 /**
  * Declare timer
@@ -83,5 +88,22 @@
 #define GPUJPEG_TIMER_STOP() GPUJPEG_CUSTOM_TIMER_STOP(def)
 #define GPUJPEG_TIMER_DURATION() GPUJPEG_CUSTOM_TIMER_DURATION(def)
 #define GPUJPEG_TIMER_STOP_PRINT(text) GPUJPEG_CUSTOM_TIMER_STOP_PRINT(def, text)
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+struct gpujpeg_component;
+
+/**
+ * Returns convenient name for subsampling (4:2:0 etc.). If it cannot be constructed
+ * returns the format W1xH1:W2xH2:W3xH3.
+ */
+const char*
+gpujpeg_subsampling_get_name(int comp_count, struct gpujpeg_component *components);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif // __cplusplus
 
 #endif // GPUJPEG_COMMON_INTERNAL_H

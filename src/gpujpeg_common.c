@@ -96,6 +96,24 @@
     }
 #endif
 
+#define PLANAR   1u
+#define SUBSAMPL 2u
+const static struct {
+    enum gpujpeg_pixel_format pixel_format;
+    uint32_t flags;
+    int comp_count;
+    const char *name;
+} gpujpeg_pixel_format_desc[] = {
+    { GPUJPEG_PIXFMT_NONE,   0,               0, "(unknown)" },
+    { GPUJPEG_U8,            0,               1, "u8" },
+    { GPUJPEG_444_U8_P012,   0,               3, "444-u8-p012" },
+    { GPUJPEG_444_U8_P0P1P2, PLANAR,          3, "444-u8-p0p1p2" },
+    { GPUJPEG_422_U8_P1020,  SUBSAMPL,        3, "422-u8-p1020" },
+    { GPUJPEG_422_U8_P0P1P2, PLANAR|SUBSAMPL, 3, "422-u8-p0p1p2" },
+    { GPUJPEG_420_U8_P0P1P2, PLANAR|SUBSAMPL, 3, "420-u8-p0p1p2" },
+    { GPUJPEG_444_U8_P012Z,  0,               3, "444-u8-p012z" },
+};
+
 /* Documented at declaration */
 struct gpujpeg_devices_info
 gpujpeg_get_devices_info()
@@ -1452,6 +1470,80 @@ gpujpeg_subsampling_get_name(int comp_count, struct gpujpeg_component *component
     }
 
     return buf;
+}
+
+const char*
+gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
+{
+    switch ( color_space ) {
+    case GPUJPEG_NONE:
+        return "None";
+    case GPUJPEG_RGB:
+        return "RGB";
+    case GPUJPEG_YUV:
+        return "YUV";
+    case GPUJPEG_YCBCR_BT601:
+        return "YCbCr BT.601";
+    case GPUJPEG_YCBCR_BT601_256LVLS:
+        return "YCbCr BT.601 256 Levels (YCbCr JPEG)";
+    case GPUJPEG_YCBCR_BT709:
+        return "YCbCr BT.709";
+    default:
+        return "Unknown";
+    }
+}
+
+enum gpujpeg_pixel_format
+gpujpeg_pixel_format_by_name(const char *name)
+{
+for (size_t i = 0; sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+    if (strcmp(gpujpeg_pixel_format_desc[i].name, name) == 0) {
+        return gpujpeg_pixel_format_desc[i].pixel_format;
+    }
+}
+return GPUJPEG_PIXFMT_NONE;
+}
+
+int
+gpujpeg_pixel_format_get_comp_count(enum gpujpeg_pixel_format pixel_format)
+{
+    for (size_t i = 0; sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+        if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
+            return gpujpeg_pixel_format_desc[i].comp_count;
+        }
+    }
+    return 0;
+}
+
+const char*
+gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format)
+{
+    for (size_t i = 0; sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+        if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
+            return gpujpeg_pixel_format_desc[i].name;
+        }
+    }
+    return NULL;
+}
+
+int gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format)
+{
+    for (size_t i = 0; sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+        if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
+            return gpujpeg_pixel_format_desc[i].flags & PLANAR;
+        }
+    }
+    return -1;
+}
+
+int gpujpeg_pixel_format_is_subsampled(enum gpujpeg_pixel_format pixel_format)
+{
+    for (size_t i = 0; sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+        if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
+            return gpujpeg_pixel_format_desc[i].flags & SUBSAMPL;
+        }
+    }
+    return -1;
 }
 
 /* vi: set expandtab sw=4 : */

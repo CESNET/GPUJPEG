@@ -804,13 +804,6 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     return NULL;
 }
 
-static int gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format)
-{
-    return pixel_format == GPUJPEG_444_U8_P0P1P2
-        || pixel_format == GPUJPEG_422_U8_P0P1P2
-        || pixel_format == GPUJPEG_420_U8_P0P1P2;
-}
-
 /* Documented at declaration */
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)

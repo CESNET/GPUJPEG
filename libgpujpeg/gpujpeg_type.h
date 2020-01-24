@@ -59,12 +59,6 @@ extern "C" {
 /** Maximum number of segment info header in stream */
 #define GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT   100
 
-#if __cplusplus >= 201703L
-#define MAYBE_UNUSED [[maybe_unused]]
-#else
-#define MAYBE_UNUSED
-#endif
-
 /**
  * Color spaces for JPEG codec
  */
@@ -78,33 +72,6 @@ enum gpujpeg_color_space {
     GPUJPEG_YCBCR = GPUJPEG_YCBCR_BT709,
     GPUJPEG_YUV = 5
 };
-
-/**
- * Get color space name
- *
- * @param color_space
- */
-MAYBE_UNUSED
-static const char*
-gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
-{
-    switch ( color_space ) {
-    case GPUJPEG_NONE:
-        return "None";
-    case GPUJPEG_RGB:
-        return "RGB";
-    case GPUJPEG_YUV:
-        return "YUV";
-    case GPUJPEG_YCBCR_BT601:
-        return "YCbCr BT.601";
-    case GPUJPEG_YCBCR_BT601_256LVLS:
-        return "YCbCr BT.601 256 Levels (YCbCr JPEG)";
-    case GPUJPEG_YCBCR_BT709:
-        return "YCbCr BT.709";
-    default:
-        return "Unknown";
-    }
-}
 
 /**
  * Pixel format for input/output image data.
