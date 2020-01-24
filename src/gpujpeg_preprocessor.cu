@@ -1,6 +1,5 @@
-/**
- * @file
- * Copyright (c) 2011-2019, CESNET z.s.p.o
+/*
+ * Copyright (c) 2011-2020, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -26,6 +25,16 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * @file
+ * @brief
+ * This file contains preprocessors and postprocessors between raw image and
+ * a common format for computational kernels. It also does color space
+ * transformations.
+ * @todo
+ * Preprocesors/postprocessors don't work for planar formats, only memcpy is
+ * performed now (subsampling and color space cannot be changed).
  */
 
 #include "gpujpeg_preprocessor.h"
@@ -474,12 +483,12 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
  * Use preprocessing kernels as for packed formats.
  */
 static int
-gpujpeg_preprocessor_copy_planar_data(struct gpujpeg_encoder * encoder)
+gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder * coder = &encoder->coder;
     assert(coder->param_image.comp_count == 3);
     if (coder->param_image.color_space != coder->param.color_space_internal) {
-            fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when no color transformation is required. "
+            fprintf(stderr, "Encoding JPEG from a planar pixel format supported only when no color transformation is required. "
                             "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
                             gpujpeg_color_space_get_name(coder->param.color_space_internal),
                             gpujpeg_color_space_get_name(coder->param_image.color_space));
@@ -534,7 +543,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when 4:4:4 subsampling inside JPEG is used.\n");
                 return -1;
             }
-            return gpujpeg_preprocessor_copy_planar_data(encoder);
+            return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
         }
         case GPUJPEG_422_U8_P0P1P2:
         {
@@ -544,7 +553,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 fprintf(stderr, "Encoding JPEG from pixel format 422-u8-p0p1p2 is supported only to 4:2:2 subsampling inside JPEG is used.\n");
                 return -1;
             }
-            return gpujpeg_preprocessor_copy_planar_data(encoder);
+            return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
         }
         case GPUJPEG_420_U8_P0P1P2:
         {
@@ -554,7 +563,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only to 4:2:0 subsampling inside JPEG is used.");
                 return -1;
             }
-            return gpujpeg_preprocessor_copy_planar_data(encoder);
+            return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
         }
         default:
         {
@@ -795,11 +804,22 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     return NULL;
 }
 
+static int gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format)
+{
+    return pixel_format == GPUJPEG_444_U8_P0P1P2
+        || pixel_format == GPUJPEG_422_U8_P0P1P2
+        || pixel_format == GPUJPEG_420_U8_P0P1P2;
+}
+
 /* Documented at declaration */
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
     if (coder->param_image.comp_count == 1) {
+        return 0;
+    }
+
+    if (gpujpeg_pixel_format_is_planar(coder->param_image.pixel_format)) {
         return 0;
     }
 
@@ -823,6 +843,62 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
     return 0;
 }
 
+/**
+ * Copies raw data GPU memory without running any postprocessor kernel.
+ *
+ * This assumes that the JPEG has same color space as input raw image and
+ * currently also that the component subsampling correspond between raw and
+ * JPEG (although at least different horizontal subsampling can be quite
+ * easily done).
+ *
+ * @todo
+ * Use postprocessing kernels as for packed formats.
+ */
+static int
+gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cudaStream_t stream)
+{
+    assert(coder->param_image.comp_count == 3);
+    if (coder->param_image.color_space != coder->param.color_space_internal) {
+            fprintf(stderr, "Decoding JPEG to a planar pixel format is supported only when no color transformation is required. "
+                            "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
+                            gpujpeg_color_space_get_name(coder->param.color_space_internal),
+                            gpujpeg_color_space_get_name(coder->param_image.color_space));
+            return -1;
+    }
+
+    if ((coder->param_image.pixel_format == GPUJPEG_444_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 1 || coder->component[0].sampling_factor.vertical != 1))
+            || (coder->param_image.pixel_format == GPUJPEG_422_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 1))
+            || (coder->param_image.pixel_format == GPUJPEG_420_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 2))
+                || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
+                || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
+        fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s).\n",
+                gpujpeg_subsampling_get_name(coder->param_image.comp_count, coder->component));
+        return -1;
+    }
+
+    size_t data_raw_offset = 0;
+    if (coder->component[0].width == coder->component[0].data_width &&
+                    coder->component[1].width == coder->component[1].data_width &&
+                    coder->component[2].width == coder->component[2].data_width) {
+            for (int i = 0; i < 3; ++i) {
+                    size_t component_size = coder->component[i].width * coder->component[i].height;
+                    cudaMemcpyAsync(coder->d_data_raw + data_raw_offset, coder->component[i].d_data, component_size, cudaMemcpyDeviceToDevice, stream);
+                    data_raw_offset += component_size;
+            }
+    } else {
+            for (int i = 0; i < 3; ++i) {
+                    int spitch = coder->component[i].data_width;
+                    int dpitch = coder->component[i].width;
+                    size_t component_size = spitch * coder->component[i].height;
+                    cudaMemcpy2DAsync(coder->d_data_raw + data_raw_offset, dpitch, coder->component[i].d_data, spitch, coder->component[i].width, coder->component[i].height, cudaMemcpyDeviceToDevice, stream);
+
+                    data_raw_offset += component_size;
+            }
+    }
+    gpujpeg_cuda_check_error("Preprocessor copy failed", return -1);
+    return 0;
+}
+
 /* Documented at declaration */
 int
 gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
@@ -831,6 +907,11 @@ gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
         cudaMemcpyAsync(coder->d_data_raw, coder->d_data, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice, stream);
         return 0;
     }
+
+    if (gpujpeg_pixel_format_is_planar(coder->param_image.pixel_format)) {
+        return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);
+    }
+
     assert(coder->param_image.comp_count == 3);
 
     cudaMemsetAsync(coder->d_data_raw, 0, coder->data_raw_size * sizeof(uint8_t), stream);
