@@ -2,13 +2,13 @@ CUDA_COMPILER=@CUDA_COMPILER@
 CUDA_MEMCHECK=@CUDA_INSTALL_PATH@/bin/cuda-memcheck
 
 TESTS=memcheck_local.sh memcheck_cuda.sh
-check_PROGRAMS = ${TESTS} memcheck
+check_PROGRAMS = memcheck
+check_SCRIPTS = ${TESTS} memcheck
 
 all-local: tests
 tests: check-TESTS
 
-memcheck:
-	${CUDA_COMPILER} memcheck.cu -o memcheck
+memcheck_SOURCES = memcheck.cu
 
 memcheck_local.sh: memcheck
 	@echo "echo '+-------------------------------------------------------+'" > memcheck_local.sh
