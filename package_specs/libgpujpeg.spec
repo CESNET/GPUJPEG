@@ -3,7 +3,7 @@
 
 
 Name:	libgpujpeg
-Version:	20180511
+Version:	20200220
 Release:	00%{?dist}
 Summary:	Experimental GPU JPEG codec implementation
 Group:	Development/Libraries
@@ -35,17 +35,21 @@ BuildRequires:	clang
 %if 0%{?sle_version} < 120300
 BuildRequires:  cuda-minimal-build-9-0
 %else
+%if 0%{?sle_version} >= 150000 && 0%{?sle_version} <= 160000
+BuildRequires:  cuda-minimal-build-10-2
+%else
 BuildRequires:  cuda-minimal-build-9-2
 %endif
+%endif
 ##
-#%if 0%{?sle_version} <= 120300
+#if 0{?sle_version} <= 120300
 ### leap 42
 BuildRequires:  clang
 %define cuda_host_compiler --with-cuda-host-compiler=clang
-#%else
+#else
 ### leap 15 + - sle_version 150000
 #BuildRequires:  gcc
-#%endif
+#endif
 
 
 %else
@@ -115,7 +119,7 @@ sh -c "$(ldd bin/gpujpeg $(find . -name '*.so*') 2>/dev/null | grep cuda | grep 
 
 %files
 %defattr(-,root,root,-)
-%doc AUTHORS ChangeLog COPYING NEWS README
+%doc AUTHORS ChangeLog COPYING NEWS
 %{_libdir}/libgpujpeg*.so.*
 %dir %{_libdir}/libgpujpeg
 %{_libdir}/libgpujpeg/*cuda*
@@ -134,7 +138,7 @@ sh -c "$(ldd bin/gpujpeg $(find . -name '*.so*') 2>/dev/null | grep cuda | grep 
 %{_libdir}/libgpujpeg/config.h
 
 %changelog
-* Fri May 11 2018 Lukas Rucka <xrucka@fi.muni.cz> 20180511
+* Fri May 11 2018 Lukas Rucka <xrucka@fi.muni.cz> 20200220
 - Upgrade package specification to match cuda-9
 
 * Wed Nov 1 2017 Lukas Rucka <xrucka@fi.muni.cz> 20170331
