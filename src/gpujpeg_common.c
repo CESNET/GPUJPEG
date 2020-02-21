@@ -1496,18 +1496,18 @@ gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
 enum gpujpeg_pixel_format
 gpujpeg_pixel_format_by_name(const char *name)
 {
-for (size_t i = 0; sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
-    if (strcmp(gpujpeg_pixel_format_desc[i].name, name) == 0) {
-        return gpujpeg_pixel_format_desc[i].pixel_format;
+    for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+        if (strcmp(gpujpeg_pixel_format_desc[i].name, name) == 0) {
+            return gpujpeg_pixel_format_desc[i].pixel_format;
+        }
     }
-}
-return GPUJPEG_PIXFMT_NONE;
+    return GPUJPEG_PIXFMT_NONE;
 }
 
 int
 gpujpeg_pixel_format_get_comp_count(enum gpujpeg_pixel_format pixel_format)
 {
-    for (size_t i = 0; sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+    for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
         if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
             return gpujpeg_pixel_format_desc[i].comp_count;
         }
@@ -1518,7 +1518,7 @@ gpujpeg_pixel_format_get_comp_count(enum gpujpeg_pixel_format pixel_format)
 const char*
 gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format)
 {
-    for (size_t i = 0; sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+    for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
         if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
             return gpujpeg_pixel_format_desc[i].name;
         }
@@ -1528,9 +1528,9 @@ gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format)
 
 int gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format)
 {
-    for (size_t i = 0; sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+    for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
         if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
-            return gpujpeg_pixel_format_desc[i].flags & PLANAR;
+            return (gpujpeg_pixel_format_desc[i].flags & PLANAR) != 0U;
         }
     }
     return -1;
@@ -1538,9 +1538,9 @@ int gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format)
 
 int gpujpeg_pixel_format_is_subsampled(enum gpujpeg_pixel_format pixel_format)
 {
-    for (size_t i = 0; sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+    for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
         if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
-            return gpujpeg_pixel_format_desc[i].flags & SUBSAMPL;
+            return (gpujpeg_pixel_format_desc[i].flags & SUBSAMPL) != 0U;
         }
     }
     return -1;

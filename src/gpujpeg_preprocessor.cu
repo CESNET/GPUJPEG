@@ -560,7 +560,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
             if (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 2
                 || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
                 || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
-                fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only to 4:2:0 subsampling inside JPEG is used.");
+                fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only to 4:2:0 subsampling inside JPEG is used.\n");
                 return -1;
             }
             return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
