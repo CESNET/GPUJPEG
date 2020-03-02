@@ -1,5 +1,6 @@
 GPUJPEG
 =======
+[![@gpujpeg:matrix.org](https://img.shields.io/badge/Matrix-chat-black)](https://matrix.to/#/!ppSneXxiHfvznPxTTN:matrix.org?via=matrix.org)
 
 **JPEG** encoder and decoder library and console application for **NVIDIA GPUs**.
 
