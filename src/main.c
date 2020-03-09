@@ -50,10 +50,10 @@ print_help()
     printf("   -s, --size             set input image size in pixels, e.g. 1920x1080\n"
            "   -f, --pixel-format     set input/output image pixel format, one of the\n"
            "                          following:\n"
-           "                          u8               422-u8-p1020\n"
-           "                          444-u8-p012      422-u8-p0p1p2\n"
+           "                          u8               444-u8-p0p1p2\n"
+           "                          444-u8-p012      422-u8-p1020\n"
+           "                          444-u8-p012a     422-u8-p0p1p2\n"
            "                          444-u8-p012z     420-u8-p0p1p2\n"
-           "                          444-u8-p0p1p2\n"
            "\n"
            "   -c, --colorspace       set input/output image colorspace, e.g. rgb,\n"
            "                          ycbcr, ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
@@ -371,7 +371,7 @@ main(int argc, char *argv[])
         enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(argv[encode ? 0 : 1]);
         switch (format) {
         case GPUJPEG_IMAGE_FILE_RGBA:
-            param_image.pixel_format = GPUJPEG_444_U8_P012Z;
+            param_image.pixel_format = GPUJPEG_444_U8_P012A;
             break;
         case GPUJPEG_IMAGE_FILE_I420:
             param_image.pixel_format = GPUJPEG_420_U8_P0P1P2;

@@ -102,16 +102,18 @@ const static struct {
     enum gpujpeg_pixel_format pixel_format;
     uint32_t flags;
     int comp_count;
+    int bpp; ///< bytes per pixel, not relevant for planar formats
     const char *name;
 } gpujpeg_pixel_format_desc[] = {
-    { GPUJPEG_PIXFMT_NONE,   0,               0, "(unknown)" },
-    { GPUJPEG_U8,            0,               1, "u8" },
-    { GPUJPEG_444_U8_P012,   0,               3, "444-u8-p012" },
-    { GPUJPEG_444_U8_P0P1P2, PLANAR,          3, "444-u8-p0p1p2" },
-    { GPUJPEG_422_U8_P1020,  SUBSAMPL,        3, "422-u8-p1020" },
-    { GPUJPEG_422_U8_P0P1P2, PLANAR|SUBSAMPL, 3, "422-u8-p0p1p2" },
-    { GPUJPEG_420_U8_P0P1P2, PLANAR|SUBSAMPL, 3, "420-u8-p0p1p2" },
-    { GPUJPEG_444_U8_P012Z,  0,               3, "444-u8-p012z" },
+    { GPUJPEG_PIXFMT_NONE,   0,               0, 0, "(unknown)" },
+    { GPUJPEG_U8,            0,               1, 1, "u8" },
+    { GPUJPEG_444_U8_P012,   0,               3, 3, "444-u8-p012" },
+    { GPUJPEG_444_U8_P0P1P2, PLANAR,          3, 0, "444-u8-p0p1p2" },
+    { GPUJPEG_422_U8_P1020,  SUBSAMPL,        3, 2, "422-u8-p1020" },
+    { GPUJPEG_422_U8_P0P1P2, PLANAR|SUBSAMPL, 3, 0, "422-u8-p0p1p2" },
+    { GPUJPEG_420_U8_P0P1P2, PLANAR|SUBSAMPL, 3, 0, "420-u8-p0p1p2" },
+    { GPUJPEG_444_U8_P012Z,  0,               3, 4, "444-u8-p012z" },
+    { GPUJPEG_444_U8_P012A,  0,               3, 4, "444-u8-p012a" },
 };
 
 /* Documented at declaration */
@@ -930,24 +932,20 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
 int
 gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
 {
+    int bpp = gpujpeg_pixel_format_get_unit_size(param->pixel_format);
+    if (bpp != 0) {
+        return param->width * param->height * bpp;
+    }
     switch (param->pixel_format) {
-    case GPUJPEG_U8:
-        assert(param->comp_count == 1);
-        return param->width * param->height;
-    case GPUJPEG_444_U8_P012:
     case GPUJPEG_444_U8_P0P1P2:
         assert(param->comp_count == 3);
         return param->width * param->height * param->comp_count;
-    case GPUJPEG_422_U8_P1020:
     case GPUJPEG_422_U8_P0P1P2:
         assert(param->comp_count == 3);
         return param->width * param->height * 2;
     case GPUJPEG_420_U8_P0P1P2:
         assert(param->comp_count == 3);
         return ((param->width * param->height) * 3) / 2;
-    case GPUJPEG_444_U8_P012Z:
-        assert(param->comp_count == 3);
-        return param->width * param->height * 4;
     default:
         assert(0);
         return 0;
@@ -1524,6 +1522,17 @@ gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format)
         }
     }
     return NULL;
+}
+
+GPUJPEG_API int
+gpujpeg_pixel_format_get_unit_size(enum gpujpeg_pixel_format pixel_format)
+{
+    for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+        if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
+            return gpujpeg_pixel_format_desc[i].bpp;
+        }
+    }
+    return 0;
 }
 
 int gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format)

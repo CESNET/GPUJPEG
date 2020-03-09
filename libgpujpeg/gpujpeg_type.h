@@ -102,6 +102,10 @@ enum gpujpeg_pixel_format {
     /// 8bit unsigned samples, 3 components, each pixel padded to 32bits
     /// with zero byte, 4:4:4 sampling, interleaved
     GPUJPEG_444_U8_P012Z =  6,
+
+    /// 8bit unsigned samples, 3 components, each pixel padded to 32bits
+    /// with all-one bits, 4:4:4 sampling, interleaved
+    GPUJPEG_444_U8_P012A = 7,
 };
 
 /**

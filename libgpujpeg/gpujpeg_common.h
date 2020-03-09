@@ -715,6 +715,10 @@ gpujpeg_pixel_format_get_comp_count(enum gpujpeg_pixel_format pixel_format);
 GPUJPEG_API const char*
 gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format);
 
+/** Returns number of bytes per pixel */
+GPUJPEG_API int
+gpujpeg_pixel_format_get_unit_size(enum gpujpeg_pixel_format pixel_format);
+
 /** Returns true if a pixel format is planar */
 GPUJPEG_API int
 gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format);
