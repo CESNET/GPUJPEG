@@ -479,8 +479,10 @@ gpujpeg_reader_read_dri(struct gpujpeg_decoder* decoder, uint8_t** image)
     if ( restart_interval == decoder->reader->param.restart_interval )
         return 0;
 
-    if ( decoder->reader->param.restart_interval != 0 ) {
-        fprintf(stderr, "[GPUJPEG] [Error] DRI marker can't redefine restart interval!");
+    if ( decoder->reader->param.restart_interval != 0
+            && decoder->reader->param.restart_interval != restart_interval ) {
+        fprintf(stderr, "[GPUJPEG] [Error] DRI marker can't redefine restart interval (%d to %d)!\n",
+                decoder->reader->param.restart_interval, restart_interval );
         fprintf(stderr, "This may be caused when more DRI markers are presented which is not supported!\n");
         return -1;
     }
