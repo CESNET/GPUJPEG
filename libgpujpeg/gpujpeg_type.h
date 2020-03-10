@@ -59,6 +59,11 @@ extern "C" {
 /** Maximum number of segment info header in stream */
 #define GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT   100
 
+/** Errors */
+#define GPUJPEG_NOERR                           0
+#define GPUJPEG_ERROR                           (-1)
+#define GPUJPEG_ERR_WRONG_SUBSAMPLING           (-2)
+
 /**
  * Color spaces for JPEG codec
  */

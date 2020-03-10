@@ -287,6 +287,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
 
     // Get coder
     struct gpujpeg_coder* coder = &encoder->coder;
+    int rc;
 
     // (Re)initialize encoder
     if (coder->param.quality != param->quality) {
@@ -400,8 +401,9 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
     GPUJPEG_CUSTOM_TIMER_START(encoder->in_gpu);
 
     // Preprocessing
-    if (0 != gpujpeg_preprocessor_encode(encoder)) {
-        return -1;
+    rc = gpujpeg_preprocessor_encode(encoder);
+    if (rc != GPUJPEG_NOERR) {
+        return rc;
     }
 
     // Perform DCT and quantization

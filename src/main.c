@@ -157,6 +157,8 @@ main(int argc, char *argv[])
     int restart_interval_default = 1;
     int chroma_subsampled = 0;
 
+    int rc;
+
     param_image.color_space = GPUJPEG_NONE;
     param_image.pixel_format = GPUJPEG_PIXFMT_NONE;
 
@@ -493,7 +495,11 @@ main(int argc, char *argv[])
 
                 GPUJPEG_TIMER_START();
 
-                if ( gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size) != 0 ) {
+                rc = gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size);
+                if ( rc != GPUJPEG_NOERR ) {
+                    if ( rc == GPUJPEG_ERR_WRONG_SUBSAMPLING ) {
+                        fprintf(stderr, "Consider using '--subsampling' option!\n");
+                    }
                     fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
                     return -1;
                 }

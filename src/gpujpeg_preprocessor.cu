@@ -540,7 +540,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
                 || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
                 fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when 4:4:4 subsampling inside JPEG is used.\n");
-                return -1;
+                return GPUJPEG_ERR_WRONG_SUBSAMPLING;
             }
             return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
         }
@@ -550,7 +550,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
                 || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
                 fprintf(stderr, "Encoding JPEG from pixel format 422-u8-p0p1p2 is supported only to 4:2:2 subsampling inside JPEG is used.\n");
-                return -1;
+                return GPUJPEG_ERR_WRONG_SUBSAMPLING;
             }
             return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
         }
@@ -560,7 +560,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
                 || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
                 || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
                 fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only to 4:2:0 subsampling inside JPEG is used.\n");
-                return -1;
+                return GPUJPEG_ERR_WRONG_SUBSAMPLING;
             }
             return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
         }
@@ -872,7 +872,7 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
         fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s to %s).\n",
                 gpujpeg_subsampling_get_name(coder->param_image.comp_count, coder->component),
                 gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));
-        return -1;
+        return GPUJPEG_ERR_WRONG_SUBSAMPLING;
     }
 
     size_t data_raw_offset = 0;

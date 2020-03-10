@@ -205,6 +205,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
 {
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
+    int rc;
 
     // Reset durations
     coder->duration_huffman_cpu = 0.0;
@@ -305,8 +306,9 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     }
 
     // Preprocessing
-    if (0 != gpujpeg_preprocessor_decode(&decoder->coder, *(decoder->stream))) {
-        return -1;
+    rc = gpujpeg_preprocessor_decode(&decoder->coder, *(decoder->stream));
+    if (rc != GPUJPEG_NOERR) {
+        return rc;
     }
 
     // Wait for async operations before copying from the device

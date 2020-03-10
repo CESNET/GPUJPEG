@@ -53,6 +53,9 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder);
  * @param encoder  Encoder structure
  * @param image  Image source data
  * @return 0 if succeeds, otherwise nonzero
+ * @retval  0 if succeeds
+ * @retval -1 general error
+ * @retval -2 planar pixel format cannot be encoded with specified subsampling
  */
 int
 gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder);
@@ -71,7 +74,9 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder);
  *
  * @param coder
  * @param stream
- * @return 0 if succeeds, otherwise nonzero
+ * @retval  0 if succeeds
+ * @retval -1 general error
+ * @retval -2 JPEG with source subsampling cannot be decoded to specified planar pixel format
  */
 int
 gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream);
