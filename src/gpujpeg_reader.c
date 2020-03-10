@@ -464,7 +464,8 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
  *
  * @param decoder
  * @param image
- * @return 0 if succeeds, otherwise nonzero
+ * @retval  0 if succeeds
+ * @retval -3 on restart interval redefinition
  */
 int
 gpujpeg_reader_read_dri(struct gpujpeg_decoder* decoder, uint8_t** image)
@@ -484,7 +485,7 @@ gpujpeg_reader_read_dri(struct gpujpeg_decoder* decoder, uint8_t** image)
         fprintf(stderr, "[GPUJPEG] [Error] DRI marker can't redefine restart interval (%d to %d)!\n",
                 decoder->reader->param.restart_interval, restart_interval );
         fprintf(stderr, "This may be caused when more DRI markers are presented which is not supported!\n");
-        return -1;
+        return GPUJPEG_ERR_RESTART_CHANGE;
     }
 
     decoder->reader->param.restart_interval = restart_interval;
@@ -816,6 +817,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
 int
 gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size)
 {
+    int rc;
     // Setup reader and decoder
     decoder->reader->param = decoder->coder.param;
     decoder->reader->param_image = decoder->coder.param_image;
@@ -934,8 +936,9 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
 
         case GPUJPEG_MARKER_DRI:
-            if ( gpujpeg_reader_read_dri(decoder, &image) != 0 )
-                return -1;
+            rc = gpujpeg_reader_read_dri(decoder, &image);
+            if ( rc != 0 )
+                return rc;
             break;
 
         case GPUJPEG_MARKER_SOS:

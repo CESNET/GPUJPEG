@@ -63,6 +63,7 @@ extern "C" {
 #define GPUJPEG_NOERR                           0
 #define GPUJPEG_ERROR                           (-1)
 #define GPUJPEG_ERR_WRONG_SUBSAMPLING           (-2)
+#define GPUJPEG_ERR_RESTART_CHANGE              (-3)
 
 /**
  * Color spaces for JPEG codec

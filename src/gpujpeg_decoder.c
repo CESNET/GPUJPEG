@@ -218,9 +218,9 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     GPUJPEG_CUSTOM_TIMER_START(decoder->def);
 
     // Read JPEG image data
-    if (0 != gpujpeg_reader_read_image(decoder, image, image_size)) {
+    if (0 != (rc = gpujpeg_reader_read_image(decoder, image, image_size))) {
         fprintf(stderr, "[GPUJPEG] [Error] Decoder failed when decoding image data!\n");
-        return -1;
+        return rc;
     }
 
     GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);

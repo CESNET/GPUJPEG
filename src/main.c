@@ -649,7 +649,10 @@ main(int argc, char *argv[])
                 GPUJPEG_TIMER_START();
 
                 // Decode image
-                if ( gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output) != 0 ) {
+                if ( (rc = gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output)) != 0 ) {
+                    if (rc == GPUJPEG_ERR_RESTART_CHANGE && param_image.width != 0 && param_image.height != 0) {
+                        fprintf(stderr, "Hint: Do not enter image dimensions to avoid preinitialization or correctly specify restart interval.\n");
+                    }
                     fprintf(stderr, "Failed to decode image [%s]!\n", argv[index]);
                     return -1;
                 }
