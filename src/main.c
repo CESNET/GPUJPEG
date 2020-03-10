@@ -34,7 +34,9 @@
 #include <libgpujpeg/gpujpeg.h>
 #include <libgpujpeg/gpujpeg_common.h>
 #include <libgpujpeg/gpujpeg_util.h>
-#if defined(__linux__)
+#if defined(_MSC_VER)
+    #include <libgpujpeg/gpujpeg_getopt_mingw.h>
+#else
     #include <getopt.h>
 #endif
 
@@ -158,7 +160,6 @@ main(int argc, char *argv[])
     param_image.color_space = GPUJPEG_NONE;
     param_image.pixel_format = GPUJPEG_PIXFMT_NONE;
 
-#if defined(__linux__)
     // Parse command line
     #define OPTION_DEVICE_INFO     1
     #define OPTION_SUBSAMPLED      2
@@ -300,10 +301,6 @@ main(int argc, char *argv[])
     }
     argc -= optind;
     argv += optind;
-#else
-    fprintf(stderr, "Parsing command line options isn't implemented in current OS\n");
-    return -1;
-#endif
 
     // Show info about image samples range
     if ( component_range == 1 ) {
