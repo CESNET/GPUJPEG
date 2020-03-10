@@ -62,7 +62,7 @@ print_help()
            "\n");
     printf("   -q, --quality          set JPEG encoder quality level 0-100 (default 75)\n"
            "   -r, --restart          set JPEG encoder restart interval (default 8)\n"
-           "       --subsampled       set JPEG encoder to use chroma subsampling\n"
+           "       --subsampled[=<s>] set JPEG encoder to use chroma subsampling (default 420)\n"
            "   -i  --interleaved      set JPEG encoder to use interleaved stream\n"
            "   -g  --segment-info     set JPEG encoder to use segment info in stream\n"
            "                          for fast decoding\n"
@@ -253,8 +253,17 @@ main(int argc, char *argv[])
                 param.segment_info = 0;
             break;
         case OPTION_SUBSAMPLED:
-            gpujpeg_parameters_chroma_subsampling_420(&param);
             chroma_subsampled = 1;
+            if ( optarg == NULL || strcmp(optarg, "420") == 0 )
+                gpujpeg_parameters_chroma_subsampling_420(&param);
+            else if ( strcmp(optarg, "422") == 0 )
+                gpujpeg_parameters_chroma_subsampling_422(&param);
+            else if ( strcmp(optarg, "444") == 0 )
+                chroma_subsampled = 0;
+            else {
+                fprintf(stderr, "Unknown subsampling '%s'!\n", optarg);
+                return 1;
+            }
             break;
         case OPTION_DEVICE_INFO:
             gpujpeg_print_devices_info();
