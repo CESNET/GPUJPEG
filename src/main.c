@@ -202,12 +202,12 @@ main(int argc, char *argv[])
             param.verbose = 1;
             break;
         case 's':
-            param_image.width = atoi(optarg);
             pos = strstr(optarg, "x");
-            if ( pos == NULL || param_image.width == 0 || (strlen(pos) >= strlen(optarg)) ) {
-                print_help();
+            if ( pos == NULL || pos == optarg ) {
+                fprintf(stderr, "Incorrect image size '%s'! Use a format 'WxH'.\n", optarg);
                 return -1;
             }
+            param_image.width = atoi(optarg);
             param_image.height = atoi(pos + 1);
             break;
         case 'c':
@@ -306,6 +306,7 @@ main(int argc, char *argv[])
         case '?':
             return -1;
         default:
+            fprintf(stderr, "Unrecognized option '%c' (code 0%o)\n", ch, ch);
             print_help();
             return -1;
         }
