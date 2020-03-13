@@ -1524,7 +1524,7 @@ gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format)
     return NULL;
 }
 
-GPUJPEG_API int
+int
 gpujpeg_pixel_format_get_unit_size(enum gpujpeg_pixel_format pixel_format)
 {
     for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {

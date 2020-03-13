@@ -117,12 +117,13 @@ application (including project file for MSVS) or a plain old _Makefile.bkp_.
 In _Windows_ you may want to avoid using build system at all and use the
 following command directly:
 
-    nvcc -I. -DGPUJPEG_EXPORTS -o gpujpeg.dll --shared src/gpujpeg_*c src/gpujpeg*cu
+    nvcc -I. -DGPUJPEG_EXPORTS -o gpujpeg.dll --shared src/gpujpeg_*c src/gpujpeg*cu # library
+    nvcc -I. -o gpujpeg src/*c src/*cu # console application
 
 or (in _Linux_):
 
     nvcc -I. -Xcompiler -fPIC -o gpujpeg.so --shared src/gpujpeg_*c src/gpujpeg*cu # library
-    nvcc -o gpujpeg src/*c src/*cu # console application
+    nvcc -I -o gpujpeg src/*c src/*cu # console application
 
 Usage
 -----
