@@ -190,7 +190,7 @@ main(int argc, char *argv[])
         {"rgb",                     no_argument,       0,  'R' },
         0
     };
-    char ch = '\0';
+    int ch = '\0';
     int optindex = 0;
     char* pos = 0;
     while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:oI:R", longopts, &optindex)) != -1 ) {
