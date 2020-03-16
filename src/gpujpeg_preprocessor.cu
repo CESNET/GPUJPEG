@@ -506,7 +506,7 @@ gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
                     data_raw_offset += component_size;
             }
     } else {
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < coder->param_image.comp_count; ++i) {
                     int spitch = coder->component[i].width;
                     int dpitch = coder->component[i].data_width;
                     size_t component_size = spitch * coder->component[i].height;
