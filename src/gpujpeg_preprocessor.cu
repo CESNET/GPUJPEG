@@ -484,8 +484,10 @@ static int
 gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder * coder = &encoder->coder;
-    assert(coder->param_image.comp_count == 3);
-    if (coder->param_image.color_space != coder->param.color_space_internal) {
+    assert(coder->param_image.comp_count == 1 ||
+            coder->param_image.comp_count == 3);
+
+    if (coder->param_image.comp_count == 3 && coder->param_image.color_space != coder->param.color_space_internal) {
             fprintf(stderr, "Encoding JPEG from a planar pixel format supported only when no color transformation is required. "
                             "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
                             gpujpeg_color_space_get_name(coder->param.color_space_internal),
@@ -493,10 +495,12 @@ gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
             return -1;
     }
     size_t data_raw_offset = 0;
-    if (coder->component[0].width == coder->component[0].data_width &&
-                    coder->component[1].width == coder->component[1].data_width &&
-                    coder->component[2].width == coder->component[2].data_width) {
-            for (int i = 0; i < 3; ++i) {
+    bool needs_stride = false;
+    for (int i = 0; i < coder->param_image.comp_count; ++i) {
+        needs_stride = needs_stride || coder->component[i].width != coder->component[i].data_width;
+    }
+    if (!needs_stride) {
+            for (int i = 0; i < coder->param_image.comp_count; ++i) {
                     size_t component_size = coder->component[i].width * coder->component[i].height;
                     cudaMemcpyAsync(coder->component[i].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, *(encoder->stream));
                     data_raw_offset += component_size;
@@ -523,8 +527,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
         case GPUJPEG_U8:
         {
             assert(coder->param_image.comp_count == 1);
-            cudaMemcpyAsync(coder->d_data, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice, *(encoder->stream));
-            return 0;
+            return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
         }
         case GPUJPEG_444_U8_P012:
         case GPUJPEG_444_U8_P012A:
@@ -855,8 +858,9 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 static int
 gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cudaStream_t stream)
 {
-    assert(coder->param_image.comp_count == 3);
-    if (coder->param_image.color_space != coder->param.color_space_internal) {
+    assert(coder->param_image.comp_count == 1 ||
+            coder->param_image.comp_count == 3);
+    if (coder->param_image.comp_count == 3 && coder->param_image.color_space != coder->param.color_space_internal) {
             fprintf(stderr, "Decoding JPEG to a planar pixel format is supported only when no color transformation is required. "
                             "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
                             gpujpeg_color_space_get_name(coder->param.color_space_internal),
@@ -864,11 +868,12 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
             return -1;
     }
 
-    if ((coder->param_image.pixel_format == GPUJPEG_444_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 1 || coder->component[0].sampling_factor.vertical != 1))
-            || (coder->param_image.pixel_format == GPUJPEG_422_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 1))
-            || (coder->param_image.pixel_format == GPUJPEG_420_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 2))
-                || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
-                || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
+    if (coder->param_image.comp_count == 3 &&
+            ((coder->param_image.pixel_format == GPUJPEG_444_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 1 || coder->component[0].sampling_factor.vertical != 1))
+             || (coder->param_image.pixel_format == GPUJPEG_422_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 1))
+             || (coder->param_image.pixel_format == GPUJPEG_420_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 2))
+             || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
+             || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1)) {
         fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s to %s).\n",
                 gpujpeg_subsampling_get_name(coder->param_image.comp_count, coder->component),
                 gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));
@@ -876,16 +881,19 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
     }
 
     size_t data_raw_offset = 0;
-    if (coder->component[0].width == coder->component[0].data_width &&
-                    coder->component[1].width == coder->component[1].data_width &&
-                    coder->component[2].width == coder->component[2].data_width) {
-            for (int i = 0; i < 3; ++i) {
+    bool needs_stride = false;
+    for (int i = 0; i < coder->param_image.comp_count; ++i) {
+        needs_stride = needs_stride || coder->component[i].width != coder->component[i].data_width;
+    }
+
+    if (!needs_stride) {
+            for (int i = 0; i < coder->param_image.comp_count; ++i) {
                     size_t component_size = coder->component[i].width * coder->component[i].height;
                     cudaMemcpyAsync(coder->d_data_raw + data_raw_offset, coder->component[i].d_data, component_size, cudaMemcpyDeviceToDevice, stream);
                     data_raw_offset += component_size;
             }
     } else {
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < coder->param_image.comp_count; ++i) {
                     int spitch = coder->component[i].data_width;
                     int dpitch = coder->component[i].width;
                     size_t component_size = spitch * coder->component[i].height;
@@ -902,12 +910,8 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
 int
 gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
-    if (coder->param_image.comp_count == 1) {
-        cudaMemcpyAsync(coder->d_data_raw, coder->d_data, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice, stream);
-        return 0;
-    }
-
-    if (gpujpeg_pixel_format_is_planar(coder->param_image.pixel_format)) {
+    if (coder->param_image.comp_count == 1 ||
+            gpujpeg_pixel_format_is_planar(coder->param_image.pixel_format)) {
         return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);
     }
 
