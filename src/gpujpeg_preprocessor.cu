@@ -410,6 +410,8 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder* coder = &encoder->coder;
 
+    assert(coder->param_image.comp_count == 3);
+
     cudaMemsetAsync(coder->d_data, 0, coder->data_size * sizeof(uint8_t), *(encoder->stream));
     gpujpeg_cuda_check_error("Preprocessor memset failed", return -1);
 
@@ -495,7 +497,7 @@ gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
             return -1;
     }
     size_t data_raw_offset = 0;
-    bool needs_stride = false;
+    bool needs_stride = false; // true if width is not divisible by MCU width
     for (int i = 0; i < coder->param_image.comp_count; ++i) {
         needs_stride = needs_stride || coder->component[i].width != coder->component[i].data_width;
     }
@@ -523,55 +525,20 @@ int
 gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder * coder = &encoder->coder;
-    switch (coder->param_image.pixel_format) {
-        case GPUJPEG_U8:
-        {
-            assert(coder->param_image.comp_count == 1);
-            return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
-        }
-        case GPUJPEG_444_U8_P012:
-        case GPUJPEG_444_U8_P012A:
-        case GPUJPEG_444_U8_P012Z:
-        case GPUJPEG_422_U8_P1020:
-        {
-            assert(coder->param_image.comp_count == 3);
+    if (gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format)) {
             return gpujpeg_preprocessor_encode_interlaced(encoder);
-        }
-        case GPUJPEG_444_U8_P0P1P2:
-        {
-            if (coder->component[0].sampling_factor.horizontal != 1 || coder->component[0].sampling_factor.vertical != 1
-                || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
-                || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
-                fprintf(stderr, "Encoding JPEG from pixel format 444-u8-p0p1p2 is supported only when 4:4:4 subsampling inside JPEG is used.\n");
+    } else {
+        const int *sampling_factors = gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
+        for (int i = 0; i < coder->param_image.comp_count; ++i) {
+            if (coder->component[i].sampling_factor.horizontal != sampling_factors[i * 2]
+                    || coder->component[0].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
+                const char *name = gpujpeg_pixel_format_get_name(coder->param_image.pixel_format);
+                fprintf(stderr, "Encoding JPEG from pixel format %s is supported only when %c:%c:%c subsampling inside JPEG is used.\n",
+                        name, name[0], name[1], name[2]);
                 return GPUJPEG_ERR_WRONG_SUBSAMPLING;
             }
-            return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
         }
-        case GPUJPEG_422_U8_P0P1P2:
-        {
-            if (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 1
-                || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
-                || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
-                fprintf(stderr, "Encoding JPEG from pixel format 422-u8-p0p1p2 is supported only to 4:2:2 subsampling inside JPEG is used.\n");
-                return GPUJPEG_ERR_WRONG_SUBSAMPLING;
-            }
-            return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
-        }
-        case GPUJPEG_420_U8_P0P1P2:
-        {
-            if (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 2
-                || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
-                || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1) {
-                fprintf(stderr, "Encoding JPEG from pixel format 420-u8-p0p1p2 is supported only to 4:2:0 subsampling inside JPEG is used.\n");
-                return GPUJPEG_ERR_WRONG_SUBSAMPLING;
-            }
-            return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
-        }
-        default:
-        {
-            fprintf(stderr, "Unknown pixel format %d to be preprocessed.", coder->param_image.pixel_format);
-            return -1;
-        }
+        return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
     }
 }
 
@@ -816,11 +783,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
-    if (coder->param_image.comp_count == 1) {
-        return 0;
-    }
-
-    if (gpujpeg_pixel_format_is_planar(coder->param_image.pixel_format)) {
+    if (!gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format)) {
         return 0;
     }
 
@@ -868,24 +831,23 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
             return -1;
     }
 
-    if (coder->param_image.comp_count == 3 &&
-            ((coder->param_image.pixel_format == GPUJPEG_444_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 1 || coder->component[0].sampling_factor.vertical != 1))
-             || (coder->param_image.pixel_format == GPUJPEG_422_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 1))
-             || (coder->param_image.pixel_format == GPUJPEG_420_U8_P0P1P2 && (coder->component[0].sampling_factor.horizontal != 2 || coder->component[0].sampling_factor.vertical != 2))
-             || coder->component[1].sampling_factor.horizontal != 1 || coder->component[1].sampling_factor.vertical != 1
-             || coder->component[2].sampling_factor.horizontal != 1 || coder->component[2].sampling_factor.vertical != 1)) {
-        fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s to %s).\n",
-                gpujpeg_subsampling_get_name(coder->param_image.comp_count, coder->component),
-                gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));
-        return GPUJPEG_ERR_WRONG_SUBSAMPLING;
+    const int *sampling_factors = gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
+    for (int i = 0; i < coder->param_image.comp_count; ++i) {
+        if (coder->component[i].sampling_factor.horizontal != sampling_factors[i * 2]
+                || coder->component[0].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
+            const char *name = gpujpeg_pixel_format_get_name(coder->param_image.pixel_format);
+            fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s to %s).\n",
+                    gpujpeg_subsampling_get_name(coder->param_image.comp_count, coder->component),
+                    gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));
+            return GPUJPEG_ERR_WRONG_SUBSAMPLING;
+        }
     }
 
     size_t data_raw_offset = 0;
-    bool needs_stride = false;
+    bool needs_stride = false; // true if width is not divisible by MCU width
     for (int i = 0; i < coder->param_image.comp_count; ++i) {
         needs_stride = needs_stride || coder->component[i].width != coder->component[i].data_width;
     }
-
     if (!needs_stride) {
             for (int i = 0; i < coder->param_image.comp_count; ++i) {
                     size_t component_size = coder->component[i].width * coder->component[i].height;
@@ -898,7 +860,6 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
                     int dpitch = coder->component[i].width;
                     size_t component_size = spitch * coder->component[i].height;
                     cudaMemcpy2DAsync(coder->d_data_raw + data_raw_offset, dpitch, coder->component[i].d_data, spitch, coder->component[i].width, coder->component[i].height, cudaMemcpyDeviceToDevice, stream);
-
                     data_raw_offset += component_size;
             }
     }
@@ -910,8 +871,7 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
 int
 gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
-    if (coder->param_image.comp_count == 1 ||
-            gpujpeg_pixel_format_is_planar(coder->param_image.pixel_format)) {
+    if (!gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format)) {
         return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);
     }
 
@@ -932,8 +892,7 @@ gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     }
 
     // Prepare unit size
-    int unitSize = (coder->param_image.pixel_format == GPUJPEG_444_U8_P012 || coder->param_image.pixel_format == GPUJPEG_444_U8_P0P1P2) ? 3 :
-            (coder->param_image.pixel_format == GPUJPEG_444_U8_P012Z ? 4 : 2);
+    int unitSize = gpujpeg_pixel_format_get_unit_size(coder->param_image.pixel_format);
 
     // Prepare kernel
     int alignedSize = gpujpeg_div_and_round_up(image_width * image_height, RGB_8BIT_THREADS) * RGB_8BIT_THREADS * unitSize;

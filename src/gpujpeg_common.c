@@ -104,16 +104,17 @@ const static struct {
     int comp_count;
     int bpp; ///< bytes per pixel, not relevant for planar formats
     const char *name;
+    int sampling_factor[8]; ///< native sampling factor for the pixfmt
 } gpujpeg_pixel_format_desc[] = {
-    { GPUJPEG_PIXFMT_NONE,   0,               0, 0, "(unknown)" },
-    { GPUJPEG_U8,            0,               1, 1, "u8" },
-    { GPUJPEG_444_U8_P012,   0,               3, 3, "444-u8-p012" },
-    { GPUJPEG_444_U8_P0P1P2, PLANAR,          3, 0, "444-u8-p0p1p2" },
-    { GPUJPEG_422_U8_P1020,  SUBSAMPL,        3, 2, "422-u8-p1020" },
-    { GPUJPEG_422_U8_P0P1P2, PLANAR|SUBSAMPL, 3, 0, "422-u8-p0p1p2" },
-    { GPUJPEG_420_U8_P0P1P2, PLANAR|SUBSAMPL, 3, 0, "420-u8-p0p1p2" },
-    { GPUJPEG_444_U8_P012Z,  0,               3, 4, "444-u8-p012z" },
-    { GPUJPEG_444_U8_P012A,  0,               3, 4, "444-u8-p012a" },
+    { GPUJPEG_PIXFMT_NONE,   0,               0, 0, "(unknown)", { 0 } },
+    { GPUJPEG_U8,            0,               1, 1, "u8", { 1, 1 } },
+    { GPUJPEG_444_U8_P012,   0,               3, 3, "444-u8-p012", { 1, 1, 1, 1, 1, 1 } },
+    { GPUJPEG_444_U8_P0P1P2, PLANAR,          3, 0, "444-u8-p0p1p2", { 1, 1, 1, 1, 1, 1 } },
+    { GPUJPEG_422_U8_P1020,  SUBSAMPL,        3, 2, "422-u8-p1020", { 2, 1, 1, 1, 1, 1 } },
+    { GPUJPEG_422_U8_P0P1P2, PLANAR|SUBSAMPL, 3, 0, "422-u8-p0p1p2", { 2, 1, 1, 1, 1, 1 } },
+    { GPUJPEG_420_U8_P0P1P2, PLANAR|SUBSAMPL, 3, 0, "420-u8-p0p1p2", { 2, 2, 1, 1, 1, 1 } },
+    { GPUJPEG_444_U8_P012Z,  0,               3, 4, "444-u8-p012z", { 1, 1, 1, 1, 1, 1 } },
+    { GPUJPEG_444_U8_P012A,  0,               3, 4, "444-u8-p012a", { 1, 1, 1, 1, 1, 1 } },
 };
 
 /* Documented at declaration */
@@ -1524,6 +1525,17 @@ gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format)
     return NULL;
 }
 
+const int *
+gpujpeg_pixel_format_get_sampling_factor(enum gpujpeg_pixel_format pixel_format)
+{
+    for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+        if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
+            return gpujpeg_pixel_format_desc[i].sampling_factor;
+        }
+    }
+    return NULL;
+}
+
 int
 gpujpeg_pixel_format_get_unit_size(enum gpujpeg_pixel_format pixel_format)
 {
@@ -1533,6 +1545,12 @@ gpujpeg_pixel_format_get_unit_size(enum gpujpeg_pixel_format pixel_format)
         }
     }
     return 0;
+}
+
+int
+gpujpeg_pixel_format_is_interleaved(enum gpujpeg_pixel_format pixel_format)
+{
+    return gpujpeg_pixel_format_get_comp_count(pixel_format) > 1 && !gpujpeg_pixel_format_is_planar(pixel_format);
 }
 
 int gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format)
