@@ -100,7 +100,14 @@ struct gpujpeg_component;
  * returns the format W1xH1:W2xH2:W3xH3.
  */
 const char*
-gpujpeg_subsampling_get_name(int comp_count, struct gpujpeg_component *components);
+gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component *components);
+
+/**
+ * Returns gpujpeg_component[] which has sampling factors set
+ * native to given pixel_format
+ */
+const struct gpujpeg_component *
+gpujpeg_get_component_subsampling(enum gpujpeg_pixel_format pixel_format);
 
 #ifdef __cplusplus
 } // extern "C"

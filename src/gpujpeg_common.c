@@ -1449,26 +1449,43 @@ int gpujpeg_version()
 }
 
 const char*
-gpujpeg_subsampling_get_name(int comp_count, struct gpujpeg_component *components)
+gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component *components)
 {
     thread_local static char buf[128];
+    if (comp_count == 1) { // monochrome
+        strcpy(buf, "4:0:0");
+        return buf;
+    }
+
     if (comp_count == 3 && components[1].sampling_factor.horizontal == components[2].sampling_factor.horizontal
             && components[1].sampling_factor.vertical == components[2].sampling_factor.horizontal) {
         int J = 4;
         int a = J / components[0].sampling_factor.horizontal * components[1].sampling_factor.horizontal;
-        int vert_change = 2 / components[0].sampling_factor.vertical * components[1].sampling_factor.vertical == 2;
-        int b = J * vert_change;
+        int vert_change = 2 / components[0].sampling_factor.vertical * components[1].sampling_factor.vertical == 2; // 1 if there is a vertical chroma change between 2 lines, 0 otherwise
+        int b = a * vert_change;
         snprintf(buf, sizeof buf, "%d:%d:%d", J, a, b);
         return buf;
     }
 
+    // other cases - simply write the subsampling factors in format v0-h0:v1-h1[:...]
     buf[0] = '\0';
     for (int i = 0; i < comp_count; ++i) {
-        snprintf(buf + strlen(buf), sizeof buf - strlen(buf), "%s%d:%d", i != 0 ? ":" : "",
+        snprintf(buf + strlen(buf), sizeof buf - strlen(buf), "%s%d-%d", i != 0 ? ":" : "",
                 components[i].sampling_factor.horizontal, components[i].sampling_factor.vertical);
     }
 
     return buf;
+}
+
+const struct gpujpeg_component *
+gpujpeg_get_component_subsampling(enum gpujpeg_pixel_format pixel_format) {
+    thread_local static struct gpujpeg_component ret[4] = { };
+    const int *samp = gpujpeg_pixel_format_get_sampling_factor(pixel_format);
+    for (int i = 0; i < gpujpeg_pixel_format_get_comp_count(pixel_format); ++i) {
+        ret[i].sampling_factor.horizontal = samp[i * 2];
+        ret[i].sampling_factor.vertical = samp[i * 2 + 1];
+    }
+    return ret;
 }
 
 const char*
