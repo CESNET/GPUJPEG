@@ -98,3 +98,11 @@ if(GPUJPEG_OPENGL_ENABLED)
     #target_link_libraries(opengl_interop src)
 
 endif()
+
+add_custom_target(unittests make -C test/unit LIBDIR=${CMAKE_BINARY_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        DEPENDS gpujpeg)
+
+add_custom_target(tests
+        DEPENDS unittests)
+
