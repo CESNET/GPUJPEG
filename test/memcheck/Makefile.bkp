@@ -1,3 +1,6 @@
+CUDA_MEMCHECK ?= cuda-memcheck
+NVCC ?= nvcc
+
 build: memcheck
 	@echo "+-------------------------------------------------------+"
 	@echo "| Running without cuda memory checking (should pass)... |"
@@ -7,10 +10,10 @@ build: memcheck
 	@echo "+-----------------------------------------------------+"
 	@echo "| Running with cuda memory checking (may not pass)... |"
 	@echo "+-----------------------------------------------------+"
-	@/usr/local/cuda/bin/cuda-memcheck ./memcheck
+	@$(CUDA_MEMCHECK) ./memcheck
 
 clean:
 	rm -f *.o memcheck
 
 memcheck:
-	/usr/local/cuda/bin/nvcc memcheck.cu -o memcheck
+	$(NVCC) memcheck.cu -o memcheck
