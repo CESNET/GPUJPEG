@@ -1479,7 +1479,7 @@ gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component *com
 
 const struct gpujpeg_component *
 gpujpeg_get_component_subsampling(enum gpujpeg_pixel_format pixel_format) {
-    thread_local static struct gpujpeg_component ret[4] = { };
+    thread_local static struct gpujpeg_component ret[4] = { 0 };
     const int *samp = gpujpeg_pixel_format_get_sampling_factor(pixel_format);
     for (int i = 0; i < gpujpeg_pixel_format_get_comp_count(pixel_format); ++i) {
         ret[i].sampling_factor.horizontal = samp[i * 2];
