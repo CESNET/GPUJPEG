@@ -203,8 +203,8 @@ raw image data that we can encode by encoder, for example we can load it
 from file:
 
     int image_size = 0;
-    uint8_t* image = NULL;
-    if ( gpujpeg_image_load_from_file("input_image.rgb", &image,
+    uint8_t* input_image = NULL;
+    if ( gpujpeg_image_load_from_file("input_image.rgb", &input_image,
              &image_size) != 0 )
         return -1;
 
@@ -212,7 +212,7 @@ Next step is to encode uncompressed image data to JPEG compressed data
 by encoder:
 
     struct gpujpeg_encoder_input encoder_input;
-    gpujpeg_encoder_input_set_image(&encoder_input, image);
+    gpujpeg_encoder_input_set_image(&encoder_input, input_image);
 
     uint8_t* image_compressed = NULL;
     int image_compressed_size = 0;
@@ -232,7 +232,7 @@ Now we can load, encode and save next image or finish and move to clean up
 encoder. Finally we have to clean up so destroy loaded image and destroy
 the encoder.
 
-    gpujpeg_image_destroy(image);
+    gpujpeg_image_destroy(input_image);
     gpujpeg_encoder_destroy(encoder);
 
 #### Decoding
