@@ -4,6 +4,9 @@ GPUJPEG
 
 **JPEG** encoder and decoder library and console application for **NVIDIA GPUs**.
 
+This documents provides an introduction to the library and how to use it. You
+can also look at [FAQ](FAQ.md) for additional information.
+
 Table of contents
 -----------------
 - [Authors](#authors)
