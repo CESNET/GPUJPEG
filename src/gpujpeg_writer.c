@@ -28,10 +28,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <libgpujpeg/gpujpeg_writer.h>
 #include <libgpujpeg/gpujpeg_encoder.h>
-#include <libgpujpeg/gpujpeg_encoder_internal.h>
-#include <libgpujpeg/gpujpeg_util.h>
+#include "gpujpeg_encoder_internal.h"
+#include "gpujpeg_marker.h"
+#include "gpujpeg_util.h"
+#include "gpujpeg_writer.h"
 
 #if defined _MSC_VER && _MSC_VER < 1900 // VS 2015
 #define snprintf _snprintf

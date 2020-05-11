@@ -31,8 +31,8 @@
 #ifndef GPUJPEG_DCT_CPU_H
 #define GPUJPEG_DCT_CPU_H
 
-#include <libgpujpeg/gpujpeg_encoder_internal.h>
-#include <libgpujpeg/gpujpeg_decoder_internal.h>
+#include "gpujpeg_encoder_internal.h"
+#include "gpujpeg_decoder_internal.h"
 
 /**
  * Peform inverse DCT on CPU

@@ -31,6 +31,7 @@
 #ifndef GPUJPEG_COLORSPACE_H
 #define GPUJPEG_COLORSPACE_H
 
+#include <assert.h>
 #include <libgpujpeg/gpujpeg_type.h>
 
 /**

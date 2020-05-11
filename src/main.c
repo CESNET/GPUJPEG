@@ -28,17 +28,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <libgpujpeg/gpujpeg_common_internal.h> // TIMER
-#include <libgpujpeg/gpujpeg_encoder_internal.h> // TIMER
-#include <libgpujpeg/gpujpeg_decoder_internal.h> // TIMER
 #include <libgpujpeg/gpujpeg.h>
 #include <libgpujpeg/gpujpeg_common.h>
-#include <libgpujpeg/gpujpeg_util.h>
 #if defined(_MSC_VER)
-    #include <libgpujpeg/gpujpeg_getopt_mingw.h>
+    #include "gpujpeg_getopt_mingw.h"
 #else
     #include <getopt.h>
 #endif
+
+#include "gpujpeg_common_internal.h" // TIMER
+#include "gpujpeg_decoder_internal.h" // TIMER
+#include "gpujpeg_encoder_internal.h" // TIMER
+#include "gpujpeg_util.h"
 
 void
 print_help()

@@ -28,6 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <math.h>
 #include <stdbool.h>
 #include <string.h>
 #include <libgpujpeg/gpujpeg_encoder.h>
@@ -36,8 +37,8 @@
 #include "gpujpeg_dct_gpu.h"
 #include "gpujpeg_huffman_cpu_encoder.h"
 #include "gpujpeg_huffman_gpu_encoder.h"
-#include <math.h>
-#include <libgpujpeg/gpujpeg_util.h>
+#include "gpujpeg_marker.h"
+#include "gpujpeg_util.h"
 
 /* Documented at declaration */
 void

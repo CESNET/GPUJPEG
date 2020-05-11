@@ -1,5 +1,6 @@
 #include <libgpujpeg/gpujpeg.h>
-#include <libgpujpeg/gpujpeg_decoder_internal.h>
+#include <stdio.h>
+#include "../../src/gpujpeg_decoder_internal.h"
 #include "gpujpeg_reformat.h"
 #include <GL/glew.h>
 #include <GL/glut.h>
@@ -69,7 +70,7 @@ int main(int argc, char *argv[])
 
     // Get image size and check number of color components
     struct gpujpeg_image_parameters param_image;
-    if (0 != gpujpeg_reader_get_image_info(image, image_size, &param_image, NULL)) {
+    if (0 != gpujpeg_decoder_get_image_info(image, image_size, &param_image, NULL)) {
         fprintf(stderr, "Failed to read image size from file [%s]!\n", input_filename);
         return -1;
     }

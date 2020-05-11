@@ -29,7 +29,8 @@
  */
 
 #include "gpujpeg_huffman_gpu_encoder.h"
-#include <libgpujpeg/gpujpeg_util.h>
+#include "gpujpeg_marker.h"
+#include "gpujpeg_util.h"
 
 #define WARPS_NUM 8
 

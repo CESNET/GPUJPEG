@@ -37,9 +37,9 @@
  * performed now (subsampling and color space cannot be changed).
  */
 
-#include "gpujpeg_preprocessor.h"
-#include <libgpujpeg/gpujpeg_util.h>
 #include "gpujpeg_colorspace.h"
+#include "gpujpeg_preprocessor.h"
+#include "gpujpeg_util.h"
 
 #define RGB_8BIT_THREADS 256
 

@@ -32,9 +32,9 @@
 #define GPUJPEG_DECODER_INTERNAL_H
 
 #include <libgpujpeg/gpujpeg_common.h>
-#include <libgpujpeg/gpujpeg_common_internal.h>
-#include <libgpujpeg/gpujpeg_table.h>
-#include <libgpujpeg/gpujpeg_reader.h>
+#include "gpujpeg_common_internal.h"
+#include "gpujpeg_reader.h"
+#include "gpujpeg_table.h"
 
 /**
  * JPEG decoder structure

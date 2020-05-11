@@ -28,8 +28,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <libgpujpeg/gpujpeg_table.h>
-#include <libgpujpeg/gpujpeg_util.h>
+#include "gpujpeg_table.h"
+#include "gpujpeg_util.h"
 
 /** Default Quantization Table for Y component (zig-zag order)*/
 static uint8_t gpujpeg_table_default_quantization_luminance[] = { 

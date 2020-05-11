@@ -29,7 +29,7 @@
  */
 
 #include "gpujpeg_huffman_gpu_decoder.h"
-#include <libgpujpeg/gpujpeg_util.h>
+#include "gpujpeg_util.h"
 
 /**
  * Entry of pre-built Huffman fast-decoding table.
