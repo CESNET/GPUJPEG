@@ -580,8 +580,7 @@ main(int argc, char *argv[])
                 return -1;
             }
         } else {
-            decoder->coder.param_image.color_space = param_image.color_space;
-            decoder->coder.param_image.pixel_format = param_image.pixel_format;
+            gpujpeg_decoder_set_output_format(decoder, param_image.color_space, param_image.pixel_format);
         }
 
         // Decode images
