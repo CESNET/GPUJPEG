@@ -132,6 +132,19 @@ static int print_image_info(const char *filename) {
 
 static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image_parameters *param_image,
         const char *in, const char *out, _Bool encode, _Bool chroma_subsampled, _Bool restart_interval_default) {
+    // if possible, read properties from file
+    int width = 0, height = 0;
+    enum gpujpeg_color_space cs = GPUJPEG_NONE;
+    enum gpujpeg_pixel_format pf = GPUJPEG_PIXFMT_NONE;
+    gpujpeg_image_get_properties(encode ? in : out, &width, &height, &cs, &pf, encode);
+    param_image->width = param_image->width == 0 ? width : param_image->width;
+    param_image->height = param_image->height == 0 ? height : param_image->height;
+    param_image->color_space = param_image->color_space == GPUJPEG_NONE ? cs : param_image->color_space;
+    if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && pf != GPUJPEG_PIXFMT_NONE ) {
+        param_image->pixel_format = pf;
+        param_image->comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);
+    }
+
     // Detect color spalce
     if ( param_image->color_space == GPUJPEG_NONE ) {
         if ( gpujpeg_image_get_file_format(encode ? in : out) == GPUJPEG_IMAGE_FILE_YUV ) {
@@ -454,7 +467,7 @@ main(int argc, char *argv[])
             enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
             enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
             if ( (input_format & GPUJPEG_IMAGE_FILE_RAW) == 0 ) {
-                fprintf(stderr, "[Warning] Encoder input file [%s] should be raw image (*.rgb, *.yuv, *.r)!\n", input);
+                fprintf(stderr, "[Warning] Encoder input file [%s] should be raw image (*.rgb, *.yuv, *.r, *.pnm)!\n", input);
                 if ( input_format & GPUJPEG_IMAGE_FILE_JPEG ) {
                     return -1;
                 }
@@ -541,7 +554,7 @@ main(int argc, char *argv[])
             GPUJPEG_TIMER_START();
 
             // Save image
-            if ( gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size) != 0 ) {
+            if ( gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size, &param_image) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
                 return -1;
             }
@@ -590,8 +603,6 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Failed to preinitialize decoder!\n");
                 return -1;
             }
-        } else {
-            gpujpeg_decoder_set_output_format(decoder, param_image.color_space, param_image.pixel_format);
         }
 
         // Decode images
@@ -621,7 +632,7 @@ main(int argc, char *argv[])
                 return -1;
             }
             if ( (output_format & GPUJPEG_IMAGE_FILE_RAW) == 0 ) {
-                fprintf(stderr, "[Warning] Decoder output file [%s] should be raw image (*.rgb, *.yuv, *.r)!\n", output);
+                fprintf(stderr, "[Warning] Decoder output file [%s] should be raw image (*.rgb, *.yuv, *.r, *.pnm)!\n", output);
                 if ( output_format & GPUJPEG_IMAGE_FILE_JPEG ) {
                     return -1;
                 }
@@ -630,8 +641,9 @@ main(int argc, char *argv[])
             param = param_saved;
             param_image = param_image_saved;
             adjust_params(&param, &param_image, input, output, encode, chroma_subsampled, restart_interval_default);
-            if (param_image.width <= 0 || param_image.height <= 0) {
-                fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
+
+            if ( param_image_saved.width == 0 || param_image_saved.height == 0 ) {
+                gpujpeg_decoder_set_output_format(decoder, param_image.color_space, param_image.pixel_format);
             }
 
             // Decode image
@@ -711,7 +723,11 @@ main(int argc, char *argv[])
             GPUJPEG_TIMER_START();
 
             // Save image
-            if ( gpujpeg_image_save_to_file(output, data, data_size) != 0 ) {
+            struct gpujpeg_image_parameters decoded_param_image;
+            gpujpeg_decoder_get_image_info(image, image_size, &decoded_param_image, NULL);
+            decoded_param_image.color_space = param_image.color_space;
+            decoded_param_image.pixel_format = param_image.pixel_format;
+            if ( gpujpeg_image_save_to_file(output, data, data_size, &decoded_param_image) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", output);
                 return -1;
             }

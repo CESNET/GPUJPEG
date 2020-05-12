@@ -36,7 +36,8 @@ libgpujpeg_la_SOURCES = src/gpujpeg_common.c \
 			src/gpujpeg_huffman_cpu_encoder.c \
 			src/gpujpeg_reader.c \
 			src/gpujpeg_table.c \
-			src/gpujpeg_writer.c
+			src/gpujpeg_writer.c \
+			src/utils/image_delegate.cpp
 
 libgpujpeg_la_DEPENDENCIES = @LIBGPUJPEG_CUDA_OBJS@
 

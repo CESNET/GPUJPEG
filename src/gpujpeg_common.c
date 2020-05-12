@@ -37,6 +37,7 @@
 #include <libgpujpeg/gpujpeg_version.h>
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_util.h"
+#include "utils/image_delegate.h"
 #include <math.h>
 #if defined(_MSC_VER)
   #include <windows.h>
@@ -314,7 +315,7 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
 enum gpujpeg_image_file_format
 gpujpeg_image_get_file_format(const char* filename)
 {
-    static const char *extension[] = { "raw", "rgb", "rgba", "yuv", "i420", "r", "jpg" };
+    static const char *extension[] = { "raw", "rgb", "rgba", "yuv", "i420", "r", "jpg", "pbm", "pnm", "pgm", "ppm", "pam" };
     static const enum gpujpeg_image_file_format format[] = {
         GPUJPEG_IMAGE_FILE_RAW,
         GPUJPEG_IMAGE_FILE_RGB,
@@ -322,7 +323,12 @@ gpujpeg_image_get_file_format(const char* filename)
         GPUJPEG_IMAGE_FILE_YUV,
         GPUJPEG_IMAGE_FILE_I420,
         GPUJPEG_IMAGE_FILE_GRAY,
-        GPUJPEG_IMAGE_FILE_JPEG
+        GPUJPEG_IMAGE_FILE_JPEG,
+        GPUJPEG_IMAGE_FILE_PNM,
+        GPUJPEG_IMAGE_FILE_PNM,
+        GPUJPEG_IMAGE_FILE_PNM,
+        GPUJPEG_IMAGE_FILE_PNM,
+        GPUJPEG_IMAGE_FILE_PAM,
     };
 
     const char * ext = strrchr(filename, '.');
@@ -953,10 +959,22 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
     }
 }
 
+static void *gpujpeg_cuda_malloc_host(size_t size) {
+    void *ptr;
+    GPUJPEG_CHECK_EX(cudaMallocHost(&ptr, size), "Could not alloc host pointer", return NULL);
+    return ptr;
+}
+
 /* Documented at declaration */
 int
 gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size)
 {
+    enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
+    image_load_delegate_t image_load_delegate = gpujpeg_get_image_load_delegate(format);
+    if (image_load_delegate) {
+        return image_load_delegate(filename, image_size, (void **) image, gpujpeg_cuda_malloc_host);
+    }
+
     FILE* file;
     file = fopen(filename, "rb");
     if ( !file ) {
@@ -986,8 +1004,14 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
 
 /* Documented at declaration */
 int
-gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
+gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size, struct gpujpeg_image_parameters *param_image)
 {
+    enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
+    image_save_delegate_t image_save_delegate = gpujpeg_get_image_save_delegate(format);
+    if (param_image && image_save_delegate) {
+        return image_save_delegate(filename, param_image->width, param_image->height, param_image->color_space, param_image->pixel_format, (const char *) image);
+    }
+
     FILE* file;
     file = fopen(filename, "wb");
     if ( !file ) {
@@ -1002,6 +1026,17 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size)
     fclose(file);
 
     return 0;
+}
+
+int
+gpujpeg_image_get_properties(const char *filename, int *width, int *height, enum gpujpeg_color_space *cs, enum gpujpeg_pixel_format *pf, int file_exists)
+{
+    image_probe_delegate_t image_probe_delegate = gpujpeg_get_image_probe_delegate(gpujpeg_image_get_file_format(filename));
+    if (image_probe_delegate) {
+        return image_probe_delegate(filename, width, height, cs, pf, file_exists);
+    }
+
+    return -1;
 }
 
 /* Documented at declaration */
@@ -1137,7 +1172,7 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     assert(gpujpeg_preprocessor_decode(coder, NULL) == 0);
     // Save preprocessor result
     assert(cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
-    if ( gpujpeg_image_save_to_file(output, coder->data_raw, coder->data_raw_size) != 0 ) {
+    if ( gpujpeg_image_save_to_file(output, coder->data_raw, coder->data_raw_size, &param_image_to ) != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to save image [%s]!\n", output);
         return;
     }

@@ -235,6 +235,10 @@ enum gpujpeg_image_file_format {
     GPUJPEG_IMAGE_FILE_RGBA = 1 | 32,
     /// i420 file format
     GPUJPEG_IMAGE_FILE_I420 = 1 | 64,
+    /// PNM file format
+    GPUJPEG_IMAGE_FILE_PNM = 1 | 128,
+    /// PAM file format
+    GPUJPEG_IMAGE_FILE_PAM = 1 | 256,
 };
 
 /**
@@ -516,10 +520,20 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
  * @param filaname  Image filename
  * @param image  Image data buffer
  * @param image_size  Image data buffer size
+ * @param param_image Image properties (may be NULL)
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size);
+gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size, struct gpujpeg_image_parameters *param_image);
+
+/**
+ * Reads/obtains properties from uncompressed file (PNM etc.)
+ *
+ * May also return some with a null value - eg. when the file doesn't exist
+ * but color space may be deduced from extension.
+ */
+GPUJPEG_API int
+gpujpeg_image_get_properties(const char *filename, int *width, int *height, enum gpujpeg_color_space *cs, enum gpujpeg_pixel_format *pf, int file_exists);
 
 /**
  * Destroy DXT image
