@@ -99,3 +99,7 @@ clean-local:
 
 cscope:
 	cscope -bv $(srcdir)/src/*cu $(srcdir)/src/*c $(srcdir)/libgpujpeg/*h
+
+universal-ctags:
+	ctags-universal $$(find $(srcdir)/src $(srcdir)/test \( -name '*.c' -o -name '*.cpp' -o -name '*.cu' -o -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \))
+
