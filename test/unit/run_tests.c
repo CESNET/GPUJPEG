@@ -1,7 +1,8 @@
 #include <assert.h>
 #include <libgpujpeg/gpujpeg_common.h>
-#include <libgpujpeg/gpujpeg_common_internal.h>
+#include "../../src/gpujpeg_common_internal.h"
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
 static void subsampling_name_test() {
