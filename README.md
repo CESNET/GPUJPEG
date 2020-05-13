@@ -109,13 +109,13 @@ Compile
 -------
 To build console application check [Requirements](#requirements) and go
 to `gpujpeg` directory (where [README.md](README.md) and [COPYING](COPYING)
-files are placed) and run `autogen.sh` and `make` command. It builds
-libgpugjpeg library in subdirectory `.libs` and it creates script `gpujpeg`
-which runs executable file linked to runtime library _libgpujpeg.so_
-(which is placed in `.libs` subdirectory).
+files are placed) and run `cmake` command:
 
-You can also use **CMake** to crate build recipe for the library and the
-application (including project file for MSVS) or a plain old _Makefile.bkp_.
+    cmake . -Bbuild
+    cmake --build build
+
+You can also use **autotools** to create a build recipe for the library and the
+application or a plain old _Makefile.bkp_.
 
 In _Windows_ you may want to avoid using build system at all and use the
 following command directly:
@@ -388,8 +388,9 @@ application** you need:
    default installation path is `/usr/local/cuda`. If you have the CUDA
    installed somewhere else, you need to specify it by environment variable
    `CUDA_INSTALL_PATH` or in Makefiles by `CUDA_INSTALL_PATH` variable.
-2) NVIDIA developer drivers
-3) CUDA enabled NVIDIA GPU
+2) C/C++ compiler + cmake
+3) NVIDIA drivers
+4) CUDA enabled NVIDIA GPU
 
 License
 -------
