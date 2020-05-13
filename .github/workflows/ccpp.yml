@@ -1,0 +1,86 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches:
+      - devel
+      - master
+    paths:
+      - '.github/scripts/**'
+      - '.github/workflows/ccpp.yml'
+      - '**.c'
+      - '**.cpp'
+      - '**.cu'
+      - '**.h'
+      - '**.hpp'
+      - '**.m'
+      - '**.mm'
+      - 'CMakeLists.txt'
+
+jobs:
+  retag-continuous:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, we do not need to create own token.
+    steps:
+    - uses: actions/checkout@v2
+      if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
+      with:
+        persist-credentials: true
+    - name: Retag continuous
+      if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
+      run: |
+        git tag -f continuous
+        git push -f origin refs/tags/continuous:refs/tags/continuous
+
+  Ubuntu:
+    name: run Ubuntu
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install
+      run: sudo apt install nvidia-cuda-toolkit cmake
+    - name: Build
+      run: |
+        cmake -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -Bbuild
+        cmake --build build
+        cmake --build build --target tests
+
+  Windows:
+    name: run Windows
+    needs: retag-continuous
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: install CUDA
+      run: choco install cuda -y --no-progress
+    - name: Build
+      run: |
+        #Set-PSDebug -Trace 1
+        $env:ChocolateyInstall = Convert-Path "$((Get-Command choco).Path)\..\.."
+        Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+        refreshenv
+        cmake.exe -p:Configuration=Release -Bbuild .
+        cmake.exe --build build --config Release
+        Move-Item build/Release GPUJPEG
+        Copy-Item -Recurse libgpujpeg GPUJPEG
+        Copy-Item AUTHORS,CONTRIBUTING.md,COPYING,FAQ.md,INSTALL,NEWS,README.md GPUJPEG
+        Compress-Archive -Path GPUJPEG -DestinationPath GPUJPEG
+
+    - name: Upload Build
+      if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
+      uses: actions/upload-artifact@v1
+      with:
+        name: GPUJPEG CI Windows build
+        path: GPUJPEG
+
+    - name: Upload Release Asset
+      if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: .github/scripts/replace-asset.sh continuous GPUJPEG.zip application/zip Windows%20build
+      shell: bash
+
+# vi: set expandtab sw=2:
