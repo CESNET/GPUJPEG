@@ -424,12 +424,10 @@ main(int argc, char *argv[])
         }
     }
 
-    adjust_params(&param, &param_image, argv[0], argv[1], encode, chroma_subsampled, restart_interval_default);
+    struct gpujpeg_parameters param_saved = param;
+    struct gpujpeg_image_parameters param_image_saved = param_image;
 
     if ( encode == 1 ) {
-        if (param_image.width <= 0 || param_image.height <= 0) {
-            fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
-        }
         // Create OpenGL texture
         struct gpujpeg_opengl_texture* texture = NULL;
         if ( use_opengl ) {
@@ -464,6 +462,13 @@ main(int argc, char *argv[])
             if ( output_format != GPUJPEG_IMAGE_FILE_JPEG ) {
                 fprintf(stderr, "Encoder output file [%s] should be JPEG image (*.jpg)!\n", output);
                 return -1;
+            }
+
+            param = param_saved;
+            param_image = param_image_saved;
+            adjust_params(&param, &param_image, input, output, encode, chroma_subsampled, restart_interval_default);
+            if (param_image.width <= 0 || param_image.height <= 0) {
+                fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
             }
 
             // Encode image
@@ -620,6 +625,13 @@ main(int argc, char *argv[])
                 if ( output_format & GPUJPEG_IMAGE_FILE_JPEG ) {
                     return -1;
                 }
+            }
+
+            param = param_saved;
+            param_image = param_image_saved;
+            adjust_params(&param, &param_image, input, output, encode, chroma_subsampled, restart_interval_default);
+            if (param_image.width <= 0 || param_image.height <= 0) {
+                fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
             }
 
             // Decode image
