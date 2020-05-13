@@ -130,6 +130,62 @@ static int print_image_info(const char *filename) {
     return 0;
 }
 
+static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image_parameters *param_image,
+        const char *in, const char *out, _Bool encode, _Bool chroma_subsampled, _Bool restart_interval_default) {
+    // Detect color spalce
+    if ( param_image->color_space == GPUJPEG_NONE ) {
+        if ( gpujpeg_image_get_file_format(encode ? in : out) == GPUJPEG_IMAGE_FILE_YUV ) {
+            param_image->color_space = GPUJPEG_YCBCR_JPEG;
+        } else {
+            param_image->color_space = GPUJPEG_RGB;
+        }
+    }
+
+    if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
+        enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(encode ? in : out);
+        switch (format) {
+        case GPUJPEG_IMAGE_FILE_RGBA:
+            param_image->pixel_format = GPUJPEG_444_U8_P012A;
+            break;
+        case GPUJPEG_IMAGE_FILE_I420:
+            param_image->pixel_format = GPUJPEG_420_U8_P0P1P2;
+            break;
+        default:
+            param_image->pixel_format = GPUJPEG_444_U8_P012;
+        }
+    }
+
+    // Detect component count
+    if ( gpujpeg_image_get_file_format(encode ? in : out) == GPUJPEG_IMAGE_FILE_GRAY && param_image->comp_count != 1 ) {
+        param_image->pixel_format = GPUJPEG_U8;
+        param_image->comp_count = 1;
+    }
+
+    // Adjust restart interval
+    if ( restart_interval_default ) {
+        // when chroma subsampling and interleaving is enabled, the restart interval should be smaller
+        if ( chroma_subsampled == 1 && param->interleaved == 1 ) {
+            param->restart_interval = 2;
+        }
+        else {
+            // Adjust according to Mpix count
+            double coefficient = ((double)param_image->width * param_image->height * param_image->comp_count) / (1000000.0 * 3.0);
+            if ( coefficient < 1.0 ) {
+                param->restart_interval = 4;
+            } else if ( coefficient < 3.0 ) {
+                param->restart_interval = 8;
+            } else if ( coefficient < 9.0 ) {
+                param->restart_interval = 10;
+            } else {
+                param->restart_interval = 12;
+            }
+        }
+        if ( param->verbose ) {
+            printf("\nAuto-adjusting restart interval to %d for better performance.\n", param->restart_interval);
+        }
+    }
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -368,58 +424,7 @@ main(int argc, char *argv[])
         }
     }
 
-    // Detect color spalce
-    if ( param_image.color_space == GPUJPEG_NONE ) {
-        if ( gpujpeg_image_get_file_format(argv[encode ? 0 : 1]) == GPUJPEG_IMAGE_FILE_YUV ) {
-            param_image.color_space = GPUJPEG_YCBCR_JPEG;
-        } else {
-            param_image.color_space = GPUJPEG_RGB;
-        }
-    }
-
-    if ( param_image.pixel_format == GPUJPEG_PIXFMT_NONE ) {
-        enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(argv[encode ? 0 : 1]);
-        switch (format) {
-        case GPUJPEG_IMAGE_FILE_RGBA:
-            param_image.pixel_format = GPUJPEG_444_U8_P012A;
-            break;
-        case GPUJPEG_IMAGE_FILE_I420:
-            param_image.pixel_format = GPUJPEG_420_U8_P0P1P2;
-            break;
-        default:
-            param_image.pixel_format = GPUJPEG_444_U8_P012;
-        }
-    }
-
-    // Detect component count
-    if ( gpujpeg_image_get_file_format(argv[encode ? 0 : 1]) == GPUJPEG_IMAGE_FILE_GRAY && param_image.comp_count != 1 ) {
-        param_image.pixel_format = GPUJPEG_U8;
-        param_image.comp_count = 1;
-    }
-
-    // Adjust restart interval
-    if ( restart_interval_default == 1 ) {
-        // when chroma subsampling and interleaving is enabled, the restart interval should be smaller
-        if ( chroma_subsampled == 1 && param.interleaved == 1 ) {
-            param.restart_interval = 2;
-        }
-        else {
-            // Adjust according to Mpix count
-            double coefficient = ((double)param_image.width * param_image.height * param_image.comp_count) / (1000000.0 * 3.0);
-            if ( coefficient < 1.0 ) {
-                param.restart_interval = 4;
-            } else if ( coefficient < 3.0 ) {
-                param.restart_interval = 8;
-            } else if ( coefficient < 9.0 ) {
-                param.restart_interval = 10;
-            } else {
-                param.restart_interval = 12;
-            }
-        }
-        if ( param.verbose ) {
-            printf("\nAuto-adjusting restart interval to %d for better performance.\n", param.restart_interval);
-        }
-    }
+    adjust_params(&param, &param_image, argv[0], argv[1], encode, chroma_subsampled, restart_interval_default);
 
     if ( encode == 1 ) {
         if (param_image.width <= 0 || param_image.height <= 0) {
