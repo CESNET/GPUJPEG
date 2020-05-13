@@ -4,6 +4,8 @@ test -z "$srcdir" && srcdir=.
 
 ORIGDIR=`pwd`
 
+cd $srcdir
+
 if [ `uname -s` = "Darwin" ]; then
     LIBTOOLIZE=glibtoolize
 else 
@@ -16,11 +18,12 @@ $LIBTOOLIZE --copy && \
 aclocal -I m4 && \
 automake --copy --add-missing && \
 autoconf && \
-./configure "$@"
 
 STATUS=$?
 
 cd $ORIGDIR
+
+$srcdir/configure "$@"
 
 ([ $STATUS -eq 0 ] && echo "Autogen done." ) || echo "Autogen failed."
 
