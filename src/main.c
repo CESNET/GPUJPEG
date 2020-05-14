@@ -712,7 +712,7 @@ main(int argc, char *argv[])
 
             // Save image
             if ( gpujpeg_image_save_to_file(output, data, data_size) != 0 ) {
-                fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
+                fprintf(stderr, "Failed to save image [%s]!\n", output);
                 return -1;
             }
 
