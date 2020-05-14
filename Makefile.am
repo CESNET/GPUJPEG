@@ -19,7 +19,7 @@ lib_LTLIBRARIES = libgpujpeg.la
 bin_PROGRAMS = gpujpeg
 pkgconfig_DATA = libgpujpeg.pc
 
-library_include_HEADERS = libgpujpeg/*.h
+library_include_HEADERS = $(srcdir)/libgpujpeg/*.h
 nodist_gpujpeg_libinclude_HEADERS = config.h
 
 gpujpeg_SOURCES = src/main.c
