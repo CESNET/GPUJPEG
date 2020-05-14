@@ -1074,6 +1074,9 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
                 if (comp_count > 1) {
                     interleaved = 1;
                 }
+                if (segment_count == NULL) { // if not counting segments, we can skip the rest
+                    eoi_presented = 1;
+                }
             }
             while (*image != 0xff || (*image == 0xff && image[1] == 0x00)) { if (*image == 0xff) image++; image++; }
             break;
