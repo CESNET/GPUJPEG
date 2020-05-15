@@ -47,46 +47,46 @@ static int pam_load_delegate(const char *filename, int *image_size, void **image
     return ret ? 0 : 1;
 }
 
-static int pam_probe_delegate(const char *filename, int *width, int *height, enum gpujpeg_color_space *color_space, enum gpujpeg_pixel_format *pixel_format, int file_exists) {
+static int pam_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists) {
     if (!file_exists) {
         return 0;
     }
     int depth;
     unsigned int w, h;
     if (pam_read(filename, &w, &h, &depth, nullptr, nullptr)) {
-        *width = w;
-        *height = h;
+        param_image->width = w;
+        param_image->height = h;
         switch (depth) {
         case 4:
-            *pixel_format = GPUJPEG_444_U8_P012A;
+            param_image->pixel_format = GPUJPEG_444_U8_P012A;
             break;
         case 3:
-            *pixel_format = GPUJPEG_444_U8_P012;
+            param_image->pixel_format = GPUJPEG_444_U8_P012;
             break;
         case 1:
-            *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
-            *pixel_format = GPUJPEG_U8;
+            param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+            param_image->pixel_format = GPUJPEG_U8;
             break;
         default:
             fprintf(stderr, "Wrong pam component count %d!\n", depth);
             return GPUJPEG_ERROR;
         }
     } else {
-        *width = 0;
-        *height = 0;
-        *pixel_format = GPUJPEG_PIXFMT_NONE;
+        param_image->width = 0;
+        param_image->height = 0;
+        param_image->pixel_format = GPUJPEG_PIXFMT_NONE;
     }
     return 0;
 }
 
-int pam_save_delegate(const char *filename, int width, int height, enum gpujpeg_color_space cs, enum gpujpeg_pixel_format pf, const char *data)
+int pam_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data)
 {
-    if (pf != GPUJPEG_U8 && cs != GPUJPEG_RGB) {
-        fprintf(stderr, "Wrong color space %s for PAM!\n", gpujpeg_color_space_get_name(cs));
+    if (param_image->pixel_format != GPUJPEG_U8 && param_image->color_space != GPUJPEG_RGB) {
+        fprintf(stderr, "Wrong color space %s for PAM!\n", gpujpeg_color_space_get_name(param_image->color_space));
         return -1;
     }
     int depth;
-    switch (pf) {
+    switch (param_image->pixel_format) {
     case GPUJPEG_U8:
         depth = 1;
         break;
@@ -102,7 +102,7 @@ int pam_save_delegate(const char *filename, int width, int height, enum gpujpeg_
         return -1;
     }
 
-    bool ret = pam_write(filename, width, height, depth, (const unsigned char *) data);
+    bool ret = pam_write(filename, param_image->width, param_image->height, depth, (const unsigned char *) data);
     return ret ? 0 : -1;
 }
 
@@ -119,7 +119,7 @@ static int pnm_load_delegate(const char *filename, int *image_size, void **image
     return 0;
 }
 
-static int pnm_probe_delegate(const char *filename, int *width, int *height, enum gpujpeg_color_space *color_space, enum gpujpeg_pixel_format *pixel_format, int file_exists) {
+static int pnm_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists) {
     if (!file_exists) {
         // deduce from file extension
         const char *suffix = strrchr(filename, '.');
@@ -128,10 +128,10 @@ static int pnm_probe_delegate(const char *filename, int *width, int *height, enu
         }
         suffix++;
         if (strcasecmp(suffix, "pgm") == 0) {
-            *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
-            *pixel_format = GPUJPEG_U8;
+            param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+            param_image->pixel_format = GPUJPEG_U8;
         } else if (strcasecmp(suffix, "ppm") == 0) {
-            *pixel_format = GPUJPEG_444_U8_P012;
+            param_image->pixel_format = GPUJPEG_444_U8_P012;
         }
         return 0;
     }
@@ -140,15 +140,15 @@ static int pnm_probe_delegate(const char *filename, int *width, int *height, enu
 
     ifs >> PNM::probe( info );
     if (info.valid()) {
-        *width = info.width();
-        *height = info.height();
+        param_image->width = info.width();
+        param_image->height = info.height();
         switch (info.channel()) {
         case 3:
-            *pixel_format = GPUJPEG_444_U8_P012;
+            param_image->pixel_format = GPUJPEG_444_U8_P012;
             break;
         case 1:
-            *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
-            *pixel_format = GPUJPEG_U8;
+            param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+            param_image->pixel_format = GPUJPEG_U8;
             break;
         default:
             fprintf(stderr, "Wrong PNM component count %zd!\n", info.channel());
@@ -158,16 +158,16 @@ static int pnm_probe_delegate(const char *filename, int *width, int *height, enu
     return 0;
 }
 
-int pnm_save_delegate(const char *filename, int width, int height, enum gpujpeg_color_space cs, enum gpujpeg_pixel_format pf, const char *data)
+int pnm_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data)
 {
-    if (cs != GPUJPEG_RGB) {
-        fprintf(stderr, "Wrong color space %s for PNM!\n", gpujpeg_color_space_get_name(cs));
+    if (param_image->color_space != GPUJPEG_RGB) {
+        fprintf(stderr, "Wrong color space %s for PNM!\n", gpujpeg_color_space_get_name(param_image->color_space));
         return -1;
     }
 
     std::ofstream ofs( filename );
     PNM::type type;
-    switch (pf) {
+    switch (param_image->pixel_format) {
     case GPUJPEG_U8:
         type = PNM::P5;
         break;
@@ -179,7 +179,7 @@ int pnm_save_delegate(const char *filename, int width, int height, enum gpujpeg_
         return -1;
     }
 
-    ofs << PNM::save( (uint8_t *) data, width, height, type );
+    ofs << PNM::save( (uint8_t *) data, param_image->width, param_image->height, type );
 
     return 0;
 }

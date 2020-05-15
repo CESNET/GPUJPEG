@@ -37,8 +37,8 @@ extern "C" {
 
 typedef void *(*allocator_t)(size_t);
 typedef int (*image_load_delegate_t)(const char *filename, int *image_size, void **image_data, allocator_t alloc);
-typedef int (*image_probe_delegate_t)(const char *filename, int *width, int *height, enum gpujpeg_color_space *, enum gpujpeg_pixel_format *, int file_exists);
-typedef int (*image_save_delegate_t)(const char *filename, int width, int height, enum gpujpeg_color_space, enum gpujpeg_pixel_format, const char *data);
+typedef int (*image_probe_delegate_t)(const char *filename, struct gpujpeg_image_parameters *, int file_exists);
+typedef int (*image_save_delegate_t)(const char *filename, const struct gpujpeg_image_parameters *, const char *data);
 
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format);
 image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_format format);

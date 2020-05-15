@@ -133,15 +133,13 @@ static int print_image_info(const char *filename) {
 static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image_parameters *param_image,
         const char *in, const char *out, _Bool encode, _Bool chroma_subsampled, _Bool restart_interval_default) {
     // if possible, read properties from file
-    int width = 0, height = 0;
-    enum gpujpeg_color_space cs = GPUJPEG_NONE;
-    enum gpujpeg_pixel_format pf = GPUJPEG_PIXFMT_NONE;
-    gpujpeg_image_get_properties(encode ? in : out, &width, &height, &cs, &pf, encode);
-    param_image->width = param_image->width == 0 ? width : param_image->width;
-    param_image->height = param_image->height == 0 ? height : param_image->height;
-    param_image->color_space = param_image->color_space == GPUJPEG_NONE ? cs : param_image->color_space;
-    if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && pf != GPUJPEG_PIXFMT_NONE ) {
-        param_image->pixel_format = pf;
+    struct gpujpeg_image_parameters file_param_image = { 0, 0, 0, GPUJPEG_NONE, GPUJPEG_PIXFMT_NONE };
+    gpujpeg_image_get_properties(encode ? in : out, &file_param_image, encode);
+    param_image->width = param_image->width == 0 ? file_param_image.width : param_image->width;
+    param_image->height = param_image->height == 0 ? file_param_image.height : param_image->height;
+    param_image->color_space = param_image->color_space == GPUJPEG_NONE ? file_param_image.color_space : param_image->color_space;
+    if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && file_param_image.pixel_format != GPUJPEG_PIXFMT_NONE ) {
+        param_image->pixel_format = file_param_image.pixel_format;
         param_image->comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);
     }
 

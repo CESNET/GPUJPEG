@@ -1004,12 +1004,12 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
 
 /* Documented at declaration */
 int
-gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size, struct gpujpeg_image_parameters *param_image)
+gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size, const struct gpujpeg_image_parameters *param_image)
 {
     enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
     image_save_delegate_t image_save_delegate = gpujpeg_get_image_save_delegate(format);
     if (param_image && image_save_delegate) {
-        return image_save_delegate(filename, param_image->width, param_image->height, param_image->color_space, param_image->pixel_format, (const char *) image);
+        return image_save_delegate(filename, param_image, (const char *) image);
     }
 
     FILE* file;
@@ -1029,11 +1029,11 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size,
 }
 
 int
-gpujpeg_image_get_properties(const char *filename, int *width, int *height, enum gpujpeg_color_space *cs, enum gpujpeg_pixel_format *pf, int file_exists)
+gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists)
 {
     image_probe_delegate_t image_probe_delegate = gpujpeg_get_image_probe_delegate(gpujpeg_image_get_file_format(filename));
     if (image_probe_delegate) {
-        return image_probe_delegate(filename, width, height, cs, pf, file_exists);
+        return image_probe_delegate(filename, param_image, file_exists);
     }
 
     return -1;

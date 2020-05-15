@@ -524,7 +524,7 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size, struct gpujpeg_image_parameters *param_image);
+gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size, const struct gpujpeg_image_parameters *param_image);
 
 /**
  * Reads/obtains properties from uncompressed file (PNM etc.)
@@ -533,7 +533,7 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size,
  * but color space may be deduced from extension.
  */
 GPUJPEG_API int
-gpujpeg_image_get_properties(const char *filename, int *width, int *height, enum gpujpeg_color_space *cs, enum gpujpeg_pixel_format *pf, int file_exists);
+gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists);
 
 /**
  * Destroy DXT image
