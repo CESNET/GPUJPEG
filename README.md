@@ -225,7 +225,7 @@ them somewhere else before we start encoding next image, for example we
 can save them to file:
 
     if ( gpujpeg_image_save_to_file("output_image.jpg", image_compressed,
-             image_compressed_size) != 0 )
+             image_compressed_size, NULL) != 0 )
         return -1;
 
 Now we can load, encode and save next image or finish and move to clean up
@@ -296,7 +296,7 @@ image data:
 Now we can save decoded raw image data to file and perform cleanup:
 
     if ( gpujpeg_image_save_to_file("output_image.rgb", decoder_output.data,
-             decoder_output.data_size) != 0 )
+             decoder_output.data_size, NULL) != 0 )
         return -1;
     
     gpujpeg_image_destroy(image);
