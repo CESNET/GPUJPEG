@@ -40,7 +40,9 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Install
-      run: sudo apt install nvidia-cuda-toolkit cmake
+      run: |
+        sudo apt update
+        sudo apt install nvidia-cuda-toolkit cmake
     - name: Build
       run: |
         cmake -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -Bbuild
