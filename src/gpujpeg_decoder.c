@@ -116,12 +116,12 @@ gpujpeg_decoder_create(cudaStream_t * stream)
         result = 0;
 
     // Allocate quantization tables in device memory
-    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+    for ( int comp_type = 0; comp_type < GPUJPEG_MAX_COMPONENT_COUNT; comp_type++ ) {
         if ( cudaSuccess != cudaMalloc((void**)&decoder->table_quantization[comp_type].d_table, 64 * sizeof(uint16_t)) )
             result = 0;
     }
     // Allocate huffman tables in device memory
-    for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {
+    for ( int comp_type = 0; comp_type < GPUJPEG_MAX_COMPONENT_COUNT; comp_type++ ) {
         for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
             if ( cudaSuccess != cudaMalloc((void**)&decoder->d_table_huffman[comp_type][huff_type], sizeof(struct gpujpeg_table_huffman_decoder)) )
                 result = 0;
@@ -206,6 +206,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
     int rc;
+    int unsupp_gpu_huffman_params = 0;
 
     // Reset durations
     coder->duration_huffman_cpu = 0.0;
@@ -226,8 +227,22 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
     coder->duration_stream = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
 
+    // check if params is ok for GPU decoder
+    for (int i = 0; i < decoder->coder.param_image.comp_count; ++i) {
+        // packed_block_info_ptr holds only component type
+        if ( decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_DC] != decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_AC] ) {
+            fprintf(stderr, "[GPUJPEG] [Warning] Using different table DC/AC indices (%d and %d) for component %d (ID %d)! Using Huffman CPU decoder. Please report to GPUJPEG developers.\n", decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_AC], decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_DC], i, decoder->comp_id[i]);
+            unsupp_gpu_huffman_params = 1;
+        }
+        // only DC/AC tables 0 and 1 are processed gpujpeg_huffman_decoder_table_kernel()
+        if ( decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_DC] > 1 || decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_AC] > 1 ) {
+            fprintf(stderr, "[GPUJPEG] [Warning] Using Huffman tables (%d, %d) implies extended process! Using Huffman CPU decoder. Please report to GPUJPEG developers.\n", decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_AC], decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_DC]);
+            unsupp_gpu_huffman_params = 1;
+        }
+    }
+
     // Perform huffman decoding on CPU (when there are not enough segments to saturate GPU)
-    if (coder->segment_count < 32) {
+    if (coder->segment_count < 32 || unsupp_gpu_huffman_params) {
         GPUJPEG_CUSTOM_TIMER_START(decoder->def);
         if (0 != gpujpeg_huffman_cpu_decoder_decode(decoder)) {
             fprintf(stderr, "[GPUJPEG] [Error] Huffman decoder failed!\n");

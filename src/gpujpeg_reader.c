@@ -764,16 +764,6 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
             return -1;
         }
 
-        if ( table_dc != table_ac ) {
-            fprintf(stderr, "[GPUJPEG] [Error] Using different table indices (%d and %d) for component %d (ID %d)! Please report to GPUJPEG developers.\n", table_ac, table_dc, comp, comp_id);
-            return -1;
-        }
-
-        if ( table_dc > 1 ||  table_ac > 1 ) {
-            fprintf(stderr, "[GPUJPEG] [Error] Using Huffman tables (%d, %d) implies extended process! Please report to GPUJPEG developers.\n", table_ac, table_dc);
-            return -1;
-        }
-
         decoder->comp_table_huffman_map[component_index][GPUJPEG_HUFFMAN_DC] = table_dc;
         decoder->comp_table_huffman_map[component_index][GPUJPEG_HUFFMAN_AC] = table_ac;
     }
