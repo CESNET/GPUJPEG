@@ -38,9 +38,9 @@ struct gpujpeg_huffman_cpu_decoder
     struct gpujpeg_component* component;
     
     // Huffman table DC
-    struct gpujpeg_table_huffman_decoder* table_dc[GPUJPEG_COMPONENT_TYPE_COUNT];
+    struct gpujpeg_table_huffman_decoder* table_dc[GPUJPEG_MAX_COMPONENT_COUNT];
     // Huffman table AC
-    struct gpujpeg_table_huffman_decoder* table_ac[GPUJPEG_COMPONENT_TYPE_COUNT];
+    struct gpujpeg_table_huffman_decoder* table_ac[GPUJPEG_MAX_COMPONENT_COUNT];
     
     // Get bits
     int get_bits;
@@ -366,11 +366,16 @@ gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder)
     coder.scan_index = -1;
     
     // Set huffman tables
-    for ( int type = 0; type < GPUJPEG_COMPONENT_TYPE_COUNT; type++ ) {
-        coder.table_dc[type] = &decoder->table_huffman[type][GPUJPEG_HUFFMAN_DC];
-        coder.table_ac[type] = &decoder->table_huffman[type][GPUJPEG_HUFFMAN_AC];
+    for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ ) {
+        coder.table_dc[comp] = &decoder->table_huffman[comp][GPUJPEG_HUFFMAN_DC];
+        coder.table_ac[comp] = &decoder->table_huffman[comp][GPUJPEG_HUFFMAN_AC];
     }
     
+    for (int comp = 0; comp < decoder->coder.param_image.comp_count; comp++) {
+        coder.component[comp].dc_huff_idx = decoder->comp_table_huffman_map[comp][GPUJPEG_HUFFMAN_DC];
+        coder.component[comp].ac_huff_idx = decoder->comp_table_huffman_map[comp][GPUJPEG_HUFFMAN_AC];
+    }
+
     // Set mcu component count
     if ( decoder->coder.param.interleaved == 1 )
         coder.comp_count = decoder->coder.param_image.comp_count;
@@ -407,3 +412,5 @@ gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder)
     
     return 0;
 }
+
+/* vi: set sw=4: */
