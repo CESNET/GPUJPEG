@@ -40,6 +40,7 @@
 #ifndef PAM_H_7E23A609_963A_45A8_88E2_ED4D3FDFF69F
 #define PAM_H_7E23A609_963A_45A8_88E2_ED4D3FDFF69F
 
+#include <cstdlib>
 #include <exception>
 #include <fstream>
 #include <iostream>
