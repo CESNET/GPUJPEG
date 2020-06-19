@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 project(gpujpeg)
 
 # Include cmake modules in "cmake" directory (FindGLEW.cmake and FindGLUT.cmake)
@@ -7,6 +7,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 # Common settings
 include_directories(${CMAKE_SOURCE_DIR})
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+
+set(NEEDED_CXX_FEATURES cxx_delegating_constructors cxx_nullptr)
 
 # Find CUDA
 find_package(CUDA)
@@ -63,6 +65,7 @@ endif()
 file(GLOB H_FILES libgpujpeg/*.h)
 file(GLOB C_FILES src/*.c src/*/*.cpp src/*.cu)
 cuda_add_library(gpujpeg SHARED ${H_FILES} ${C_FILES})
+target_compile_features(gpujpeg PRIVATE ${NEEDED_CXX_FEATURES})
 set_target_properties(gpujpeg PROPERTIES SOVERSION 0)
 SET_TARGET_PROPERTIES(
   gpujpeg
@@ -76,6 +79,7 @@ endif()
 # GPUJPEG commmand-line application
 file(GLOB C_FILES src/main.c)
 cuda_add_executable(gpujpeg-bin ${C_FILES})
+target_compile_features(gpujpeg-bin PRIVATE ${NEEDED_CXX_FEATURES})
 target_link_libraries(gpujpeg-bin gpujpeg)
 set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg")
 
