@@ -412,7 +412,7 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
 
     assert(coder->param_image.comp_count == 3);
 
-    cudaMemsetAsync(coder->d_data, 0, coder->data_size * sizeof(uint8_t), *(encoder->stream));
+    cudaMemsetAsync(coder->d_data, 0, coder->data_size * sizeof(uint8_t), encoder->stream);
     gpujpeg_cuda_check_error("Preprocessor memset failed", return -1);
 
     // Select kernel
@@ -456,7 +456,7 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
         data.comp[comp].sampling_factor.vertical = coder->sampling_factor.vertical / coder->component[comp].sampling_factor.vertical;
         data.comp[comp].data_width = coder->component[comp].data_width;
     }
-    kernel<<<grid, threads, 0, *(encoder->stream)>>>(
+    kernel<<<grid, threads, 0, encoder->stream>>>(
         data,
         coder->d_data_raw,
         coder->d_data_raw + coder->data_raw_size,
@@ -504,7 +504,7 @@ gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
     if (!needs_stride) {
             for (int i = 0; i < coder->param_image.comp_count; ++i) {
                     size_t component_size = coder->component[i].width * coder->component[i].height;
-                    cudaMemcpyAsync(coder->component[i].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, *(encoder->stream));
+                    cudaMemcpyAsync(coder->component[i].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, encoder->stream);
                     data_raw_offset += component_size;
             }
     } else {
@@ -512,7 +512,7 @@ gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
                     int spitch = coder->component[i].width;
                     int dpitch = coder->component[i].data_width;
                     size_t component_size = spitch * coder->component[i].height;
-                    cudaMemcpy2DAsync(coder->component[i].d_data, dpitch, coder->d_data_raw + data_raw_offset, spitch, spitch, coder->component[i].height, cudaMemcpyDeviceToDevice, *(encoder->stream));
+                    cudaMemcpy2DAsync(coder->component[i].d_data, dpitch, coder->d_data_raw + data_raw_offset, spitch, spitch, coder->component[i].height, cudaMemcpyDeviceToDevice, encoder->stream);
                     data_raw_offset += component_size;
             }
     }

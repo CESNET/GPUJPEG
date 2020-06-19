@@ -90,7 +90,7 @@ gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, ui
 
 /* Documented at declaration */
 struct gpujpeg_decoder*
-gpujpeg_decoder_create(cudaStream_t * stream)
+gpujpeg_decoder_create(cudaStream_t stream)
 {
     struct gpujpeg_decoder* decoder = (struct gpujpeg_decoder*) malloc(sizeof(struct gpujpeg_decoder));
     if ( decoder == NULL )
@@ -136,13 +136,6 @@ gpujpeg_decoder_create(cudaStream_t * stream)
 
     // Stream
     decoder->stream = stream;
-    if (decoder->stream == NULL) {
-        decoder->allocatedStream = (cudaStream_t *) malloc(sizeof(cudaStream_t));
-        if (cudaSuccess != cudaStreamCreate(decoder->allocatedStream)) {
-            result = 0;
-        }
-        decoder->stream = decoder->allocatedStream;
-    }
 
     if (result == 0) {
         gpujpeg_decoder_destroy(decoder);
@@ -252,7 +245,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         coder->duration_huffman_cpu = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
 
         // Copy quantized data to device memory from cpu memory
-        cudaMemcpyAsync(coder->d_data_quantized, coder->data_quantized, coder->data_size * sizeof(int16_t), cudaMemcpyHostToDevice, *(decoder->stream));
+        cudaMemcpyAsync(coder->d_data_quantized, coder->data_quantized, coder->data_size * sizeof(int16_t), cudaMemcpyHostToDevice, decoder->stream);
 
         GPUJPEG_CUSTOM_TIMER_START(decoder->in_gpu);
     }
@@ -261,18 +254,18 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         GPUJPEG_CUSTOM_TIMER_START(decoder->in_gpu);
 
         // Reset huffman output
-        cudaMemsetAsync(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t), *(decoder->stream));
+        cudaMemsetAsync(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t), decoder->stream);
 
         // Copy scan data to device memory
-        cudaMemcpyAsync(coder->d_data_compressed, coder->data_compressed, decoder->data_compressed_size * sizeof(uint8_t), cudaMemcpyHostToDevice, *(decoder->stream));
+        cudaMemcpyAsync(coder->d_data_compressed, coder->data_compressed, decoder->data_compressed_size * sizeof(uint8_t), cudaMemcpyHostToDevice, decoder->stream);
         gpujpeg_cuda_check_error("Decoder copy compressed data", return -1);
 
         // Copy segments to device memory
-        cudaMemcpyAsync(coder->d_segment, coder->segment, decoder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice, *(decoder->stream));
+        cudaMemcpyAsync(coder->d_segment, coder->segment, decoder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice, decoder->stream);
         gpujpeg_cuda_check_error("Decoder copy compressed data", return -1);
 
         // Zero output memory
-        cudaMemsetAsync(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t), *(decoder->stream));
+        cudaMemsetAsync(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t), decoder->stream);
 
         // Perform huffman decoding
         if (0 != gpujpeg_huffman_gpu_decoder_decode(decoder)) {
@@ -321,14 +314,14 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     }
 
     // Preprocessing
-    rc = gpujpeg_preprocessor_decode(&decoder->coder, *(decoder->stream));
+    rc = gpujpeg_preprocessor_decode(&decoder->coder, decoder->stream);
     if (rc != GPUJPEG_NOERR) {
         return rc;
     }
 
     // Wait for async operations before copying from the device
     GPUJPEG_CUSTOM_TIMER_START(decoder->def);
-    cudaStreamSynchronize(*(decoder->stream));
+    cudaStreamSynchronize(decoder->stream);
     GPUJPEG_CUSTOM_TIMER_STOP(decoder->def);
     coder->duration_waiting = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->def);
 
@@ -435,13 +428,6 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
 
     if (decoder->reader != NULL) {
         gpujpeg_reader_destroy(decoder->reader);
-    }
-
-    if (decoder->allocatedStream != NULL) {
-        cudaStreamDestroy(*(decoder->allocatedStream));
-        free(decoder->allocatedStream);
-        decoder->allocatedStream = NULL;
-        decoder->stream = NULL;
     }
 
     free(decoder);

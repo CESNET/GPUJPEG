@@ -60,8 +60,7 @@ struct gpujpeg_encoder
     struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder;
 
     // Stream
-    cudaStream_t * stream;
-    cudaStream_t * allocatedStream;
+    cudaStream_t stream;
 
     // Timers
     GPUJPEG_CUSTOM_TIMER_DECLARE(def)

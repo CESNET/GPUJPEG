@@ -35,6 +35,10 @@
 #include <stdint.h>
 #include <libgpujpeg/gpujpeg_type.h>
 
+/**
+ * @todo
+ * Remove the redefinition and instead of cudaStream_t use a typedef to (void *).
+ */
 struct CUstream_st;
 typedef struct CUstream_st *cudaStream_t;
 
@@ -482,11 +486,11 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder);
  * @param codec        Codec structure
  * @param param
  * @param param_image
- * @param stream       CUDA stream or NULL
+ * @param stream       CUDA stream
  * @return size of allocated device memory in bytes if succeeds, otherwise 0
  */
 size_t
-gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, cudaStream_t * stream);
+gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, cudaStream_t stream);
 
 /**
  * Deinitialize JPEG coder (free buffers)

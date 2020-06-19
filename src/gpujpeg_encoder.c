@@ -69,7 +69,7 @@ gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gp
 
 /* Documented at declaration */
 struct gpujpeg_encoder*
-gpujpeg_encoder_create(cudaStream_t * stream)
+gpujpeg_encoder_create(cudaStream_t stream)
 {
     struct gpujpeg_encoder* encoder = (struct gpujpeg_encoder*) malloc(sizeof(struct gpujpeg_encoder));
     if ( encoder == NULL ) {
@@ -119,13 +119,6 @@ gpujpeg_encoder_create(cudaStream_t * stream)
 
     // Stream
     encoder->stream = stream;
-    if (encoder->stream == NULL) {
-        encoder->allocatedStream = (cudaStream_t *) malloc(sizeof(cudaStream_t));
-        if (cudaSuccess != cudaStreamCreate(encoder->allocatedStream)) {
-            result = 0;
-        }
-        encoder->stream = encoder->allocatedStream;
-    }
 
     if ( result == 0 ) {
         gpujpeg_encoder_destroy(encoder);
@@ -156,7 +149,7 @@ size_t gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpuj
         param_image->width = (int) sqrt((float) pixels);
         param_image->height = (pixels + param_image->width - 1) / param_image->width;
         //printf("\nIteration #%d (pixels: %d, size: %dx%d)\n", iteration++, pixels, param_image->width, param_image->height);
-        size_t image_memory_size = gpujpeg_coder_init_image(&coder, param, param_image, NULL);
+        size_t image_memory_size = gpujpeg_coder_init_image(&coder, param, param_image, cudaStreamDefault);
         if (image_memory_size == 0) {
             break;
         }
@@ -213,7 +206,7 @@ size_t gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpuj
     param_image->width = (int) sqrt((float) max_pixels);
     param_image->height = (max_pixels + param_image->width - 1) / param_image->width;
 
-    size_t image_memory_size = gpujpeg_coder_init_image(&coder, param, param_image, NULL);
+    size_t image_memory_size = gpujpeg_coder_init_image(&coder, param, param_image, cudaStreamDefault);
     if (image_memory_size == 0) {
         return 0;
     }
@@ -250,7 +243,7 @@ int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, struct gpujpeg_pa
     tmp_param_image.height = (pixels + tmp_param_image.width - 1) / tmp_param_image.width;
 
     // Allocate internal buffers
-    if (0 == gpujpeg_coder_init_image(coder, &tmp_param, &tmp_param_image, NULL)) {
+    if (0 == gpujpeg_coder_init_image(coder, &tmp_param, &tmp_param_image, cudaStreamDefault)) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to pre-allocate encoding!\n");
         return -1;
     }
@@ -345,7 +338,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         coder->d_data_raw = coder->d_data_raw_allocated;
 
         // Copy image to device memory
-        cudaMemcpyAsync(coder->d_data_raw, input->image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice, *(encoder->stream));
+        cudaMemcpyAsync(coder->d_data_raw, input->image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice, encoder->stream);
         gpujpeg_cuda_check_error("Encoder raw data copy", return -1);
     }
     else if (input->type == GPUJPEG_ENCODER_INPUT_GPU_IMAGE) {
@@ -381,7 +374,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         coder->duration_memory_map = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
 
         // Copy image data from texture pixel buffer object to device data
-        cudaMemcpyAsync(coder->d_data_raw, d_data, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice, *(encoder->stream));
+        cudaMemcpyAsync(coder->d_data_raw, d_data, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToDevice, encoder->stream);
 
         GPUJPEG_CUSTOM_TIMER_START(encoder->def);
 
@@ -427,10 +420,10 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
     // Perform huffman coding on CPU (when restart interval is not set)
     if ( coder->param.restart_interval == 0 ) {
         // Copy quantized data from device memory to cpu memory
-        cudaMemcpyAsync(coder->data_quantized, coder->d_data_quantized, coder->data_size * sizeof(int16_t), cudaMemcpyDeviceToHost, *(encoder->stream));
+        cudaMemcpyAsync(coder->data_quantized, coder->d_data_quantized, coder->data_size * sizeof(int16_t), cudaMemcpyDeviceToHost, encoder->stream);
 
         // Wait for async operations before the coding
-        cudaStreamSynchronize(*(encoder->stream));
+        cudaStreamSynchronize(encoder->stream);
 
         GPUJPEG_CUSTOM_TIMER_START(encoder->def);
         // Perform huffman coding
@@ -451,17 +444,17 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         }
 
         // Copy compressed data from device memory to cpu memory
-        if ( cudaSuccess != cudaMemcpyAsync(coder->data_compressed, coder->d_data_compressed, output_size, cudaMemcpyDeviceToHost, *(encoder->stream)) != 0 ) {
+        if ( cudaSuccess != cudaMemcpyAsync(coder->data_compressed, coder->d_data_compressed, output_size, cudaMemcpyDeviceToHost, encoder->stream) != 0 ) {
             return -1;
         }
         // Copy segments from device memory
-        if ( cudaSuccess != cudaMemcpyAsync(coder->segment, coder->d_segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyDeviceToHost, *(encoder->stream)) ) {
+        if ( cudaSuccess != cudaMemcpyAsync(coder->segment, coder->d_segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyDeviceToHost, encoder->stream) ) {
             return -1;
         }
 
         // Wait for async operations before formatting
         GPUJPEG_CUSTOM_TIMER_START(encoder->def);
-        cudaStreamSynchronize(*(encoder->stream));
+        cudaStreamSynchronize(encoder->stream);
         GPUJPEG_CUSTOM_TIMER_STOP(encoder->def);
         coder->duration_waiting = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->def);
 
@@ -555,12 +548,6 @@ gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)
     }
     if (encoder->writer != NULL) {
         gpujpeg_writer_destroy(encoder->writer);
-    }
-    if (encoder->allocatedStream != NULL) {
-        cudaStreamDestroy(*(encoder->allocatedStream));
-        free(encoder->allocatedStream);
-        encoder->allocatedStream = NULL;
-        encoder->stream = NULL;
     }
 
     free(encoder);

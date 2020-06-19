@@ -191,8 +191,7 @@ where first parameters is CUDA device (e.g. `device_id = 0`) id and second
 parameter is flag if verbose output should be used (`0` or `GPUJPEG_VERBOSE`).
 Next step is to create encoder:
 
-    struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&param,
-        &param_image);
+    struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(0);
     if ( encoder == NULL )
         return -1;
 
@@ -243,7 +242,7 @@ create decoder:
     if ( gpujpeg_init_device(device_id, 0) )
         return -1;
     
-    struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(NULL);
+    struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(0);
     if ( decoder == NULL )
         return -1;
 

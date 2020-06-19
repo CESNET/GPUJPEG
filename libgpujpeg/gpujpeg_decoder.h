@@ -134,12 +134,11 @@ gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, ui
 /**
  * Create JPEG decoder
  *
- * @param param  Parameters for coder
- * @param param_image  Parameters for image data
+ * @param stream CUDA stream to be used, may be cudaStreamDefault (0x00)
  * @return decoder structure if succeeds, otherwise NULL
  */
 GPUJPEG_API struct gpujpeg_decoder*
-gpujpeg_decoder_create(cudaStream_t * stream);
+gpujpeg_decoder_create(cudaStream_t stream);
 
 /**
  * Init JPEG decoder for specific image size

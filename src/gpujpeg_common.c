@@ -437,7 +437,7 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
 }
 
 size_t
-gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, cudaStream_t * stream)
+gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, cudaStream_t stream)
 {
     size_t allocated_gpu_memory_size = 0;
 
@@ -875,30 +875,15 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters
     assert(block_idx == coder->block_count);
 
     // Copy components to device memory
-    if (stream != NULL) {
-        cudaMemcpyAsync(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice, *stream);
-    }
-    else {
-        cudaMemcpy(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice);
-    }
+    cudaMemcpyAsync(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice, stream);
     gpujpeg_cuda_check_error("Coder component copy", return 0);
 
     // Copy block lists to device memory
-    if (stream != NULL) {
-        cudaMemcpyAsync(coder->d_block_list, coder->block_list, coder->block_count * sizeof(*coder->d_block_list), cudaMemcpyHostToDevice, *stream);
-    }
-    else {
-        cudaMemcpy(coder->d_block_list, coder->block_list, coder->block_count * sizeof(*coder->d_block_list), cudaMemcpyHostToDevice);
-    }
+    cudaMemcpyAsync(coder->d_block_list, coder->block_list, coder->block_count * sizeof(*coder->d_block_list), cudaMemcpyHostToDevice, stream);
     gpujpeg_cuda_check_error("Coder block list copy", return 0);
 
     // Copy segments to device memory
-    if (stream) {
-        cudaMemcpyAsync(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice, *stream);
-    }
-    else {
-        cudaMemcpy(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice);
-    }
+    cudaMemcpyAsync(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice, stream);
     gpujpeg_cuda_check_error("Coder segment copy", return 0);
 
     return allocated_gpu_memory_size;
