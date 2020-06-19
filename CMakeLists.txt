@@ -110,3 +110,6 @@ add_custom_target(unittests make -C test/unit LIBDIR=${CMAKE_BINARY_DIR}
 add_custom_target(tests
         DEPENDS unittests)
 
+add_custom_target(cscope cscope -bv `find ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/test \( -name '*.c' -o -name '*.cpp' -o -name '*.cu' -o -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \)`)
+add_custom_target(universal-ctags ctags-universal `find ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/test \( -name '*.c' -o -name '*.cpp' -o -name '*.cu' -o -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \)`)
+
