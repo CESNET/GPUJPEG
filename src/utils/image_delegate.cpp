@@ -25,6 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <iostream>
 #include <string.h>
 
 #include "image_delegate.h"
@@ -36,6 +37,8 @@
 #else
   #include <strings.h>
 #endif
+
+using std::cerr;
 
 static int pam_load_delegate(const char *filename, int *image_size, void **image_data, allocator_t alloc) {
     unsigned int w, h;
@@ -109,6 +112,12 @@ int pam_save_delegate(const char *filename, const struct gpujpeg_image_parameter
 
 static int pnm_load_delegate(const char *filename, int *image_size, void **image_data, allocator_t alloc) {
     std::ifstream ifs( filename, std::ios_base::binary | std::ios::ate );
+    if (!ifs.is_open()) {
+        cerr << "[GPUJPEG] [Error] Failed open " << filename << " for reading!\n";
+        return 1;
+    }
+    ifs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
     std::uint8_t *data;
     PNM::Info info;
 
@@ -116,7 +125,7 @@ static int pnm_load_delegate(const char *filename, int *image_size, void **image
     ifs.seekg( 0, std::ios::beg );
 
     ifs >> PNM::load( (uint8_t*) *image_data, info );
-    return 0;
+    return info.valid() ? 0 : 1;
 }
 
 static int pnm_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists) {
@@ -136,6 +145,11 @@ static int pnm_probe_delegate(const char *filename, struct gpujpeg_image_paramet
         return 0;
     }
     std::ifstream ifs( filename, std::ios_base::binary );
+    if (!ifs.is_open()) {
+        cerr << "[GPUJPEG] [Error] Failed open " << filename << " for reading!\n";
+        return 1;
+    }
+    ifs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     PNM::Info info;
 
     ifs >> PNM::probe( info );
