@@ -109,6 +109,23 @@ gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component *com
 const struct gpujpeg_component *
 gpujpeg_get_component_subsampling(enum gpujpeg_pixel_format pixel_format);
 
+struct gpujpeg_image_parameters;
+struct gpujpeg_parameters;
+
+/**
+ * @retval 0 parameters are different
+ * @retval 1 parameters are the same
+ */
+int
+gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpujpeg_parameters *p2);
+
+/**
+ * @retval 0 parameters are different
+ * @retval 1 parameters are the same
+ */
+int
+gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , const struct gpujpeg_image_parameters *p2);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus

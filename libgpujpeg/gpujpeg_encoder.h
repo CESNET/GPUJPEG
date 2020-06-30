@@ -140,11 +140,10 @@ gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpujpeg_ima
  * @param param
  * @param param_image
  * @param image_input_type
- * @param pixels
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_encoder_allocate(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int pixels);
+gpujpeg_encoder_allocate(struct gpujpeg_encoder* encoder, const struct gpujpeg_parameters * param, const struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type);
 
 /**
  * Compress image by encoder

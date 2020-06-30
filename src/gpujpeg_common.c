@@ -300,6 +300,28 @@ gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param)
     }
 }
 
+int
+gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpujpeg_parameters *p2)
+{
+    if (p1->verbose != p2->verbose ||
+            p1->quality != p2->quality ||
+            p1->restart_interval != p2->restart_interval ||
+            p1->interleaved != p2->interleaved ||
+            p1->segment_info != p2->segment_info ||
+            p1->color_space_internal != p2->color_space_internal) {
+        return 0;
+    }
+
+    for (int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++) {
+        if (p1->sampling_factor[comp].horizontal != p2->sampling_factor[comp].horizontal ||
+                p1->sampling_factor[comp].vertical != p2->sampling_factor[comp].vertical) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 /* Documented at declaration */
 void
 gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
@@ -309,6 +331,16 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
     param->comp_count = 3;
     param->color_space = GPUJPEG_RGB;
     param->pixel_format = GPUJPEG_444_U8_P012;
+}
+
+int
+gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , const struct gpujpeg_image_parameters *p2)
+{
+    return p1->width == p2->width &&
+        p1->height == p2->height &&
+        p1->comp_count == p2->comp_count &&
+        p1->color_space == p2->color_space &&
+        p1->pixel_format == p2->pixel_format;
 }
 
 /* Documented at declaration */
@@ -437,8 +469,11 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
 }
 
 size_t
-gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, cudaStream_t stream)
+gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_parameters * param, const struct gpujpeg_image_parameters * param_image, cudaStream_t stream)
 {
+    if (gpujpeg_parameters_equals(&coder->param, param) && gpujpeg_image_parameters_equals(&coder->param_image, param_image)) {
+        return coder->allocated_gpu_memory_size;
+    }
     size_t allocated_gpu_memory_size = 0;
 
     // Set parameters
@@ -481,9 +516,9 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters
         struct gpujpeg_component* component = &coder->component[comp];
 
         // Sampling factors
-        assert(coder->param.sampling_factor[comp].horizontal >= 1 && coder->param.sampling_factor[comp].horizontal <= 15);
-        assert(coder->param.sampling_factor[comp].vertical >= 1 && coder->param.sampling_factor[comp].vertical <= 15);
         component->sampling_factor = coder->param.sampling_factor[comp];
+        assert(component->sampling_factor.horizontal >= 1 && component->sampling_factor.horizontal <= 15);
+        assert(component->sampling_factor.vertical >= 1 && component->sampling_factor.vertical <= 15);
         if ( component->sampling_factor.horizontal > coder->sampling_factor.horizontal ) {
             coder->sampling_factor.horizontal = component->sampling_factor.horizontal;
         }
@@ -885,6 +920,8 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters
     // Copy segments to device memory
     cudaMemcpyAsync(coder->d_segment, coder->segment, coder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice, stream);
     gpujpeg_cuda_check_error("Coder segment copy", return 0);
+
+    coder->allocated_gpu_memory_size = allocated_gpu_memory_size;
 
     return allocated_gpu_memory_size;
 }

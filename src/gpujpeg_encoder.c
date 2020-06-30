@@ -226,24 +226,13 @@ size_t gpujpeg_encoder_max_memory(struct gpujpeg_parameters * param, struct gpuj
 }
 
 /* Documented at declaration */
-int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type, int pixels)
+int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, const struct gpujpeg_parameters * param, const struct gpujpeg_image_parameters * param_image, enum gpujpeg_encoder_input_type image_input_type)
 {
     // Get coder
     struct gpujpeg_coder* coder = &encoder->coder;
 
-    // Quality should be initialized when encoding
-    struct gpujpeg_parameters tmp_param;
-    tmp_param = *param;
-    tmp_param.quality = -1;
-
-    // Set image size from pixels
-    struct gpujpeg_image_parameters tmp_param_image;
-    tmp_param_image = *param_image;
-    tmp_param_image.width = (int) sqrt((float) pixels);
-    tmp_param_image.height = (pixels + tmp_param_image.width - 1) / tmp_param_image.width;
-
     // Allocate internal buffers
-    if (0 == gpujpeg_coder_init_image(coder, &tmp_param, &tmp_param_image, cudaStreamDefault)) {
+    if (0 == gpujpeg_coder_init_image(coder, param, param_image, encoder->stream)) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to pre-allocate encoding!\n");
         return -1;
     }

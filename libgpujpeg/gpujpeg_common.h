@@ -469,6 +469,8 @@ struct gpujpeg_coder
     float duration_stream;
     float duration_in_gpu;
     float duration_waiting;
+
+    size_t allocated_gpu_memory_size; ///< for gpujpeg_encoder_max_pixels() only (remove?)
 };
 
 /**
@@ -490,7 +492,7 @@ gpujpeg_coder_init(struct gpujpeg_coder* coder);
  * @return size of allocated device memory in bytes if succeeds, otherwise 0
  */
 size_t
-gpujpeg_coder_init_image(struct gpujpeg_coder * coder, struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, cudaStream_t stream);
+gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_parameters * param, const struct gpujpeg_image_parameters * param_image, cudaStream_t stream);
 
 /**
  * Deinitialize JPEG coder (free buffers)
