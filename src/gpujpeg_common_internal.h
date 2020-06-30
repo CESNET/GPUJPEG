@@ -350,6 +350,26 @@ const struct gpujpeg_component *
 gpujpeg_get_component_subsampling(enum gpujpeg_pixel_format pixel_format);
 
 /**
+ * Returns subsampling configuration of a planar pixel format in array of 8
+ * ints - [W0 H0 W1 H1 ...] where each number represent given component
+ * horizontal/vertical sampling factor as defined for JPEG, eg. (2 1 1 1 1 1)
+ * for 4:2:2 (first comonent - Y - is sampled in horizontal dimension twice
+ * compared to the remaining components.
+ *
+ * @returns array of 8 components representing the sampling factor of the pixel format
+ */
+const int *
+gpujpeg_pixel_format_get_sampling_factor(enum gpujpeg_pixel_format pixel_format);
+
+/** Returns number of bytes per pixel */
+int
+gpujpeg_pixel_format_get_unit_size(enum gpujpeg_pixel_format pixel_format);
+
+/** Returns true if a pixel format is interleaved (packed, more than one component) */
+int
+gpujpeg_pixel_format_is_interleaved(enum gpujpeg_pixel_format pixel_format);
+
+/**
  * @retval 0 parameters are different
  * @retval 1 parameters are the same
  */
