@@ -65,6 +65,7 @@ endif()
 file(GLOB H_FILES libgpujpeg/*.h)
 file(GLOB C_FILES src/*.c src/*/*.cpp src/*.cu)
 cuda_add_library(gpujpeg SHARED ${H_FILES} ${C_FILES})
+set_target_properties(gpujpeg PROPERTIES COMPILE_FLAGS -DGPUJPEG_EXPORTS)
 target_compile_features(gpujpeg PRIVATE ${NEEDED_CXX_FEATURES})
 set_target_properties(gpujpeg PROPERTIES SOVERSION 0)
 SET_TARGET_PROPERTIES(
@@ -81,7 +82,7 @@ file(GLOB C_FILES src/main.c)
 cuda_add_executable(gpujpeg-bin ${C_FILES})
 target_compile_features(gpujpeg-bin PRIVATE ${NEEDED_CXX_FEATURES})
 target_link_libraries(gpujpeg-bin gpujpeg)
-set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg")
+set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg${CMAKE_EXECUTABLE_SUFFIX}")
 
 install(TARGETS gpujpeg gpujpeg-bin
         LIBRARY DESTINATION lib
