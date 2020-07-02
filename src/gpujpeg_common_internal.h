@@ -36,6 +36,8 @@
 #define GPUJPEG_COMMON_INTERNAL_H
 
 #include <cuda_runtime.h>
+#include <math.h> // NAN
+#include "gpujpeg_util.h"
 #include "libgpujpeg/gpujpeg_common.h"
 #include "libgpujpeg/gpujpeg_type.h"
 
@@ -45,50 +47,56 @@
  * @param name
  */
 #define GPUJPEG_CUSTOM_TIMER_DECLARE(name) \
-    double name ## _elapsedTime__;
+    cudaEvent_t name ## _start__; \
+    cudaEvent_t name ## _stop__
+
+#define GPUJPEG_CUSTOM_TIMER_CREATE(name) \
+    do { \
+        GPUJPEG_CHECK(cudaEventCreate(&name ## _start__), ); \
+        GPUJPEG_CHECK(cudaEventCreate(&name ## _stop__), ); \
+    } while (0)
+
+#define GPUJPEG_CUSTOM_TIMER_DESTROY(name) \
+    do { \
+        GPUJPEG_CHECK(cudaEventDestroy(name ## _start__), ); \
+        GPUJPEG_CHECK(cudaEventDestroy(name ## _stop__), ); \
+    } while (0)
 
 /**
  * Start timer
  *
  * @param name
+ * @todo stream
  */
-#define GPUJPEG_CUSTOM_TIMER_START(name) \
-    name ## _elapsedTime__ = gpujpeg_get_time();
+#define GPUJPEG_CUSTOM_TIMER_START(name, stream) \
+    GPUJPEG_CHECK(cudaEventRecord(name ## _start__, stream), )
 
 /**
  * Stop timer
  *
  * @param name
  */
-#define GPUJPEG_CUSTOM_TIMER_STOP(name) \
-    name ## _elapsedTime__ = gpujpeg_get_time() - name ## _elapsedTime__;
+#define GPUJPEG_CUSTOM_TIMER_STOP(name, stream) \
+    GPUJPEG_CHECK(cudaEventRecord(name ## _stop__, stream), )
 
 /**
  * Get duration for timer
  *
  * @param name
  */
-#define GPUJPEG_CUSTOM_TIMER_DURATION(name) (name ## _elapsedTime__ * 1000.0)
-
-/**
- * Stop timer and print result
- *
- * @param name
- * @param text
- */
-#define GPUJPEG_CUSTOM_TIMER_STOP_PRINT(name, text) \
-    GPUJPEG_CUSTOM_TIMER_STOP(name); \
-    printf("%s %0.2f ms\n", text, (name ## _elapsedTime__ * 1000.0))
+#define GPUJPEG_CUSTOM_TIMER_DURATION(name) \
+    gpujpeg_custom_timer_get_duration(name ## _start__, name ## _stop__)
 
 /**
  * Default timer implementation
  */
 #define GPUJPEG_TIMER_INIT() \
-    GPUJPEG_CUSTOM_TIMER_DECLARE(def)
-#define GPUJPEG_TIMER_START() GPUJPEG_CUSTOM_TIMER_START(def)
-#define GPUJPEG_TIMER_STOP() GPUJPEG_CUSTOM_TIMER_STOP(def)
+    GPUJPEG_CUSTOM_TIMER_DECLARE(def); \
+    GPUJPEG_CUSTOM_TIMER_CREATE(def)
+#define GPUJPEG_TIMER_START() GPUJPEG_CUSTOM_TIMER_START(def, 0)
+#define GPUJPEG_TIMER_STOP() GPUJPEG_CUSTOM_TIMER_STOP(def, 0)
 #define GPUJPEG_TIMER_DURATION() GPUJPEG_CUSTOM_TIMER_DURATION(def)
-#define GPUJPEG_TIMER_STOP_PRINT(text) GPUJPEG_CUSTOM_TIMER_STOP_PRINT(def, text)
+#define GPUJPEG_TIMER_DEINIT() GPUJPEG_CUSTOM_TIMER_DESTROY(def)
 
 #ifdef __cplusplus
 extern "C" {
@@ -292,13 +300,16 @@ struct gpujpeg_coder
     int cuda_cc_minor; ///< CUDA Compute capability (minor version)
 
     // Operation durations
-    float duration_huffman_cpu;
-    float duration_memory_from;
-    float duration_memory_map;
-    float duration_memory_unmap;
-    float duration_stream;
-    float duration_in_gpu;
-    float duration_waiting;
+    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_memory_to);
+    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_memory_from);
+    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_memory_map);
+    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_memory_unmap);
+    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_preprocessor);
+    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_dct_quantization);
+    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_huffman_coder);
+    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_stream);
+    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_in_gpu);
+    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_waiting);
 
     size_t allocated_gpu_memory_size; ///< for gpujpeg_encoder_max_pixels() only (remove?)
 };
@@ -383,8 +394,19 @@ gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpu
 int
 gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , const struct gpujpeg_image_parameters *p2);
 
+/**
+ * returns difference between specified CUDA events
+ *
+ * @returns duration in ms, 0.0F in case of error
+ */
+float
+gpujpeg_custom_timer_get_duration(cudaEvent_t start, cudaEvent_t stop);
+
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus
 
 #endif // GPUJPEG_COMMON_INTERNAL_H
+
+/* vi: set expandtab sw=4: */

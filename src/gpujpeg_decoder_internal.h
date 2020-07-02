@@ -67,10 +67,6 @@ struct gpujpeg_decoder
 
     // Stream
     cudaStream_t stream;
-
-    // Timers
-    GPUJPEG_CUSTOM_TIMER_DECLARE(def)
-    GPUJPEG_CUSTOM_TIMER_DECLARE(in_gpu)
 };
 
 #endif // GPUJPEG_DECODER_INTERNAL_H

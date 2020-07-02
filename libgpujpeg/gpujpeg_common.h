@@ -56,10 +56,6 @@ extern "C" {
     #define GPUJPEG_API
 #endif
 
-/** @return current time in seconds */
-GPUJPEG_API double
-gpujpeg_get_time();
-
 /** Marker used as segment info */
 #define GPUJPEG_MARKER_SEGMENT_INFO GPUJPEG_MARKER_APP13
 

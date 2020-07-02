@@ -66,37 +66,6 @@
 // rounds number of segment bytes up to next multiple of 128
 #define SEGMENT_ALIGN(b) (((b) + 127) & ~127)
 
-#if defined(_MSC_VER)
-#include <Windows.h>
-    /* Documented at declaration */
-    double gpujpeg_get_time()
-    {
-        static double frequency = 0.0;
-        static LARGE_INTEGER frequencyAsInt;
-        LARGE_INTEGER timer;
-        if (frequency == 0.0) {
-            if (!QueryPerformanceFrequency(&frequencyAsInt)) {
-                return -1.0;
-            }
-            else {
-                frequency = (double)frequencyAsInt.QuadPart;
-            }
-        }
-        QueryPerformanceCounter(&timer);
-        return (double) timer.QuadPart / frequency;
-    }
-#elif defined(__linux__) || defined(__APPLE__)
-    #include <sys/time.h>
-
-    /* Documented at declaration */
-    double gpujpeg_get_time(void)
-    {
-        struct timeval tv;
-        gettimeofday(&tv, 0);
-        return (double) tv.tv_sec + (double) tv.tv_usec * 0.000001;
-    }
-#endif
-
 #define PLANAR   1u
 #define SUBSAMPL 2u
 const static struct {
@@ -464,6 +433,17 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
     coder->d_data_compressed = NULL;
     coder->d_temp_huffman = NULL;
     coder->data_compressed_allocated_size = 0;
+
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_to);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_from);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_map);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_unmap);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_preprocessor);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_dct_quantization);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_huffman_coder);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_stream);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_in_gpu);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_waiting);
 
     return 0;
 }
@@ -954,6 +934,18 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
         cudaFreeHost(coder->block_list);
     if ( coder->d_block_list != NULL )
         cudaFree(coder->d_block_list);
+
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_to);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_from);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_map);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_unmap);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_preprocessor);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_dct_quantization);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_huffman_coder);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_stream);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_in_gpu);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_waiting);
+
     return 0;
 }
 
@@ -1645,6 +1637,30 @@ int gpujpeg_pixel_format_is_subsampled(enum gpujpeg_pixel_format pixel_format)
         }
     }
     return -1;
+}
+
+float gpujpeg_custom_timer_get_duration(cudaEvent_t start, cudaEvent_t stop) {
+    float elapsedTime = NAN;
+    cudaError_t err = cudaSuccess;
+    err = cudaEventSynchronize(stop);
+    if (err != cudaSuccess) {
+        if (err != cudaErrorInvalidResourceHandle) {
+            gpujpeg_cuda_check_error("cudaEventSynchronize", );
+        } else { // reset last error to cudaSuccess
+            cudaGetLastError();
+        }
+        return 0.0F;
+    }
+    err = cudaEventElapsedTime(&elapsedTime, start, stop);
+    if (err != cudaSuccess) {
+        if (err != cudaErrorInvalidResourceHandle) {
+            gpujpeg_cuda_check_error("cudaEventElapsedTime", );
+        } else { // reset last error to cudaSuccess
+            cudaGetLastError();
+        }
+        return 0.0F;
+    }
+    return elapsedTime;
 }
 
 /* vi: set expandtab sw=4 : */
