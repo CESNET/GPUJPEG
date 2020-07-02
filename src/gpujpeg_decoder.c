@@ -92,15 +92,19 @@ gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, ui
 struct gpujpeg_decoder*
 gpujpeg_decoder_create(cudaStream_t stream)
 {
-    struct gpujpeg_decoder* decoder = (struct gpujpeg_decoder*) malloc(sizeof(struct gpujpeg_decoder));
+    struct gpujpeg_decoder* decoder = (struct gpujpeg_decoder*) calloc(1, sizeof(struct gpujpeg_decoder));
     if ( decoder == NULL )
         return NULL;
 
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
 
+    // Initialize coder
+    if ( gpujpeg_coder_init(coder) != 0 ) {
+        return NULL;
+    }
+
     // Set parameters
-    memset(decoder, 0, sizeof(struct gpujpeg_decoder));
     gpujpeg_set_default_parameters(&coder->param);
     gpujpeg_image_set_default_parameters(&coder->param_image);
     coder->param_image.comp_count = 0;
@@ -175,10 +179,6 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
         return -1;
     }
 
-    // Initialize coder
-    if ( gpujpeg_coder_init(coder) != 0 ) {
-        return -1;
-    }
     if (0 == gpujpeg_coder_init_image(coder, param, param_image, decoder->stream)) {
         return -1;
     }

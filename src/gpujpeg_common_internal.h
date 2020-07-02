@@ -397,9 +397,12 @@ gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , cons
 /**
  * returns difference between specified CUDA events
  *
+ * @note
+ * Must be declared as GPUJPEG_API (used by main.c)
+ *
  * @returns duration in ms, 0.0F in case of error
  */
-float
+GPUJPEG_API float
 gpujpeg_custom_timer_get_duration(cudaEvent_t start, cudaEvent_t stop);
 
 

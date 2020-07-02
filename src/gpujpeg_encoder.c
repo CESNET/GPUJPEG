@@ -436,6 +436,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         }
 
         GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_huffman_coder, encoder->stream);
+        GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_in_gpu, encoder->stream);
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_memory_from, encoder->stream);
 
         // Copy compressed data from device memory to cpu memory
@@ -452,7 +453,6 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         cudaStreamSynchronize(encoder->stream);
         GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_waiting, encoder->stream);
         GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_memory_from, encoder->stream);
-        GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_in_gpu, encoder->stream);
 
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_stream, encoder->stream);
         if ( coder->param.interleaved == 1 ) {
