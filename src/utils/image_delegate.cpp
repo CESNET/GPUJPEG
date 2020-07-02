@@ -118,7 +118,6 @@ static int pnm_load_delegate(const char *filename, int *image_size, void **image
     }
     ifs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
-    std::uint8_t *data;
     PNM::Info info;
 
     *image_data = alloc(ifs.tellg());

@@ -197,7 +197,6 @@ gpujpeg_writer_write_dqt(struct gpujpeg_encoder* encoder, enum gpujpeg_component
     uint8_t* dqt = encoder->table_quantization[type].table_raw;
 
     // Emit table in zig-zag order
-    unsigned char qval;
     for ( int i = 0; i < 64; i++ )  {
         unsigned char qval = (unsigned char)((char)(dqt[i]));
         gpujpeg_writer_emit_byte(encoder->writer, qval);
