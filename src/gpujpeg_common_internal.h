@@ -41,25 +41,21 @@
 #include "libgpujpeg/gpujpeg_common.h"
 #include "libgpujpeg/gpujpeg_type.h"
 
-/**
- * Declare timer
- *
- * @param name
- */
-#define GPUJPEG_CUSTOM_TIMER_DECLARE(name) \
-    cudaEvent_t name ## _start__; \
-    cudaEvent_t name ## _stop__
+struct gpujpeg_timer {
+    cudaEvent_t start;
+    cudaEvent_t stop;
+};
 
 #define GPUJPEG_CUSTOM_TIMER_CREATE(name) \
     do { \
-        GPUJPEG_CHECK(cudaEventCreate(&name ## _start__), ); \
-        GPUJPEG_CHECK(cudaEventCreate(&name ## _stop__), ); \
+        GPUJPEG_CHECK(cudaEventCreate(&(name).start), ); \
+        GPUJPEG_CHECK(cudaEventCreate(&(name).stop), ); \
     } while (0)
 
 #define GPUJPEG_CUSTOM_TIMER_DESTROY(name) \
     do { \
-        GPUJPEG_CHECK(cudaEventDestroy(name ## _start__), ); \
-        GPUJPEG_CHECK(cudaEventDestroy(name ## _stop__), ); \
+        GPUJPEG_CHECK(cudaEventDestroy((name).start), ); \
+        GPUJPEG_CHECK(cudaEventDestroy((name).stop), ); \
     } while (0)
 
 /**
@@ -69,7 +65,7 @@
  * @todo stream
  */
 #define GPUJPEG_CUSTOM_TIMER_START(name, stream) \
-    GPUJPEG_CHECK(cudaEventRecord(name ## _start__, stream), )
+    GPUJPEG_CHECK(cudaEventRecord((name).start, stream), )
 
 /**
  * Stop timer
@@ -77,7 +73,7 @@
  * @param name
  */
 #define GPUJPEG_CUSTOM_TIMER_STOP(name, stream) \
-    GPUJPEG_CHECK(cudaEventRecord(name ## _stop__, stream), )
+    GPUJPEG_CHECK(cudaEventRecord((name).stop, stream), )
 
 /**
  * Get duration for timer
@@ -85,13 +81,13 @@
  * @param name
  */
 #define GPUJPEG_CUSTOM_TIMER_DURATION(name) \
-    gpujpeg_custom_timer_get_duration(name ## _start__, name ## _stop__)
+    gpujpeg_custom_timer_get_duration((name).start, (name).stop)
 
 /**
  * Default timer implementation
  */
 #define GPUJPEG_TIMER_INIT() \
-    GPUJPEG_CUSTOM_TIMER_DECLARE(def); \
+    struct gpujpeg_timer def; \
     GPUJPEG_CUSTOM_TIMER_CREATE(def)
 #define GPUJPEG_TIMER_START() GPUJPEG_CUSTOM_TIMER_START(def, 0)
 #define GPUJPEG_TIMER_STOP() GPUJPEG_CUSTOM_TIMER_STOP(def, 0)
@@ -300,15 +296,15 @@ struct gpujpeg_coder
     int cuda_cc_minor; ///< CUDA Compute capability (minor version)
 
     // Operation durations
-    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_memory_to);
-    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_memory_from);
-    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_memory_map);
-    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_memory_unmap);
-    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_preprocessor);
-    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_dct_quantization);
-    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_huffman_coder);
-    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_stream);
-    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_in_gpu);
+    struct gpujpeg_timer duration_memory_to;
+    struct gpujpeg_timer duration_memory_from;
+    struct gpujpeg_timer duration_memory_map;
+    struct gpujpeg_timer duration_memory_unmap;
+    struct gpujpeg_timer duration_preprocessor;
+    struct gpujpeg_timer duration_dct_quantization;
+    struct gpujpeg_timer duration_huffman_coder;
+    struct gpujpeg_timer duration_stream;
+    struct gpujpeg_timer duration_in_gpu;
 
     size_t allocated_gpu_memory_size; ///< for gpujpeg_encoder_max_pixels() only (remove?)
 };
