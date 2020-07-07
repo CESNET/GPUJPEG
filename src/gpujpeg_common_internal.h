@@ -309,7 +309,6 @@ struct gpujpeg_coder
     GPUJPEG_CUSTOM_TIMER_DECLARE(duration_huffman_coder);
     GPUJPEG_CUSTOM_TIMER_DECLARE(duration_stream);
     GPUJPEG_CUSTOM_TIMER_DECLARE(duration_in_gpu);
-    GPUJPEG_CUSTOM_TIMER_DECLARE(duration_waiting);
 
     size_t allocated_gpu_memory_size; ///< for gpujpeg_encoder_max_pixels() only (remove?)
 };

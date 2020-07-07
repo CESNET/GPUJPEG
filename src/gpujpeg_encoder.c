@@ -449,9 +449,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         }
 
         // Wait for async operations before formatting
-        GPUJPEG_CUSTOM_TIMER_START(coder->duration_waiting, encoder->stream);
         cudaStreamSynchronize(encoder->stream);
-        GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_waiting, encoder->stream);
         GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_memory_from, encoder->stream);
 
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_stream, encoder->stream);

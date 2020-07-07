@@ -443,7 +443,6 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
     GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_huffman_coder);
     GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_stream);
     GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_in_gpu);
-    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_waiting);
 
     return 0;
 }
@@ -944,7 +943,6 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
     GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_huffman_coder);
     GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_stream);
     GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_in_gpu);
-    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_waiting);
 
     return 0;
 }

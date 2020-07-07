@@ -109,10 +109,12 @@ int main(int argc, char *argv[])
             return -1;
         }
         GPUJPEG_TIMER_STOP();
-        printf("      Stream Reader: %7.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_stream));
-        printf("       GPU decoding: %7.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_in_gpu));
-        printf("    Waiting for GPU: %7.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_waiting));
-        printf("    Copy To Texture: %7.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_from) + GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_map) + GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_unmap));
+        printf("    Stream Reader:     %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_stream));
+        printf("    Copy To Device:    %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_to));
+        printf("    Huffman Decoder:   %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_huffman_coder));
+        printf("    DCT & Quantization:%10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_dct_quantization));
+        printf("    Postprocessing:    %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_preprocessor));
+        printf("    Copy To Texture:   %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_from));
         printf("Image decoded OK in %0.2f ms (%dx%d)\n", GPUJPEG_TIMER_DURATION(), param_image.width, param_image.height);
         GPUJPEG_TIMER_DEINIT();
     }

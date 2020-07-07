@@ -321,9 +321,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_preprocessor, decoder->stream);
 
     // Wait for async operations before copying from the device
-    GPUJPEG_CUSTOM_TIMER_START(coder->duration_waiting, decoder->stream);
     cudaStreamSynchronize(decoder->stream);
-    GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_waiting, decoder->stream);
 
     GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_in_gpu, decoder->stream);
 
