@@ -39,8 +39,10 @@
  * @todo
  * Remove the redefinition and instead of cudaStream_t use a typedef to (void *).
  */
+#ifndef __DRIVER_TYPES_H__
 struct CUstream_st;
 typedef struct CUstream_st *cudaStream_t;
+#endif
 
 #ifdef __cplusplus
 extern "C" {
