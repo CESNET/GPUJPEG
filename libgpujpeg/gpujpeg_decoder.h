@@ -65,10 +65,10 @@ struct gpujpeg_decoder_output
     /// Output type
     enum gpujpeg_decoder_output_type type;
 
-    /// Compressed data
+    /// Decompressed data
     uint8_t* data;
 
-    /// Compressed data size
+    /// Decompressed data size
     int data_size;
 
     /// OpenGL texture
@@ -153,6 +153,16 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
  */
 GPUJPEG_API int
 gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, struct gpujpeg_decoder_output* output);
+
+/**
+ * Returns duration statistics for last decoded image
+ * @return 0 if succeeds, otherwise nonzero
+ * @note
+ * The values are only informative and for debugging only and thus this is
+ * not considered as a part of a public API.
+ */
+GPUJPEG_API int
+gpujpeg_decoder_get_stats(struct gpujpeg_decoder *decoder, struct gpujpeg_duration_stats *stats);
 
 /**
  * Destory JPEG decoder

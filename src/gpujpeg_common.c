@@ -66,6 +66,36 @@
 // rounds number of segment bytes up to next multiple of 128
 #define SEGMENT_ALIGN(b) (((b) + 127) & ~127)
 
+#if defined(_MSC_VER)
+    /* Documented at declaration */
+    double gpujpeg_get_time()
+    {
+        static double frequency = 0.0;
+        static LARGE_INTEGER frequencyAsInt;
+        LARGE_INTEGER timer;
+        if (frequency == 0.0) {
+            if (!QueryPerformanceFrequency(&frequencyAsInt)) {
+                return -1.0;
+            }
+            else {
+                frequency = (double)frequencyAsInt.QuadPart;
+            }
+        }
+        QueryPerformanceCounter(&timer);
+        return (double) timer.QuadPart / frequency;
+    }
+#elif defined(__linux__) || defined(__APPLE__)
+    #include <sys/time.h>
+
+    /* Documented at declaration */
+    double gpujpeg_get_time(void)
+    {
+        struct timeval tv;
+        gettimeofday(&tv, 0);
+        return (double) tv.tv_sec + (double) tv.tv_usec * 0.000001;
+    }
+#endif
+
 #define PLANAR   1u
 #define SUBSAMPL 2u
 const static struct {
@@ -903,6 +933,22 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     coder->allocated_gpu_memory_size = allocated_gpu_memory_size;
 
     return allocated_gpu_memory_size;
+}
+
+int
+gpujpeg_coder_get_stats(struct gpujpeg_coder *coder, struct gpujpeg_duration_stats *stats)
+{
+    stats->duration_memory_to = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_memory_to);
+    stats->duration_memory_from = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_memory_from);
+    stats->duration_memory_map = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_memory_map);
+    stats->duration_memory_unmap = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_memory_unmap);
+    stats->duration_preprocessor = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_preprocessor);
+    stats->duration_dct_quantization = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_dct_quantization);
+    stats->duration_huffman_coder = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_huffman_coder);
+    stats->duration_stream = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_stream);
+    stats->duration_in_gpu = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_in_gpu);
+
+    return 0;
 }
 
 /* Documented at declaration */

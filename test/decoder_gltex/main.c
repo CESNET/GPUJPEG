@@ -1,6 +1,5 @@
 #include <libgpujpeg/gpujpeg.h>
 #include <stdio.h>
-#include "../../src/gpujpeg_decoder_internal.h"
 #include "gpujpeg_reformat.h"
 #include <GL/glew.h>
 #include <GL/glut.h>
@@ -62,11 +61,10 @@ int main(int argc, char *argv[])
     // Add segment info headers into JPEG stream
     uint8_t * image_old = image;
     int image_old_size = image_size;
-    GPUJPEG_TIMER_INIT();
-    GPUJPEG_TIMER_START();
+    double duration = gpujpeg_get_time();
     gpujpeg_reformat(image, image_size, &image, &image_size);
-    GPUJPEG_TIMER_STOP();
-    printf("Rewritten JPEG stream in %0.2f ms (from %d bytes to %d bytes.\n", GPUJPEG_TIMER_DURATION(), image_old_size, image_size);
+    duration = gpujpeg_get_time() - duration;
+    printf("Rewritten JPEG stream in %0.2f ms (from %d bytes to %d bytes.\n", duration * 1000.0, image_old_size, image_size);
     gpujpeg_image_destroy(image_old);
 
     // Get image size and check number of color components
@@ -97,29 +95,29 @@ int main(int argc, char *argv[])
     gpujpeg_decoder_output_set_texture(&decoder_output, texture);
 
     // Decode image
-    GPUJPEG_TIMER_START();
+    duration = gpujpeg_get_time();
     const int iterationCount = 20;
     for (int iteration = 0; iteration < iterationCount; iteration++)
     {
-        GPUJPEG_TIMER_INIT();
-        GPUJPEG_TIMER_START();
+        double duration = gpujpeg_get_time();
         printf("Decoding Image %s\n", input_filename);
         if ( gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output) != 0 ) {
             fprintf(stderr, "Failed to decode image [%s]!\n", input_filename);
             return -1;
         }
-        GPUJPEG_TIMER_STOP();
-        printf("    Stream Reader:     %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_stream));
-        printf("    Copy To Device:    %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_to));
-        printf("    Huffman Decoder:   %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_huffman_coder));
-        printf("    DCT & Quantization:%10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_dct_quantization));
-        printf("    Postprocessing:    %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_preprocessor));
-        printf("    Copy To Texture:   %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_from));
-        printf("Image decoded OK in %0.2f ms (%dx%d)\n", GPUJPEG_TIMER_DURATION(), param_image.width, param_image.height);
-        GPUJPEG_TIMER_DEINIT();
+        duration = gpujpeg_get_time() - duration;
+        struct gpujpeg_duration_stats stats;
+        gpujpeg_decoder_get_stats(decoder, &stats);
+        printf("    Stream Reader:     %10.2f ms\n", stats.duration_stream);
+        printf("    Copy To Device:    %10.2f ms\n", stats.duration_memory_to);
+        printf("    Huffman Decoder:   %10.2f ms\n", stats.duration_huffman_coder);
+        printf("    DCT & Quantization:%10.2f ms\n", stats.duration_dct_quantization);
+        printf("    Postprocessing:    %10.2f ms\n", stats.duration_preprocessor);
+        printf("    Copy To Texture:   %10.2f ms\n", stats.duration_memory_from);
+        printf("Image decoded OK in %0.2f ms (%dx%d)\n", duration * 1000.0, param_image.width, param_image.height);
     }
-    GPUJPEG_TIMER_STOP();
-    printf("FPS: %0.2f\n", ((double) iterationCount) / (GPUJPEG_TIMER_DURATION() / 1000.0));
+    duration = gpujpeg_get_time() - duration;
+    printf("FPS: %0.2f\n", ((double) iterationCount) / duration);
 
     // Get data from OpenGL texture
     uint8_t* data = NULL;
@@ -135,8 +133,6 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to save image [%s]!\n", output_filename);
         return -1;
     }
-
-    GPUJPEG_TIMER_DEINIT();
 
     // Clean up decoder
     gpujpeg_image_destroy(image);

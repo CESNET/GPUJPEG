@@ -28,18 +28,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <assert.h>
 #include <libgpujpeg/gpujpeg.h>
 #include <libgpujpeg/gpujpeg_common.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #if defined(_MSC_VER)
     #include "gpujpeg_getopt_mingw.h"
 #else
     #include <getopt.h>
 #endif
-
-#include "gpujpeg_common_internal.h" // TIMER
-#include "gpujpeg_decoder_internal.h" // TIMER
-#include "gpujpeg_encoder_internal.h" // TIMER
-#include "gpujpeg_util.h"
 
 void
 print_help()
@@ -483,10 +482,8 @@ main(int argc, char *argv[])
             }
 
             // Encode image
-            GPUJPEG_TIMER_INIT();
+            double duration = gpujpeg_get_time();
             printf("\nEncoding Image [%s]\n", input);
-
-            GPUJPEG_TIMER_START();
 
             // Load image
             int image_size = gpujpeg_image_calculate_size(&param_image);
@@ -496,8 +493,8 @@ main(int argc, char *argv[])
                 return -1;
             }
 
-            GPUJPEG_TIMER_STOP();
-            printf("Load Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
+            duration = gpujpeg_get_time() - duration;
+            printf("Load Image:          %10.2f ms\n", duration * 1000.0);
 
             // Prepare encoder input
             struct gpujpeg_encoder_input encoder_input;
@@ -516,7 +513,7 @@ main(int argc, char *argv[])
                     printf("\nIteration #%d:\n", iteration + 1);
                 }
 
-                GPUJPEG_TIMER_START();
+                double duration = gpujpeg_get_time();
 
                 rc = gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size);
                 if ( rc != GPUJPEG_NOERR ) {
@@ -527,31 +524,31 @@ main(int argc, char *argv[])
                     return -1;
                 }
 
-                GPUJPEG_TIMER_STOP();
-                float duration = GPUJPEG_TIMER_DURATION();
-                if ( param.verbose ) {
-                    float duration_memory_map = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_memory_map);
-                    float duration_memory_unmap = GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_memory_unmap);
-                    printf(" -Copy To Device:    %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_memory_to));
-                    if ( duration_memory_map != 0.0 && duration_memory_unmap != 0.0 ) {
-                        printf(" -OpenGL Memory Map: %10.2f ms\n", duration_memory_map);
-                        printf(" -OpenGL Memory Unmap:%9.2f ms\n", duration_memory_unmap);
+                duration = gpujpeg_get_time() - duration;
+                struct gpujpeg_duration_stats stats;
+                rc = gpujpeg_encoder_get_stats(encoder, &stats);
+
+                if ( rc == 0 && param.verbose ) {
+                    printf(" -Copy To Device:    %10.2f ms\n", stats.duration_memory_to);
+                    if ( stats.duration_memory_map != 0.0 && stats.duration_memory_unmap != 0.0 ) {
+                        printf(" -OpenGL Memory Map: %10.2f ms\n", stats.duration_memory_map);
+                        printf(" -OpenGL Memory Unmap:%9.2f ms\n", stats.duration_memory_unmap);
                     }
-                    printf(" -Preprocessing:     %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_preprocessor));
-                    printf(" -DCT & Quantization:%10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_dct_quantization));
-                    printf(" -Huffman Encoder:   %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_huffman_coder));
-                    printf(" -Copy From Device:  %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_memory_from));
-                    printf(" -Stream Formatter:  %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_stream));
+                    printf(" -Preprocessing:     %10.2f ms\n", stats.duration_preprocessor);
+                    printf(" -DCT & Quantization:%10.2f ms\n", stats.duration_dct_quantization);
+                    printf(" -Huffman Encoder:   %10.2f ms\n", stats.duration_huffman_coder);
+                    printf(" -Copy From Device:  %10.2f ms\n", stats.duration_memory_from);
+                    printf(" -Stream Formatter:  %10.2f ms\n", stats.duration_stream);
                 }
-                printf("Encode Image GPU:    %10.2f ms (only in-GPU processing)\n", GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_in_gpu));
-                printf("Encode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_memory_to) - GPUJPEG_CUSTOM_TIMER_DURATION(encoder->coder.duration_memory_from));
-                printf("Encode Image:        %10.2f ms\n", duration);
+                printf("Encode Image GPU:    %10.2f ms (only in-GPU processing)\n", stats.duration_in_gpu);
+                printf("Encode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration * 1000.0 - stats.duration_memory_to - stats.duration_memory_from);
+                printf("Encode Image:        %10.2f ms\n", duration * 1000.0);
             }
             if ( iterate > 1 ) {
                 printf("\n");
             }
 
-            GPUJPEG_TIMER_START();
+            duration = gpujpeg_get_time();
 
             // Save image
             if ( gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size, &param_image) != 0 ) {
@@ -559,13 +556,12 @@ main(int argc, char *argv[])
                 return -1;
             }
 
-            GPUJPEG_TIMER_STOP();
-            printf("Save Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
+            duration = gpujpeg_get_time() - duration;
+            printf("Save Image:          %10.2f ms\n", duration * 1000.0);
             printf("Compressed Size:     %10.d bytes [%s]\n", image_compressed_size, output);
 
             // Destroy image
             gpujpeg_image_destroy(image);
-            GPUJPEG_TIMER_DEINIT();
         }
 
         // Destroy OpenGL texture
@@ -648,8 +644,7 @@ main(int argc, char *argv[])
             }
 
             // Decode image
-            GPUJPEG_TIMER_INIT();
-            GPUJPEG_TIMER_START();
+            double duration = gpujpeg_get_time();
 
             printf("\nDecoding Image [%s]\n", input);
 
@@ -661,8 +656,8 @@ main(int argc, char *argv[])
                 return -1;
             }
 
-            GPUJPEG_TIMER_STOP();
-            printf("Load Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
+            duration = gpujpeg_get_time() - duration;
+            printf("Load Image:          %10.2f ms\n", duration * 1000.0);
 
             // Prepare decoder output buffer
             struct gpujpeg_decoder_output decoder_output;
@@ -677,7 +672,7 @@ main(int argc, char *argv[])
                     printf("\nIteration #%d:\n", iteration + 1);
                 }
 
-                GPUJPEG_TIMER_START();
+                double duration = gpujpeg_get_time();
 
                 // Decode image
                 if ( (rc = gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output)) != 0 ) {
@@ -688,25 +683,25 @@ main(int argc, char *argv[])
                     return -1;
                 }
 
-                GPUJPEG_TIMER_STOP();
-                float duration = GPUJPEG_TIMER_DURATION();
-                if ( param.verbose ) {
-                    printf(" -Stream Reader:     %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_stream));
-                    printf(" -Copy To Device:    %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_to));
-                    printf(" -Huffman Decoder:   %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_huffman_coder));
-                    printf(" -DCT & Quantization:%10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_dct_quantization));
-                    printf(" -Postprocessing:    %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_preprocessor));
-                    printf(" -Copy From Device:  %10.2f ms\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_from));
-                    float duration_memory_map = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_map);
-                    float duration_memory_unmap = GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_unmap);
-                    if ( duration_memory_map != 0.0 && duration_memory_unmap != 0.0 ) {
-                        printf(" -OpenGL Memory Map: %10.2f ms\n", duration_memory_map);
-                        printf(" -OpenGL Memory Unmap:%9.2f ms\n", duration_memory_unmap);
+                duration = gpujpeg_get_time() - duration;
+                struct gpujpeg_duration_stats stats;
+                rc = gpujpeg_decoder_get_stats(decoder, &stats);
+
+                if ( rc == 0 && param.verbose ) {
+                    printf(" -Stream Reader:     %10.2f ms\n", stats.duration_stream);
+                    printf(" -Copy To Device:    %10.2f ms\n", stats.duration_memory_to);
+                    printf(" -Huffman Decoder:   %10.2f ms\n", stats.duration_huffman_coder);
+                    printf(" -DCT & Quantization:%10.2f ms\n", stats.duration_dct_quantization);
+                    printf(" -Postprocessing:    %10.2f ms\n", stats.duration_preprocessor);
+                    printf(" -Copy From Device:  %10.2f ms\n", stats.duration_memory_from);
+                    if ( stats.duration_memory_map != 0.0 && stats.duration_memory_unmap != 0.0 ) {
+                        printf(" -OpenGL Memory Map: %10.2f ms\n", stats.duration_memory_map);
+                        printf(" -OpenGL Memory Unmap:%9.2f ms\n", stats.duration_memory_unmap);
                     }
                 }
-                printf("Decode Image GPU:    %10.2f ms (only in-GPU processing)\n", GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_in_gpu));
-                printf("Decode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration - GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_to) - GPUJPEG_CUSTOM_TIMER_DURATION(decoder->coder.duration_memory_from));
-                printf("Decode Image:        %10.2f ms\n", duration);
+                printf("Decode Image GPU:    %10.2f ms (only in-GPU processing)\n", stats.duration_in_gpu);
+                printf("Decode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration * 1000.0 - stats.duration_memory_to - stats.duration_memory_from);
+                printf("Decode Image:        %10.2f ms\n", duration * 1000.0);
             }
             if ( iterate > 1 ) {
                 printf("\n");
@@ -715,15 +710,15 @@ main(int argc, char *argv[])
             uint8_t* data = NULL;
             int data_size = 0;
             if ( use_opengl ) {
-                gpujpeg_opengl_texture_get_data(texture->texture_id, decoder->coder.data_raw, &data_size);
-                data = decoder->coder.data_raw;
+                data = malloc(decoder_output.data_size);
+                gpujpeg_opengl_texture_get_data(texture->texture_id, data, &data_size);
                 assert(data != NULL && data_size != 0);
             } else {
                 data = decoder_output.data;
                 data_size = decoder_output.data_size;
             }
 
-            GPUJPEG_TIMER_START();
+            duration = gpujpeg_get_time();
 
             // Save image
             struct gpujpeg_image_parameters decoded_param_image;
@@ -735,13 +730,16 @@ main(int argc, char *argv[])
                 return -1;
             }
 
-            GPUJPEG_TIMER_STOP();
-            printf("Save Image:          %10.2f ms\n", GPUJPEG_TIMER_DURATION());
+            duration = gpujpeg_get_time() - duration;
+            printf("Save Image:          %10.2f ms\n", duration * 1000.0);
             printf("Decompressed Size:   %10.d bytes [%s]\n", decoder_output.data_size, output);
+
+            if ( use_opengl ) {
+                free(data);
+            }
 
             // Destroy image
             gpujpeg_image_destroy(image);
-            GPUJPEG_TIMER_DEINIT();
         }
 
         // Destroy OpenGL texture

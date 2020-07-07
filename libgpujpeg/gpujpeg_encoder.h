@@ -162,6 +162,16 @@ GPUJPEG_API int
 gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, int* image_compressed_size);
 
 /**
+ * Returns duration statistics for last encoded image
+ * @return 0 if succeeds, otherwise nonzero
+ * @note
+ * The values are only informative and for debugging only and thus this is
+ * not considered as a part of a public API.
+ */
+GPUJPEG_API int
+gpujpeg_encoder_get_stats(struct gpujpeg_encoder *encoder, struct gpujpeg_duration_stats *stats);
+
+/**
  * Destory JPEG encoder
  *
  * @param encoder  Encoder structure

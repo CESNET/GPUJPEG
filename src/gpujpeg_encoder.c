@@ -519,6 +519,12 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
     return 0;
 }
 
+int
+gpujpeg_encoder_get_stats(struct gpujpeg_encoder *encoder, struct gpujpeg_duration_stats *stats)
+{
+    return gpujpeg_coder_get_stats(&encoder->coder, stats);
+}
+
 /* Documented at declaration */
 int
 gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)

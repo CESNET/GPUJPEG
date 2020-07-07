@@ -56,6 +56,10 @@ extern "C" {
     #define GPUJPEG_API
 #endif
 
+/** @return current time in seconds */
+GPUJPEG_API double
+gpujpeg_get_time();
+
 /** Marker used as segment info */
 #define GPUJPEG_MARKER_SEGMENT_INFO GPUJPEG_MARKER_APP13
 
@@ -242,6 +246,26 @@ enum gpujpeg_image_file_format {
     GPUJPEG_IMAGE_FILE_PNM = 1 | 128,
     /// PAM file format
     GPUJPEG_IMAGE_FILE_PAM = 1 | 256,
+};
+
+/**
+ * Encoder/decoder fine-grained statistics with duration of individual steps
+ * of JPEG compression/decompression. All values are in milliseconds.
+ *
+ * @note
+ * The values are only informative and for debugging only and thus this is
+ * not considered as a part of a public API.
+ */
+struct gpujpeg_duration_stats {
+    double duration_memory_to;
+    double duration_memory_from;
+    double duration_memory_map;
+    double duration_memory_unmap;
+    double duration_preprocessor;
+    double duration_dct_quantization;
+    double duration_huffman_coder;
+    double duration_stream;
+    double duration_in_gpu;
 };
 
 /**

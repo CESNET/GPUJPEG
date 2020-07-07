@@ -335,6 +335,12 @@ size_t
 gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_parameters * param, const struct gpujpeg_image_parameters * param_image, cudaStream_t stream);
 
 /**
+ * Returns duration statistics for last coded image
+ */
+int
+gpujpeg_coder_get_stats(struct gpujpeg_coder *coder, struct gpujpeg_duration_stats *stats);
+
+/**
  * Deinitialize JPEG coder (free buffers)
  *
  * @param codec  Codec structure
@@ -396,12 +402,9 @@ gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , cons
 /**
  * returns difference between specified CUDA events
  *
- * @note
- * Must be declared as GPUJPEG_API (used by main.c)
- *
  * @returns duration in ms, 0.0F in case of error
  */
-GPUJPEG_API float
+float
 gpujpeg_custom_timer_get_duration(cudaEvent_t start, cudaEvent_t stop);
 
 

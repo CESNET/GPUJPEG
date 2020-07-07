@@ -121,7 +121,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
  * @param param_image parameters obtained from image
  * @return 0 if succeeds, otherwise nonzero
  */
-GPUJPEG_API int
+int
 gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count);
 
 #ifdef __cplusplus

@@ -393,6 +393,12 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     return 0;
 }
 
+int
+gpujpeg_decoder_get_stats(struct gpujpeg_decoder *decoder, struct gpujpeg_duration_stats *stats)
+{
+    return gpujpeg_coder_get_stats(&decoder->coder, stats);
+}
+
 void
 gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
                 enum gpujpeg_color_space color_space,
