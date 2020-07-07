@@ -29,6 +29,15 @@ you can, however, for a direct contact use a mailing list of a sister
 project, [UltraGrid](https://github.com/CESNET/UltraGrid) which is
 tightly personally linked.
 
+Please follow these rules when reporting the issue:
+1. if possible, use the latest GPUJPEG version
+2. try to reproduce the issue either with the sample console application
+   or provide a minimal working example demonstrating the problem
+3. do not alter GPUJPEG code
+4. provide as much information as possible related to the problem
+   (SW/HW environment, compilation options, GPUJPEG parameters,
+   image for which the problem occurs)
+
 Development
 -----------
 Contributing by your own code is definitely highly appreciated. There
