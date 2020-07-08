@@ -130,7 +130,6 @@ AC_ARG_WITH(cuda-compiler,
 
 case "$CUDA_COMPILER" in
         *nvcc*)
-                CUDA_COMPUTE_ARGS="-gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35 -gencode arch=compute_35,code=compute_35"
                 ;;
         *clang*)
                 CUDA_COMPUTE_ARGS="--cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35"
