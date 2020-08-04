@@ -82,6 +82,7 @@ target_link_libraries(gpujpeg-bin gpujpeg)
 set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg")
 
 install(TARGETS gpujpeg gpujpeg-bin
+        ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         PUBLIC_HEADER DESTINATION include/libgpujpeg
         RUNTIME DESTINATION bin)
