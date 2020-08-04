@@ -58,6 +58,8 @@ jobs:
     - uses: actions/checkout@v1
     - name: install CUDA
       run: choco install cuda -y --no-progress
+    - name: install NSIS
+      run: choco install nsis -y --no-progress
     - name: Build
       run: |
         #Set-PSDebug -Trace 1
@@ -66,23 +68,38 @@ jobs:
         refreshenv
         cmake.exe -p:Configuration=Release -Bbuild .
         cmake.exe --build build --config Release
+        cpack.exe --config build/CPackConfig.cmake -GNSIS64
         Move-Item build/Release GPUJPEG
         Copy-Item -Recurse libgpujpeg GPUJPEG
         Copy-Item AUTHORS,CONTRIBUTING.md,COPYING,FAQ.md,INSTALL,NEWS,README.md GPUJPEG
         Compress-Archive -Path GPUJPEG -DestinationPath GPUJPEG
 
-    - name: Upload Build
+    - name: Upload Archive
       if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
       uses: actions/upload-artifact@v1
       with:
-        name: GPUJPEG CI Windows build
+        name: GPUJPEG CI Windows archive
         path: GPUJPEG
 
-    - name: Upload Release Asset
+    - name: Upload Installer
+      if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
+      uses: actions/upload-artifact@v2
+      with:
+        name: GPUJPEG CI Windows installer
+        path: gpujpeg-*-win64.exe
+
+    - name: Upload Release Archive Asset
       if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: .github/scripts/replace-asset.sh continuous GPUJPEG.zip application/zip Windows%20build
+      run: .github/scripts/replace-asset.sh continuous GPUJPEG.zip application/zip Windows%20archive
+      shell: bash
+
+    - name: Upload Release Installer Asset
+      if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: .github/scripts/replace-asset.sh continuous gpujpeg-*-win64.exe application/vnd.microsoft.portable-executable Windows%20installer
       shell: bash
 
 # vi: set expandtab sw=2:
