@@ -79,7 +79,7 @@ file(GLOB C_FILES src/main.c)
 add_executable(gpujpeg-bin ${C_FILES})
 target_compile_features(gpujpeg-bin PRIVATE ${NEEDED_CXX_FEATURES})
 target_link_libraries(gpujpeg-bin gpujpeg)
-set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg${CMAKE_EXECUTABLE_SUFFIX}")
+set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg")
 
 install(TARGETS gpujpeg gpujpeg-bin
         LIBRARY DESTINATION lib
