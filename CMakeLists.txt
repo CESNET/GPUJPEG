@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
 project(gpujpeg LANGUAGES C CXX CUDA)
 
+include(CPack)
+
 # Include cmake modules in "cmake" directory (FindGLEW.cmake and FindGLUT.cmake)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
