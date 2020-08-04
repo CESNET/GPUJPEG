@@ -8,7 +8,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 # Common settings
 include_directories(${CMAKE_SOURCE_DIR})
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 
 set(NEEDED_CXX_FEATURES cxx_delegating_constructors cxx_nullptr)
 
@@ -64,6 +63,7 @@ file(GLOB H_FILES libgpujpeg/*.h)
 file(GLOB C_FILES src/*.c src/*/*.cpp src/*.cu)
 add_library(gpujpeg SHARED ${H_FILES} ${C_FILES})
 target_compile_features(gpujpeg PRIVATE ${NEEDED_CXX_FEATURES})
+set_property(TARGET gpujpeg PROPERTY C_STANDARD 99)
 set_target_properties(gpujpeg PROPERTIES SOVERSION 0)
 SET_TARGET_PROPERTIES(
   gpujpeg
@@ -78,6 +78,7 @@ endif()
 file(GLOB C_FILES src/main.c)
 add_executable(gpujpeg-bin ${C_FILES})
 target_compile_features(gpujpeg-bin PRIVATE ${NEEDED_CXX_FEATURES})
+set_property(TARGET gpujpeg-bin PROPERTY C_STANDARD 99)
 target_link_libraries(gpujpeg-bin gpujpeg)
 set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg")
 
@@ -93,6 +94,8 @@ if(GPUJPEG_OPENGL_ENABLED)
     # GPUJPEG decoder to OpenGL texture
     file(GLOB FILES test/decoder_gltex/*)
     add_executable(decoder_gltex ${FILES})
+    target_compile_features(decoder_gltex PRIVATE ${NEEDED_CXX_FEATURES})
+    set_property(TARGET decoder_gltex PROPERTY C_STANDARD 99)
     target_link_libraries(decoder_gltex gpujpeg)
 
     # OpenGL interoperability example (currently not working)
