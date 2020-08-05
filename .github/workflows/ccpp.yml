@@ -68,10 +68,8 @@ jobs:
         refreshenv
         cmake.exe -p:Configuration=Release -Bbuild .
         cmake.exe --build build --config Release
+        cmake.exe --install build --prefix GPUJPEG
         cpack.exe --config build/CPackConfig.cmake -GNSIS64
-        Move-Item build/Release GPUJPEG
-        Copy-Item -Recurse libgpujpeg GPUJPEG
-        Copy-Item AUTHORS,CONTRIBUTING.md,COPYING,FAQ.md,INSTALL,NEWS,README.md GPUJPEG
         Compress-Archive -Path GPUJPEG -DestinationPath GPUJPEG
 
     - name: Upload Archive

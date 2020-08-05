@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
 project(gpujpeg LANGUAGES C CXX CUDA)
 
-include(CPack)
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "gpujpeg") # may be removed when version will be explicitly defined
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+include(CPack)
 
 # Include cmake modules in "cmake" directory (FindGLEW.cmake and FindGLUT.cmake)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
@@ -89,6 +90,9 @@ install(TARGETS gpujpeg gpujpeg-bin
         LIBRARY DESTINATION lib
         PUBLIC_HEADER DESTINATION include/libgpujpeg
         RUNTIME DESTINATION bin)
+
+install(FILES AUTHORS CONTRIBUTING.md COPYING FAQ.md INSTALL NEWS README.md
+        TYPE DOC)
 
 # When OpenGL was found, include OpenGL executables
 if(GPUJPEG_OPENGL_ENABLED)
