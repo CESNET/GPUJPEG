@@ -169,8 +169,7 @@ gpujpeg_reader_read_segment_info(struct gpujpeg_decoder* decoder, uint8_t** imag
                 " (marker not a segment info?)\n",
                 gpujpeg_marker_name(GPUJPEG_MARKER_SEGMENT_INFO), decoder->reader->scan_count, scan_index);
         *image += data_size;
-        //return -1;
-        return 0;
+        return -1;
     }
 
     decoder->reader->segment_info[decoder->reader->segment_info_count] = *image;
@@ -215,6 +214,10 @@ gpujpeg_reader_read_app0(uint8_t** image)
  * @param decoder decoder state
  * @param image   JPEG data
  * @return        0 if succeeds, otherwise nonzero
+ *
+ * @todo
+ * Segment info should have an identifying header like other application markers
+ * (see http://www.ozhiker.com/electronics/pjmt/jpeg_info/app_segments.html)
  */
 static int
 gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
@@ -225,16 +228,28 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
                 length);
         return -1;
     }
-    char photoshop[] = "Photoshop 3.0";
-    if (length > 2 + strlen(photoshop) && strncmp((char *) *image, photoshop, strlen(photoshop)) == 0) {
-        fprintf(stderr, "[GPUJPEG] [Warning] Skipping unsupported Photoshop IRB APP13 marker!\n");
-        *image += length - 2;
-        return 0;
-    } else { // suppose segment info marker
-        /// @todo segment info should have an identifying header like other application markers
-        /// (see http://www.ozhiker.com/electronics/pjmt/jpeg_info/app_segments.html)
+
+    char *ignored_hdrs[] = { "Adobe_Photoshop2.5", "Photoshop 3.0", "Adobe_CM" };
+    for (size_t i = 0; i < sizeof ignored_hdrs / sizeof ignored_hdrs[0]; ++i) {
+        if (length >= 2 + sizeof ignored_hdrs[i] - 1 && memcmp((char *) *image, ignored_hdrs[i], sizeof ignored_hdrs[i] - 1) == 0) {
+            fprintf(stderr, "[GPUJPEG] [Warning] Skipping unsupported %s APP13 marker!\n", ignored_hdrs[i]);
+            *image += length - 2;
+            return 0;
+        }
+    }
+
+    // forward compatibility - expect future GPUJPEG version to tag the segment info marker,
+    // which is currently not written
+    char gpujpeg_str[] = "GPUJPEG"; // with terminating '\0'
+    if (length >= 2 + sizeof gpujpeg_str && memcmp((char *) image, gpujpeg_str, sizeof gpujpeg_str) == 0) {
+        *image += sizeof gpujpeg_str;
+        length -= sizeof gpujpeg_str;
         return gpujpeg_reader_read_segment_info(decoder, image, length);
     }
+    // suppose segment info marker - current GPUJPEG doesn't tag it
+    gpujpeg_reader_read_segment_info(decoder, image, length); // ignore return code since we are
+                                                              // not sure if it is ours
+    return 0;
 }
 
 /**
