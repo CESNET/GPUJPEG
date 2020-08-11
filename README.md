@@ -137,7 +137,9 @@ To build _libgpujpeg_ library check [Compile](#compile).
 To use library in your project you have to include library to your
 sources and linked shared library object to your executable:
 
-    #include "libgpujpeg/gpujpeg.h"
+    #include <libgpujpeg/gpujpeg.h>
+
+For simple library usage examples you look into subdirectory [examples](examples).
 
 #### Encoding
 For encoding by libgpujpeg library you have to declare two structures
