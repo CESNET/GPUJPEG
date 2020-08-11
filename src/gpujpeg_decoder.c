@@ -175,11 +175,11 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
 
     // For now we can't reinitialize decoder, we can only do first initialization
     if ( coder->param_image.width != 0 || coder->param_image.height != 0 || coder->param_image.comp_count != 0 ) {
-        fprintf(stderr, "[GPUJPEG] [Error] Can't reinitialize decoder, implement if needed!\n");
-        return -1;
+        fprintf(stderr, "[GPUJPEG] [Info] Reinitializing decoder.\n");
     }
 
     if (0 == gpujpeg_coder_init_image(coder, param, param_image, decoder->stream)) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to init coder image!\n");
         return -1;
     }
 

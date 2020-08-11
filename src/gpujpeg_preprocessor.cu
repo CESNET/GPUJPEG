@@ -784,6 +784,8 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
+    coder->preprocessor = NULL;
+
     if (!gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format)) {
         return 0;
     }
