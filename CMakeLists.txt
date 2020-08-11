@@ -92,7 +92,7 @@ install(TARGETS gpujpeg gpujpeg-bin
         RUNTIME DESTINATION bin)
 
 install(FILES AUTHORS CONTRIBUTING.md COPYING FAQ.md INSTALL NEWS README.md
-        TYPE DOC)
+        DESTINATION doc)
 
 # When OpenGL was found, include OpenGL executables
 if(GPUJPEG_OPENGL_ENABLED)
