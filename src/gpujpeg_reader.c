@@ -226,7 +226,7 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
         return -1;
     }
     char photoshop[] = "Photoshop 3.0";
-    if (length > 2 + strlen(photoshop) && strncmp((char *) image, photoshop, strlen(photoshop)) == 0) {
+    if (length > 2 + strlen(photoshop) && strncmp((char *) *image, photoshop, strlen(photoshop)) == 0) {
         fprintf(stderr, "[GPUJPEG] [Warning] Skipping unsupported Photoshop IRB APP13 marker!\n");
         *image += length - 2;
         return 0;
