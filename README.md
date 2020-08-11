@@ -248,13 +248,14 @@ create decoder:
     if ( decoder == NULL )
         return -1;
 
-Now we have two options. The first is to do nothing and decoder will
+Now we have **two options**. The first is to do nothing and decoder will
 postpone buffer allocations to decoding first image where it determines
-proper image size and all other parameters. All the following images must
-have the same parameters. The second option is to provide input image size
-and optionally other parameters and the decoder will allocate all buffers
-and it is fully ready when encoding even the first image.
+proper image size and all other parameters (recommended).  The second option
+is to provide input image size and other parameters (reset interval, interleaving)
+and the decoder will allocate all buffers and it is fully ready when encoding
+even the first image:
 
+    // you can skip this code below and let the decoder initialize automatically
     struct gpujpeg_parameters param;
     gpujpeg_set_default_parameters(&param);
     param.restart_interval = 16;
@@ -264,6 +265,7 @@ and it is fully ready when encoding even the first image.
     gpujpeg_image_set_default_parameters(&param_image);
     param_image.width = 1920;
     param_image.height = 1080;
+    param_image.pixel_format = GPUJPEG_444_U8_P012;
     param_image.comp_count = 3;
     
     // Pre initialize decoder before decoding
