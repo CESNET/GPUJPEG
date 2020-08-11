@@ -541,6 +541,9 @@ gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)
         if (encoder->table_quantization[comp_type].d_table != NULL) {
             cudaFree(encoder->table_quantization[comp_type].d_table);
         }
+        if (encoder->table_quantization[comp_type].d_table_forward != NULL) {
+            cudaFree(encoder->table_quantization[comp_type].d_table_forward);
+        }
     }
     if (encoder->writer != NULL) {
         gpujpeg_writer_destroy(encoder->writer);
