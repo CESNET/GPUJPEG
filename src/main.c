@@ -196,9 +196,15 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
     }
 }
 
+#ifndef GIT_REV
+#define GIT_REV "unknown"
+#endif
+
 int
 main(int argc, char *argv[])
 {
+    printf("GPUJPEG rev %s\n", strlen(GIT_REV) > 0 ? GIT_REV : "unknown");
+
     // Default coder parameters
     struct gpujpeg_parameters param;
     gpujpeg_set_default_parameters(&param);

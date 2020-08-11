@@ -6,6 +6,12 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 include(CPack)
 
+execute_process(COMMAND git rev-parse --short HEAD
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        OUTPUT_VARIABLE GIT_REV
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+add_definitions(-DGIT_REV=\"${GIT_REV}\")
+
 # Include cmake modules in "cmake" directory (FindGLEW.cmake and FindGLUT.cmake)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
