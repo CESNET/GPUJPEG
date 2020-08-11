@@ -595,7 +595,7 @@ main(int argc, char *argv[])
         }
 
         // Init decoder if image size is filled
-        if ( param_image.width != 0 && param_image.height != 0 ) {
+        if ( param_image.width != 0 && param_image.height != 0 && param_image.pixel_format != GPUJPEG_PIXFMT_NONE && !restart_interval_default ) {
             if ( gpujpeg_decoder_init(decoder, &param, &param_image) != 0 ) {
                 fprintf(stderr, "Failed to preinitialize decoder!\n");
                 return -1;
