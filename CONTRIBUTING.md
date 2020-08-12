@@ -9,6 +9,14 @@ Please note that we have only limited amount of resources so usually
 feature requests cannot be fulfilled (depends on complexity of the task).
 But if you want to take the development up, we'd willingly help you.
 
+Table of contents
+-----------------
+- [Testing](#testing)
+- [Reporting bugs](#reporting-bugs)
+- [Development](#development)
+- [Compatibility](#compatibility)
+- [Contacting us](#contacting-us)
+
 Testing
 -------
 Using and thus testing GPUJPEG is the most straightward way of
@@ -30,13 +38,17 @@ project, [UltraGrid](https://github.com/CESNET/UltraGrid) which is
 tightly personally linked.
 
 Please follow these rules when reporting the issue:
-1. if possible, use the latest GPUJPEG version
+1. use the latest GPUJPEG version
 2. try to reproduce the issue either with the sample console application
-   or provide a minimal working example demonstrating the problem
+   or provide a minimal working example demonstrating the problem.
+   Use verbose parameter (for _console application_  option `-v`).
 3. do not alter GPUJPEG code
-4. provide as much information as possible related to the problem
-   (SW/HW environment, compilation options, GPUJPEG parameters,
-   image for which the problem occurs)
+4. provide as much information as possible related to the problem, e.g.:
+   - SW/HW environment
+   - compilation options
+   - GPUJPEG parameters
+   - console output of the library/application
+   - image for which the problem occurs
 
 Development
 -----------
