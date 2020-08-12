@@ -131,7 +131,17 @@ GPUJPEG_API struct gpujpeg_decoder*
 gpujpeg_decoder_create(cudaStream_t stream);
 
 /**
- * Init JPEG decoder for specific image size
+ * Init JPEG decoder for specific image properties
+ *
+ * Following properties are relevant:
+ * - image dimensions, commonent count
+ * - output pixel format that will be requested
+ * - interleaving, restart interval, color_space_internal (usually GPUJPEG_YCBCR_BT601_256LVLS)
+ * - correct subsampling setting
+ *
+ * @note
+ * Doesn't need to be called from user code, buffers will be initialized automatically according to
+ * image properties during decompression.
  *
  * @param decoder  Decoder structure
  * @param param  Parameters for coder
