@@ -232,7 +232,9 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
     char *ignored_hdrs[] = { "Adobe_Photoshop2.5", "Photoshop 3.0", "Adobe_CM" };
     for (size_t i = 0; i < sizeof ignored_hdrs / sizeof ignored_hdrs[0]; ++i) {
         if (length >= 2 + sizeof ignored_hdrs[i] - 1 && memcmp((char *) *image, ignored_hdrs[i], sizeof ignored_hdrs[i] - 1) == 0) {
-            fprintf(stderr, "[GPUJPEG] [Warning] Skipping unsupported %s APP13 marker!\n", ignored_hdrs[i]);
+            if ( decoder->coder.param.verbose ) {
+                fprintf(stderr, "[GPUJPEG] [Warning] Skipping unsupported %s APP13 marker!\n", ignored_hdrs[i]);
+            }
             *image += length - 2;
             return 0;
         }
@@ -881,7 +883,9 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         case GPUJPEG_MARKER_APP11:
         case GPUJPEG_MARKER_APP12:
         case GPUJPEG_MARKER_APP15:
-            fprintf(stderr, "[GPUJPEG] [Warning] JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
+            if ( decoder->coder.param.verbose ) {
+                fprintf(stderr, "[GPUJPEG] [Warning] JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
+            }
             gpujpeg_reader_skip_marker_content(&image);
             break;
 
