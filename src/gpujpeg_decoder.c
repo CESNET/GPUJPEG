@@ -436,6 +436,10 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
 
     free(decoder);
 
+#ifdef DEBUG
+    cudaDeviceReset(); // to allow "cuda-memcheck --leak-check full"
+#endif // defined DEBUG
+
     return 0;
 }
 
