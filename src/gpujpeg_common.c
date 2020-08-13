@@ -955,6 +955,10 @@ gpujpeg_coder_get_stats(struct gpujpeg_coder *coder, struct gpujpeg_duration_sta
 int
 gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
 {
+    if (coder->component != NULL)
+        cudaFreeHost(coder->component);
+    if (coder->d_component != NULL)
+        cudaFree(coder->d_component);
     if ( coder->data_raw != NULL )
         cudaFreeHost(coder->data_raw);
     if ( coder->d_data_raw_allocated != NULL )
