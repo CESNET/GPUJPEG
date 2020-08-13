@@ -418,9 +418,15 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
         return -1;
     }
 
-    for (int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++) {
+    for (int comp_type = 0; comp_type < GPUJPEG_MAX_COMPONENT_COUNT; comp_type++) {
         if (decoder->table_quantization[comp_type].d_table != NULL) {
             cudaFree(decoder->table_quantization[comp_type].d_table);
+        }
+    }
+
+    for ( int comp_type = 0; comp_type < GPUJPEG_MAX_COMPONENT_COUNT; comp_type++ ) {
+        for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
+            cudaFree(decoder->d_table_huffman[comp_type][huff_type]);
         }
     }
 
