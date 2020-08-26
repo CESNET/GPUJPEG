@@ -531,7 +531,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
         const int *sampling_factors = gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
         for (int i = 0; i < coder->param_image.comp_count; ++i) {
             if (coder->component[i].sampling_factor.horizontal != sampling_factors[i * 2]
-                    || coder->component[0].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
+                    || coder->component[i].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
                 fprintf(stderr, "Encoding JPEG from pixel format %s is supported only when %s subsampling inside JPEG is used.\n",
                         gpujpeg_pixel_format_get_name(coder->param_image.pixel_format),
                         gpujpeg_subsampling_get_name(coder->param_image.comp_count,
