@@ -1021,6 +1021,20 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     return 0;
 }
 
+static int
+gcd(int a, int b)
+{
+    assert(b != 0);
+    int c = a % b;
+    while (c != 0) {
+        a = b;
+        b = c;
+        c = a % b;
+    }
+
+    return (b);
+}
+
 /* Documented at declaration */
 int
 gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count)
@@ -1138,19 +1152,35 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
     }
 
     param_image->pixel_format = GPUJPEG_PIXFMT_NONE;
+
     if (param_image->comp_count == 1) {
         param_image->pixel_format = GPUJPEG_U8;
-    } else if (param_image->comp_count == 3
-            && param.sampling_factor[1].horizontal == 1 && param.sampling_factor[1].vertical == 1
-            && param.sampling_factor[2].horizontal == 1 && param.sampling_factor[2].vertical == 1) {
-        int sum = interleaved << 16 | param.sampling_factor[0].horizontal << 8 |  param.sampling_factor[0].vertical;
-        switch (sum) {
-        case 1<<16 | 1<<8 | 1: param_image->pixel_format = GPUJPEG_444_U8_P012; break;
-        case 0<<16 | 1<<8 | 1: param_image->pixel_format = GPUJPEG_444_U8_P0P1P2; break;
-        case 1<<16 | 2<<8 | 1: param_image->pixel_format = GPUJPEG_422_U8_P1020; break;
-        case 0<<16 | 2<<8 | 1: param_image->pixel_format = GPUJPEG_422_U8_P0P1P2; break;
-        case 1<<16 | 2<<8 | 2: // we have only one pixfmt for 420, so use for both
-        case 0<<16 | 2<<8 | 2: param_image->pixel_format = GPUJPEG_420_U8_P0P1P2; break;
+    }
+    if (param_image->comp_count == 3) {
+        // reduce [2, 2; 1, 2; 1, 2] (FFmpeg) to [2, 1; 1, 1; 1, 1]
+        int horizontal_gcd = param.sampling_factor[0].horizontal;
+        int vertical_gcd = param.sampling_factor[0].vertical;
+        for (int i = 1; i < 3; ++i) {
+            horizontal_gcd = gcd(horizontal_gcd, param.sampling_factor[i].horizontal);
+            vertical_gcd = gcd(vertical_gcd, param.sampling_factor[i].vertical);
+        }
+        for (int i = 0; i < 3; ++i) {
+            param.sampling_factor[i].horizontal /= horizontal_gcd;
+            param.sampling_factor[i].vertical /= vertical_gcd;
+        }
+
+        if (param.sampling_factor[1].horizontal == 1 && param.sampling_factor[1].vertical == 1
+                && param.sampling_factor[2].horizontal == 1 && param.sampling_factor[2].vertical == 1) {
+            int sum = interleaved << 16 | param.sampling_factor[0].horizontal << 8 |  param.sampling_factor[0].vertical; // NOLINT
+            switch (sum) {
+                case 1<<16 | 1<<8 | 1: param_image->pixel_format = GPUJPEG_444_U8_P012; break;   // NOLINT
+                case 0<<16 | 1<<8 | 1: param_image->pixel_format = GPUJPEG_444_U8_P0P1P2; break; // NOLINT
+                case 1<<16 | 2<<8 | 1: param_image->pixel_format = GPUJPEG_422_U8_P1020; break;  // NOLINT
+                case 0<<16 | 2<<8 | 1: param_image->pixel_format = GPUJPEG_422_U8_P0P1P2; break; // NOLINT
+                case 1<<16 | 2<<8 | 2: // we have only one pixfmt for 420, so use for both          NOLINT
+                case 0<<16 | 2<<8 | 2: param_image->pixel_format = GPUJPEG_420_U8_P0P1P2; break; // NOLINT
+                default: break;
+            }
         }
     }
 
