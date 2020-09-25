@@ -35,6 +35,9 @@
 #include "gpujpeg_reader.h"
 #include "gpujpeg_util.h"
 
+#undef MIN
+#define MIN(a, b)      (((a) < (b))? (a): (b))
+
 /* Documented at declaration */
 struct gpujpeg_reader*
 gpujpeg_reader_create()
@@ -299,6 +302,25 @@ gpujpeg_reader_read_app14(uint8_t** image, enum gpujpeg_color_space *color_space
         fprintf(stderr, "[GPUJPEG] [Error] Unsupported color transformation value '%d' was presented in APP14 marker!\n", color_transform);
         return -1;
     }
+
+    return 0;
+}
+
+static int
+gpujpeg_reader_read_com(uint8_t** image, enum gpujpeg_color_space *color_space)
+{
+    int length = (int)gpujpeg_reader_read_2byte(*image);
+
+    const char cs_itu601[] = "CS=ITU601";
+    char buf[sizeof cs_itu601];
+    size_t str_len = MIN(sizeof buf - 1, length - 2);
+    memcpy(buf, *image, str_len);
+    buf[str_len] = '\0'; // terminate if needed
+    if (strcmp(buf, cs_itu601) == 0) {
+        *color_space = GPUJPEG_YCBCR_BT601;
+    }
+
+    *image += length - 2;
 
     return 0;
 }
@@ -962,7 +984,9 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
 
         case GPUJPEG_MARKER_COM:
-            gpujpeg_reader_skip_marker_content(&image);
+            if ( gpujpeg_reader_read_com(&image, &decoder->reader->param.color_space_internal) != 0 ) {
+                return -1;
+            }
             break;
 
         case GPUJPEG_MARKER_DAC:

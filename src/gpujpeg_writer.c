@@ -326,23 +326,28 @@ gpujpeg_writer_write_dri(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_emit_2byte(encoder->writer, encoder->coder.param.restart_interval);
 }
 
+static void
+gpujpeg_writer_write_com(struct gpujpeg_encoder* encoder, const char *str)
+{
+    gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_COM);
+    // Length
+    gpujpeg_writer_emit_2byte(encoder->writer, 2 + strlen(str) + 1);
+
+    for ( int i = 0; i <= strlen(str); i++ )  { // include terminating '\0'
+        gpujpeg_writer_emit_byte(encoder->writer, str[i]);
+    }
+}
+
 /**
  * Write encoding library in comment marker
  */
 static void
-gpujpeg_writer_write_com(struct gpujpeg_encoder* encoder)
+gpujpeg_writer_write_com_library(struct gpujpeg_encoder* encoder)
 {
     char creator[] = "CREATOR: GPUJPEG, quality = \0\0\0";
     snprintf(creator + strlen(creator), sizeof creator - strlen(creator), "%d",
                     encoder->coder.param.quality);
-
-    gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_COM);
-    // Length
-    gpujpeg_writer_emit_2byte(encoder->writer, 2 + strlen(creator) + 1);
-
-    for ( int i = 0; i <= strlen(creator); i++ )  { // include terminating '\0'
-        gpujpeg_writer_emit_byte(encoder->writer, creator[i]);
-    }
+    gpujpeg_writer_write_com(encoder, creator);
 }
 
 /* Documented at declaration */
@@ -372,7 +377,11 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 
     gpujpeg_writer_write_dri(encoder);
 
-    gpujpeg_writer_write_com(encoder);
+    gpujpeg_writer_write_com_library(encoder);
+
+    if (encoder->coder.param.color_space_internal == GPUJPEG_YCBCR_BT601) {
+            gpujpeg_writer_write_com(encoder, "CS=ITU601");
+    }
 }
 
 /* Documented at declaration */
