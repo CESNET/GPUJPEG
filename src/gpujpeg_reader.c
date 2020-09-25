@@ -1116,6 +1116,12 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
             break;
         }
 
+        case GPUJPEG_MARKER_COM:
+            if ( gpujpeg_reader_read_com(&image, &param_image->color_space) != 0 ) {
+                return -1;
+            }
+            break;
+
         case GPUJPEG_MARKER_EOI:
         {
             eoi_presented = 1;
