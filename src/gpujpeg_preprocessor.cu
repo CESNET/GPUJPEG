@@ -388,6 +388,9 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
             else if (coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS) {
                 coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
             }
+            else if (coder->param.color_space_internal == GPUJPEG_YCBCR_BT709) {
+                coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT709>(coder);
+            }
             else {
                 assert(false);
             }

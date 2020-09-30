@@ -77,7 +77,8 @@ print_help()
            "                          iterations for each image\n"
            "   -o  --use-opengl       use an OpenGL texture as input/output\n"
            "   -I  --info             print JPEG file info\n"
-           "   -R  --rgb              create RGB JPEG\n"
+           "   -N  --native           create native JPEG (Adobe RGB for RGB, SPIFF for Y709;\n"
+           "                                              may be incompatible with some decoders)\n"
            "\n");
 }
 
@@ -229,6 +230,7 @@ main(int argc, char *argv[])
     // Flags
     int restart_interval_default = 1;
     int chroma_subsampled = 0;
+    int native_file_format = 0;
 
     int rc;
 
@@ -260,13 +262,13 @@ main(int argc, char *argv[])
         {"iterate",                 required_argument, 0,  'n' },
         {"use-opengl",              no_argument,       0,  'o' },
         {"info",                    required_argument, 0,  'I' },
-        {"rgb",                     no_argument,       0,  'R' },
+        {"native",                  no_argument,       0,  'N' },
         0
     };
     int ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:oI:R", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:oI:N", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'h':
             print_help();
@@ -373,8 +375,8 @@ main(int argc, char *argv[])
             break;
         case 'I':
             return print_image_info(optarg);
-        case 'R':
-            param.color_space_internal = GPUJPEG_RGB;
+        case 'N':
+            native_file_format = 1;
             break;
         case '?':
             return -1;
@@ -485,6 +487,10 @@ main(int argc, char *argv[])
             adjust_params(&param, &param_image, input, output, encode, chroma_subsampled, restart_interval_default);
             if (param_image.width <= 0 || param_image.height <= 0) {
                 fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
+            }
+
+            if (native_file_format) {
+                param.color_space_internal = param_image.color_space;
             }
 
             // Encode image

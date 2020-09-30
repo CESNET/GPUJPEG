@@ -32,6 +32,7 @@
 #define GPUJPEG_WRITER_H
 
 #include <libgpujpeg/gpujpeg_type.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -111,6 +112,16 @@ gpujpeg_writer_destroy(struct gpujpeg_writer* writer);
     writer->buffer_current++; \
     *writer->buffer_current = (uint8_t)((value) & 0xFF); \
     writer->buffer_current++; }
+
+#define gpujpeg_writer_emit_4byte(writer, value) { \
+    *(writer)->buffer_current = (uint8_t)(((value) >> 24U) & 0xFFU); \
+    (writer)->buffer_current++; \
+    *(writer)->buffer_current = (uint8_t)(((value) >> 16U) & 0xFFU); \
+    (writer)->buffer_current++; \
+    *(writer)->buffer_current = (uint8_t)(((value) >> 8U) & 0xFFU); \
+    (writer)->buffer_current++; \
+    *(writer)->buffer_current = (uint8_t)((value) & 0xFFU); \
+    (writer)->buffer_current++; }
 
 /**
  * Write marker to file

@@ -148,6 +148,40 @@ void gpujpeg_writer_write_app0(struct gpujpeg_writer* writer)
 }
 
 /**
+ * Write APP8 block
+ *
+ * This marker is used for color spaces that neither JFIF nor Adobe APP14 cannot represent
+ *
+ * @param writer  Writer structure
+ */
+static void gpujpeg_writer_write_app8(struct gpujpeg_encoder* encoder)
+{
+    struct gpujpeg_writer* writer = encoder->writer;
+    gpujpeg_writer_emit_marker(writer, GPUJPEG_MARKER_APP8);
+
+    // Length
+    gpujpeg_writer_emit_2byte(writer, 32)
+
+    // Identifier: ASCII "SPIFF\0"
+    char spiff[] = { 'S', 'P', 'I', 'F', 'F', '\0' };
+    for (int i = 0; i < sizeof spiff; ++i) {
+        gpujpeg_writer_emit_byte(writer, spiff[i]);
+    }
+    gpujpeg_writer_emit_2byte(writer, 0x100); // Version 1.00
+    gpujpeg_writer_emit_byte(writer, 0);   // ProfileID
+    gpujpeg_writer_emit_byte(writer, encoder->coder.param_image.comp_count);   // number of components
+    gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.height);
+    gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.width);
+    assert(encoder->coder.param.color_space_internal == GPUJPEG_YCBCR_BT709);
+    gpujpeg_writer_emit_byte(writer, 1);   // Color space: 1 - YCbCr, ITU-R BT 709, video
+    gpujpeg_writer_emit_byte(writer, 8);   // bits per sample
+    gpujpeg_writer_emit_byte(writer, 5);   // compression type: 5 - JPEG
+    gpujpeg_writer_emit_byte(writer, 1);   // resolution units: 1 - inches
+    gpujpeg_writer_emit_4byte(writer, 300U);   // VerticalResolution
+    gpujpeg_writer_emit_4byte(writer, 300U);   // HorizontalResolution
+}
+
+/**
  * Write APP14 block
  *
  * This marker is used for RGB images - JFIF supports only YCbCr. This Apple
@@ -355,10 +389,17 @@ void
 gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 {
     gpujpeg_writer_write_soi(encoder->writer);
-    if (encoder->coder.param.color_space_internal == GPUJPEG_RGB) {
-        gpujpeg_writer_write_app14(encoder->writer);
-    } else { // ordinal JFIF
-        gpujpeg_writer_write_app0(encoder->writer);
+
+    switch (encoder->coder.param.color_space_internal) {
+        case GPUJPEG_YCBCR_BT709:
+            gpujpeg_writer_write_app8(encoder);
+            break;
+        case GPUJPEG_RGB:
+            gpujpeg_writer_write_app14(encoder->writer);
+            break;
+        default: // ordinary JFIF
+            gpujpeg_writer_write_app0(encoder->writer);
+            break;
     }
 
     gpujpeg_writer_write_dqt(encoder, GPUJPEG_COMPONENT_LUMINANCE);
@@ -523,3 +564,5 @@ gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int scan_index
     gpujpeg_writer_emit_byte(encoder->writer, 0x3F); // Se
     gpujpeg_writer_emit_byte(encoder->writer, 0);    // Ah/Al
 }
+
+/* vi: set expandtab sw=4 : */
