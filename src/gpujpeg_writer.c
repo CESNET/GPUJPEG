@@ -172,8 +172,24 @@ static void gpujpeg_writer_write_app8(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_emit_byte(writer, encoder->coder.param_image.comp_count);   // number of components
     gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.height);
     gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.width);
-    assert(encoder->coder.param.color_space_internal == GPUJPEG_YCBCR_BT709);
-    gpujpeg_writer_emit_byte(writer, 1);   // Color space: 1 - YCbCr, ITU-R BT 709, video
+    int color_space;
+    switch (encoder->coder.param.color_space_internal) {
+        case GPUJPEG_YCBCR_BT709:
+            color_space = 1;
+            break;
+        case GPUJPEG_YCBCR_BT601_256LVLS:
+            color_space = 3;
+            break;
+        case GPUJPEG_YCBCR_BT601:
+            color_space = 4;
+            break;
+        case GPUJPEG_RGB:
+            color_space = encoder->coder.param_image.comp_count == 1 ? 8 : 10; // Gray-scale or RGB
+            break;
+        default:
+            color_space = 2; // no color space specified
+    }
+    gpujpeg_writer_emit_byte(writer, color_space);
     gpujpeg_writer_emit_byte(writer, 8);   // bits per sample
     gpujpeg_writer_emit_byte(writer, 5);   // compression type: 5 - JPEG
     gpujpeg_writer_emit_byte(writer, 1);   // resolution units: 1 - inches
@@ -391,6 +407,7 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_write_soi(encoder->writer);
 
     switch (encoder->coder.param.color_space_internal) {
+        case GPUJPEG_YCBCR_BT601:
         case GPUJPEG_YCBCR_BT709:
             gpujpeg_writer_write_app8(encoder);
             break;
