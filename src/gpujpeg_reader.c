@@ -1135,14 +1135,13 @@ gcd(int a, int b)
 
 /* Documented at declaration */
 int
-gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count)
+gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count, int verbose)
 {
     struct gpujpeg_parameters param = {0};
     int segments = 0;
     int interleaved = 0;
     int unused[4];
     uint8_t unused2[4];
-    int verbose = 0;
 
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image);

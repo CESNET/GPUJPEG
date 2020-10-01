@@ -82,7 +82,7 @@ print_help()
            "\n");
 }
 
-static int print_image_info(const char *filename) {
+static int print_image_info(const char *filename, int verbose) {
     if (!filename) {
         fprintf(stderr, "Missing filename!\n");
         return 1;
@@ -102,10 +102,9 @@ static int print_image_info(const char *filename) {
         fprintf(stderr, "Cannot read image contents.\n");
         return 1;
     }
-    struct gpujpeg_image_parameters params;
+    struct gpujpeg_image_parameters params = { 0 };
     int segment_count = 0;
-    memset(&params, 0, sizeof params);
-    if (gpujpeg_decoder_get_image_info(jpeg, len, &params, &segment_count) == 0) {
+    if (gpujpeg_decoder_get_image_info(jpeg, len, &params, &segment_count, verbose) == 0) {
         if (params.width) {
             printf("width: %d\n", params.width);
         }
@@ -378,7 +377,7 @@ main(int argc, char *argv[])
             use_opengl = 1;
             break;
         case 'I':
-            return print_image_info(optarg);
+            return print_image_info(optarg, param.verbose);
         case 'N':
             native_file_format = 1;
             break;
@@ -738,7 +737,7 @@ main(int argc, char *argv[])
 
             // Save image
             struct gpujpeg_image_parameters decoded_param_image;
-            gpujpeg_decoder_get_image_info(image, image_size, &decoded_param_image, NULL);
+            gpujpeg_decoder_get_image_info(image, image_size, &decoded_param_image, NULL, param.verbose);
             decoded_param_image.color_space = param_image.color_space;
             decoded_param_image.pixel_format = param_image.pixel_format;
             if ( gpujpeg_image_save_to_file(output, data, data_size, &decoded_param_image) != 0 ) {
