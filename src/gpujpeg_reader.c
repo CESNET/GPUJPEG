@@ -28,8 +28,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string.h>
+#include <ctype.h>
 #include <libgpujpeg/gpujpeg_decoder.h>
+#include <string.h>
+
 #include "gpujpeg_decoder_internal.h"
 #include "gpujpeg_marker.h"
 #include "gpujpeg_reader.h"
@@ -37,6 +39,10 @@
 
 #undef MIN
 #define MIN(a, b)      (((a) < (b))? (a): (b))
+
+#define ERROR_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__); } while(0)
+#define DEBUG_MSG(...) do { if (verbose >= 2) fprintf(stderr, "[GPUJPEG] [Info] " __VA_ARGS__); } while(0)
+#define VERBOSE_MSG(...) do { if (verbose >= 1) fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
 
 /* Documented at declaration */
 struct gpujpeg_reader*
@@ -82,6 +88,10 @@ gpujpeg_reader_destroy(struct gpujpeg_reader* reader)
 #define gpujpeg_reader_read_2byte(image) \
     (uint16_t)(((*(image)) << 8) + (*((image) + 1))); \
     image += 2;
+
+#define gpujpeg_reader_read_4byte(image) \
+    (uint32_t)(((uint32_t) (image)[0]) << 24U | ((uint32_t) (image)[1] << 16U) | ((uint32_t) (image)[2] << 8U) | ((uint32_t) (image)[3])); \
+    (image) += 4;
 
 /**
  * Read marker from image data
@@ -254,6 +264,90 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
     // suppose segment info marker - current GPUJPEG doesn't tag it
     gpujpeg_reader_read_segment_info(decoder, image, length); // ignore return code since we are
                                                               // not sure if it is ours
+    return 0;
+}
+
+#define SPIFF_MARKER_LEN 32 ///< including length field
+#define SPIFF_COMPRESSION_JPEG 5
+/**
+ * Read APP8 marker
+ *
+ * Obtains colorspace from APP14.
+ *
+ * @param         decoder     decoder state
+ * @param[in,out] image       JPEG data
+ * @param[out]    color_space detected color space
+ * @return        0 if succeeds, otherwise nonzero
+ */
+static int
+gpujpeg_reader_read_app8(uint8_t** image, enum gpujpeg_color_space *color_space, int verbose)
+{
+    int length = gpujpeg_reader_read_2byte(*image);
+    if (length != SPIFF_MARKER_LEN) {
+        VERBOSE_MSG("APP8 segment length is %d, expected 32 for SPIFF.\n", length);
+        *image += length - 2;
+        return 0;
+    }
+
+    length -= 2;
+
+    const char expected_marker_name[] = { 'S', 'P', 'I', 'F', 'F', '\0' };
+    char marker_name[sizeof expected_marker_name];
+    int i = 0;
+    for (i = 0; i < sizeof marker_name; i++) {
+        marker_name[i] = gpujpeg_reader_read_byte(*image);
+        if (!isprint(marker_name[i])) {
+            marker_name[i] = '\0';
+        }
+    }
+    length -= sizeof marker_name;
+
+    if (strcmp(marker_name, expected_marker_name) != 0) {
+        VERBOSE_MSG("APP8 marker identifier should be 'SPIFF\\0' but '%-6.6s' was presented!\n", marker_name);
+        *image += length - 2;
+        return 0;
+    }
+
+    gpujpeg_reader_read_2byte(*image); // version
+    gpujpeg_reader_read_byte(*image); // profile ID
+    gpujpeg_reader_read_byte(*image); // component count
+    gpujpeg_reader_read_4byte(*image); // width
+    gpujpeg_reader_read_4byte(*image); // height
+    int spiff_color_space = gpujpeg_reader_read_byte(*image);
+    gpujpeg_reader_read_byte(*image); // bits per sample
+    int compression = gpujpeg_reader_read_byte(*image);
+    gpujpeg_reader_read_byte(*image); // resolution units
+    gpujpeg_reader_read_4byte(*image); // vertical res
+    gpujpeg_reader_read_4byte(*image); // horizontal res
+
+    if (compression != SPIFF_COMPRESSION_JPEG) {
+            ERROR_MSG("Unexpected compression index %d, expected %d (JPEG)\n", compression, SPIFF_COMPRESSION_JPEG);
+            return -1;
+    }
+
+    switch (spiff_color_space) {
+        case 1: // NOLINT
+            *color_space = GPUJPEG_YCBCR_BT709;
+            break;
+        case 2: // NOLINT
+            break;
+        case 3: // NOLINT
+            *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+            break;
+        case 4: // NOLINT
+            *color_space = GPUJPEG_YCBCR_BT601;
+            break;
+        case 8: // NOLINT
+        case 10: // NOLINT
+            *color_space = GPUJPEG_RGB;
+            break;
+        default:
+            ERROR_MSG("Unsupported or unrecongnized SPIFF color space %d!\n", spiff_color_space);
+            return -1;
+    }
+
+    DEBUG_MSG("APP8 SPIFF parsed succesfully, internal color space: %s\n", gpujpeg_color_space_get_name(*color_space));
+
     return 0;
 }
 
@@ -884,6 +978,11 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             if ( gpujpeg_reader_read_app0(&image) != 0 )
                 return -1;
             break;
+        case GPUJPEG_MARKER_APP8:
+            if ( gpujpeg_reader_read_app8(&image, &decoder->reader->param.color_space_internal, decoder->coder.param.verbose ) != 0 ) {
+                return -1;
+            }
+            break;
         case GPUJPEG_MARKER_APP13:
             if ( gpujpeg_reader_read_app13(decoder, &image) != 0 )
                 return -1;
@@ -899,7 +998,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         case GPUJPEG_MARKER_APP5:
         case GPUJPEG_MARKER_APP6:
         case GPUJPEG_MARKER_APP7:
-        case GPUJPEG_MARKER_APP8:
         case GPUJPEG_MARKER_APP9:
         case GPUJPEG_MARKER_APP10:
         case GPUJPEG_MARKER_APP11:
