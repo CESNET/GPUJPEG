@@ -191,7 +191,7 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
                 param->restart_interval = 12;
             }
         }
-        if ( param->verbose ) {
+        if ( param->verbose >= 1 ) {
             printf("\nAuto-adjusting restart interval to %d for better performance.\n", param->restart_interval);
         }
     }
@@ -244,7 +244,7 @@ main(int argc, char *argv[])
     #define OPTION_COMPONENT_RANGE 4
     struct option longopts[] = {
         {"help",                    no_argument,       0, 'h'},
-        {"verbose",                 no_argument,       0, 'v'},
+        {"verbose",                 optional_argument, 0, 'v'},
         {"device",                  required_argument, 0, 'D'},
         {"device-list",             no_argument,       0,  OPTION_DEVICE_INFO },
         {"size",                    required_argument, 0, 's'},
@@ -274,7 +274,11 @@ main(int argc, char *argv[])
             print_help();
             return 0;
         case 'v':
-            param.verbose = 1;
+            if (optarg) {
+                param.verbose = atoi(optarg); // NOLINT(cert-err34-c): not important
+            } else {
+                param.verbose += 1;
+            }
             break;
         case 's':
             pos = strstr(optarg, "x");
@@ -540,7 +544,7 @@ main(int argc, char *argv[])
                 struct gpujpeg_duration_stats stats;
                 rc = gpujpeg_encoder_get_stats(encoder, &stats);
 
-                if ( rc == 0 && param.verbose ) {
+                if ( rc == 0 && param.verbose >= 1 ) {
                     printf(" -Copy To Device:    %10.2f ms\n", stats.duration_memory_to);
                     if ( stats.duration_memory_map != 0.0 && stats.duration_memory_unmap != 0.0 ) {
                         printf(" -OpenGL Memory Map: %10.2f ms\n", stats.duration_memory_map);
@@ -699,7 +703,7 @@ main(int argc, char *argv[])
                 struct gpujpeg_duration_stats stats;
                 rc = gpujpeg_decoder_get_stats(decoder, &stats);
 
-                if ( rc == 0 && param.verbose ) {
+                if ( rc == 0 && param.verbose >= 1 ) {
                     printf(" -Stream Reader:     %10.2f ms\n", stats.duration_stream);
                     printf(" -Copy To Device:    %10.2f ms\n", stats.duration_memory_to);
                     printf(" -Huffman Decoder:   %10.2f ms\n", stats.duration_huffman_coder);

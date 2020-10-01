@@ -710,7 +710,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     //printf("Compressed size %d (segments %d)\n", coder->data_compressed_size, coder->segment_count);
 
     // Print allocation info
-    if ( coder->param.verbose ) {
+    if ( coder->param.verbose >= 1 ) {
         int structures_size = 0;
         structures_size += coder->segment_count * sizeof(struct gpujpeg_segment);
         structures_size += coder->param_image.comp_count * sizeof(struct gpujpeg_component);
