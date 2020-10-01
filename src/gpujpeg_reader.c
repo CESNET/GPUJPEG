@@ -1142,6 +1142,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
     int interleaved = 0;
     int unused[4];
     uint8_t unused2[4];
+    int verbose = 0;
 
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image);
@@ -1167,6 +1168,13 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
                 // if the marker defines a valid JFIF, it is YCbCr (CCIR 601-256 levels)
                 param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             } else {
+                return -1;
+            }
+            break;
+        }
+        case GPUJPEG_MARKER_APP8:
+        {
+            if (gpujpeg_reader_read_app8(&image, &param_image->color_space, verbose) != 0) {
                 return -1;
             }
             break;
