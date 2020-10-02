@@ -5,7 +5,8 @@ GPUJPEG
 **JPEG** encoder and decoder library and console application for **NVIDIA GPUs**.
 
 This documents provides an introduction to the library and how to use it. You
-can also look at [FAQ](FAQ.md) for additional information.
+can also look at [FAQ](FAQ.md) for additional information. To list _latest_changes_
+you can display file [NEWS](NEWS).
 
 Table of contents
 -----------------
@@ -29,10 +30,11 @@ Authors
 -------
  - Martin Srom, CESNET z.s.p.o
  - Jan Brothánek
+ - Petr Holub
  - Martin Jirman
  - Jiri Matela
  - Martin Pulec
- - Petr Holub
+ - Lukáš Ručka
 
 Description
 -----------
@@ -409,9 +411,11 @@ References
 [2]: http://www.ijg.org/
 [3]: https://github.com/silicongenome/SiGenGPU
 [4]: https://www.ecma-international.org/publications/files/ECMA-TR/ECMA%20TR-098.pdf
+[5]: https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-T.84-199607-I!!PDF-E&type=items
 
 1. [ITU T-81][1]
 2. [ILG][2]
 3. [SiGenGPU][3] (currently defunct)
 4. [ECMA TR/098 (JFIF)][4]
+5. [ITU-T T.84 (SPIFF)][5]
 

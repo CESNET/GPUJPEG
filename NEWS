@@ -1,3 +1,39 @@
+2020-10-02
+----------
+- Support for SPIFF files (decode, encode limited-range BT.709, BT.601)
+- Support for FFmpeg limited-range BT.601 JPEGs
+
+2020-05-12
+----------
+- Support for PNM and PAM files
+
+2020-03-10
+----------
+- Command-line application is now supported in MSW
+
+2020-01-21
+----------
+- Support for RGBA buffers
+- Raw RGBA and I420 files supported
+
+2019-12-02
+----------
+- Decoder compatibility with more (foreign) JPEGs
+
+2019-06-18
+----------
+- Support for RGB JPEG images
+
+2016-03-07
+----------
+- Support for decoding to OpenGL texture or CUDA buffer
+- Encoding different image sizes
+- Support for encoding of planar images (limited)
+
+2013-03-19
+----------
+- New IDCT computing kernel 43 % faster
+
 2012-08-02
 ----------
 Changes:
