@@ -167,11 +167,6 @@ static void gpujpeg_writer_write_app8(struct gpujpeg_encoder* encoder)
     for (int i = 0; i < sizeof spiff; ++i) {
         gpujpeg_writer_emit_byte(writer, spiff[i]);
     }
-    gpujpeg_writer_emit_2byte(writer, 0x100); // Version 1.00
-    gpujpeg_writer_emit_byte(writer, 0);   // ProfileID
-    gpujpeg_writer_emit_byte(writer, encoder->coder.param_image.comp_count);   // number of components
-    gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.height);
-    gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.width);
     int color_space;
     switch (encoder->coder.param.color_space_internal) {
         case GPUJPEG_YCBCR_BT709:
@@ -189,6 +184,12 @@ static void gpujpeg_writer_write_app8(struct gpujpeg_encoder* encoder)
         default:
             color_space = 2; // no color space specified
     }
+    int profile = color_space == 3 || color_space == 8 ? 1 : 0; // 0 = No profile
+    gpujpeg_writer_emit_2byte(writer, 0x100); // Version 1.00
+    gpujpeg_writer_emit_byte(writer, profile);   // ProfileID
+    gpujpeg_writer_emit_byte(writer, encoder->coder.param_image.comp_count);   // number of components
+    gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.height);
+    gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.width);
     gpujpeg_writer_emit_byte(writer, color_space);
     gpujpeg_writer_emit_byte(writer, 8);   // bits per sample
     gpujpeg_writer_emit_byte(writer, 5);   // compression type: 5 - JPEG
