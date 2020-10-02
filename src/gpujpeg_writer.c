@@ -193,9 +193,9 @@ static void gpujpeg_writer_write_app8(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_emit_byte(writer, color_space);
     gpujpeg_writer_emit_byte(writer, 8);   // bits per sample
     gpujpeg_writer_emit_byte(writer, 5);   // compression type: 5 - JPEG
-    gpujpeg_writer_emit_byte(writer, 1);   // resolution units: 1 - inches
-    gpujpeg_writer_emit_4byte(writer, 300U);   // VerticalResolution
-    gpujpeg_writer_emit_4byte(writer, 300U);   // HorizontalResolution
+    gpujpeg_writer_emit_byte(writer, 0);   // resolution units: 1 - ratio
+    gpujpeg_writer_emit_4byte(writer, 1U); // VerticalResolution
+    gpujpeg_writer_emit_4byte(writer, 1U); // HorizontalResolution
 }
 
 /**
