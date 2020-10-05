@@ -412,10 +412,12 @@ References
 [3]: https://github.com/silicongenome/SiGenGPU
 [4]: https://www.ecma-international.org/publications/files/ECMA-TR/ECMA%20TR-098.pdf
 [5]: https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-T.84-199607-I!!PDF-E&type=items
+[6]: https://www.fileformat.info/format/spiff/egff.htm
 
-1. [ITU T-81][1]
+1. [ITU-T Rec T.81][1]
 2. [ILG][2]
 3. [SiGenGPU][3] (currently defunct)
 4. [ECMA TR/098 (JFIF)][4]
-5. [ITU-T T.84 (SPIFF)][5]
+5. [ITU-T Rec T.84 (SPIFF)][5]
+5. [SPIFF File Format Summary (FileFormat.Info)][6]
 

@@ -3,6 +3,8 @@
 - [What is an restart interval](#what-is-an-restart-interval)
 - [Decoding is too slow](#decoding-is-too-slow)
 - [Encoding different color spaces than full-range YCbCr BT.601](#encoding-different-color-spaces-than-full-range-ycbcr-bt601)
+- [Optimizing encoding/decoding performance](#optimizing-encodingdecoding-performance)
+- [Decoding (foreign) JPEG fails](#decoding-foreign-jpeg-fails)
 
 ## What is an restart interval
 A **restart interval** and related option in UltraGrid is a way how to
@@ -43,4 +45,27 @@ color space, it cannot be changed by the app now). The relevant option is "**-N*
 
 
     gpujpeg -s 1920x1080 -N -e image.rgb image.jpg
+
+## Optimizing encoding/decoding performance
+To optimze encoding/decoding performance, following features can be tweaked (in order of importance):
+
+1. restart intervals turned on and set to reasonable value (see autotuning in main.c)
+2. enabling segment info (needs to be set on _encoder_, speeds up _decoder_)
+3. avoiding color space conversions - setting `gpujpeg_parameters::internal_color_space` equal to
+   `gpujpeg_image_parameters::color_space``
+4. reducing quality - the lower quality, the lesser work for entropy encoder and decoder
+
+Also a very helpful thing to use the image already in GPU memory is if possible to avoid costy
+memory transfers.
+
+It is also advisable to look at individual performance counters to see performance bottlenecks
+(parameter `-v` for command-line application, see relevant code in _main.c_ to see how to use
+in custom code).
+
+## Decoding (foreign) JPEG fails
+**GPUJPEG** is always capable of decoding the JPEG encoded by itself. As the standard allows
+much options, including _progressive encoding_, _arithmetic coding_ etc., not all options
+are supported. Basically a **baseline** **DCT-based** **Huffman-encoded** JPEGs are supported.
+Few features of **extended** process are supported as well (4 Huffman tables). If the decoder
+is incapable of decoding the above mentioned JPEG, you are encouraged to fill a bug report.
 
