@@ -297,7 +297,9 @@ GPUJPEG_API int
 gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param);
 
 /**
- * Load RGB image from file
+ * Load image from file
+ *
+ * Allocated image must be freed by gpujpeg_image_load_from_file().
  *
  * @param         filaname    Image filename
  * @param[out]    image       Image data buffer allocated as CUDA host buffer
@@ -329,7 +331,7 @@ GPUJPEG_API int
 gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists);
 
 /**
- * Destroy DXT image
+ * Destroys image allocated by GPUJPEG (eg. gpujpeg_image_load_from_file())
  *
  * @param image  Image data buffer
  * @return 0 if succeeds, otherwise nonzero
