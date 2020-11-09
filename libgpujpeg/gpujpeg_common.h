@@ -58,6 +58,9 @@ extern "C" {
     #define GPUJPEG_API
 #endif
 
+/** @return runtime version of the GPUJPEG library */
+GPUJPEG_API int gpujpeg_version(void);
+
 /** @return current time in seconds */
 GPUJPEG_API double
 gpujpeg_get_time();

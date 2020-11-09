@@ -1,20 +1,21 @@
 AC_PREREQ([2.65])
-AC_INIT([libgpujpeg], [0.0.2], [martin.srom@mail.muni.cz], [libgpujpeg], [https://sourceforge.net/p/gpujpeg/])
+AC_INIT([libgpujpeg], [0.11.0], [martin.srom@mail.muni.cz], [libgpujpeg], [https://sourceforge.net/p/gpujpeg/])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE([foreign])
 
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_HEADERS([config.h libgpujpeg/gpujpeg_version.h])
 
 GPUJPEG_MAJOR_VERSION=0
-GPUJPEG_MINOR_VERSION=0
-GPUJPEG_MICRO_VERSION=1
+GPUJPEG_MINOR_VERSION=11
+GPUJPEG_MICRO_VERSION=0
+
+AC_DEFINE([GPUJPEG_MAJOR_VERSION], [0], [GPUJPEG major version])
+AC_DEFINE([GPUJPEG_MINOR_VERSION], [11], [GPUJPEG minor version])
 
 GPUJPEG_LIBRARY_VERSION=0:1:0
 
-GPUJPEG_API_VERSION=0.1
-AC_SUBST(GPUJPEG_API_VERSION)
 AC_SUBST(GPUJPEG_LIBRARY_VERSION)
 
 LT_PREREQ([2.2])

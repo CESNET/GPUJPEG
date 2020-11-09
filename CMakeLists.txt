@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
-project(gpujpeg LANGUAGES C CXX CUDA)
+project(gpujpeg VERSION 0.11.0 LANGUAGES C CXX CUDA)
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "gpujpeg") # may be removed when version will be explicitly defined
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
@@ -12,11 +12,16 @@ execute_process(COMMAND git rev-parse --short HEAD
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 add_definitions(-DGIT_REV=\"${GIT_REV}\")
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libgpujpeg/gpujpeg_version.h.cmakein
+               ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg/gpujpeg_version.h @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libgpujpeg.pc.cmakein
+               ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg.pc @ONLY)
+
 # Include cmake modules in "cmake" directory (FindGLEW.cmake and FindGLUT.cmake)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 # Common settings
-include_directories(${CMAKE_SOURCE_DIR})
+include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 set(NEEDED_CXX_FEATURES cxx_delegating_constructors cxx_nullptr)
 
@@ -68,7 +73,7 @@ if(NOT OPENGL_ERROR)
 endif()
 
 # GPUJPEG library
-file(GLOB H_FILES libgpujpeg/*.h)
+file(GLOB H_FILES libgpujpeg/*.h ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg/gpujpeg_version.h)
 file(GLOB C_FILES src/*.c src/*/*.cpp src/*.cu)
 add_library(gpujpeg SHARED ${H_FILES} ${C_FILES})
 target_compile_features(gpujpeg PRIVATE ${NEEDED_CXX_FEATURES})
@@ -99,6 +104,8 @@ install(TARGETS gpujpeg gpujpeg-bin
 
 install(FILES AUTHORS CONTRIBUTING.md COPYING FAQ.md INSTALL NEWS README.md
         DESTINATION doc)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg.pc DESTINATION share/pkgconfig)
 
 # When OpenGL was found, include OpenGL executables
 if(GPUJPEG_OPENGL_ENABLED)

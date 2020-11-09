@@ -34,9 +34,9 @@
 
 #include <ctype.h>
 #include <libgpujpeg/gpujpeg_common.h>
-#include <libgpujpeg/gpujpeg_version.h>
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_util.h"
+#include "libgpujpeg/gpujpeg_version.h"
 #include "utils/image_delegate.h"
 #include <math.h>
 #if defined(_MSC_VER)
