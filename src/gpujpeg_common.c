@@ -464,15 +464,15 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
     coder->d_temp_huffman = NULL;
     coder->data_compressed_allocated_size = 0;
 
-    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_to);
-    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_from);
-    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_map);
-    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_unmap);
-    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_preprocessor);
-    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_dct_quantization);
-    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_huffman_coder);
-    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_stream);
-    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_in_gpu);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_to, return -1);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_from, return -1);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_map, return -1);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_unmap, return -1);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_preprocessor, return -1);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_dct_quantization, return -1);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_huffman_coder, return -1);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_stream, return -1);
+    GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_in_gpu, return -1);
 
     return 0;
 }
@@ -984,15 +984,15 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
     if ( coder->d_block_list != NULL )
         cudaFree(coder->d_block_list);
 
-    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_to);
-    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_from);
-    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_map);
-    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_unmap);
-    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_preprocessor);
-    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_dct_quantization);
-    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_huffman_coder);
-    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_stream);
-    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_in_gpu);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_to, return -1);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_from, return -1);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_map, return -1);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_memory_unmap, return -1);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_preprocessor, return -1);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_dct_quantization, return -1);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_huffman_coder, return -1);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_stream, return -1);
+    GPUJPEG_CUSTOM_TIMER_DESTROY(coder->duration_in_gpu, return -1);
 
     return 0;
 }

@@ -46,16 +46,16 @@ struct gpujpeg_timer {
     cudaEvent_t stop;
 };
 
-#define GPUJPEG_CUSTOM_TIMER_CREATE(name) \
+#define GPUJPEG_CUSTOM_TIMER_CREATE(name, err_action) \
     do { \
-        GPUJPEG_CHECK(cudaEventCreate(&(name).start), ); \
-        GPUJPEG_CHECK(cudaEventCreate(&(name).stop), ); \
+        GPUJPEG_CHECK(cudaEventCreate(&(name).start), err_action); \
+        GPUJPEG_CHECK(cudaEventCreate(&(name).stop), err_action); \
     } while (0)
 
-#define GPUJPEG_CUSTOM_TIMER_DESTROY(name) \
+#define GPUJPEG_CUSTOM_TIMER_DESTROY(name, err_action) \
     do { \
-        GPUJPEG_CHECK(cudaEventDestroy((name).start), ); \
-        GPUJPEG_CHECK(cudaEventDestroy((name).stop), ); \
+        GPUJPEG_CHECK(cudaEventDestroy((name).start), err_action); \
+        GPUJPEG_CHECK(cudaEventDestroy((name).stop), err_action); \
     } while (0)
 
 /**
@@ -64,16 +64,16 @@ struct gpujpeg_timer {
  * @param name
  * @todo stream
  */
-#define GPUJPEG_CUSTOM_TIMER_START(name, stream) \
-    GPUJPEG_CHECK(cudaEventRecord((name).start, stream), )
+#define GPUJPEG_CUSTOM_TIMER_START(name, stream, err_action) \
+    GPUJPEG_CHECK(cudaEventRecord((name).start, stream), err_action)
 
 /**
  * Stop timer
  *
  * @param name
  */
-#define GPUJPEG_CUSTOM_TIMER_STOP(name, stream) \
-    GPUJPEG_CHECK(cudaEventRecord((name).stop, stream), )
+#define GPUJPEG_CUSTOM_TIMER_STOP(name, stream, err_action) \
+    GPUJPEG_CHECK(cudaEventRecord((name).stop, stream), err_action)
 
 /**
  * Get duration for timer
@@ -82,17 +82,6 @@ struct gpujpeg_timer {
  */
 #define GPUJPEG_CUSTOM_TIMER_DURATION(name) \
     gpujpeg_custom_timer_get_duration((name).start, (name).stop)
-
-/**
- * Default timer implementation
- */
-#define GPUJPEG_TIMER_INIT() \
-    struct gpujpeg_timer def; \
-    GPUJPEG_CUSTOM_TIMER_CREATE(def)
-#define GPUJPEG_TIMER_START() GPUJPEG_CUSTOM_TIMER_START(def, 0)
-#define GPUJPEG_TIMER_STOP() GPUJPEG_CUSTOM_TIMER_STOP(def, 0)
-#define GPUJPEG_TIMER_DURATION() GPUJPEG_CUSTOM_TIMER_DURATION(def)
-#define GPUJPEG_TIMER_DEINIT() GPUJPEG_CUSTOM_TIMER_DESTROY(def)
 
 #ifdef __cplusplus
 extern "C" {
