@@ -129,6 +129,11 @@ gpujpeg_decoder_create(cudaStream_t stream)
         for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
             if ( cudaSuccess != cudaMalloc((void**)&decoder->d_table_huffman[comp_type][huff_type], sizeof(struct gpujpeg_table_huffman_decoder)) )
                 result = 0;
+            // gpujpeg_huffman_decoder_table_kernel() computes quick tables for 2 pair of Huffman tables, but eg. for grayscale only one pair is
+            // present which causes the function potentially crash because computing from garbage values - memsetting to 0 fixes that
+            if ( cudaSuccess != cudaMemset(decoder->d_table_huffman[comp_type][huff_type], 0, sizeof(struct gpujpeg_table_huffman_decoder)) ) {
+                result = 0;
+            }
         }
     }
     gpujpeg_cuda_check_error("Decoder table allocation", return NULL);
