@@ -48,6 +48,11 @@ typedef struct CUstream_st *cudaStream_t;
 extern "C" {
 #endif
 
+// CMake defines implicitly gpujpeg_EXPORTS in Windows (lower-case target name)
+#ifdef gpujpeg_EXPORTS
+#define GPUJPEG_EXPORTS
+#endif
+
 #if (defined(_MSC_VER) || defined(__MINGW32__)) && !defined(GPUJPEG_STATIC)
     #ifdef GPUJPEG_EXPORTS
         #define GPUJPEG_API __declspec(dllexport)
