@@ -89,8 +89,7 @@ if(GPUJPEG_OPENGL_ENABLED)
 endif()
 
 # GPUJPEG commmand-line application
-file(GLOB C_FILES src/main.c)
-add_executable(gpujpeg-bin ${C_FILES})
+add_executable(gpujpeg-bin src/main.c)
 target_compile_features(gpujpeg-bin PRIVATE ${NEEDED_CXX_FEATURES})
 set_property(TARGET gpujpeg-bin PROPERTY C_STANDARD 99)
 target_link_libraries(gpujpeg-bin gpujpeg)
