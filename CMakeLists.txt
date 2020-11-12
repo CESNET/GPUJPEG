@@ -17,9 +17,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libgpujpeg/gpujpeg_version.h.cmakein
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libgpujpeg.pc.cmakein
                ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg.pc @ONLY)
 
-# Include cmake modules in "cmake" directory (FindGLEW.cmake and FindGLUT.cmake)
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
-
 # Common settings
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
