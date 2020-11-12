@@ -97,6 +97,7 @@ target_link_libraries(gpujpeg-bin gpujpeg)
 set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg")
 
 install(TARGETS gpujpeg gpujpeg-bin
+        EXPORT GPUJPEGTargets
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         PUBLIC_HEADER DESTINATION include/libgpujpeg
@@ -124,6 +125,21 @@ if(GPUJPEG_OPENGL_ENABLED)
 
 endif()
 
+# CMake config
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/GPUJPEGConfigVersion.cmake"
+    VERSION ${Upstream_VERSION}
+    COMPATIBILITY AnyNewerVersion)
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/GPUJPEGConfig.cmake"
+    INSTALL_DESTINATION "lib/cmake/GPUJPEG"
+    NO_CHECK_REQUIRED_COMPONENTS_MACRO
+    NO_SET_AND_CHECK_MACRO)
+install(EXPORT GPUJPEGTargets
+    DESTINATION lib/cmake/GPUJPEG)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/GPUJPEGConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/GPUJPEGConfigVersion.cmake
+    DESTINATION lib/cmake/GPUJPEG)
+
 add_custom_target(unittests make -C test/unit LIBDIR=${CMAKE_BINARY_DIR}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         DEPENDS gpujpeg)
@@ -134,3 +150,4 @@ add_custom_target(tests
 add_custom_target(cscope cscope -bv `find ${CMAKE_SOURCE_DIR}/libgpujpeg ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/test -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cu' -o -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \)`)
 add_custom_target(universal-ctags ctags-universal `find ${CMAKE_SOURCE_DIR}/libgpujpeg ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/test -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cu' -o -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \)`)
 
+# vim: sw=4
