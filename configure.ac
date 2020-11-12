@@ -1,5 +1,5 @@
 AC_PREREQ([2.65])
-AC_INIT([libgpujpeg], [0.11.0], [martin.srom@mail.muni.cz], [libgpujpeg], [https://sourceforge.net/p/gpujpeg/])
+AC_INIT([libgpujpeg], [0.11.1], [martin.srom@mail.muni.cz], [libgpujpeg], [https://sourceforge.net/p/gpujpeg/])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR([.])
@@ -7,12 +7,9 @@ AM_INIT_AUTOMAKE([foreign])
 
 AC_CONFIG_HEADERS([config.h libgpujpeg/gpujpeg_version.h])
 
-GPUJPEG_MAJOR_VERSION=0
-GPUJPEG_MINOR_VERSION=11
-GPUJPEG_MICRO_VERSION=0
-
-AC_DEFINE([GPUJPEG_MAJOR_VERSION], [0], [GPUJPEG major version])
-AC_DEFINE([GPUJPEG_MINOR_VERSION], [11], [GPUJPEG minor version])
+AC_DEFINE([GPUJPEG_VERSION_MAJOR], regexp(AC_PACKAGE_VERSION, [\([^.]*\)], [\1]), [GPUJPEG major version])
+AC_DEFINE([GPUJPEG_VERSION_MINOR], regexp(AC_PACKAGE_VERSION, [[^.]*\.\([^.]*\)], [\1]), [GPUJPEG minor version])
+AC_DEFINE([GPUJPEG_VERSION_PATCH], regexp(AC_PACKAGE_VERSION, [[^.]*\.[^.]*\.\([^.]*\)], [\1]), [GPUJPEG patch version])
 
 GPUJPEG_LIBRARY_VERSION=0:1:0
 

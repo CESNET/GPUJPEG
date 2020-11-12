@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
-project(gpujpeg VERSION 0.11.0 LANGUAGES C CXX CUDA)
+project(gpujpeg VERSION 0.11.1 LANGUAGES C CXX CUDA)
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "gpujpeg") # may be removed when version will be explicitly defined
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
