@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
 project(gpujpeg VERSION 0.11.1 LANGUAGES C CXX CUDA)
 
+option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "gpujpeg") # may be removed when version will be explicitly defined
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
@@ -29,6 +31,7 @@ endif()
 find_package(OpenGL)
 find_package(GLEW)
 find_package(GLUT)
+find_package(X11)
 if(NOT OPENGL_FOUND)
     set(OPENGL_ERROR "OpenGL library not found")
 elseif(NOT GLEW_FOUND)
@@ -46,6 +49,8 @@ elseif(NOT OPENGL_INCLUDE_DIR)
     else()
         set(OPENGL_ERROR "OpenGL header files not found")
     endif()
+elseif(UNIX AND NOT X11_FOUND)
+    set(OPENGL_ERROR "X11 not found")
 endif()
 if(MSVC AND NOT GLEW_DLL)
     set(OPENGL_ERROR "GLEW DLL not found")
@@ -63,19 +68,20 @@ if(NOT OPENGL_ERROR)
 
     # Build GPUJPEG library with OpenGL support
     add_definitions("-DGPUJPEG_USE_OPENGL")
-    include_directories("${OPENGL_INCLUDE_DIR}" "${GLEW_INCLUDE_DIRS}" "${GLUT_INCLUDE_DIR}")
+    include_directories("${OPENGL_INCLUDE_DIR}" "${GLEW_INCLUDE_DIRS}" "${GLUT_INCLUDE_DIR}" "${X11_INCLUDE_DIR}")
 
     # Prepare list of OpenGL libraries for linking
     set(GPUJPEG_OPENGL_LIBRARIES)
     list(APPEND GPUJPEG_OPENGL_LIBRARIES ${GLEW_LIBRARIES})
     list(APPEND GPUJPEG_OPENGL_LIBRARIES ${GLUT_glut_LIBRARY})
     list(APPEND GPUJPEG_OPENGL_LIBRARIES ${OPENGL_LIBRARIES})
+    list(APPEND GPUJPEG_OPENGL_LIBRARIES ${X11_LIBRARIES})
 endif()
 
 # GPUJPEG library
 file(GLOB H_FILES libgpujpeg/*.h ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg/gpujpeg_version.h)
 file(GLOB C_FILES src/*.c src/*/*.cpp src/*.cu)
-add_library(gpujpeg SHARED ${H_FILES} ${C_FILES})
+add_library(gpujpeg ${H_FILES} ${C_FILES})
 target_compile_features(gpujpeg PRIVATE ${NEEDED_CXX_FEATURES})
 set_property(TARGET gpujpeg PROPERTY C_STANDARD 99)
 set_target_properties(gpujpeg PROPERTIES SOVERSION 0)
