@@ -1,5 +1,50 @@
+#[=======================================================================[.rst:
+
+GPUJPEG
+-------
+
+Defines variables to import GPUJPEG to own project.
+
+IMPORTED Targets
+^^^^^^^^^^^^^^^^
+
+This module defines the :prop_tgt:`IMPORTED` targets:
+
+``gpujpeg``
+Defines GPUJPEG library.
+
+``gpujpeg-bin``
+Defines GPUJPEG console application.
+
+Result Variables
+^^^^^^^^^^^^^^^^
+
+Additionally this module sets the following variable::
+
+  GPUJPEG_LIBRARIES - the library to link against
+
+Usage
+^^^^^
+
+After creating a project find GPUJPEG and add some source code::
+
+  cmake_minimum_required(VERSION 3.16)
+  project(test)
+  find_package(GPUJPEG REQUIRED)
+  add_executable(app main.c)
+
+To use the GPUJPEG library, either import the library target (preferred)::
+
+  target_link_libraries(app PRIVATE gpujpeg)
+
+Alternatively you can utilize the variable GPUJPEG_LIBRARIES::
+
+  target_link_libraries(app ${GPUJPEG_LIBRARIES})
+
+#]=======================================================================]
+
 @PACKAGE_INIT@
 
 include("${CMAKE_CURRENT_LIST_DIR}/GPUJPEGTargets.cmake")
-set(GPUJPEG_LIBRARIES -lgpujpeg)
+set(GPUJPEG_LIBRARIES "-lgpujpeg")
 
