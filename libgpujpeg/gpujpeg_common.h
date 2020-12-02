@@ -65,6 +65,8 @@ extern "C" {
 
 /** @return runtime version of the GPUJPEG library */
 GPUJPEG_API int gpujpeg_version(void);
+/** @return text representation of GPUJPEG version number */
+GPUJPEG_API const char *gpujpeg_version_to_string(int version);
 
 /** @return current time in seconds */
 GPUJPEG_API double

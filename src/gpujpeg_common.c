@@ -1545,6 +1545,13 @@ int gpujpeg_version()
     return LIBGPUJPEG_API_VERSION;
 }
 
+const char *gpujpeg_version_to_string(int version)
+{
+    thread_local static char buf[128];
+    snprintf(buf, sizeof buf, "%d.%d.%d", version >> 16, (version >> 8) & 0xFF, version & 0xFF);
+    return buf;
+}
+
 const char*
 gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component *components)
 {
