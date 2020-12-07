@@ -47,6 +47,8 @@ struct gpujpeg_decoder
     /// JPEG reader structure
     struct gpujpeg_reader* reader;
 
+    struct gpujpeg_huffman_gpu_decoder *huffman_gpu_decoder;
+
     uint8_t comp_id[GPUJPEG_MAX_COMPONENT_COUNT]; /// component IDs defined by SOF
     
     /// Quantization tables

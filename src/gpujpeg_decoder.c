@@ -139,7 +139,7 @@ gpujpeg_decoder_create(cudaStream_t stream)
     gpujpeg_cuda_check_error("Decoder table allocation", return NULL);
 
     // Init huffman encoder
-    if (gpujpeg_huffman_gpu_decoder_init() != 0) {
+    if ((decoder->huffman_gpu_decoder = gpujpeg_huffman_gpu_decoder_init()) == NULL) {
         result = 0;
     }
 
@@ -437,6 +437,10 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
 
     if (decoder->reader != NULL) {
         gpujpeg_reader_destroy(decoder->reader);
+    }
+
+    if (decoder->huffman_gpu_decoder != NULL) {
+        gpujpeg_huffman_gpu_decoder_destroy(decoder->huffman_gpu_decoder);
     }
 
     free(decoder);

@@ -37,13 +37,18 @@
 extern "C" {
 #endif
 
+struct gpujpeg_huffman_gpu_decoder;
+
 /**
  * Init huffman decoder
  * 
  * @return 0 if succeeds, otherwise nonzero
  */
-int
+struct gpujpeg_huffman_gpu_decoder *
 gpujpeg_huffman_gpu_decoder_init();
+
+void
+gpujpeg_huffman_gpu_decoder_destroy(struct gpujpeg_huffman_gpu_decoder *);
 
 /**
  * Perform huffman decoding
