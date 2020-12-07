@@ -61,6 +61,7 @@ struct gpujpeg_huffman_gpu_decoder {
     uint16_t *d_tables_full;
 };
 
+#ifdef HUFFMAN_GPU_CONST_TABLES
 /** Number of code bits to be checked first (with high chance for the code to fit into this number of bits). */
 #define QUICK_CHECK_BITS 10
 #define QUICK_TABLE_ITEMS (4 * (1 << QUICK_CHECK_BITS))
@@ -71,6 +72,7 @@ __device__ uint16_t gpujpeg_huffman_gpu_decoder_tables_quick[QUICK_TABLE_ITEMS];
 
 /** Same table as above, but copied into constant memory */
 __constant__ uint16_t gpujpeg_huffman_gpu_decoder_tables_quick_const[QUICK_TABLE_ITEMS];
+#endif
 
 /** Natural order in constant memory */
 __constant__ int gpujpeg_huffman_gpu_decoder_order_natural[GPUJPEG_ORDER_NATURAL_SIZE];
@@ -288,7 +290,11 @@ gpujpeg_huffman_gpu_decoder_get_coefficient(uint16_t *gpujpeg_huffman_gpu_decode
     const unsigned int table_idx = table_offset + gpujpeg_huffman_gpu_decoder_peek_bits(16, r_bit, r_bit_count, s_byte, s_byte_idx);
     
     // Try the quick table first (use the full table only if not succeded with the quick table)
+#ifdef HUFFMAN_GPU_CONST_TABLES
     unsigned int packed_info = gpujpeg_huffman_gpu_decoder_tables_quick_const[table_idx >> (16 - QUICK_CHECK_BITS)];
+#else
+    unsigned int packed_info = 0;
+#endif
     if(0 == packed_info) {
         packed_info = gpujpeg_huffman_gpu_decoder_tables_full[table_idx];
     }
@@ -568,6 +574,7 @@ gpujpeg_huffman_gpu_decoder_table_setup(
     const int packed_info = (rle_zero_count << 9) + (code_nbits << 4) + value_nbits;
     gpujpeg_huffman_gpu_decoder_tables_full[(table_idx << 16) + bits] = packed_info;
     
+#ifdef HUFFMAN_GPU_CONST_TABLES
     // some threads also save entries into the quick table
     const int dest_idx_quick = bits >> (16 - QUICK_CHECK_BITS);
     if(bits == (dest_idx_quick << (16 - QUICK_CHECK_BITS))) {
@@ -575,6 +582,7 @@ gpujpeg_huffman_gpu_decoder_table_setup(
         // check bit count, otherwise put 0 there to indicate that full table lookup consultation is needed
         gpujpeg_huffman_gpu_decoder_tables_quick[(table_idx << QUICK_CHECK_BITS) + dest_idx_quick] = code_nbits <= QUICK_CHECK_BITS ? packed_info : 0;
     }
+#endif
 }
 
 /**
@@ -662,6 +670,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     );
     gpujpeg_cuda_check_error("Huffman decoder table setup failed", return -1);
 
+#ifdef HUFFMAN_GPU_CONST_TABLES
     // Get pointer to quick decoding table in device memory
     void * d_src_ptr = 0;
     cudaGetSymbolAddress(&d_src_ptr, gpujpeg_huffman_gpu_decoder_tables_quick);
@@ -677,6 +686,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
         decoder->stream
     );
     gpujpeg_cuda_check_error("Huffman decoder table copy failed", return -1);
+#endif
 
     for (int comp = 0; comp < coder->param_image.comp_count; comp++) {
         coder->component[comp].dc_huff_idx = decoder->comp_table_huffman_map[comp][GPUJPEG_HUFFMAN_DC];
