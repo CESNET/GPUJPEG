@@ -1542,7 +1542,7 @@ gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
 
 int gpujpeg_version()
 {
-    return LIBGPUJPEG_API_VERSION;
+    return GPUJPEG_VERSION_INT;
 }
 
 const char *gpujpeg_version_to_string(int version)
