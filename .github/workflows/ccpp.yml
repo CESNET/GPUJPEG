@@ -97,7 +97,9 @@ jobs:
       if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: .github/scripts/replace-asset.sh continuous gpujpeg-*-win64.exe application/vnd.microsoft.portable-executable Windows%20installer
+      run: |
+        mv gpujpeg-*-win64.exe GPUJPEG.exe
+        .github/scripts/replace-asset.sh continuous GPUJPEG.exe application/vnd.microsoft.portable-executable Windows%20installer
       shell: bash
 
 # vi: set expandtab sw=2:
