@@ -849,7 +849,7 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
     const int *sampling_factors = gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
     for (int i = 0; i < coder->param_image.comp_count; ++i) {
         if (coder->component[i].sampling_factor.horizontal != sampling_factors[i * 2]
-                || coder->component[0].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
+                || coder->component[i].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
             const char *name = gpujpeg_pixel_format_get_name(coder->param_image.pixel_format);
             fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s to %s).\n",
                     gpujpeg_subsampling_get_name(coder->param_image.comp_count, coder->component),
