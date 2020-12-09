@@ -694,16 +694,11 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     gpujpeg_cuda_check_error("Huffman decoder table setup failed", return -1);
 
 #ifdef HUFFMAN_GPU_CONST_TABLES
-    // Get pointer to quick decoding table in device memory
-    void * d_src_ptr = 0;
-    cudaGetSymbolAddress(&d_src_ptr, gpujpeg_huffman_gpu_decoder_tables_quick);
-    gpujpeg_cuda_check_error("Huffman decoder table address lookup failed", return -1);
-    
     // Copy quick decoding table into constant memory
     cudaMemcpyToSymbolAsync(
         gpujpeg_huffman_gpu_decoder_tables_quick_const,
-        d_src_ptr,
-        sizeof(*gpujpeg_huffman_gpu_decoder_tables_quick) * QUICK_TABLE_ITEMS,
+        decoder->huffman_gpu_decoder->d_tables_quick,
+        sizeof(*decoder->huffman_gpu_decoder->d_tables_quick) * QUICK_TABLE_ITEMS,
         0,
         cudaMemcpyDeviceToDevice,
         decoder->stream
