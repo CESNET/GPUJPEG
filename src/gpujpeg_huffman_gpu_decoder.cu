@@ -68,15 +68,17 @@ struct gpujpeg_huffman_gpu_decoder {
     /** Table with same format as the full table, except that all-zero-entry means that the full table should be consulted. */
     uint16_t *d_tables_quick;
 
+    /** Natural order */
+    int *d_order_natural;
 };
 
 #ifdef HUFFMAN_GPU_CONST_TABLES
 /** Same table as above, but copied into constant memory */
 __constant__ uint16_t gpujpeg_huffman_gpu_decoder_tables_quick_const[QUICK_TABLE_ITEMS];
-#endif
-
+ 
 /** Natural order in constant memory */
 __constant__ int gpujpeg_huffman_gpu_decoder_order_natural[GPUJPEG_ORDER_NATURAL_SIZE];
+#endif
 
 // /**
 //  * Fill more bit to current get buffer
@@ -370,7 +372,11 @@ gpujpeg_huffman_gpu_decoder_decode_block(
         }
         
         // save the coefficient   TODO: try to ommit saving 0 coefficients
+#ifdef HUFFMAN_GPU_CONST_TABLES
         data_output[gpujpeg_huffman_gpu_decoder_order_natural[coefficient_idx - 1]] = coefficient_value;
+#else
+        data_output[huffman_gpu_decoder.d_order_natural[coefficient_idx - 1]] = coefficient_value;
+#endif
     } while(coefficient_idx < 64);
     
     return 0;
@@ -608,22 +614,35 @@ gpujpeg_huffman_decoder_table_kernel(
 struct gpujpeg_huffman_gpu_decoder *
 gpujpeg_huffman_gpu_decoder_init()
 {
+    struct gpujpeg_huffman_gpu_decoder *huffman_gpu_decoder = (struct gpujpeg_huffman_gpu_decoder *) calloc(1, sizeof(struct gpujpeg_huffman_gpu_decoder));
+
+#ifdef HUFFMAN_GPU_CONST_TABLES
     // Copy natural order to constant device memory
     cudaMemcpyToSymbol(
         gpujpeg_huffman_gpu_decoder_order_natural,
-        gpujpeg_order_natural, 
+        gpujpeg_order_natural,
         GPUJPEG_ORDER_NATURAL_SIZE * sizeof(int),
         0,
         cudaMemcpyHostToDevice
     );
-    gpujpeg_cuda_check_error("Huffman decoder init", return NULL);
+    gpujpeg_cuda_check_error("Huffman decoder init", gpujpeg_huffman_gpu_decoder_destroy(huffman_gpu_decoder); return NULL);
+#else
+    cudaMalloc((void**)&huffman_gpu_decoder->d_order_natural, GPUJPEG_ORDER_NATURAL_SIZE * sizeof(int));
+    gpujpeg_cuda_check_error("Huffman GPU decoder natural order table allocation", gpujpeg_huffman_gpu_decoder_destroy(huffman_gpu_decoder); return NULL);
+    cudaMemcpy(
+        huffman_gpu_decoder->d_order_natural,
+        gpujpeg_order_natural,
+        GPUJPEG_ORDER_NATURAL_SIZE * sizeof(int),
+        cudaMemcpyHostToDevice
+    );
+    gpujpeg_cuda_check_error("Huffman GPU decoder natural order table copy", gpujpeg_huffman_gpu_decoder_destroy(huffman_gpu_decoder); return NULL);
+#endif
 
-    struct gpujpeg_huffman_gpu_decoder *huffman_gpu_decoder = (struct gpujpeg_huffman_gpu_decoder *) calloc(1, sizeof(struct gpujpeg_huffman_gpu_decoder));
     cudaMalloc((void**)&huffman_gpu_decoder->d_tables_full, 4 * (1 << 16) * sizeof(uint16_t));
-    gpujpeg_cuda_check_error("Huffman GPU decoder full table allocation", free(huffman_gpu_decoder); return NULL);
+    gpujpeg_cuda_check_error("Huffman GPU decoder full table allocation", gpujpeg_huffman_gpu_decoder_destroy(huffman_gpu_decoder); return NULL);
 
     cudaMalloc((void**)&huffman_gpu_decoder->d_tables_quick, QUICK_TABLE_ITEMS * sizeof(uint16_t));
-    gpujpeg_cuda_check_error("Huffman GPU decoder quick table allocation", free(huffman_gpu_decoder); return NULL);
+    gpujpeg_cuda_check_error("Huffman GPU decoder quick table allocation", gpujpeg_huffman_gpu_decoder_destroy(huffman_gpu_decoder); return NULL);
     
     return huffman_gpu_decoder;
 }
@@ -635,6 +654,7 @@ gpujpeg_huffman_gpu_decoder_destroy(struct gpujpeg_huffman_gpu_decoder *huffman_
         return;
     }
 
+    cudaFree(huffman_gpu_decoder->d_order_natural);
     cudaFree(huffman_gpu_decoder->d_tables_full);
     cudaFree(huffman_gpu_decoder->d_tables_quick);
     free(huffman_gpu_decoder);
