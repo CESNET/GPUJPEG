@@ -39,6 +39,11 @@ struct gpujpeg_table_huffman_decoder_entry {
     int value_nbits;
 };
 
+/** Number of code bits to be checked first (with high chance for the code to fit into this number of bits). */
+#define QUICK_CHECK_BITS 10
+#define QUICK_TABLE_ITEMS (4 * (1 << QUICK_CHECK_BITS))
+// TODO: try to tweak QUICK table size and memory space
+
 struct gpujpeg_huffman_gpu_decoder {
     /**
      * 4 pre-built tables for faster Huffman decoding (codewords up-to 16 bit length):
@@ -59,17 +64,13 @@ struct gpujpeg_huffman_gpu_decoder {
      * @endcode
      */
     uint16_t *d_tables_full;
+
+    /** Table with same format as the full table, except that all-zero-entry means that the full table should be consulted. */
+    uint16_t *d_tables_quick;
+
 };
 
 #ifdef HUFFMAN_GPU_CONST_TABLES
-/** Number of code bits to be checked first (with high chance for the code to fit into this number of bits). */
-#define QUICK_CHECK_BITS 10
-#define QUICK_TABLE_ITEMS (4 * (1 << QUICK_CHECK_BITS))
-// TODO: try to tweak QUICK table size and memory space
-
-/** Table with same format as the full table, except that all-zero-entry means that the full table should be consulted. */
-__device__ uint16_t gpujpeg_huffman_gpu_decoder_tables_quick[QUICK_TABLE_ITEMS];
-
 /** Same table as above, but copied into constant memory */
 __constant__ uint16_t gpujpeg_huffman_gpu_decoder_tables_quick_const[QUICK_TABLE_ITEMS];
 #endif
@@ -282,7 +283,7 @@ gpujpeg_huffman_gpu_decoder_value_from_category(int nbits, int code)
  * @return int
  */
 __device__ inline int
-gpujpeg_huffman_gpu_decoder_get_coefficient(uint16_t *gpujpeg_huffman_gpu_decoder_tables_full,
+gpujpeg_huffman_gpu_decoder_get_coefficient(struct gpujpeg_huffman_gpu_decoder huffman_gpu_decoder,
                 unsigned int & r_bit, unsigned int & r_bit_count, uint4* const s_byte,
                 unsigned int & s_byte_idx, const unsigned int table_offset, unsigned int & coefficient_idx)
 {
@@ -293,10 +294,10 @@ gpujpeg_huffman_gpu_decoder_get_coefficient(uint16_t *gpujpeg_huffman_gpu_decode
 #ifdef HUFFMAN_GPU_CONST_TABLES
     unsigned int packed_info = gpujpeg_huffman_gpu_decoder_tables_quick_const[table_idx >> (16 - QUICK_CHECK_BITS)];
 #else
-    unsigned int packed_info = 0;
+    unsigned int packed_info = huffman_gpu_decoder.d_tables_quick[table_idx >> (16 - QUICK_CHECK_BITS)];
 #endif
     if(0 == packed_info) {
-        packed_info = gpujpeg_huffman_gpu_decoder_tables_full[table_idx];
+        packed_info = huffman_gpu_decoder.d_tables_full[table_idx];
     }
     
     // remove the right number of bits from the bit buffer
@@ -320,7 +321,7 @@ gpujpeg_huffman_gpu_decoder_get_coefficient(uint16_t *gpujpeg_huffman_gpu_decode
  */
 __device__ inline int
 gpujpeg_huffman_gpu_decoder_decode_block(
-    uint16_t *gpujpeg_huffman_gpu_decoder_tables_full,
+    struct gpujpeg_huffman_gpu_decoder huffman_gpu_decoder,
     int & dc, int16_t* const data_output, const unsigned int dc_table_offset, const unsigned int ac_table_offset,
     unsigned int & r_bit, unsigned int & r_bit_count, uint4* const s_byte,
     unsigned int & s_byte_idx, const uint4* & d_byte, unsigned int & d_byte_chunk_count)
@@ -332,7 +333,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(
     
     // Section F.2.2.1: decode the DC coefficient difference
     // Get the coefficient value (using DC coding table)
-    int dc_coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(gpujpeg_huffman_gpu_decoder_tables_full, r_bit, r_bit_count, s_byte, s_byte_idx, dc_table_offset, coefficient_idx);
+    int dc_coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(huffman_gpu_decoder, r_bit, r_bit_count, s_byte, s_byte_idx, dc_table_offset, coefficient_idx);
 
     // Convert DC difference to actual value, update last_dc_val
     dc = dc_coefficient_value += dc;
@@ -361,7 +362,7 @@ gpujpeg_huffman_gpu_decoder_decode_block(
         }
         
         // decode next coefficient, updating its destination index
-        const int coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(gpujpeg_huffman_gpu_decoder_tables_full, r_bit, r_bit_count, s_byte, s_byte_idx, ac_table_offset, coefficient_idx);
+        const int coefficient_value = gpujpeg_huffman_gpu_decoder_get_coefficient(huffman_gpu_decoder, r_bit, r_bit_count, s_byte, s_byte_idx, ac_table_offset, coefficient_idx);
         
         // stop with this block if have all coefficients
         if(coefficient_idx > 64) {
@@ -389,7 +390,7 @@ __launch_bounds__(THREADS_PER_TBLOCK, 2)
 __launch_bounds__(THREADS_PER_TBLOCK, 6)
 #endif
 gpujpeg_huffman_decoder_decode_kernel(
-    uint16_t *gpujpeg_huffman_gpu_decoder_tables_full,
+    struct gpujpeg_huffman_gpu_decoder huffman_gpu_decoder,
     struct gpujpeg_component* d_component,
     struct gpujpeg_segment* d_segment,
     int comp_count,
@@ -451,7 +452,7 @@ gpujpeg_huffman_decoder_decode_kernel(
         // Encode MCUs in segment
         for ( int mcu_index = 0; mcu_index < segment->mcu_count; mcu_index++ ) {
             // Encode 8x8 block
-            if ( gpujpeg_huffman_gpu_decoder_decode_block(gpujpeg_huffman_gpu_decoder_tables_full, dc[0], block, dc_table_offset, ac_table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count) != 0 )
+            if ( gpujpeg_huffman_gpu_decoder_decode_block(huffman_gpu_decoder, dc[0], block, dc_table_offset, ac_table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count) != 0 )
                 break;
             
             // advance to next block
@@ -479,7 +480,7 @@ gpujpeg_huffman_decoder_decode_kernel(
             int16_t* block = d_data_quantized + (packed_block_info >> 8);
             
             // Encode 8x8 block
-            gpujpeg_huffman_gpu_decoder_decode_block(gpujpeg_huffman_gpu_decoder_tables_full, dc[last_dc_idx], block, dc_huffman_table_offset, ac_huffman_table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
+            gpujpeg_huffman_gpu_decoder_decode_block(huffman_gpu_decoder, dc[last_dc_idx], block, dc_huffman_table_offset, ac_huffman_table_offset, r_bit, r_bit_count, s_byte, s_byte_idx, d_byte, d_byte_chunk_count);
         }
         
         
@@ -538,7 +539,7 @@ gpujpeg_huffman_decoder_decode_kernel(
  */
 __device__ void
 gpujpeg_huffman_gpu_decoder_table_setup(
-    uint16_t *gpujpeg_huffman_gpu_decoder_tables_full,
+    struct gpujpeg_huffman_gpu_decoder huffman_gpu_decoder,
     const int bits, 
     const struct gpujpeg_table_huffman_decoder* const d_table_src,
     const int table_idx
@@ -572,17 +573,15 @@ gpujpeg_huffman_gpu_decoder_table_setup(
     
     // save all the info into the right place in the destination table
     const int packed_info = (rle_zero_count << 9) + (code_nbits << 4) + value_nbits;
-    gpujpeg_huffman_gpu_decoder_tables_full[(table_idx << 16) + bits] = packed_info;
+    huffman_gpu_decoder.d_tables_full[(table_idx << 16) + bits] = packed_info;
     
-#ifdef HUFFMAN_GPU_CONST_TABLES
     // some threads also save entries into the quick table
     const int dest_idx_quick = bits >> (16 - QUICK_CHECK_BITS);
     if(bits == (dest_idx_quick << (16 - QUICK_CHECK_BITS))) {
         // save info also into the quick table if number of required bits is less than quick 
         // check bit count, otherwise put 0 there to indicate that full table lookup consultation is needed
-        gpujpeg_huffman_gpu_decoder_tables_quick[(table_idx << QUICK_CHECK_BITS) + dest_idx_quick] = code_nbits <= QUICK_CHECK_BITS ? packed_info : 0;
+        huffman_gpu_decoder.d_tables_quick[(table_idx << QUICK_CHECK_BITS) + dest_idx_quick] = code_nbits <= QUICK_CHECK_BITS ? packed_info : 0;
     }
-#endif
 }
 
 /**
@@ -591,7 +590,7 @@ gpujpeg_huffman_gpu_decoder_table_setup(
  */
 __global__ void
 gpujpeg_huffman_decoder_table_kernel(
-                uint16_t *gpujpeg_huffman_gpu_decoder_tables_full,
+                struct gpujpeg_huffman_gpu_decoder huffman_gpu_decoder,
                 const struct gpujpeg_table_huffman_decoder* const d_table_y_dc,
                 const struct gpujpeg_table_huffman_decoder* const d_table_y_ac,
                 const struct gpujpeg_table_huffman_decoder* const d_table_cbcr_dc,
@@ -599,10 +598,10 @@ gpujpeg_huffman_decoder_table_kernel(
 ) {
     // Each thread uses all 4 Huffman tables to "decode" one symbol from its unique 16bits.
     const int idx = threadIdx.x + blockIdx.x * blockDim.x;
-    gpujpeg_huffman_gpu_decoder_table_setup(gpujpeg_huffman_gpu_decoder_tables_full, idx, d_table_y_dc, 0);
-    gpujpeg_huffman_gpu_decoder_table_setup(gpujpeg_huffman_gpu_decoder_tables_full, idx, d_table_y_ac, 1);
-    gpujpeg_huffman_gpu_decoder_table_setup(gpujpeg_huffman_gpu_decoder_tables_full, idx, d_table_cbcr_dc, 2);
-    gpujpeg_huffman_gpu_decoder_table_setup(gpujpeg_huffman_gpu_decoder_tables_full, idx, d_table_cbcr_ac, 3);
+    gpujpeg_huffman_gpu_decoder_table_setup(huffman_gpu_decoder, idx, d_table_y_dc, 0);
+    gpujpeg_huffman_gpu_decoder_table_setup(huffman_gpu_decoder, idx, d_table_y_ac, 1);
+    gpujpeg_huffman_gpu_decoder_table_setup(huffman_gpu_decoder, idx, d_table_cbcr_dc, 2);
+    gpujpeg_huffman_gpu_decoder_table_setup(huffman_gpu_decoder, idx, d_table_cbcr_ac, 3);
 }
 
 /* Documented at declaration */
@@ -621,7 +620,10 @@ gpujpeg_huffman_gpu_decoder_init()
 
     struct gpujpeg_huffman_gpu_decoder *huffman_gpu_decoder = (struct gpujpeg_huffman_gpu_decoder *) calloc(1, sizeof(struct gpujpeg_huffman_gpu_decoder));
     cudaMalloc((void**)&huffman_gpu_decoder->d_tables_full, 4 * (1 << 16) * sizeof(uint16_t));
-    gpujpeg_cuda_check_error("Huffman GPU decoder table allocation", free(huffman_gpu_decoder); return NULL);
+    gpujpeg_cuda_check_error("Huffman GPU decoder full table allocation", free(huffman_gpu_decoder); return NULL);
+
+    cudaMalloc((void**)&huffman_gpu_decoder->d_tables_quick, QUICK_TABLE_ITEMS * sizeof(uint16_t));
+    gpujpeg_cuda_check_error("Huffman GPU decoder quick table allocation", free(huffman_gpu_decoder); return NULL);
     
     return huffman_gpu_decoder;
 }
@@ -634,6 +636,7 @@ gpujpeg_huffman_gpu_decoder_destroy(struct gpujpeg_huffman_gpu_decoder *huffman_
     }
 
     cudaFree(huffman_gpu_decoder->d_tables_full);
+    cudaFree(huffman_gpu_decoder->d_tables_quick);
     free(huffman_gpu_decoder);
 }
 
@@ -662,7 +665,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     
     // Setup GPU tables (one thread for each of 65536 entries)
     gpujpeg_huffman_decoder_table_kernel<<<256, 256, 0, decoder->stream>>>(
-        decoder->huffman_gpu_decoder->d_tables_full,
+        *decoder->huffman_gpu_decoder,
         decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC],
         decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC],
         decoder->d_table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC],
@@ -701,7 +704,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     dim3 grid(gpujpeg_div_and_round_up(decoder->segment_count, THREADS_PER_TBLOCK));
     if(comp_count == 1) {
         gpujpeg_huffman_decoder_decode_kernel<true, THREADS_PER_TBLOCK><<<grid, thread, 0, decoder->stream>>>(
-            decoder->huffman_gpu_decoder->d_tables_full,
+            *decoder->huffman_gpu_decoder,
             coder->d_component, 
             coder->d_segment, 
             comp_count,
@@ -712,7 +715,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
         );
     } else {
         gpujpeg_huffman_decoder_decode_kernel<false, THREADS_PER_TBLOCK><<<grid, thread, 0, decoder->stream>>>(
-            decoder->huffman_gpu_decoder->d_tables_full,
+            *decoder->huffman_gpu_decoder,
             coder->d_component, 
             coder->d_segment, 
             comp_count,
