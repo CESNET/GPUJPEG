@@ -977,6 +977,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         case GPUJPEG_MARKER_APP0:
             if ( gpujpeg_reader_read_app0(&image) != 0 )
                 return -1;
+            decoder->reader->param.color_space_internal = GPUJPEG_YCBCR_BT601_256LVLS;
             break;
         case GPUJPEG_MARKER_APP8:
             if ( gpujpeg_reader_read_app8(&image, &decoder->reader->param.color_space_internal, decoder->coder.param.verbose ) != 0 ) {
