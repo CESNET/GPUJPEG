@@ -481,7 +481,7 @@ static uint8_t gpujpeg_reader_get_component_id(int index, enum gpujpeg_color_spa
  * @return 0 if succeeds, otherwise nonzero
  */
 static int
-gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, int quant_map[4], uint8_t comp_id[4], uint8_t** image)
+gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_color_space header_color_space, int quant_map[4], uint8_t comp_id[4], uint8_t** image)
 {
     int length = (int)gpujpeg_reader_read_2byte(*image);
     if ( length < 6 ) {
@@ -505,8 +505,18 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
         int id = (int)gpujpeg_reader_read_byte(*image);
         int expected_id = gpujpeg_reader_get_component_id(comp, param->color_space_internal);
         if ( id != expected_id ) {
-            fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker component %d id should be %d but %d was presented!\n", comp, expected_id, id);
-            return -1;
+            // if color space not matched and not read from header -> deduce from comp ID
+            if (header_color_space == GPUJPEG_NONE) {
+                if (gpujpeg_reader_get_component_id(comp, GPUJPEG_RGB)) {
+                    param->color_space_internal = GPUJPEG_RGB;
+                } else {
+                    param->color_space_internal = GPUJPEG_YCBCR_BT601_256LVLS;
+                }
+                const int verbose = param->verbose;
+                VERBOSE_MSG("Deduced color space %s.\n", gpujpeg_color_space_get_name(param->color_space_internal));
+            } else {
+                fprintf(stderr, "[GPUJPEG] [Warning] SOF0 marker component %d id should be %d but %d was presented!\n", comp, expected_id, id);
+            }
         }
         comp_id[comp] = id;
 
@@ -952,6 +962,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     decoder->reader->data_compressed_size = 0;
     decoder->reader->segment_info_count = 0;
     decoder->reader->segment_info_size = 0;
+    enum gpujpeg_color_space header_color_space = GPUJPEG_NONE;
 
     // Get image end
     uint8_t* image_end = image + image_size;
@@ -977,10 +988,10 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         case GPUJPEG_MARKER_APP0:
             if ( gpujpeg_reader_read_app0(&image) != 0 )
                 return -1;
-            decoder->reader->param.color_space_internal = GPUJPEG_YCBCR_BT601_256LVLS;
+            header_color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             break;
         case GPUJPEG_MARKER_APP8:
-            if ( gpujpeg_reader_read_app8(&image, &decoder->reader->param.color_space_internal, decoder->coder.param.verbose ) != 0 ) {
+            if ( gpujpeg_reader_read_app8(&image, &header_color_space, decoder->coder.param.verbose ) != 0 ) {
                 return -1;
             }
             break;
@@ -989,8 +1000,9 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
                 return -1;
             break;
         case GPUJPEG_MARKER_APP14:
-            if ( gpujpeg_reader_read_app14(&image, &decoder->reader->param.color_space_internal) != 0 )
+            if ( gpujpeg_reader_read_app14(&image, &header_color_space) != 0 ) {
                 return -1;
+            }
             break;
         case GPUJPEG_MARKER_APP1:
         case GPUJPEG_MARKER_APP2:
@@ -1015,18 +1027,17 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
                 return -1;
             break;
 
-        case GPUJPEG_MARKER_SOF0:
-            // Baseline
-            if ( gpujpeg_reader_read_sof0(&decoder->reader->param, &decoder->reader->param_image, decoder->comp_table_quantization_map,
-                       decoder->comp_id, &image) != 0 )
-                return -1;
-            break;
-        case GPUJPEG_MARKER_SOF1:
-            // Extended sequential with Huffman coder
+        case GPUJPEG_MARKER_SOF1: // Extended sequential with Huffman coder
             fprintf(stderr, "[GPUJPEG] [Warning] Reading SOF1 as it was SOF0 marker (should work but verify it)!\n");
-            if ( gpujpeg_reader_read_sof0(&decoder->reader->param, &decoder->reader->param_image, decoder->comp_table_quantization_map,
-                        decoder->comp_id, &image) != 0 )
+            /* fall through */
+        case GPUJPEG_MARKER_SOF0: // Baseline
+            if (header_color_space != GPUJPEG_NONE) {
+                decoder->reader->param.color_space_internal = header_color_space;
+            }
+            if ( gpujpeg_reader_read_sof0(&decoder->reader->param, &decoder->reader->param_image, header_color_space, decoder->comp_table_quantization_map,
+                       decoder->comp_id, &image) != 0 ) {
                 return -1;
+            }
             break;
         case GPUJPEG_MARKER_SOF2:
             fprintf(stderr, "[GPUJPEG] [Error] Marker SOF2 (Progressive with Huffman coding) is not supported!");
@@ -1083,7 +1094,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
 
         case GPUJPEG_MARKER_COM:
-            if ( gpujpeg_reader_read_com(&image, &decoder->reader->param.color_space_internal) != 0 ) {
+            if ( gpujpeg_reader_read_com(&image, &header_color_space) != 0 ) {
                 return -1;
             }
             break;
@@ -1143,6 +1154,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
     int interleaved = 0;
     int unused[4];
     uint8_t unused2[4];
+    enum gpujpeg_color_space header_color_space = GPUJPEG_NONE;
 
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image);
@@ -1166,7 +1178,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         {
             if (gpujpeg_reader_read_app0(&image) == 0) {
                 // if the marker defines a valid JFIF, it is YCbCr (CCIR 601-256 levels)
-                param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+                header_color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             } else {
                 return -1;
             }
@@ -1174,14 +1186,14 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         }
         case GPUJPEG_MARKER_APP8:
         {
-            if (gpujpeg_reader_read_app8(&image, &param_image->color_space, verbose) != 0) {
+            if (gpujpeg_reader_read_app8(&image, &header_color_space, verbose) != 0) {
                 return -1;
             }
             break;
         }
         case GPUJPEG_MARKER_APP14:
         {
-            if (gpujpeg_reader_read_app14(&image, &param_image->color_space) != 0) {
+            if (gpujpeg_reader_read_app14(&image, &header_color_space) != 0) {
                 return -1;
             }
             break;
@@ -1189,10 +1201,11 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         case GPUJPEG_MARKER_SOF0: // Baseline
         case GPUJPEG_MARKER_SOF1: // Extended sequential with Huffman coder
         {
-            param.color_space_internal = param_image->color_space;
-            if (gpujpeg_reader_read_sof0(&param, param_image, unused, unused2, &image) != 0) {
+            param.color_space_internal = header_color_space;
+            if (gpujpeg_reader_read_sof0(&param, param_image, header_color_space, unused, unused2, &image) != 0) {
                 return -1;
             }
+            param_image->color_space = param.color_space_internal;
             break;
         }
         case GPUJPEG_MARKER_SOF2:
@@ -1237,7 +1250,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         }
 
         case GPUJPEG_MARKER_COM:
-            if ( gpujpeg_reader_read_com(&image, &param_image->color_space) != 0 ) {
+            if ( gpujpeg_reader_read_com(&image, &header_color_space) != 0 ) {
                 return -1;
             }
             break;
