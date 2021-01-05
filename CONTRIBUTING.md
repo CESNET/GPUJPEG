@@ -83,10 +83,10 @@ The _decoder_ shall be able to decode all following files:
 
 Contacting us
 -------------
-You can contact us through our Matrix room
-[@gpujpeg:matrix.org](https://matrix.to/#/!ppSneXxiHfvznPxTTN:matrix.org?via=matrix.org).
+You can post your questions, ideas or remarks to our
+[GitHub Discussions](https://github.com/CESNET/GPUJPEG/discussions).
 
-If you prefer an e-mail contact for your questions, remarks or ideas,
+If you prefer an e-mail contact,
 you can use a mailing list of our sister project
 [UltraGrid](https://github.com/CESNET/UltraGrid).
 

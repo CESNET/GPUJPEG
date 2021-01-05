@@ -1,7 +1,5 @@
 GPUJPEG
 =======
-[![@gpujpeg:matrix.org](https://img.shields.io/badge/Matrix-chat-black)](https://matrix.to/#/!ppSneXxiHfvznPxTTN:matrix.org?via=matrix.org)
-
 **JPEG** encoder and decoder library and console application for **NVIDIA GPUs**.
 
 This documents provides an introduction to the library and how to use it. You
