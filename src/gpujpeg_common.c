@@ -243,7 +243,7 @@ gpujpeg_init_device(int device_id, int flags)
     cudaFree(d_data);
     cudaError_t error = cudaGetLastError();
     if ( cudaSuccess != error ) {
-        fprintf(stderr, "[GPUJPEG] [Error] Failed to initialize CUDA device.\n");
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to initialize CUDA device: %s\n", cudaGetErrorString(error));
         if ( flags & GPUJPEG_OPENGL_INTEROPERABILITY )
             fprintf(stderr, "[GPUJPEG] [Info]  OpenGL interoperability is used, is OpenGL context available?\n");
         return -1;
