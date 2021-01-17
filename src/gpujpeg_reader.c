@@ -741,7 +741,8 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
                 memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
 
                 if ( segment->data_compressed_size == 0 ) { // skip FFMPEG empty segments after last RST before EOF (FF bug #8412)
-                    fprintf(stderr, "[GPUJPEG] [Warning] Empty segment detected!\n");
+                    const int verbose = decoder->coder.param.verbose;
+                    VERBOSE_MSG("Empty segment detected!\n");
                     scan->segment_count -= 1;
                 }
 
