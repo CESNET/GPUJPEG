@@ -612,6 +612,7 @@ template<
     uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
     uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
     uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v,
+    bool planar,
     int sample_width,
     uint8_t fill
 >
@@ -641,12 +642,18 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     gpujpeg_color_order<color_space>::perform_store(r1, r2, r3);
 
     // Save
-    image_position = image_position * sample_width;
-    d_data_raw[image_position + 0] = r1;
-    d_data_raw[image_position + 1] = r2;
-    d_data_raw[image_position + 2] = r3;
-    if (sample_width > 3) {
-        d_data_raw[image_position + 3] = fill;
+    if (planar) {
+        d_data_raw[image_position] = r1;
+        d_data_raw[image_width * image_height + image_position] = r2;
+        d_data_raw[2 * image_width * image_height + image_position] = r3;
+    } else {
+        image_position = image_position * sample_width;
+        d_data_raw[image_position + 0] = r1;
+        d_data_raw[image_position + 1] = r2;
+        d_data_raw[image_position + 2] = r3;
+        if (sample_width > 3) {
+            d_data_raw[image_position + 3] = fill;
+        }
     }
 }
 
@@ -656,7 +663,8 @@ template<
     enum gpujpeg_color_space color_space,
     uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
     uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
-    uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v
+    uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v,
+    bool planar
 >
 __global__ void
 gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data data, uint8_t* d_data_raw, int image_width, int image_height)
@@ -684,12 +692,20 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     gpujpeg_color_order<color_space>::perform_store(r1, r2, r3);
 
     // Save
-    image_position = image_position * 2;
-    d_data_raw[image_position + 1] = r2;
-    if ( (image_position_x % 2) == 0 )
-        d_data_raw[image_position + 0] = r1;
-    else
-        d_data_raw[image_position + 0] = r3;
+    if (planar) {
+        d_data_raw[image_position] = r2;
+        if ( (image_position_x % 2) == 0 ) {
+            d_data_raw[image_width * image_height + image_position / 2] = r1;
+            d_data_raw[image_width * image_height + image_width * ((image_height + 1) / 2) + image_position / 2] = r3;
+        }
+    } else {
+        image_position = image_position * 2;
+        d_data_raw[image_position + 1] = r2;
+        if ( (image_position_x % 2) == 0 )
+            d_data_raw[image_position + 0] = r1;
+        else
+            d_data_raw[image_position + 0] = r3;
+    }
 }
 
 /**
@@ -719,13 +735,17 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
             printf("Using faster kernel for postprocessor (precompiled %dx%d, %dx%d, %dx%d).\n", max_h / P1, max_v / P2, max_h / P3, max_v / P4, max_h / P5, max_v / P6); \
         } \
         if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
-            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, 3, 0>; \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, false, 3, 0>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012A ) { \
-            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, 4, 0xff>; \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, false, 4, 0xff>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012Z ) { \
-            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, 4, 0>; \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, false, 4, 0>; \
         } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) { \
-            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6>; \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, false>; \
+        } else if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P0P1P2 ) { \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, true, 3, 0>; \
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P0P1P2 ) { \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, true>; \
         } else { \
             assert(false); \
         } \
@@ -741,11 +761,15 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
             printf("Using slower kernel for postprocessor (dynamic %dx%d, %dx%d, %dx%d).\n", coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical, coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical, coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical); \
         } \
         if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
-            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, 3, 0>; \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, false, 3, 0>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012Z ) { \
-            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, 4, 0>; \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, false, 4, 0>; \
         } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P1020 ) { \
-            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, false>; \
+        } else if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P0P1P2 ) { \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, true, 3, 0>; \
+        } else if ( coder->param_image.pixel_format == GPUJPEG_422_U8_P0P1P2 ) { \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, true>; \
         } else { \
             assert(false); \
         } \
@@ -786,13 +810,41 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     return NULL;
 }
 
+static int gpujpeg_preprocessor_decode_no_transform(struct gpujpeg_coder * coder)
+{
+    if (coder->param_image.comp_count == 3 && coder->param_image.color_space != coder->param.color_space_internal) {
+            /*fprintf(stderr, "Decoding JPEG to a planar pixel format is supported only when no color transformation is required. "
+                            "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
+                            gpujpeg_color_space_get_name(coder->param.color_space_internal),
+                            gpujpeg_color_space_get_name(coder->param_image.color_space));*/
+            return 0;
+    }
+
+    const int *sampling_factors = gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
+    for (int i = 0; i < coder->param_image.comp_count; ++i) {
+        if (coder->component[i].sampling_factor.horizontal != sampling_factors[i * 2]
+                || coder->component[i].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
+            const char *name = gpujpeg_pixel_format_get_name(coder->param_image.pixel_format);
+            /*fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s to %s).\n",
+                    gpujpeg_subsampling_get_name(coder->param_image.comp_count, coder->component),
+                    gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));*/
+            return 0;
+        }
+    }
+    return 1;
+}
+
 /* Documented at declaration */
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
     coder->preprocessor = NULL;
 
-    if (!gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format)) {
+    if (!gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format) &&
+            gpujpeg_preprocessor_decode_no_transform(coder)) {
+        if ( coder->param.verbose >= 1 ) {
+            printf("Matching format detected - not using postprocessor, using memcpy instead.");
+        }
         return 0;
     }
 
@@ -830,34 +882,13 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
  * JPEG (although at least different horizontal subsampling can be quite
  * easily done).
  *
- * @todo
- * Use postprocessing kernels as for packed formats.
+ * @invariant gpujpeg_preprocessor_decode_no_transform(coder) != 0
  */
 static int
 gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cudaStream_t stream)
 {
     assert(coder->param_image.comp_count == 1 ||
             coder->param_image.comp_count == 3);
-    if (coder->param_image.comp_count == 3 && coder->param_image.color_space != coder->param.color_space_internal) {
-            fprintf(stderr, "Decoding JPEG to a planar pixel format is supported only when no color transformation is required. "
-                            "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
-                            gpujpeg_color_space_get_name(coder->param.color_space_internal),
-                            gpujpeg_color_space_get_name(coder->param_image.color_space));
-            return -1;
-    }
-
-    const int *sampling_factors = gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
-    for (int i = 0; i < coder->param_image.comp_count; ++i) {
-        if (coder->component[i].sampling_factor.horizontal != sampling_factors[i * 2]
-                || coder->component[i].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
-            const char *name = gpujpeg_pixel_format_get_name(coder->param_image.pixel_format);
-            fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s to %s).\n",
-                    gpujpeg_subsampling_get_name(coder->param_image.comp_count, coder->component),
-                    gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));
-            return GPUJPEG_ERR_WRONG_SUBSAMPLING;
-        }
-    }
-
     size_t data_raw_offset = 0;
     bool needs_stride = false; // true if width is not divisible by MCU width
     for (int i = 0; i < coder->param_image.comp_count; ++i) {
@@ -886,7 +917,7 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
 int
 gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
-    if (!gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format)) {
+    if (!coder->preprocessor) {
         return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);
     }
 
@@ -907,7 +938,11 @@ gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     }
 
     // Prepare unit size
+    /// @todo this stuff doesn't look correct - we multiply by unitSize and then divide by it
     int unitSize = gpujpeg_pixel_format_get_unit_size(coder->param_image.pixel_format);
+    if (unitSize == 0) {
+        unitSize = 1;
+    }
 
     // Prepare kernel
     int alignedSize = gpujpeg_div_and_round_up(image_width * image_height, RGB_8BIT_THREADS) * RGB_8BIT_THREADS * unitSize;
