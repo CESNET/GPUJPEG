@@ -117,7 +117,7 @@ install(TARGETS gpujpeg gpujpeg-bin
         PUBLIC_HEADER DESTINATION include/libgpujpeg
         RUNTIME DESTINATION bin)
 
-install(FILES AUTHORS CONTRIBUTING.md COPYING FAQ.md INSTALL NEWS README.md
+install(FILES AUTHORS CONTRIBUTING.md COPYING FAQ.md INSTALL NEWS.md README.md
         DESTINATION doc)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg.pc DESTINATION share/pkgconfig)

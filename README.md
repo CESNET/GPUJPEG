@@ -3,8 +3,8 @@ GPUJPEG
 **JPEG** encoder and decoder library and console application for **NVIDIA GPUs**.
 
 This documents provides an introduction to the library and how to use it. You
-can also look at [FAQ](FAQ.md) for additional information. To list _latest_changes_
-you can display file [NEWS](NEWS).
+can also look at [FAQ](FAQ.md) for additional information. To see _latest changes_
+you can display file [NEWS.md](NEWS.md).
 
 Table of contents
 -----------------
