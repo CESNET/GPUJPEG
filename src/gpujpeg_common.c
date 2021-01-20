@@ -740,11 +740,12 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     coder->data_raw = NULL;
     coder->d_data_raw = NULL;
 
-    //for idct we must add some memory - it rounds up the block count, computes all and the extra bytes are omitted
     if (coder->component[0].data_width <= 0) {
         fprintf(stderr, "Data width should be positive!\n");
         return 0;
     }
+    //for idct we must add some memory - it rounds up the block count, computes all and the extra bytes are omitted
+    /// @todo idct_overhead computation looks suspicious
     int idct_overhead = (GPUJPEG_IDCT_BLOCK_X * GPUJPEG_IDCT_BLOCK_Y * GPUJPEG_IDCT_BLOCK_Z / coder->component[0].data_width + 1)
       * GPUJPEG_BLOCK_SIZE * coder->component[0].data_width;
     if (coder->data_size + idct_overhead > coder->data_allocated_size) {
