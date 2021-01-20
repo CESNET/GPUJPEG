@@ -266,8 +266,6 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         cudaMemcpyAsync(coder->d_segment, coder->segment, decoder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice, decoder->stream);
         gpujpeg_cuda_check_error("Decoder copy compressed data", return -1);
 
-        // Zero output memory
-        cudaMemsetAsync(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t), decoder->stream);
         GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_memory_to, decoder->stream, return -1);
 
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_in_gpu, decoder->stream, return -1);

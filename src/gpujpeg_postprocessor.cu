@@ -429,8 +429,6 @@ gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 
     assert(coder->param_image.comp_count == 3);
 
-    cudaMemsetAsync(coder->d_data_raw, 0, coder->data_raw_size * sizeof(uint8_t), stream);
-
     // Select kernel
     gpujpeg_preprocessor_decode_kernel kernel = (gpujpeg_preprocessor_decode_kernel)coder->preprocessor;
     assert(kernel != NULL);
