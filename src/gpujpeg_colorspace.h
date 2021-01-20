@@ -429,7 +429,7 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_YUV> {
  *
  * @param color_space
  */
-template<enum gpujpeg_color_space color_space>
+template<enum gpujpeg_pixel_format pixel_format>
 struct gpujpeg_color_order
 {
     /** Change load order */
@@ -445,43 +445,7 @@ struct gpujpeg_color_order
 };
 /** YCbCr and YUV Specializations (UYV <-> YUV) */
 template<>
-struct gpujpeg_color_order<GPUJPEG_YCBCR_BT601>
-{
-    static __device__ void
-    perform_load(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        uint8_t tmp = c1; c1 = c2; c2 = tmp;
-    }
-    static __device__ void
-    perform_store(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        uint8_t tmp = c1; c1 = c2; c2 = tmp;
-    }
-};
-template<>
-struct gpujpeg_color_order<GPUJPEG_YCBCR_BT601_256LVLS>
-{
-    static __device__ void
-    perform_load(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        uint8_t tmp = c1; c1 = c2; c2 = tmp;
-    }
-    static __device__ void
-    perform_store(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        uint8_t tmp = c1; c1 = c2; c2 = tmp;
-    }
-};
-template<>
-struct gpujpeg_color_order<GPUJPEG_YCBCR_BT709>
-{
-    static __device__ void
-    perform_load(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        uint8_t tmp = c1; c1 = c2; c2 = tmp;
-    }
-    static __device__ void
-    perform_store(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        uint8_t tmp = c1; c1 = c2; c2 = tmp;
-    }
-};
-template<>
-struct gpujpeg_color_order<GPUJPEG_YUV>
+struct gpujpeg_color_order<GPUJPEG_422_U8_P1020>
 {
     static __device__ void
     perform_load(uint8_t & c1, uint8_t & c2, uint8_t & c3) {

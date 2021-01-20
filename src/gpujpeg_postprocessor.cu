@@ -128,8 +128,7 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_4_4(struct gpujpeg_preprocessor_data d
     gpujpeg_color_transform<color_space_internal, color_space>::perform(r1, r2, r3);
 
     // Store Order
-    /// @todo this shouldn't be perhaps here - YCbCr 4:4:4 are not usually stored as CbYCr
-    //gpujpeg_color_order<color_space>::perform_store(r1, r2, r3);
+    gpujpeg_color_order<GPUJPEG_PIXFMT_NONE>::perform_store(r1, r2, r3);
 
     // Save
     if (planar) {
@@ -179,7 +178,7 @@ gpujpeg_preprocessor_comp_to_raw_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     gpujpeg_color_transform<color_space_internal, color_space>::perform(r1, r2, r3);
 
     // Store Order
-    gpujpeg_color_order<color_space>::perform_store(r1, r2, r3);
+    gpujpeg_color_order<GPUJPEG_422_U8_P1020>::perform_store(r1, r2, r3);
 
     // Save
     if (planar) {
