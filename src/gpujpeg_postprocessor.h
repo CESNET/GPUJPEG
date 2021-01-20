@@ -28,39 +28,38 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUJPEG_PREPROCESSOR_H
-#define GPUJPEG_PREPROCESSOR_H
+#ifndef GPUJPEG_POSTPROCESSOR_H
+#define GPUJPEG_POSTPROCESSOR_H
 
-#include "gpujpeg_encoder_internal.h"
+#include "gpujpeg_decoder_internal.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * Init preprocessor encoder
+ * Init preprocessor decoder
  *
  * @param encoder
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder);
+gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder);
 
 /**
- * Preprocessor encode
+ * Preprocessor decode
  *
- * @param encoder  Encoder structure
- * @param image  Image source data
- * @return 0 if succeeds, otherwise nonzero
+ * @param coder
+ * @param stream
  * @retval  0 if succeeds
  * @retval -1 general error
- * @retval -2 planar pixel format cannot be encoded with specified subsampling
+ * @retval -2 JPEG with source subsampling cannot be decoded to specified planar pixel format
  */
 int
-gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder);
+gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // GPUJPEG_PREPROCESSOR_H
+#endif // GPUJPEG_POSTPROCESSOR_H

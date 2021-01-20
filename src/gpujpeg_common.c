@@ -34,6 +34,7 @@
 
 #include <ctype.h>
 #include <libgpujpeg/gpujpeg_common.h>
+#include "gpujpeg_postprocessor.h"
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_util.h"
 #include "libgpujpeg/gpujpeg_version.h"

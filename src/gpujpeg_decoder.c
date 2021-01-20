@@ -34,7 +34,7 @@
 #include "gpujpeg_decoder_internal.h"
 #include "gpujpeg_huffman_cpu_decoder.h"
 #include "gpujpeg_huffman_gpu_decoder.h"
-#include "gpujpeg_preprocessor.h"
+#include "gpujpeg_postprocessor.h"
 #include "gpujpeg_util.h"
 
 /* Documented at declaration */

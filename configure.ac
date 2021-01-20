@@ -109,6 +109,7 @@ if test $enable_osx_universal = yes; then
 	LIBGPUJPEG_CUDA_OBJS=" \
 		build/universal/gpujpeg_huffman_gpu_encoder.o \
 		build/universal/gpujpeg_dct_gpu.o \
+		build/universal/gpujpeg_postprocessor.o \
 		build/universal/gpujpeg_preprocessor.o \
 		build/universal/gpujpeg_huffman_gpu_decoder.o"
 	CUDA_FLAGS="$CUDA_FLAGS -Xcompiler -Wno-error=unused-command-line-argument-hard-error-in-future"
@@ -116,6 +117,7 @@ else
 	LIBGPUJPEG_CUDA_OBJS=" \
 		src/gpujpeg_huffman_gpu_encoder.cu.o \
 		src/gpujpeg_dct_gpu.cu.o \
+		src/gpujpeg_postprocessor.cu.o \
 		src/gpujpeg_preprocessor.cu.o \
 		src/gpujpeg_huffman_gpu_decoder.cu.o"
 fi
