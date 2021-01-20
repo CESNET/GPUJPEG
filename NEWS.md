@@ -1,3 +1,7 @@
+2021-01-20 - 0.13.0
+----------
+- Decoding of arbitrary images into planar formats
+
 2020-10-02
 ----------
 - Support for SPIFF files (decode, encode limited-range BT.709, BT.601)
