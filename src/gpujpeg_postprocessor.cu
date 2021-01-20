@@ -86,6 +86,12 @@ template<enum gpujpeg_pixel_format pixel_format>
 inline __device__ void gpujpeg_comp_to_raw_store(uint8_t *d_data_raw, int &image_width, int &image_height, int &image_position, uint8_t &r1, uint8_t &r2, uint8_t &r3);
 
 template<>
+inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_U8>(uint8_t *d_data_raw, int &image_width, int &image_height, int &image_position, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+{
+    d_data_raw[image_position] = r1;
+}
+
+template<>
 inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_444_U8_P012>(uint8_t *d_data_raw, int &image_width, int &image_height, int &image_position, uint8_t &r1, uint8_t &r2, uint8_t &r3)
 {
     image_position = image_position * 3;
@@ -216,8 +222,10 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         if ( coder->param.verbose >= 1 ) { \
             printf("Using faster kernel for postprocessor (precompiled %dx%d, %dx%d, %dx%d).\n", max_h / P1, max_v / P2, max_h / P3, max_v / P4, max_h / P5, max_v / P6); \
         } \
-        if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
-            return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR,GPUJPEG_444_U8_P012, P1, P2, P3, P4, P5, P6>; \
+        if ( PIXEL_FORMAT == GPUJPEG_U8 ) { \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_U8, P1, P2, P3, P4, P5, P6>; \
+        } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012, P1, P2, P3, P4, P5, P6>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012A ) { \
             return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012A, P1, P2, P3, P4, P5, P6>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012Z ) { \
@@ -242,7 +250,9 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         if ( coder->param.verbose >= 1 ) { \
             printf("Using slower kernel for postprocessor (dynamic %dx%d, %dx%d, %dx%d).\n", coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical, coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical, coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical); \
         } \
-        if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
+        if ( PIXEL_FORMAT == GPUJPEG_U8 ) { \
+            return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_U8, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
+        } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
             return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012Z ) { \
             return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012Z, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
