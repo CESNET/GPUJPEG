@@ -15,6 +15,7 @@ pkgconfigdir = $(libdir)/pkgconfig
 library_includedir=$(includedir)/libgpujpeg/
 gpujpeg_libincludedir = $(libdir)/libgpujpeg
 
+EXTRA_DIST = AUTHORS CONTRIBUTING.md COPYING FAQ.md INSTALL NEWS.md README.md
 lib_LTLIBRARIES = libgpujpeg.la
 bin_PROGRAMS = gpujpeg
 pkgconfig_DATA = libgpujpeg.pc
