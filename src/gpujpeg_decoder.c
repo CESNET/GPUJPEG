@@ -163,6 +163,11 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters*
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
 
+    coder->param.verbose = param->verbose;
+    if (param_image->width * param_image->height * param_image->comp_count == 0) {
+        return 0;
+    }
+
     // Check if (re)inialization is needed
     int change = 0;
     change |= coder->param_image.width != param_image->width;
