@@ -652,9 +652,7 @@ main(int argc, char *argv[])
             param_image = param_image_saved;
             adjust_params(&param, &param_image, input, output, encode, chroma_subsampled, restart_interval_default);
 
-            if ( param_image_saved.color_space == GPUJPEG_NONE ) {
-                gpujpeg_decoder_set_output_format(decoder, param_image.color_space, param_image.pixel_format);
-            }
+            gpujpeg_decoder_set_output_format(decoder, param_image.color_space, param_image.pixel_format);
 
             // Decode image
             double duration = gpujpeg_get_time();
