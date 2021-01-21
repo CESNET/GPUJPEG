@@ -363,12 +363,16 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
 /**
  * Convert image
  *
+ * @note
+ * currently defunct
+ *
  * @param input
  * @param filename
  * @param param_image_from
  * @param param_image_to
+ * @return 0 if succeeds, otherwise nonzero
  */
-GPUJPEG_API void
+GPUJPEG_API int
 gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_image_parameters param_image_from,
         struct gpujpeg_image_parameters param_image_to);
 

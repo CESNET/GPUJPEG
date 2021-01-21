@@ -1176,10 +1176,13 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
 }
 
 /* Documented at declaration */
-void
+int
 gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_image_parameters param_image_from,
         struct gpujpeg_image_parameters param_image_to)
 {
+    fprintf(stderr, "[GPUJPEG] [Error] GPUJPEG conversions are currently defunct, report to developers if needed!\n");
+    return -1;
+
     assert(param_image_from.width == param_image_to.width);
     assert(param_image_from.height == param_image_to.height);
     assert(param_image_from.comp_count == param_image_to.comp_count);
@@ -1189,7 +1192,7 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     uint8_t* image = NULL;
     if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to load image [%s]!\n", input);
-        return;
+        return -1;
     }
 
     struct gpujpeg_encoder * encoder = (struct gpujpeg_encoder *) malloc(sizeof(struct gpujpeg_encoder));
@@ -1205,12 +1208,12 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     // Create buffers if not already created
     if (coder->data_raw == NULL) {
         if (cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t))) {
-            return;
+            return -1;
         }
     }
     if (coder->d_data_raw_allocated == NULL) {
         if (cudaSuccess != cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t))) {
-            return;
+            return -1;
         }
     }
 
@@ -1238,10 +1241,12 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     assert(cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
     if ( gpujpeg_image_save_to_file(output, coder->data_raw, coder->data_raw_size, &param_image_to ) != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to save image [%s]!\n", output);
-        return;
+        return -1;
     }
     // Deinitialize decoder
     gpujpeg_coder_deinit(coder);
+
+    return 0;
 }
 
 /* Documented at declaration */
