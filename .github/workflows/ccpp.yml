@@ -35,7 +35,7 @@ jobs:
 
   Ubuntu:
     name: run Ubuntu
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
     - uses: actions/checkout@v1
@@ -45,8 +45,8 @@ jobs:
         sudo apt install nvidia-cuda-toolkit cmake
     - name: Build
       run: |
-        cmake -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -Bbuild
-        cmake --build build
+        cmake -Bbuild
+        cmake --build build --parallel $(nproc)
         cmake --build build --target tests
 
   Windows:
@@ -67,7 +67,7 @@ jobs:
         Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
         refreshenv
         cmake.exe -p:Configuration=Release -Bbuild .
-        cmake.exe --build build --config Release
+        cmake.exe --build build --config Release --parallel (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
         cmake.exe --install build --prefix GPUJPEG
         cpack.exe --config build/CPackConfig.cmake -GNSIS64
         Compress-Archive -Path GPUJPEG -DestinationPath GPUJPEG
