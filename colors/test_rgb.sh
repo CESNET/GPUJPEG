@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # Parameters
-NAME="image_rgb_444"
-EXTENSION="rgb"
-MODE="--colorspace=rgb --sampling-factor=4:4:4"
+export NAME="image_rgb_444"
+export EXTENSION="rgb"
+export MODE="--colorspace=rgb  --pixel-format=444-u8-p012"
+export FF_FORMAT="rgb24"
 
 # Run test
-source `dirname $0`/test_common.sh
+`dirname $0`/test_common.sh "$@"

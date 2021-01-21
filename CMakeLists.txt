@@ -12,6 +12,8 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 include(CPack)
 
+include(CTest)
+
 execute_process(COMMAND git rev-parse --short HEAD
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         OUTPUT_VARIABLE GIT_REV
@@ -154,14 +156,12 @@ install(EXPORT GPUJPEGTargets
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/GPUJPEGConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/GPUJPEGConfigVersion.cmake
     DESTINATION lib/cmake/GPUJPEG)
 
-add_custom_target(unittests make -C test/unit LIBDIR=${CMAKE_BINARY_DIR}
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        DEPENDS gpujpeg)
-
-add_custom_target(tests
-        DEPENDS unittests)
-
 add_custom_target(cscope cscope -bv `find ${CMAKE_SOURCE_DIR}/libgpujpeg ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/test -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cu' -o -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \)`)
 add_custom_target(universal-ctags ctags-universal `find ${CMAKE_SOURCE_DIR}/libgpujpeg ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/test -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cu' -o -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \)`)
+
+add_test(NAME unittests COMMAND make -C test/unit LIBDIR=${CMAKE_BINARY_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+add_test(NAME test-yuv COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/colors/test_yuv.sh ${CMAKE_CURRENT_BINARY_DIR}/gpujpeg)
+add_test(NAME test-rgb COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/colors/test_rgb.sh ${CMAKE_CURRENT_BINARY_DIR}/gpujpeg)
 
 # vim: sw=4
