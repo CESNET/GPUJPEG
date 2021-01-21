@@ -1,3 +1,7 @@
+2021-01-21 - 0.14.0
+----------
+- Support for encoding arbitrary images in planar formats
+
 2021-01-20 - 0.13.0
 ----------
 - Decoding of arbitrary images into planar formats

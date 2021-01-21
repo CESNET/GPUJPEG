@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
-project(gpujpeg VERSION 0.13.0 LANGUAGES C CXX CUDA)
+project(gpujpeg VERSION 0.14.0 LANGUAGES C CXX CUDA)
 
 # options
 set(BUILD_OPENGL AUTO CACHE STRING "Build with OpenGL support, options are: AUTO ON OFF")

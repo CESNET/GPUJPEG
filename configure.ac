@@ -1,5 +1,5 @@
 AC_PREREQ([2.65])
-AC_INIT([libgpujpeg], [0.13.0], [https://github.com/CESNET/GPUJPEG/issues], [libgpujpeg], [https://github.com/CESNET/GPUJPEG])
+AC_INIT([libgpujpeg], [0.14.0], [https://github.com/CESNET/GPUJPEG/issues], [libgpujpeg], [https://github.com/CESNET/GPUJPEG])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR([.])
