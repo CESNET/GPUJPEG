@@ -281,7 +281,7 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
         } \
         if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, 3>; \
-        } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012Z ) { \
+        } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012A || PIXEL_FORMAT == GPUJPEG_444_U8_P012Z ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6, 4>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_422_U8_P1020 ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2<color_space_internal, COLOR, P1, P2, P3, P4, P5, P6>; \
@@ -309,7 +309,7 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
         } \
         if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, 3>; \
-        } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012Z ) { \
+        } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012A || PIXEL_FORMAT == GPUJPEG_444_U8_P012Z ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_4_4<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, 4>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_422_U8_P1020 ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2<color_space_internal, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
