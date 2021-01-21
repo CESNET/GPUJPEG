@@ -176,6 +176,41 @@ gpujpeg_preprocessor_raw_to_comp_kernel_4_2_2(struct gpujpeg_preprocessor_data d
     }
 }
 
+template<enum gpujpeg_pixel_format>
+inline __device__ void raw_to_comp_load(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3);
+
+template<>
+inline __device__ void raw_to_comp_load<GPUJPEG_U8>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+{
+    r1 = d_data_raw[image_position];
+    r2 = 128;
+    r3 = 128;
+}
+
+template<>
+inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P0P1P2>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+{
+    r1 = d_data_raw[image_position];
+    r2 = d_data_raw[image_width * image_height + image_position];
+    r3 = d_data_raw[2 * image_width * image_height + image_position];
+}
+
+template<>
+inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P0P1P2>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+{
+    r1 = d_data_raw[image_position];
+    r2 = d_data_raw[image_width * image_height + image_position / 2];
+    r3 = d_data_raw[image_width * image_height + image_height * ((image_width + 1) / 2) + image_position / 2];
+}
+
+template<>
+inline __device__ void raw_to_comp_load<GPUJPEG_420_U8_P0P1P2>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+{
+    r1 = d_data_raw[image_position];
+    r2 = d_data_raw[image_width * image_height + y / 2 * ((image_width + 1) / 2) + x / 2];
+    r3 = d_data_raw[image_width * image_height + ((image_height + 1) / 2 + y / 2) * ((image_width + 1) / 2) + x / 2];
+}
+
 /**
  * @todo
  * Merge with gpujpeg_preprocessor_raw_to_comp_kernel_4_X_X - all except loading is the same.
@@ -202,20 +237,10 @@ gpujpeg_preprocessor_raw_to_comp_kernel_planar(struct gpujpeg_preprocessor_data 
     int image_position_x = image_position - (image_position_y * image_width);
 
     // Load
-    uint8_t r1 = d_data_raw[image_position];
-    uint8_t r2 = 128;
-    uint8_t r3 = 128;
-    // GPUJPEG_U8 won't fill chroma
-    if (pixel_format == GPUJPEG_444_U8_P0P1P2) {
-        r2 = d_data_raw[image_width * image_height + image_position];
-        r3 = d_data_raw[2 * image_width * image_height + image_position];
-    } else if (pixel_format == GPUJPEG_422_U8_P0P1P2) {
-        r2 = d_data_raw[image_width * image_height + image_position / 2];
-        r3 = d_data_raw[image_width * image_height + image_height * ((image_width + 1) / 2) + image_position / 2];
-    } else if (pixel_format == GPUJPEG_420_U8_P0P1P2) {
-        r2 = d_data_raw[image_width * image_height + image_position_y / 2 * ((image_width + 1) / 2) + image_position_x / 2];
-        r3 = d_data_raw[image_width * image_height + ((image_height + 1) / 2 + image_position_y / 2) * ((image_width + 1) / 2) + image_position_x / 2];
-    }
+    uint8_t r1;
+    uint8_t r2;
+    uint8_t r3;
+    raw_to_comp_load<pixel_format>(d_data_raw, image_width, image_height, image_position, image_position_x, image_position_y, r1, r2, r3);
 
     // Color transform
     gpujpeg_color_transform<color_space, color_space_internal>::perform(r1, r2, r3);
