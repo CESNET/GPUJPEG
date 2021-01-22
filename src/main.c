@@ -497,7 +497,9 @@ main(int argc, char *argv[])
 
             // Encode image
             double duration = gpujpeg_get_time();
-            printf("\nEncoding Image [%s]\n", input);
+            printf("\nEncoding Image [%s]: %dx%d %s %s\n", input, param_image.width, param_image.height,
+                    gpujpeg_pixel_format_get_name(param_image.pixel_format),
+                    gpujpeg_color_space_get_name(param_image.color_space));
 
             // Load image
             int image_size = gpujpeg_image_calculate_size(&param_image);
@@ -656,7 +658,9 @@ main(int argc, char *argv[])
             // Decode image
             double duration = gpujpeg_get_time();
 
-            printf("\nDecoding Image [%s]\n", input);
+            printf("\nDecoding Image [%s] to %s %s\n", input,
+                    gpujpeg_pixel_format_get_name(param_image.pixel_format),
+                    gpujpeg_color_space_get_name(param_image.color_space));
 
             // Load image
             int image_size = 0;
