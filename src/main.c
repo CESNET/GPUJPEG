@@ -45,7 +45,7 @@ print_help()
 {
     printf("gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
            "   -h, --help             print help\n"
-           "   -v, --verbose          verbose output\n"
+           "   -v, --verbose          verbose output (multiply to increase verbosity - max 2) \n"
            "   -D, --device           set cuda device id (default 0)\n"
            "       --device-list      list cuda devices\n"
            "\n");
@@ -57,8 +57,8 @@ print_help()
            "                          444-u8-p012a     422-u8-p0p1p2\n"
            "                          444-u8-p012z     420-u8-p0p1p2\n"
            "\n"
-           "   -c, --colorspace       set input/output image colorspace, e.g. rgb,\n"
-           "                          ycbcr, ycbcr-jpeg, ycbcr-bt601, ycbcr-bt709\n"
+           "   -c, --colorspace       set input/output image colorspace, e.g. rgb, ycbcr-jpeg (full\n"
+           "                          range BT.601), ycbcr-bt601 (limited 601), ycbcr-bt709 (limited)\n"
            "\n");
     printf("   -q, --quality          set JPEG encoder quality level 0-100 (default 75)\n"
            "   -r, --restart          set JPEG encoder restart interval (default 8)\n"
