@@ -161,7 +161,6 @@ add_custom_target(universal-ctags ctags-universal `find ${CMAKE_SOURCE_DIR}/libg
 
 add_test(NAME unittests COMMAND make -C test/unit LIBDIR=${CMAKE_BINARY_DIR}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-add_test(NAME test-yuv COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/colors/test_yuv.sh ${CMAKE_CURRENT_BINARY_DIR}/gpujpeg)
-add_test(NAME test-rgb COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/colors/test_rgb.sh ${CMAKE_CURRENT_BINARY_DIR}/gpujpeg)
+add_test(NAME test-colors COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/colors/run_tests.sh ${CMAKE_CURRENT_BINARY_DIR}/gpujpeg)
 
 # vim: sw=4
