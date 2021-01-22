@@ -7,11 +7,14 @@
 # EXTENSION = image extension, e.g. "yuv"
 # MODE      = image arguments for gpujpeg, e.g. "--colorspace=ycbcr-bt601 --pixel-format=444-u8-p012"
 # FF_FORMAT = respective FFmpeg format (until GPUJPEG is capable to convert by itself), eg. "yuv444p"
+#
+# @todo
+# REQUESTED_PSNR should perhaps not be fixed but given by user to match expected value
 
 # Get script folder
 DIR=`dirname $0`
 GPUJPEG=${1:-$DIR/../gpujpeg}
-
+REQUESTED_PSNR=40
 IMAGE=image_bt709_422.yuv
 #IMAGE=camera_bt709_422.yuv
 
@@ -42,7 +45,7 @@ PSNR=`compare -metric PSNR -depth 8 -size 1920x1080  $DIR/$NAME.rgb $DIR/$NAME.d
 
 echo PSNR: $PSNR
 
-if expr $PSNR \< 45; then
+if expr $PSNR \< $REQUESTED_PSNR; then
         exit 1
 fi
 
