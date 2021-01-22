@@ -40,7 +40,7 @@
 #define GPUJPEG_VERSION_MINOR @PROJECT_VERSION_MINOR@
 #define GPUJPEG_VERSION_PATCH @PROJECT_VERSION_PATCH@
 
-#define GPUJPEG_MK_VERSION_INT(major, minor, patch) ((unsigned)(major) << 16U | (unsigned)(minor) << 8U | (unsigned)(patch))
+#define GPUJPEG_MK_VERSION_INT(major, minor, patch) ((major) << 16U | (minor) << 8U | (patch))
 
 #define GPUJPEG_VERSION_INT GPUJPEG_MK_VERSION_INT(GPUJPEG_VERSION_MAJOR, GPUJPEG_VERSION_MINOR, GPUJPEG_VERSION_PATCH)
 
