@@ -62,7 +62,7 @@ print_help()
            "\n");
     printf("   -q, --quality          set JPEG encoder quality level 0-100 (default 75)\n"
            "   -r, --restart          set JPEG encoder restart interval (default 8)\n"
-           "       --subsampled[=<s>] set JPEG encoder to use chroma subsampling (default 420)\n"
+           "   -S, --subsampled[=<s>] set JPEG encoder to use chroma subsampling (default 420)\n"
            "   -i  --interleaved      set JPEG encoder to use interleaved stream\n"
            "   -g  --segment-info     set JPEG encoder to use segment info in stream\n"
            "                          for fast decoding\n"
@@ -238,7 +238,6 @@ main(int argc, char *argv[])
 
     // Parse command line
     #define OPTION_DEVICE_INFO     1
-    #define OPTION_SUBSAMPLED      2
     #define OPTION_CONVERT         3
     #define OPTION_COMPONENT_RANGE 4
     struct option longopts[] = {
@@ -252,7 +251,7 @@ main(int argc, char *argv[])
         {"quality",                 required_argument, 0, 'q'},
         {"restart",                 required_argument, 0, 'r'},
         {"segment-info",            optional_argument, 0, 'g' },
-        {"subsampled",              optional_argument, 0,  OPTION_SUBSAMPLED },
+        {"subsampled",              optional_argument, 0, 'S' },
         {"interleaved",             optional_argument, 0, 'i'},
         {"encode",                  no_argument,       0, 'e'},
         {"decode",                  no_argument,       0, 'd'},
@@ -267,7 +266,7 @@ main(int argc, char *argv[])
     int ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:oI:N", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:oI:NS::", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'h':
             print_help();
@@ -332,7 +331,7 @@ main(int argc, char *argv[])
             else
                 param.segment_info = 0;
             break;
-        case OPTION_SUBSAMPLED:
+        case 'S':
             chroma_subsampled = 1;
             if ( optarg == NULL || strcmp(optarg, "420") == 0 )
                 gpujpeg_parameters_chroma_subsampling_420(&param);
