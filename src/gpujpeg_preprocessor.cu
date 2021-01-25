@@ -198,7 +198,7 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
     if ( sampling_factor == gpujpeg_preprocessor_make_sampling_factor(P1, P2, P3, P4, P5, P6) ) { \
         int max_h = max(P1, max(P3, P5)); \
         int max_v = max(P2, max(P4, P6)); \
-        if ( coder->param.verbose >= 1 ) { \
+        if ( coder->param.verbose >= 2 ) { \
             printf("Using faster kernel for preprocessor (precompiled %dx%d, %dx%d, %dx%d).\n", max_h / P1, max_v / P2, max_h / P3, max_v / P4, max_h / P5, max_v / P6); \
         } \
         if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
@@ -226,7 +226,7 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
     else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 2, 1, 2, 1) \
     else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 4, 4, 4, 4) \
     else { \
-        if ( coder->param.verbose >= 1 ) { \
+        if ( coder->param.verbose >= 2 ) { \
             printf("Using slower kernel for preprocessor (dynamic %dx%d, %dx%d, %dx%d).\n", coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical, coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical, coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical); \
         } \
         if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
@@ -314,7 +314,7 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
     }
 
     if ( gpujpeg_preprocessor_encode_no_transform(coder) ) {
-        if ( coder->param.verbose >= 1 ) {
+        if ( coder->param.verbose >= 2 ) {
             printf("Matching format detected - not using preprocessor, using memcpy instead.");
         }
         return 0;
