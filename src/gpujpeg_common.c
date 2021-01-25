@@ -347,7 +347,7 @@ gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , cons
 enum gpujpeg_image_file_format
 gpujpeg_image_get_file_format(const char* filename)
 {
-    static const char *extension[] = { "raw", "rgb", "rgba", "yuv", "i420", "r", "jpg", "pbm", "pnm", "pgm", "ppm", "pam" };
+    static const char *extension[] = { "raw", "rgb", "rgba", "yuv", "i420", "r", "jpg", "jpeg", "jfif", "pbm", "pnm", "pgm", "ppm", "pam" };
     static const enum gpujpeg_image_file_format format[] = {
         GPUJPEG_IMAGE_FILE_RAW,
         GPUJPEG_IMAGE_FILE_RGB,
@@ -355,6 +355,8 @@ gpujpeg_image_get_file_format(const char* filename)
         GPUJPEG_IMAGE_FILE_YUV,
         GPUJPEG_IMAGE_FILE_I420,
         GPUJPEG_IMAGE_FILE_GRAY,
+        GPUJPEG_IMAGE_FILE_JPEG,
+        GPUJPEG_IMAGE_FILE_JPEG,
         GPUJPEG_IMAGE_FILE_JPEG,
         GPUJPEG_IMAGE_FILE_PNM,
         GPUJPEG_IMAGE_FILE_PNM,
