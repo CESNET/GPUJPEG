@@ -1044,37 +1044,37 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             }
             break;
         case GPUJPEG_MARKER_SOF2:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF2 (Progressive with Huffman coding) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF2 (Progressive with Huffman coding) is not supported!\n");
             return -1;
         case GPUJPEG_MARKER_SOF3:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF3 (Lossless with Huffman coding) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF3 (Lossless with Huffman coding) is not supported!\n");
             return -1;
         case GPUJPEG_MARKER_SOF5:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF5 (Differential sequential with Huffman coding) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF5 (Differential sequential with Huffman coding) is not supported!\n");
             return -1;
         case GPUJPEG_MARKER_SOF6:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF6 (Differential progressive with Huffman coding) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF6 (Differential progressive with Huffman coding) is not supported!\n");
             return -1;
         case GPUJPEG_MARKER_SOF7:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF7 (Extended lossless with Arithmetic coding) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF7 (Extended lossless with Arithmetic coding) is not supported!\n");
             return -1;
         case GPUJPEG_MARKER_JPG:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker JPG (Reserved for JPEG extensions ) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker JPG (Reserved for JPEG extensions ) is not supported!\n");
             return -1;
         case GPUJPEG_MARKER_SOF10:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF10 (Progressive with Arithmetic coding) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF10 (Progressive with Arithmetic coding) is not supported!\n");
             return -1;
         case GPUJPEG_MARKER_SOF11:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF11 (Lossless with Arithmetic coding) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF11 (Lossless with Arithmetic coding) is not supported!\n");
             return -1;
         case GPUJPEG_MARKER_SOF13:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF13 (Differential sequential with Arithmetic coding) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF13 (Differential sequential with Arithmetic coding) is not supported!\n");
             return -1;
         case GPUJPEG_MARKER_SOF14:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF14 (Differential progressive with Arithmetic coding) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF14 (Differential progressive with Arithmetic coding) is not supported!\n");
             return -1;
         case GPUJPEG_MARKER_SOF15:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF15 (Differential lossless with Arithmetic coding) is not supported!");
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF15 (Differential lossless with Arithmetic coding) is not supported!\n");
             return -1;
 
         case GPUJPEG_MARKER_DHT:
