@@ -666,97 +666,98 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
 
     // Read scan data
     int result = -1;
-    uint8_t byte = 0;
-    uint8_t byte_previous = 0;
     uint8_t previous_marker = GPUJPEG_MARKER_RST0 - 1;
     do {
-        byte_previous = byte;
-        byte = gpujpeg_reader_read_byte(*image);
-        data_compressed_offset++;
+        uint8_t *ret = memchr(*image, 0xFF, image_end - *image);
+        if (ret == NULL || ret == image_end - 1) {
+            data_compressed_offset += image_end - *image;
+            *image = image_end;
+            break;
+        }
+        data_compressed_offset += ret - *image + 2;
+        *image = ret + 1;
+        uint8_t marker = *(*image)++;
+        // Check zero byte
+        if (marker == 0) {
+            continue;
+        }
+        // Check restart marker
+        if ( marker >= GPUJPEG_MARKER_RST0 && marker <= GPUJPEG_MARKER_RST7 ) {
+            // Check expected marker
+            uint8_t expected_marker = (previous_marker < GPUJPEG_MARKER_RST7) ? (previous_marker + 1) : GPUJPEG_MARKER_RST0;
+            if ( expected_marker != marker ) {
+                fprintf(stderr, "[GPUJPEG] [Error] Expected marker 0x%X but 0x%X was presented!\n", expected_marker, marker);
 
-        // Check markers
-        if ( byte_previous == 0xFF ) {
-            // Check zero byte
-            if ( byte == 0 ) {
-                continue;
-            }
-            // Check restart marker
-            else if ( byte >= GPUJPEG_MARKER_RST0 && byte <= GPUJPEG_MARKER_RST7 ) {
-                // Check expected marker
-                uint8_t expected_marker = (previous_marker < GPUJPEG_MARKER_RST7) ? (previous_marker + 1) : GPUJPEG_MARKER_RST0;
-                if ( expected_marker != byte ) {
-                    fprintf(stderr, "[GPUJPEG] [Error] Expected marker 0x%X but 0x%X was presented!\n", expected_marker, byte);
-
-                    // Skip bytes to expected marker
-                    int found_expected_marker = 0;
-                    int skip_count = 0;
-                    byte_previous = byte;
-                    while ( *image < image_end ) {
-                        skip_count++;
-                        byte = gpujpeg_reader_read_byte(*image);
-                        if ( byte_previous == 0xFF ) {
-                            // Expected marker was found so notify about it
-                            if ( byte == expected_marker ) {
-                                fprintf(stderr, "[GPUJPEG] [Recovery] Skipping %d bytes of data until marker 0x%X was found!\n", skip_count, expected_marker);
-                                found_expected_marker = 1;
-                                break;
-                            } else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS ) {
-                                // Go back last marker (will be read again by main read cycle)
-                                *image -= 2;
-                                break;
-                            }
-                        }
-                        byte_previous = byte;
+                // Skip bytes to expected marker
+                int found_expected_marker = 0;
+                size_t skip_count = 0;
+                while ( *image < image_end ) {
+                    uint8_t *ret = memchr(*image, 0xFF, image_end - *image);
+                    if (ret == NULL || ret == image_end - 1) {
+                        break;
                     }
-
-                    // If expected marker was not found to end of stream
-                    if ( found_expected_marker == 0 ) {
-                        fprintf(stderr, "[GPUJPEG] [Error] No marker 0x%X was found until end of current scan!\n", expected_marker);
-                        continue;
+                    skip_count += ret - *image + 2;
+                    *image = ret + 1;
+                    marker = *(*image)++;
+                    if ( marker == expected_marker ) {
+                        fprintf(stderr, "[GPUJPEG] [Recovery] Skipping %zd bytes of data until marker 0x%X was found!\n", skip_count, expected_marker);
+                        found_expected_marker = 1;
+                        break;
+                    }
+                    if ( marker == GPUJPEG_MARKER_EOI || marker == GPUJPEG_MARKER_SOS ) {
+                        // Go back last marker (will be read again by main read cycle)
+                        *image -= 2;
+                        break;
                     }
                 }
-                // Set previous marker
-                previous_marker = byte;
 
-                // Set segment byte count
-                data_compressed_offset -= 2;
-                segment->data_compressed_size = data_compressed_offset - segment->data_compressed_index;
-                memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
-
-                // Start new segment in scan
-                segment_data_start = *image;
-                segment = &decoder->coder.segment[scan->segment_index + scan->segment_count];
-                segment->scan_index = scan_index;
-                segment->scan_segment_index = scan->segment_count;
-                segment->data_compressed_index = data_compressed_offset;
-                scan->segment_count++;
-            }
-            // Check scan end
-            else if ( byte == GPUJPEG_MARKER_EOI || byte == GPUJPEG_MARKER_SOS || (byte >= GPUJPEG_MARKER_APP0 && byte <= GPUJPEG_MARKER_APP15) ) {
-                *image -= 2;
-
-                // Set segment byte count
-                data_compressed_offset -= 2;
-                segment->data_compressed_size = data_compressed_offset - segment->data_compressed_index;
-                memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
-
-                if ( segment->data_compressed_size == 0 ) { // skip FFMPEG empty segments after last RST before EOF (FF bug #8412)
-                    const int verbose = decoder->coder.param.verbose;
-                    VERBOSE_MSG("Empty segment detected!\n");
-                    scan->segment_count -= 1;
+                // If expected marker was not found to end of stream
+                if ( found_expected_marker == 0 ) {
+                    fprintf(stderr, "[GPUJPEG] [Error] No marker 0x%X was found until end of current scan!\n", expected_marker);
+                    continue;
                 }
-
-                // Add scan segment count to decoder segment count
-                decoder->reader->segment_count += scan->segment_count;
-
-                // Successfully read end of scan, so the result is OK
-                result = 0;
-                break;
             }
-            else {
-                fprintf(stderr, "[GPUJPEG] [Error] JPEG scan contains unexpected marker 0x%X!\n", byte);
-                return -1;
+            // Set previous marker
+            previous_marker = marker;
+
+            // Set segment byte count
+            data_compressed_offset -= 2;
+            segment->data_compressed_size = data_compressed_offset - segment->data_compressed_index;
+            memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
+
+            // Start new segment in scan
+            segment_data_start = *image;
+            segment = &decoder->coder.segment[scan->segment_index + scan->segment_count];
+            segment->scan_index = scan_index;
+            segment->scan_segment_index = scan->segment_count;
+            segment->data_compressed_index = data_compressed_offset;
+            scan->segment_count++;
+        }
+        // Check scan end
+        else if ( marker == GPUJPEG_MARKER_EOI || marker == GPUJPEG_MARKER_SOS || (marker >= GPUJPEG_MARKER_APP0 && marker <= GPUJPEG_MARKER_APP15) ) {
+            *image -= 2;
+
+            // Set segment byte count
+            data_compressed_offset -= 2;
+            segment->data_compressed_size = data_compressed_offset - segment->data_compressed_index;
+            memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
+
+            if ( segment->data_compressed_size == 0 ) { // skip FFMPEG empty segments after last RST before EOF (FF bug #8412)
+                const int verbose = decoder->coder.param.verbose;
+                VERBOSE_MSG("Empty segment detected!\n");
+                scan->segment_count -= 1;
             }
+
+            // Add scan segment count to decoder segment count
+            decoder->reader->segment_count += scan->segment_count;
+
+            // Successfully read end of scan, so the result is OK
+            result = 0;
+            break;
+        }
+        else {
+            fprintf(stderr, "[GPUJPEG] [Error] JPEG scan contains unexpected marker 0x%X!\n", marker);
+            return -1;
         }
     } while( *image < image_end );
 
