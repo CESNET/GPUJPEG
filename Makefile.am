@@ -24,7 +24,7 @@ library_include_HEADERS = $(srcdir)/libgpujpeg/*.h libgpujpeg/gpujpeg_version.h
 nodist_gpujpeg_libinclude_HEADERS = config.h
 
 gpujpeg_SOURCES = src/main.c
-gpujpeg_CFLAGS = -std=c99 @COMMON_FLAGS@
+gpujpeg_CFLAGS = -std=c11 @COMMON_FLAGS@
 gpujpeg_LDADD = libgpujpeg.la
 gpujpeg_LDFLAGS = @GPUJPEG_LDFLAGS@
 

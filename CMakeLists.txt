@@ -28,7 +28,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libgpujpeg.pc.cmakein
 # Common settings
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
-set(NEEDED_CXX_FEATURES cxx_delegating_constructors cxx_nullptr)
+set(NEEDED_COMPILER_FEATURES c_static_assert cxx_delegating_constructors cxx_nullptr)
 
 # Find OpenGL, GLEW and GLUT
 if(POLICY CMP0072)
@@ -93,7 +93,7 @@ endif()
 file(GLOB H_FILES libgpujpeg/*.h ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg/gpujpeg_version.h)
 file(GLOB C_FILES src/*.c src/*/*.cpp src/*.cu)
 add_library(gpujpeg ${H_FILES} ${C_FILES})
-target_compile_features(gpujpeg PRIVATE ${NEEDED_CXX_FEATURES})
+target_compile_features(gpujpeg PRIVATE ${NEEDED_COMPILER_FEATURES})
 set_property(TARGET gpujpeg PROPERTY C_STANDARD 99)
 set_target_properties(gpujpeg PROPERTIES SOVERSION 0)
 SET_TARGET_PROPERTIES(
@@ -107,7 +107,7 @@ endif()
 
 # GPUJPEG commmand-line application
 add_executable(gpujpeg-bin src/main.c)
-target_compile_features(gpujpeg-bin PRIVATE ${NEEDED_CXX_FEATURES})
+target_compile_features(gpujpeg-bin PRIVATE ${NEEDED_COMPILER_FEATURES})
 set_property(TARGET gpujpeg-bin PROPERTY C_STANDARD 99)
 target_link_libraries(gpujpeg-bin gpujpeg)
 set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg")
@@ -130,7 +130,7 @@ if(GPUJPEG_OPENGL_ENABLED)
     # GPUJPEG decoder to OpenGL texture
     file(GLOB FILES test/decoder_gltex/*)
     add_executable(decoder_gltex ${FILES})
-    target_compile_features(decoder_gltex PRIVATE ${NEEDED_CXX_FEATURES})
+    target_compile_features(decoder_gltex PRIVATE ${NEEDED_COMPILER_FEATURES})
     set_property(TARGET decoder_gltex PROPERTY C_STANDARD 99)
     target_link_libraries(decoder_gltex gpujpeg)
 

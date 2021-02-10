@@ -66,7 +66,8 @@ jobs:
         $env:ChocolateyInstall = Convert-Path "$((Get-Command choco).Path)\..\.."
         Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
         refreshenv
-        cmake.exe -p:Configuration=Release -Bbuild .
+        # TODO: figure out if setting CMAKE_SYSTEM_VERSION is needed/best solution
+        cmake.exe -DCMAKE_SYSTEM_VERSION=10.0.18362 -p:Configuration=Release -Bbuild .
         cmake.exe --build build --config Release --parallel (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
         cmake.exe --install build --prefix GPUJPEG
         cpack.exe --config build/CPackConfig.cmake -GNSIS64
