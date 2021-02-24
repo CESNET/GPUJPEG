@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2021, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -524,6 +524,7 @@ main(int argc, char *argv[])
             // Encode image
             uint8_t* image_compressed = NULL;
             int image_compressed_size = 0;
+            double duration_all_iterations = 0;
             for ( int iteration = 0; iteration < iterate; iteration++ ) {
                 if ( iterate > 1 ) {
                     printf("\nIteration #%d:\n", iteration + 1);
@@ -541,6 +542,7 @@ main(int argc, char *argv[])
                 }
 
                 duration = gpujpeg_get_time() - duration;
+                duration_all_iterations += duration;
                 struct gpujpeg_duration_stats stats;
                 rc = gpujpeg_encoder_get_stats(encoder, &stats);
 
@@ -562,6 +564,7 @@ main(int argc, char *argv[])
             }
             if ( iterate > 1 ) {
                 printf("\n");
+                printf("Avg Encode Duration: %10.2f ms\n\n", duration_all_iterations * 1000.0 / iterate);
             }
 
             duration = gpujpeg_get_time();
@@ -680,6 +683,8 @@ main(int argc, char *argv[])
                 gpujpeg_decoder_output_set_default(&decoder_output);
             }
 
+            double duration_all_iterations = 0;
+
             for ( int iteration = 0; iteration < iterate; iteration++ ) {
                 if ( iterate > 1 ) {
                     printf("\nIteration #%d:\n", iteration + 1);
@@ -697,6 +702,7 @@ main(int argc, char *argv[])
                 }
 
                 duration = gpujpeg_get_time() - duration;
+                duration_all_iterations += duration;
                 struct gpujpeg_duration_stats stats;
                 rc = gpujpeg_decoder_get_stats(decoder, &stats);
 
@@ -718,6 +724,7 @@ main(int argc, char *argv[])
             }
             if ( iterate > 1 ) {
                 printf("\n");
+                printf("Avg Decode Duration: %10.2f ms\n\n", duration_all_iterations * 1000.0 / iterate);
             }
 
             uint8_t* data = NULL;
