@@ -119,16 +119,16 @@ files are placed) and run `cmake` command:
 You can also use **autotools** to create a build recipe for the library and the
 application or a plain old _Makefile.bkp_.
 
-In _Windows_ you may want to avoid using build system at all and use the
+In _Windows_ you may want to **avoid using the build system** at all and use the
 following command directly:
 
-    nvcc -I. -DGPUJPEG_EXPORTS -o gpujpeg.dll --shared src/gpujpeg_*c src/gpujpeg*cu # library
-    nvcc -I. -o gpujpeg src/*c src/*cu # console application
+    nvcc -I. -DGPUJPEG_EXPORTS -o gpujpeg.dll --shared src/gpujpeg_*c src/gpujpeg*cu src/utils/*cpp # library
+    nvcc -I. -o gpujpeg src/*c src/*cu src/utils/*cpp # console application
 
 or (in _Linux_):
 
-    nvcc -I. -Xcompiler -fPIC -o gpujpeg.so --shared src/gpujpeg_*c src/gpujpeg*cu # library
-    nvcc -I -o gpujpeg src/*c src/*cu # console application
+    nvcc -I. -Xcompiler -fPIC -o gpujpeg.so --shared src/gpujpeg_*c src/gpujpeg*cu src/utils/*cpp # library
+    nvcc -I. -o gpujpeg src/*c src/*cu src/utils/*cpp # console application
 
 Usage
 -----
