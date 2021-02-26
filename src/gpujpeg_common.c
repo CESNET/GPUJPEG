@@ -37,7 +37,9 @@
 #include "gpujpeg_postprocessor.h"
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_util.h"
+#ifdef HAVE_GPUJPEG_VERSION_H
 #include "libgpujpeg/gpujpeg_version.h"
+#endif // defined HAVE_GPUJPEG_VERSION_H
 #include "utils/image_delegate.h"
 #include <math.h>
 #if defined(_MSC_VER)
@@ -1551,7 +1553,11 @@ gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
 
 int gpujpeg_version()
 {
+#ifdef HAVE_GPUJPEG_VERSION_H
     return GPUJPEG_VERSION_INT;
+#else
+    return 0;
+#endif // defined HAVE_GPUJPEG_VERSION_H
 }
 
 const char *gpujpeg_version_to_string(int version)

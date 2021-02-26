@@ -6,6 +6,7 @@ AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE([foreign])
 
 AC_CONFIG_HEADERS([config.h libgpujpeg/gpujpeg_version.h])
+COMMON_FLAGS="${COMMON_FLAGS:+$COMMON_FLAGS }-DHAVE_GPUJPEG_VERSION_H"
 
 AC_DEFINE([GPUJPEG_VERSION_MAJOR], regexp(AC_PACKAGE_VERSION, [\([^.]*\)], [\1]), [GPUJPEG major version])
 AC_DEFINE([GPUJPEG_VERSION_MINOR], regexp(AC_PACKAGE_VERSION, [[^.]*\.\([^.]*\)], [\1]), [GPUJPEG minor version])
