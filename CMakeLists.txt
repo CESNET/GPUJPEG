@@ -31,6 +31,11 @@ include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 set(NEEDED_COMPILER_FEATURES c_static_assert cxx_delegating_constructors cxx_nullptr)
 
+# allow passing <PackageName>_ROOT to find_package()
+if(POLICY CMP0074)
+    cmake_policy(SET CMP0074 NEW)
+endif()
+
 # Find OpenGL, GLEW and GLUT
 if(POLICY CMP0072)
     cmake_policy(SET CMP0072 NEW)
