@@ -1290,7 +1290,7 @@ gpujpeg_opengl_init()
 
         // Create window
         Colormap colormap = XCreateColormap(glx_display, RootWindow(glx_display, visual->screen), visual->visual, AllocNone);
-        XSetWindowAttributes swa;
+        XSetWindowAttributes swa = { 0 };
         swa.colormap = colormap;
         swa.border_pixel = 0;
         Window glx_window = XCreateWindow(
