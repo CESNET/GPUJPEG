@@ -28,22 +28,24 @@ it supports only subset of features, see [Compatibility](#compatibility)
 below to see which JPEG files are supported. If the decoder isn't
 capable to decode a supported file, it should be considered a bug. The
 decoder must be always capable of decoding the file encoded by _GPUJPEG_
-encoder. Even if file is not supported you may issue a feature request.
+encoder. Even if the file is not supported you may issue a feature request.
 
 Reporting bugs
 --------------
-You can open a bug on GitHub. GPUJPEG doesn't have its own mailing list,
-you can, however, for a direct contact use a mailing list of a sister
+Primarily, you can [open an issue](https://github.com/CESNET/GPUJPEG/issues) on GitHub.
+GPUJPEG doesn't have its own mailing list, for a direct contact
+you can, however, use a mailing list of a sister
 project, [UltraGrid](https://github.com/CESNET/UltraGrid) which is
 tightly personally linked.
 
 Please follow these rules when reporting the issue:
-1. use the latest GPUJPEG version
-2. try to reproduce the issue either with the sample console application
-   or provide a minimal working example demonstrating the problem.
-   Use verbose parameter (for _console application_  option `-v`).
-3. do not alter GPUJPEG code
-4. provide as much information as possible related to the problem, e.g.:
+1. use the _latest_ GPUJPEG version
+2. try to reproduce the issue either with the _sample console application_
+   or provide a _minimal working example_ demonstrating the problem.
+   Use debug verbosity level (for _console application_  option `-vv`).
+3. _do not alter_ GPUJPEG code for the report. If unnecessary, include the
+   GPUJPEG patch in the bug report.
+4. provide relevant information to the problem, such as:
    - SW/HW environment
    - compilation options
    - GPUJPEG parameters
@@ -73,12 +75,13 @@ Compatibility
 -------------
 Following files are produced by the encoder:
 - baseline Huffman JPEG (with default Huffman tables)
-- JFIF 1.01 (YCbCr or grayscale) or Adobe (RGB)
+- JFIF 1.01 (YCbCr or grayscale), Adobe (RGB) or SPIFF (limited-range
+  YCbCr BT.601 or BT.709)
 - using restart intervals
 
 The _decoder_ shall be able to decode all following files:
 - baseline Huffman JPEG
-- JFIF up to 1.02 or using Adobe header (using RGB internally). Other
+- JFIF up to 1.02, Adobe header (using RGB internally) or SPIFF. Other
   generic JIF files may be also possible to decode.
 
 Contacting us
