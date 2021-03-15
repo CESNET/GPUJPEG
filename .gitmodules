@@ -1,0 +1,4 @@
+[submodule "go-gpujpeg"]
+	path = go-gpujpeg
+	url = https://github.com/Danile71/go-gpujpeg
+	branch = master
