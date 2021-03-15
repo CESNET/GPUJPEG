@@ -1305,6 +1305,12 @@ gpujpeg_opengl_init()
         //XMapWindow(glx_display, glx_window);
 
         glXMakeCurrent(glx_display, glx_window, glx_context);
+
+        GLenum err = glewInit();
+        if (err != GLEW_OK) {
+            fprintf(stderr, "[GPUJPEG] [Error] glewInit: %s\n", glewGetErrorString(err));
+            return -1;
+        }
     #else
         fprintf(stderr, "[GPUJPEG] [Error] gpujpeg_opengl_init not implemented in current OS!\n");
         return -1;
