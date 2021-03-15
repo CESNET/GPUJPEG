@@ -26,6 +26,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libgpujpeg.pc.cmakein
                ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg.pc @ONLY)
 add_definitions("-DHAVE_GPUJPEG_VERSION_H")
 
+# Include cmake modules in "cmake" directory (FindGLFW.cmake)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+
 # Common settings
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -36,24 +39,23 @@ if(POLICY CMP0074)
     cmake_policy(SET CMP0074 NEW)
 endif()
 
-# Find OpenGL, GLEW and GLUT
+# Find OpenGL, GLEW, GLUT and GLFW
 if(POLICY CMP0072)
     cmake_policy(SET CMP0072 NEW)
 endif()
 find_package(OpenGL)
 find_package(GLEW)
 find_package(GLUT)
+find_package(GLFW)
 find_package(X11)
 if(NOT OPENGL_FOUND)
     set(OPENGL_ERROR "OpenGL library not found")
 elseif(NOT GLEW_FOUND)
     set(OPENGL_ERROR "GLEW library not found")
-elseif(NOT GLUT_FOUND)
-    set(OPENGL_ERROR "GLUT not found")
 elseif(NOT GLEW_INCLUDE_DIR)
     set(OPENGL_ERROR "GLEW header files not found")
-elseif(NOT GLUT_INCLUDE_DIR)
-    set(OPENGL_ERROR "GLUT header files not found")
+elseif(NOT GLFW_INCLUDE_DIR)
+    set(OPENGL_ERROR "GLFW header files not found")
 elseif(NOT OPENGL_INCLUDE_DIR)
     # On Windows the FindOpenGL.cmake doesn't work right for OPENGL_INCLUDE_DIR and thus reuse GLEW_INCLUDE_DIR
     if(MSVC)
@@ -61,10 +63,12 @@ elseif(NOT OPENGL_INCLUDE_DIR)
     else()
         set(OPENGL_ERROR "OpenGL header files not found")
     endif()
-elseif(MSVC AND NOT GLEW_DLL)
-    set(OPENGL_ERROR "GLEW DLL not found")
-elseif(MSVC AND NOT GLUT_DLL)
-    set(OPENGL_ERROR "GLUT DLL not found")
+#elseif(MSVC AND NOT GLEW_DLL)
+#    set(OPENGL_ERROR "GLEW DLL not found")
+#elseif(MSVC AND NOT GLUT_DLL)
+#    set(OPENGL_ERROR "GLUT DLL not found")
+elseif(MSVC AND NOT GLFW_FOUND)
+    set(OPENGL_ERROR "GLFW not found")
 elseif(UNIX AND NOT X11_FOUND)
     set(OPENGL_ERROR "X11 not found")
 endif()
@@ -73,18 +77,24 @@ if(NOT BUILD_OPENGL STREQUAL "OFF" AND NOT OPENGL_ERROR)
     message(STATUS "GLU: ${OPENGL_glu_LIBRARY}")
     message(STATUS "GLEW: ${GLEW_LIBRARIES} (${GLEW_INCLUDE_DIRS})")
     message(STATUS "GLUT: ${GLUT_glut_LIBRARY} (${GLUT_INCLUDE_DIR})")
+    message(STATUS "GLFW: ${GLFW_LIBRARIES} (${GLFW_INCLUDE_DIR})")
 
     # OpenGL executables are enabled
     set(GPUJPEG_OPENGL_ENABLED TRUE)
 
     # Build GPUJPEG library with OpenGL support
     add_definitions("-DGPUJPEG_USE_OPENGL")
-    include_directories("${OPENGL_INCLUDE_DIR}" "${GLEW_INCLUDE_DIRS}" "${GLUT_INCLUDE_DIR}" "${X11_INCLUDE_DIR}")
-
-    # Prepare list of OpenGL libraries for linking
     set(GPUJPEG_OPENGL_LIBRARIES)
+    include_directories(${OPENGL_INCLUDE_DIR} ${GLEW_INCLUDE_DIRS} ${X11_INCLUDE_DIR})
+    if(GLUT_FOUND)
+        include_directories(${GLUT_INCLUDE_DIR})
+        list(APPEND GPUJPEG_OPENGL_LIBRARIES ${GLUT_glut_LIBRARY})
+    endif()
+    if(MSVC)
+        include_directories(${GLFW_INCLUDE_DIR})
+        list(APPEND GPUJPEG_OPENGL_LIBRARIES ${GLFW_LIBRARIES})
+    endif()
     list(APPEND GPUJPEG_OPENGL_LIBRARIES ${GLEW_LIBRARIES})
-    list(APPEND GPUJPEG_OPENGL_LIBRARIES ${GLUT_glut_LIBRARY})
     list(APPEND GPUJPEG_OPENGL_LIBRARIES ${OPENGL_LIBRARIES})
     list(APPEND GPUJPEG_OPENGL_LIBRARIES ${X11_LIBRARIES})
 elseif(BUILD_OPENGL STREQUAL "ON")
@@ -93,6 +103,14 @@ endif()
 
 if(HUFFMAN_GPU_CONST_TABLES)
     add_definitions("-DHUFFMAN_GPU_CONST_TABLES")
+endif()
+
+if(DEFINED GLEW_USE_STATIC_LIBS)
+    add_definitions("-DGLEW_STATIC")
+endif()
+
+if(DEFINED GLFW_USE_STATIC_LIBS)
+    add_definitions("-DWINGDIAPI")
 endif()
 
 # GPUJPEG library
@@ -131,7 +149,7 @@ install(FILES AUTHORS CONTRIBUTING.md COPYING FAQ.md INSTALL NEWS.md README.md
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg.pc DESTINATION share/pkgconfig)
 
 # When OpenGL was found, include OpenGL executables
-if(GPUJPEG_OPENGL_ENABLED)
+if(GPUJPEG_OPENGL_ENABLED AND GLUT_FOUND)
 
     # GPUJPEG decoder to OpenGL texture
     file(GLOB FILES test/decoder_gltex/*)
