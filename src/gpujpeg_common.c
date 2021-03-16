@@ -56,6 +56,8 @@
     #endif
     #if defined(__linux__)
         #include <GL/glx.h>
+    #else
+        #include <GLFW/glfw3.h>
     #endif
     #include <cuda_gl_interop.h>
 #endif
@@ -1253,6 +1255,13 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     return 0;
 }
 
+#if defined GPUJPEG_USE_OPENGL && !defined __linux__
+static void glfw_error_callback(int error, const char* description)
+{
+    fprintf(stderr, "[GPUJPEG] [Error] GLFW: %s\n", description);
+}
+#endif
+
 /* Documented at declaration */
 int
 gpujpeg_opengl_init()
@@ -1305,16 +1314,26 @@ gpujpeg_opengl_init()
         //XMapWindow(glx_display, glx_window);
 
         glXMakeCurrent(glx_display, glx_window, glx_context);
+    #else
+        glfwSetErrorCallback(glfw_error_callback);
+        if (!glfwInit()) {
+            fprintf(stderr, "[GPUJPEG] [Error] glfwInit failed!\n");
+            return -1;
+        }
 
+        glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+        GLFWwindow* window = glfwCreateWindow(640, 480, "", NULL, NULL);
+        if (window == NULL) {
+            fprintf(stderr, "[GPUJPEG] [Error] Cannot create GLFW window!\n");
+            return -1;
+        }
+        glfwMakeContextCurrent(window);
+    #endif
         GLenum err = glewInit();
         if (err != GLEW_OK) {
             fprintf(stderr, "[GPUJPEG] [Error] glewInit: %s\n", glewGetErrorString(err));
             return -1;
         }
-    #else
-        fprintf(stderr, "[GPUJPEG] [Error] gpujpeg_opengl_init not implemented in current OS!\n");
-        return -1;
-    #endif
 #else
     GPUJPEG_EXIT_MISSING_OPENGL();
 #endif
