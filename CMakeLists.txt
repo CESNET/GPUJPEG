@@ -5,6 +5,7 @@ project(gpujpeg VERSION 0.14.0 LANGUAGES C CXX CUDA)
 set(BUILD_OPENGL AUTO CACHE STRING "Build with OpenGL support, options are: AUTO ON OFF")
 set_property(CACHE BUILD_OPENGL PROPERTY STRINGS AUTO ON OFF)
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+option(CMAKE_CUDA_ARCHITECTURES "CUDA architectures to build for (needs CMake 3.18)" OFF)
 option(HUFFMAN_GPU_CONST_TABLES "Enable Huffman GPU decoder quick const tables" OFF)
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "gpujpeg") # may be removed when version will be explicitly defined
