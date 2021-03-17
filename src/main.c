@@ -409,9 +409,13 @@ main(int argc, char *argv[])
 
     // Init device
     int flags = GPUJPEG_VERBOSE;
+    struct gpujpeg_opengl_context *gl_context = NULL;
     if ( use_opengl ) {
         flags |= GPUJPEG_OPENGL_INTEROPERABILITY;
-        gpujpeg_opengl_init();
+        if ( (gl_context = gpujpeg_opengl_init()) == NULL ) {
+            fprintf(stderr, "Cannot initialize OpenGL context!\n");
+            return -1;
+        }
     }
     if ( gpujpeg_init_device(device_id, flags) != 0 )
         return -1;
@@ -771,6 +775,10 @@ main(int argc, char *argv[])
 
         // Destroy decoder
         gpujpeg_decoder_destroy(decoder);
+    }
+
+    if ( use_opengl ) {
+        gpujpeg_opengl_destroy(gl_context);
     }
 
     return 0;

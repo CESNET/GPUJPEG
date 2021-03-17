@@ -1262,8 +1262,16 @@ static void glfw_error_callback(int error, const char* description)
 }
 #endif
 
+struct gpujpeg_opengl_context {
+#ifdef GPUJPEG_USE_OPENGL
+#  ifdef GPUJPEG_USE_GLFW
+    GLFWwindow* glfw_window;
+#  endif
+#endif // defined
+};
+
 /* Documented at declaration */
-int
+struct gpujpeg_opengl_context *
 gpujpeg_opengl_init()
 {
 #ifdef GPUJPEG_USE_OPENGL
@@ -1272,7 +1280,7 @@ gpujpeg_opengl_init()
         Display* glx_display = XOpenDisplay(0);
         if ( glx_display == NULL ) {
             fprintf(stderr, "[GPUJPEG] [Error] Failed to open X display!\n");
-            return -1;
+            return NULL;
         }
 
         // Choose visual
@@ -1287,14 +1295,14 @@ gpujpeg_opengl_init()
         XVisualInfo* visual = glXChooseVisual(glx_display, DefaultScreen(glx_display), attributes);
         if ( visual == NULL ) {
             fprintf(stderr, "[GPUJPEG] [Error] Failed to choose visual!\n");
-            return -1;
+            return NULL;
         }
 
         // Create OpenGL context
         GLXContext glx_context = glXCreateContext(glx_display, visual, 0, GL_TRUE);
         if ( glx_context == NULL ) {
             fprintf(stderr, "[GPUJPEG] [Error] Failed to create OpenGL context!\n");
-            return -1;
+            return NULL;
         }
 
         // Create window
@@ -1318,26 +1326,47 @@ gpujpeg_opengl_init()
         glfwSetErrorCallback(glfw_error_callback);
         if (!glfwInit()) {
             fprintf(stderr, "[GPUJPEG] [Error] glfwInit failed!\n");
-            return -1;
+            return NULL;
         }
 
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         GLFWwindow* window = glfwCreateWindow(640, 480, "", NULL, NULL);
         if (window == NULL) {
             fprintf(stderr, "[GPUJPEG] [Error] Cannot create GLFW window!\n");
-            return -1;
+            return NULL;
         }
         glfwMakeContextCurrent(window);
     #endif
         GLenum err = glewInit();
         if (err != GLEW_OK) {
             fprintf(stderr, "[GPUJPEG] [Error] glewInit: %s\n", glewGetErrorString(err));
-            return -1;
+            return NULL;
         }
+        struct gpujpeg_opengl_context *s = calloc(1, sizeof *s);
+    #if defined(GPUJPEG_USE_GLFW)
+        s->glfw_window = window;
+    #endif
+
+        return s;
 #else
     GPUJPEG_EXIT_MISSING_OPENGL();
 #endif
-    return 0;
+    return NULL;
+}
+
+GPUJPEG_API void
+gpujpeg_opengl_destroy(struct gpujpeg_opengl_context *s)
+{
+    if (s == NULL) {
+        return;
+    }
+#ifdef GPUJPEG_USE_OPENGL
+#ifdef GPUJPEG_USE_GLFW
+    glfwDestroyWindow(s->glfw_window);
+    glfwTerminate();
+#endif // defined GPUJPEG_USE_GLFW
+#endif // defined GPUJPEG_USE_OPENGL
+    free(s);
 }
 
 /* Documented at declaration */

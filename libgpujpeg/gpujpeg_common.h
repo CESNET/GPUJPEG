@@ -376,13 +376,24 @@ GPUJPEG_API int
 gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_image_parameters param_image_from,
         struct gpujpeg_image_parameters param_image_to);
 
+struct gpujpeg_opengl_context;
 /**
  * Init OpenGL context
  *
- * @return 0 if succeeds, otherwise nonzero
+ * Returned pointer should be freed with gpujpeg_opengl_destroy() when done
+ *
+ * @return NULL if failed, otherwise state pointer
  */
-GPUJPEG_API int
+GPUJPEG_API struct gpujpeg_opengl_context *
 gpujpeg_opengl_init();
+
+/**
+ * Destroys OpenGL context created with gpujpeg_opengl_init()
+ *
+ * @return NULL if failed, otherwise state pointer
+ */
+GPUJPEG_API void
+gpujpeg_opengl_destroy(struct gpujpeg_opengl_context *);
 
 /**
  * Create OpenGL texture
