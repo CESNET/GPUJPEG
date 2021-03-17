@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2019, CESNET z.s.p.o
+ * Copyright (c) 2011-2021, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -1264,9 +1264,12 @@ static void glfw_error_callback(int error, const char* description)
 
 struct gpujpeg_opengl_context {
 #ifdef GPUJPEG_USE_OPENGL
-#  ifdef GPUJPEG_USE_GLFW
+# ifdef GPUJPEG_USE_GLFW
     GLFWwindow* glfw_window;
-#  endif
+# else
+    Display* glx_display;
+    Window glx_window;
+# endif
 #endif // defined
 };
 
@@ -1345,6 +1348,9 @@ gpujpeg_opengl_init()
         struct gpujpeg_opengl_context *s = calloc(1, sizeof *s);
     #if defined(GPUJPEG_USE_GLFW)
         s->glfw_window = window;
+    #else
+        s->glx_display = glx_display;
+        s->glx_window = glx_window;
     #endif
 
         return s;
@@ -1364,6 +1370,9 @@ gpujpeg_opengl_destroy(struct gpujpeg_opengl_context *s)
 #ifdef GPUJPEG_USE_GLFW
     glfwDestroyWindow(s->glfw_window);
     glfwTerminate();
+#else
+    XDestroyWindow(s->glx_display, s->glx_window);
+    XCloseDisplay(s->glx_display);
 #endif // defined GPUJPEG_USE_GLFW
 #endif // defined GPUJPEG_USE_OPENGL
     free(s);
