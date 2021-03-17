@@ -54,10 +54,10 @@
     #ifndef GL_VERSION_1_2
         #error "OpenGL 1.2 is required"
     #endif
-    #if defined(__linux__)
-        #include <GL/glx.h>
-    #else
+    #if defined(GPUJPEG_USE_GLFW)
         #include <GLFW/glfw3.h>
+    #else
+        #include <GL/glx.h>
     #endif
     #include <cuda_gl_interop.h>
 #endif
@@ -1255,7 +1255,7 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     return 0;
 }
 
-#if defined GPUJPEG_USE_OPENGL && !defined __linux__
+#if defined GPUJPEG_USE_GLFW
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "[GPUJPEG] [Error] GLFW: %s\n", description);
@@ -1267,7 +1267,7 @@ int
 gpujpeg_opengl_init()
 {
 #ifdef GPUJPEG_USE_OPENGL
-    #if defined(__linux__)
+    #if !defined(GPUJPEG_USE_GLFW)
         // Open display
         Display* glx_display = XOpenDisplay(0);
         if ( glx_display == NULL ) {
