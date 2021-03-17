@@ -21,6 +21,7 @@ Table of contents
     + [Decoding](#decoding)
   * [GPUJPEG console application](#gpujpeg-console-application)
 - [Requirements](#requirements)
+    + [OpenGL support](#opengl-support)
 - [License](#license)
 - [References](#references)
 
@@ -396,6 +397,17 @@ application** you need:
 2) C/C++ compiler + cmake
 3) NVIDIA drivers
 4) CUDA enabled NVIDIA GPU
+
+### OpenGL support
+Additional dependencies are required for _OpenGL_ interoperability:
+
+- **GLEW**
+- **OpenGL** (usually present in Windows, may need headers installation in Linux)
+
+optionally:
+- **GLX** for context creation (Linux only)
+- **GLFW** for context creation
+- **GLUT** (**OpenGL** tests)
 
 License
 -------
