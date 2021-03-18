@@ -67,12 +67,26 @@ if test $enable_opengl = yes ; then
 	AC_CHECK_HEADER(GL/glew.h, FOUND_GLEW_H=yes)
 	AC_CHECK_LIB(GLEW, glewIsSupported, FOUND_GLEW_L=yes)
 	AC_CHECK_LIB(GL, glBindTexture, FOUND_GL_L=yes)
+	AC_CHECK_LIB(X11, XCreateWindow, FOUND_X11_L=yes)
+	AC_CHECK_HEADER(GL/glx.h, FOUND_GLX_H=yes)
+	AC_CHECK_LIB(glfw, glfwCreateWindow, FOUND_GLFW_L=yes)
+	AC_CHECK_HEADER(GLFW/glfw3.h, FOUND_GLFW_H=yes)
 
-	if test "$FOUND_GLEW_L" = yes -a "$FOUND_GLEW_H" = yes -a "$FOUND_GL_L" = yes; then
-		AC_DEFINE([GPUJPEG_USE_OPENGL], [1], [Build with OpenGL support])
-		GPUJPEG_LIBS="$GPUJPEG_LIBS -lGLEW -lGL"
-	else
+	enable_opengl=no
+	if test "$FOUND_GLEW_L" = no -o "$FOUND_GLEW_H" = no -o "$FOUND_GL_L" = no; then
 		enable_opengl=no
+	elif test "$FOUND_X11_L" = yes -a "$FOUND_GLX_H" = yes; then
+		enable_opengl=yes
+		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lX11"
+	elif test "$FOUND_GLFW_L" = yes -a "$FOUND_GLFW_H" = yes; then
+		enable_opengl=yes
+		AC_DEFINE([GPUJPEG_USE_GLFW], [1], [Use GLFW for OpenGL context creation])
+		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lGLFW"
+	fi
+
+	if test $enable_opengl = yes; then
+		AC_DEFINE([GPUJPEG_USE_OPENGL], [1], [Build with OpenGL support])
+		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lGLEW -lGL"
 	fi
 fi
 
@@ -189,4 +203,4 @@ Configuration summary:
 
 ])
 
-
+# vi: set noexpandtab:
