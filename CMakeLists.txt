@@ -104,10 +104,6 @@ if(DEFINED GLEW_USE_STATIC_LIBS)
     add_definitions("-DGLEW_STATIC")
 endif()
 
-if(DEFINED GLFW_USE_STATIC_LIBS)
-    add_definitions("-DWINGDIAPI")
-endif()
-
 message(STATUS "Configured options: ${COMPILED_OPTIONS}")
 
 # GPUJPEG library
