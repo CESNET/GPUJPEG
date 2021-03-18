@@ -45,8 +45,10 @@ jobs:
         sudo apt install nvidia-cuda-toolkit cmake
     - name: Build
       run: |
-        cmake -Bbuild
-        cmake --build build --parallel $(nproc)
+        mkdir build
+        cd build
+        cmake ..
+        cmake --build . --parallel
         ctest -R unittests
 
   Windows:
