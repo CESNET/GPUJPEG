@@ -54,7 +54,7 @@ fi
 # opengl
 AC_ARG_ENABLE(opengl, AC_HELP_STRING([--enable-opengl], [enable opengl support]) )
 if test x$enable_opengl = x ; then
-	enable_opengl=no
+	enable_opengl=auto
 fi
 
 # OS X universal build
@@ -63,7 +63,7 @@ if test x$enable_osx_universal = x ; then
 	enable_osx_universal=no
 fi
 
-if test $enable_opengl = yes ; then
+if test $enable_opengl != no ; then
 	AC_CHECK_HEADER(GL/glew.h, FOUND_GLEW_H=yes)
 	AC_CHECK_LIB(GLEW, glewIsSupported, FOUND_GLEW_L=yes)
 	AC_CHECK_LIB(GL, glBindTexture, FOUND_GL_L=yes)
@@ -72,21 +72,25 @@ if test $enable_opengl = yes ; then
 	AC_CHECK_LIB(glfw, glfwCreateWindow, FOUND_GLFW_L=yes)
 	AC_CHECK_HEADER(GLFW/glfw3.h, FOUND_GLFW_H=yes)
 
-	enable_opengl=no
+	opengl=no
 	if test "$FOUND_GLEW_L" = no -o "$FOUND_GLEW_H" = no -o "$FOUND_GL_L" = no; then
-		enable_opengl=no
+		opengl=no
 	elif test "$FOUND_X11_L" = yes -a "$FOUND_GLX_H" = yes; then
-		enable_opengl=yes
+		opengl=yes
 		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lX11"
 	elif test "$FOUND_GLFW_L" = yes -a "$FOUND_GLFW_H" = yes; then
-		enable_opengl=yes
+		opengl=yes
 		AC_DEFINE([GPUJPEG_USE_GLFW], [1], [Use GLFW for OpenGL context creation])
 		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lGLFW"
 	fi
 
-	if test $enable_opengl = yes; then
+	if test $opengl = yes; then
 		AC_DEFINE([GPUJPEG_USE_OPENGL], [1], [Build with OpenGL support])
 		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lGLEW -lGL"
+	fi
+
+	if test $enable_opengl != yes -a $opengl = no; then
+                AC_MSG_ERROR([OpenGL required but dependencies not found!])
 	fi
 fi
 
@@ -194,7 +198,7 @@ Configuration summary:
   Debug ....................... $debug
 
   Huffman const tables ........ $enable_huffman_gpu_const_tables
-  OpenGL ...................... $enable_opengl
+  OpenGL ...................... $opengl
   Host compiler ............... $with_cuda_host_compiler
   Cuda compiler ............... $CUDA_COMPILER
 
