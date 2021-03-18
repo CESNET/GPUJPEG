@@ -380,7 +380,11 @@ struct gpujpeg_opengl_context;
 /**
  * Init OpenGL context
  *
- * Returned pointer should be freed with gpujpeg_opengl_destroy() when done
+ * This call is optional - initializes OpenGL context, thus doesn't need to be
+ * called when context already exists. If not called, however, it may be required
+ * to run glewInit() from client code prior to running GPUJPEG with GL interoperability.
+ *
+ * Returned pointer should be freed with gpujpeg_opengl_destroy() when done.
  *
  * @return NULL if failed, otherwise state pointer
  */

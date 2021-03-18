@@ -1337,10 +1337,6 @@ gpujpeg_opengl_init()
             return NULL;
         }
         glfwMakeContextCurrent(window);
-    #else
-        fprintf(stderr, "[GPUJPEG] [Error] gpujpeg_opengl_init not implemented in current build!\n");
-        fprintf(stderr, "[GPUJPEG] [Note] You can still use custom OpenGL context!\n");
-        return NULL;
     #endif
         GLenum err = glewInit();
         if (err != GLEW_OK) {
@@ -1353,6 +1349,11 @@ gpujpeg_opengl_init()
     #elif defined(GPUJPEG_USE_GLX)
         s->glx_display = glx_display;
         s->glx_window = glx_window;
+    #else
+        fprintf(stderr, "[GPUJPEG] [Error] gpujpeg_opengl_init not implemented in current build!\n");
+        fprintf(stderr, "[GPUJPEG] [Note] You can still use custom OpenGL context!\n");
+        free(s);
+        return NULL;
     #endif
 
         return s;
