@@ -63,6 +63,8 @@ if test x$enable_osx_universal = x ; then
 	enable_osx_universal=no
 fi
 
+opengl=no
+opengl_context=none
 if test $enable_opengl != no ; then
 	AC_CHECK_HEADER(GL/glew.h, FOUND_GLEW_H=yes)
 	AC_CHECK_LIB(GLEW, glewIsSupported, FOUND_GLEW_L=yes)
@@ -72,16 +74,17 @@ if test $enable_opengl != no ; then
 	AC_CHECK_LIB(glfw, glfwCreateWindow, FOUND_GLFW_L=yes)
 	AC_CHECK_HEADER(GLFW/glfw3.h, FOUND_GLFW_H=yes)
 
-	opengl=no
+	opengl=yes
 	if test "$FOUND_GLEW_L" = no -o "$FOUND_GLEW_H" = no -o "$FOUND_GL_L" = no; then
 		opengl=no
 	elif test "$FOUND_X11_L" = yes -a "$FOUND_GLX_H" = yes; then
-		opengl=yes
+		AC_DEFINE([GPUJPEG_USE_GLX], [1], [Use GLX for OpenGL context creation])
 		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lX11"
+		opengl_context=glx
 	elif test "$FOUND_GLFW_L" = yes -a "$FOUND_GLFW_H" = yes; then
-		opengl=yes
 		AC_DEFINE([GPUJPEG_USE_GLFW], [1], [Use GLFW for OpenGL context creation])
 		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lGLFW"
+		opengl_context=glfw
 	fi
 
 	if test $opengl = yes; then
@@ -198,7 +201,7 @@ Configuration summary:
   Debug ....................... $debug
 
   Huffman const tables ........ $enable_huffman_gpu_const_tables
-  OpenGL ...................... $opengl
+  OpenGL ...................... $opengl ($opengl_context)
   Host compiler ............... $with_cuda_host_compiler
   Cuda compiler ............... $CUDA_COMPILER
 

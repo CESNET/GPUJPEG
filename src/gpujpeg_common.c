@@ -56,7 +56,7 @@
     #endif
     #if defined(GPUJPEG_USE_GLFW)
         #include <GLFW/glfw3.h>
-    #else
+    #elif defined(GPUJPEG_USE_GLX)
         #include <GL/glx.h>
     #endif
     #include <cuda_gl_interop.h>
@@ -1263,14 +1263,12 @@ static void glfw_error_callback(int error, const char* description)
 #endif
 
 struct gpujpeg_opengl_context {
-#ifdef GPUJPEG_USE_OPENGL
-# ifdef GPUJPEG_USE_GLFW
+#ifdef GPUJPEG_USE_GLFW
     GLFWwindow* glfw_window;
-# else
+#elif defined GPUJPEG_USE_GLX
     Display* glx_display;
     Window glx_window;
-# endif
-#endif // defined
+#endif
 };
 
 /* Documented at declaration */
@@ -1278,7 +1276,7 @@ struct gpujpeg_opengl_context *
 gpujpeg_opengl_init()
 {
 #ifdef GPUJPEG_USE_OPENGL
-    #if !defined(GPUJPEG_USE_GLFW)
+    #if defined(GPUJPEG_USE_GLX)
         // Open display
         Display* glx_display = XOpenDisplay(0);
         if ( glx_display == NULL ) {
@@ -1325,7 +1323,7 @@ gpujpeg_opengl_init()
         //XMapWindow(glx_display, glx_window);
 
         glXMakeCurrent(glx_display, glx_window, glx_context);
-    #else
+    #elif defined(GPUJPEG_USE_GLFW)
         glfwSetErrorCallback(glfw_error_callback);
         if (!glfwInit()) {
             fprintf(stderr, "[GPUJPEG] [Error] glfwInit failed!\n");
@@ -1339,6 +1337,10 @@ gpujpeg_opengl_init()
             return NULL;
         }
         glfwMakeContextCurrent(window);
+    #else
+        fprintf(stderr, "[GPUJPEG] [Error] gpujpeg_opengl_init not implemented in current build!\n");
+        fprintf(stderr, "[GPUJPEG] [Note] You can still use custom OpenGL context!\n");
+        return NULL;
     #endif
         GLenum err = glewInit();
         if (err != GLEW_OK) {
@@ -1348,7 +1350,7 @@ gpujpeg_opengl_init()
         struct gpujpeg_opengl_context *s = calloc(1, sizeof *s);
     #if defined(GPUJPEG_USE_GLFW)
         s->glfw_window = window;
-    #else
+    #elif defined(GPUJPEG_USE_GLX)
         s->glx_display = glx_display;
         s->glx_window = glx_window;
     #endif
@@ -1366,15 +1368,13 @@ gpujpeg_opengl_destroy(struct gpujpeg_opengl_context *s)
     if (s == NULL) {
         return;
     }
-#ifdef GPUJPEG_USE_OPENGL
 #ifdef GPUJPEG_USE_GLFW
     glfwDestroyWindow(s->glfw_window);
     glfwTerminate();
-#else
+#elif defined GPUJPEG_USE_GLX
     XDestroyWindow(s->glx_display, s->glx_window);
     XCloseDisplay(s->glx_display);
-#endif // defined GPUJPEG_USE_GLFW
-#endif // defined GPUJPEG_USE_OPENGL
+#endif // defined GPUJPEG_USE_GLX
     free(s);
 }
 
