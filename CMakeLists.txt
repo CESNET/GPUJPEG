@@ -37,6 +37,8 @@ include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 set(NEEDED_COMPILER_FEATURES c_static_assert cxx_delegating_constructors cxx_nullptr)
 
+set(COMPILED_OPTIONS "")
+
 # allow passing <PackageName>_ROOT to find_package()
 if(POLICY CMP0074)
     cmake_policy(SET CMP0074 NEW)
@@ -97,8 +99,10 @@ if(NOT BUILD_OPENGL STREQUAL "OFF" AND NOT OPENGL_ERROR)
         include_directories(${GLFW_INCLUDE_DIR})
         list(APPEND GPUJPEG_OPENGL_LIBRARIES ${GLFW_LIBRARIES})
         add_definitions("-DGPUJPEG_USE_GLFW")
+        set(COMPILED_OPTIONS "${COMPILED_OPTIONS} OpenGL(GLFW)")
     else()
         list(APPEND GPUJPEG_OPENGL_LIBRARIES ${X11_LIBRARIES})
+        set(COMPILED_OPTIONS "${COMPILED_OPTIONS} OpenGL(GLX)")
     endif()
     list(APPEND GPUJPEG_OPENGL_LIBRARIES ${GLEW_LIBRARIES})
     list(APPEND GPUJPEG_OPENGL_LIBRARIES ${OPENGL_LIBRARIES})
@@ -108,6 +112,7 @@ endif()
 
 if(HUFFMAN_GPU_CONST_TABLES)
     add_definitions("-DHUFFMAN_GPU_CONST_TABLES")
+    set(COMPILED_OPTIONS "${COMPILED_OPTIONS Huffman_const_tables")
 endif()
 
 if(DEFINED GLEW_USE_STATIC_LIBS)
@@ -117,6 +122,8 @@ endif()
 if(DEFINED GLFW_USE_STATIC_LIBS)
     add_definitions("-DWINGDIAPI")
 endif()
+
+message(STATUS "Compled features:${COMPILED_OPTIONS}")
 
 # GPUJPEG library
 file(GLOB H_FILES libgpujpeg/*.h ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg/gpujpeg_version.h)
