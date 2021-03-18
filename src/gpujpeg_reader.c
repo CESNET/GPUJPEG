@@ -654,7 +654,7 @@ int
 gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_t* image_end,
         struct gpujpeg_reader_scan* scan, int scan_index)
 {
-    size_t data_compressed_offset = decoder->reader->data_compressed_size;
+    int data_compressed_offset = decoder->reader->data_compressed_size;
 
     // Get first segment in scan
     uint8_t * segment_data_start = *image;
