@@ -79,17 +79,17 @@ if test $enable_opengl != no ; then
 		opengl=no
 	elif test "$FOUND_X11_L" = yes -a "$FOUND_GLX_H" = yes; then
 		AC_DEFINE([GPUJPEG_USE_GLX], [1], [Use GLX for OpenGL context creation])
-		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lX11"
+		GPUJPEG_LIBS="${GPUJPEG_LIBS:+$GPUJPEG_LIBS }-lX11"
 		opengl_context=glx
 	elif test "$FOUND_GLFW_L" = yes -a "$FOUND_GLFW_H" = yes; then
 		AC_DEFINE([GPUJPEG_USE_GLFW], [1], [Use GLFW for OpenGL context creation])
-		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lGLFW"
+		GPUJPEG_LIBS="${GPUJPEG_LIBS:+$GPUJPEG_LIBS }-lGLFW"
 		opengl_context=glfw
 	fi
 
 	if test $opengl = yes; then
 		AC_DEFINE([GPUJPEG_USE_OPENGL], [1], [Build with OpenGL support])
-		GPUJPEG_LIBS="${GPUJPEG_LIBS:+ $GPUJPEG_LIBS}-lGLEW -lGL"
+		GPUJPEG_LIBS="${GPUJPEG_LIBS:+$GPUJPEG_LIBS }-lGLEW -lGL"
 	fi
 
 	if test $enable_opengl != yes -a $opengl = no; then
