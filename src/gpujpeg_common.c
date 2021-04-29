@@ -1268,6 +1268,8 @@ struct gpujpeg_opengl_context {
 #elif defined GPUJPEG_USE_GLX
     Display* glx_display;
     Window glx_window;
+#else
+    int unused; // avoid empty struct if no extension is present
 #endif
 };
 
