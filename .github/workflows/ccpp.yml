@@ -79,7 +79,7 @@ jobs:
         Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
         refreshenv
         # TODO: figure out if setting CMAKE_SYSTEM_VERSION is needed/best solution
-        cmake.exe -DCMAKE_SYSTEM_VERSION=10.0.18362 -p:Configuration=Release -DBUILD_OPENGL=ON -DGLFW_ROOT_DIR='C:\glfw' -DGLFW_USE_STATIC_LIBS=ON -DGLEW_ROOT='C:\glew' -DGLEW_USE_STATIC_LIBS=ON -Bbuild .
+        cmake.exe -DCMAKE_SYSTEM_VERSION=10.0.18362 -DCMAKE_BUILD_TYPE=Release -DBUILD_OPENGL=ON -DGLFW_ROOT_DIR='C:\glfw' -DGLFW_USE_STATIC_LIBS=ON -DGLEW_ROOT='C:\glew' -DGLEW_USE_STATIC_LIBS=ON -Bbuild .
         cmake.exe --build build --config Release --parallel (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
         cmake.exe --install build --prefix GPUJPEG
         cpack.exe --config build/CPackConfig.cmake -GNSIS64
