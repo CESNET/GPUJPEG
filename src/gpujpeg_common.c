@@ -126,10 +126,10 @@ const static struct {
 struct gpujpeg_devices_info
 gpujpeg_get_devices_info()
 {
-    struct gpujpeg_devices_info devices_info;
+    struct gpujpeg_devices_info devices_info = { 0 };
 
     cudaGetDeviceCount(&devices_info.device_count);
-    gpujpeg_cuda_check_error("Cannot get number of CUDA devices", exit(-1));
+    gpujpeg_cuda_check_error("Cannot get number of CUDA devices", return devices_info);
 
     if ( devices_info.device_count > GPUJPEG_MAX_DEVICE_COUNT ) {
         fprintf(stderr, "[GPUJPEG] [Warning] There are available more CUDA devices (%d) than maximum count (%d).\n",
@@ -161,13 +161,13 @@ gpujpeg_get_devices_info()
 }
 
 /* Documented at declaration */
-void
+int
 gpujpeg_print_devices_info()
 {
     struct gpujpeg_devices_info devices_info = gpujpeg_get_devices_info();
     if ( devices_info.device_count == 0 ) {
         printf("There is no device supporting CUDA.\n");
-        return;
+        return -1;
     } else if ( devices_info.device_count == 1 ) {
         printf("There is 1 device supporting CUDA:\n");
     } else {

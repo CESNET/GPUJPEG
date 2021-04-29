@@ -125,9 +125,10 @@ gpujpeg_get_devices_info();
 /**
  * Print information about available devices
  *
- * @return void
+ * @return 0  if success
+ * @return -1 for error (eg. no devices were found)
  */
-GPUJPEG_API void
+GPUJPEG_API int
 gpujpeg_print_devices_info();
 
 /**

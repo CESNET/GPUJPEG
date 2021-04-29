@@ -345,8 +345,7 @@ main(int argc, char *argv[])
             }
             break;
         case OPTION_DEVICE_INFO:
-            gpujpeg_print_devices_info();
-            return 0;
+            return gpujpeg_print_devices_info() < 0 ? 1 : 0;
         case 'i':
             if ( optarg == NULL || strcmp(optarg, "true") == 0 || atoi(optarg) )
                 param.interleaved = 1;
