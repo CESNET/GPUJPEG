@@ -1,6 +1,6 @@
 AC_PREREQ([2.65])
 # change version also in CMakeLists.txt
-AC_INIT([libgpujpeg], [0.16.0], [https://github.com/CESNET/GPUJPEG/issues], [libgpujpeg], [https://github.com/CESNET/GPUJPEG])
+AC_INIT([libgpujpeg],[0.16.0],[https://github.com/CESNET/GPUJPEG/issues],[libgpujpeg],[https://github.com/CESNET/GPUJPEG])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR([.])
@@ -20,9 +20,6 @@ AC_SUBST(GPUJPEG_LIBRARY_VERSION)
 LT_PREREQ([2.2])
 LT_INIT
 
-AC_PROG_LIBTOOL
-AM_PROG_LIBTOOL
-
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC
@@ -30,7 +27,7 @@ AC_PROG_INSTALL
 AM_PROG_CC_C_O
 
 # debug
-AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [compile with debug info]) )
+AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug], [compile with debug info]) )
 if test x$enable_debug = x ; then
 	enable_debug=no
 fi
@@ -45,7 +42,7 @@ else
 fi
 
 # huffmann
-AC_ARG_ENABLE(huffman-gpu-const-tables, AC_HELP_STRING([--enable-huffman-gpu-const-tables], [enable Huffman GPU decoder tables in constant memory] ) )
+AC_ARG_ENABLE(huffman-gpu-const-tables, AS_HELP_STRING([--enable-huffman-gpu-const-tables],[enable Huffman GPU decoder tables in constant memory]) )
 if test x$enable_huffman_gpu_const_tables = xyes ; then
 	AC_DEFINE([HUFFMAN_GPU_CONST_TABLES], [1], [Build with huffmann coder tables in constant memory])
 else
@@ -53,13 +50,13 @@ else
 fi
 
 # opengl
-AC_ARG_ENABLE(opengl, AC_HELP_STRING([--enable-opengl], [enable opengl support]) )
+AC_ARG_ENABLE(opengl, AS_HELP_STRING([--enable-opengl],[enable opengl support]) )
 if test x$enable_opengl = x ; then
 	enable_opengl=auto
 fi
 
 # OS X universal build
-AC_ARG_ENABLE(osx-universal, AC_HELP_STRING([--enable-osx-universal], [enable OS X universal build] ) )
+AC_ARG_ENABLE(osx-universal, AS_HELP_STRING([--enable-osx-universal],[enable OS X universal build]) )
 if test x$enable_osx_universal = x ; then
 	enable_osx_universal=no
 fi
@@ -104,7 +101,7 @@ CUDA_COMPUTE_ARGS=""
 CUDA_COMPILER=""
 
 AC_ARG_WITH(cuda,
-	AC_HELP_STRING([--with-cuda=DIR], [specify cuda root]),
+	AS_HELP_STRING([--with-cuda=DIR],[specify cuda root]),
 	CUDA_INSTALL_PATH=$withval
 )
 AC_PATH_PROG(CUDA, nvcc, nvcc_not_found, [${CUDA_INSTALL_PATH}/bin${PATH_SEPARATOR}$PATH${PATH_SEPARATOR}/opt/cuda/bin${PATH_SEPARATOR}/usr/local/cuda/bin])
@@ -172,7 +169,7 @@ fi
 
 # CUDA host compiler
 AC_ARG_WITH(cuda-host-compiler, 
-	AC_HELP_STRING([--with-cuda-host-compiler=BINARY], [specify compiler used for building cuda host code]))
+	AS_HELP_STRING([--with-cuda-host-compiler=BINARY],[specify compiler used for building cuda host code]))
 if test "x${with_cuda_host_compiler}" != "x" ; then
 	AC_CHECK_PROG([cuda_host_cc], [${with_cuda_host_compiler}],[yes])
 	if test "x${cuda_host_cc}" = "xyes" -o -x "${with_cuda_host_compiler}"; then
