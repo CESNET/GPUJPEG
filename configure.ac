@@ -108,13 +108,13 @@ AC_ARG_WITH(cuda,
 	CUDA_INSTALL_PATH=$withval
 )
 AC_PATH_PROG(CUDA, nvcc, nvcc_not_found, [${CUDA_INSTALL_PATH}/bin${PATH_SEPARATOR}$PATH${PATH_SEPARATOR}/opt/cuda/bin${PATH_SEPARATOR}/usr/local/cuda/bin])
-if test x$CUDA = xnvcc_not_found ; then
+if test "x$CUDA" = xnvcc_not_found ; then
 	AC_MSG_FAILURE([CUDA is required to build the gpujpeg library!])
 fi
 CUDA_COMPILER="$CUDA"
 
-CUDA=`dirname $CUDA`
-CUDA=`dirname $CUDA`
+CUDA=`dirname "$CUDA"`
+CUDA=`dirname "$CUDA"`
 CUDA_INSTALL_PATH=$CUDA
 
 LBITS=`getconf LONG_BIT`
