@@ -120,6 +120,8 @@ CUDA_INSTALL_PATH=$CUDA
 LBITS=`getconf LONG_BIT`
 if test $LBITS = 64 -a `uname -s` != 'Darwin'; then
 	CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib64"
+elif test $LBITS = 64 -a `uname -o` = 'Msys'; then
+	CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib/x64"
 else
 	CUDA_INSTALL_LIB="${CUDA_INSTALL_PATH}/lib"
 fi
@@ -160,6 +162,13 @@ case "$CUDA_COMPILER" in
                 AC_MSG_ERROR([Unsupported cuda compiler $CUDA_COMPILER])
                 ;;
 esac
+
+# escape paths to remove potentially harmful spaces in paths on MSW
+if test `uname -o` = 'Msys'; then
+	CUDA_INSTALL_PATH="\"$CUDA_INSTALL_PATH\""
+	CUDA_INSTALL_LIB="\"$CUDA_INSTALL_LIB\""
+	CUDA_COMPILER="\"$CUDA_COMPILER\""
+fi
 
 # CUDA host compiler
 AC_ARG_WITH(cuda-host-compiler, 
