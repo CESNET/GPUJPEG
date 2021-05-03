@@ -73,7 +73,7 @@ if test $enable_opengl != no ; then
 	AC_CHECK_HEADER(GLFW/glfw3.h, FOUND_GLFW_H=yes)
 
 	opengl=yes
-	if test "$FOUND_GLEW_L" = no -o "$FOUND_GLEW_H" = no -o "$FOUND_GL_L" = no; then
+	if test "$FOUND_GLEW_L" != yes -o "$FOUND_GLEW_H" != yes -o "$FOUND_GL_L" != yes; then
 		opengl=no
 	elif test "$FOUND_X11_L" = yes -a "$FOUND_GLX_H" = yes; then
 		AC_DEFINE([GPUJPEG_USE_GLX], [1], [Use GLX for OpenGL context creation])
@@ -90,7 +90,7 @@ if test $enable_opengl != no ; then
 		GPUJPEG_LIBS="${GPUJPEG_LIBS:+$GPUJPEG_LIBS }-lGLEW -lGL"
 	fi
 
-	if test $enable_opengl != yes -a $opengl = no; then
+	if test $enable_opengl = yes -a $opengl = no; then
                 AC_MSG_ERROR([OpenGL required but dependencies not found!])
 	fi
 fi
