@@ -1019,10 +1019,10 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
         return param->width * param->height * param->comp_count;
     case GPUJPEG_422_U8_P0P1P2:
         assert(param->comp_count == 3);
-        return param->width * param->height * 2;
+        return param->width * param->height + 2 * ((param->width + 1) / 2) * param->height;
     case GPUJPEG_420_U8_P0P1P2:
         assert(param->comp_count == 3);
-        return ((param->width * param->height) * 3) / 2;
+        return param->width * param->height + 2 * ((param->width + 1) / 2) * ((param->height + 1) / 2);
     default:
         assert(0);
         return 0;
