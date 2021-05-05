@@ -207,6 +207,13 @@ gpujpeg_reader_read_app0(uint8_t** image)
 {
     int length = (int)gpujpeg_reader_read_2byte(*image);
 
+    if(length < 7)
+    {
+        // Just skip
+        *image += length - 2;
+        return -1;
+    }
+
     char marker[5];
     marker[0] = gpujpeg_reader_read_byte(*image);
     marker[1] = gpujpeg_reader_read_byte(*image);
@@ -219,7 +226,8 @@ gpujpeg_reader_read_app0(uint8_t** image)
         int ret = gpujpeg_reader_skip_jfxx(image, length);
         return ret == 0 ? 1 : ret;
     } else {
-        fprintf(stderr, "[GPUJPEG] [Error] APP0 marker identifier should be 'JFIF' or 'JFXX' but '%s' was presented!\n", marker);
+        // Something else - skip contents
+        *image += length - 2 - 5;
         return -1;
     }
 }
