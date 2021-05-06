@@ -220,16 +220,20 @@ gpujpeg_reader_read_app0(uint8_t** image)
     marker[2] = gpujpeg_reader_read_byte(*image);
     marker[3] = gpujpeg_reader_read_byte(*image);
     marker[4] = gpujpeg_reader_read_byte(*image);
-    if ( strcmp(marker, "JFIF") == 0 ) {
-        return gpujpeg_reader_read_jfif(image, length);
-    } else if ( strcmp(marker, "JFXX") == 0 ) {
-        int ret = gpujpeg_reader_skip_jfxx(image, length);
-        return ret == 0 ? 1 : ret;
+    if ( marker[4] == '\0' ) {
+        if ( strcmp(marker, "JFIF") == 0 ) {
+            return gpujpeg_reader_read_jfif(image, length);
+        }
+        if ( strcmp(marker, "JFXX") == 0 ) {
+            int ret = gpujpeg_reader_skip_jfxx(image, length);
+            return ret == 0 ? 1 : ret;
+        }
     } else {
-        // Something else - skip contents
-        *image += length - 2 - 5;
-        return -1;
+        fprintf(stderr, "[GPUJPEG] [Warning] APP0 marker identifier either not terminated or not present!\n");
     }
+    // Something else - skip contents
+    *image += length - 2 - 5;
+    return -1;
 }
 
 /**
