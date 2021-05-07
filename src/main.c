@@ -411,7 +411,7 @@ main(int argc, char *argv[])
     struct gpujpeg_opengl_context *gl_context = NULL;
     if ( use_opengl ) {
         flags |= GPUJPEG_OPENGL_INTEROPERABILITY;
-        if ( (gl_context = gpujpeg_opengl_init()) == NULL ) {
+        if ( gpujpeg_opengl_init(&gl_context) != 0 ) {
             fprintf(stderr, "Cannot initialize OpenGL context!\n");
             return -1;
         }

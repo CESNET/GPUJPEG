@@ -387,10 +387,13 @@ struct gpujpeg_opengl_context;
  *
  * Returned pointer should be freed with gpujpeg_opengl_destroy() when done.
  *
- * @return NULL if failed, otherwise state pointer
+ * @param[out] ctx pointer to OpenGL context data (to be passed to gpujpeg_opengl_destroy())
+ * @return      0  if succeeds, otherwise nonzero
+ * @return     -1  if initialization fails
+ * @return     -2  if OpenGL support was not compiled in
  */
-GPUJPEG_API struct gpujpeg_opengl_context *
-gpujpeg_opengl_init();
+GPUJPEG_API int
+gpujpeg_opengl_init(struct gpujpeg_opengl_context **ctx);
 
 /**
  * Destroys OpenGL context created with gpujpeg_opengl_init()

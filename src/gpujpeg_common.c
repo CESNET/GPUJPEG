@@ -1274,8 +1274,8 @@ struct gpujpeg_opengl_context {
 };
 
 /* Documented at declaration */
-struct gpujpeg_opengl_context *
-gpujpeg_opengl_init()
+int
+gpujpeg_opengl_init(struct gpujpeg_opengl_context **ctx)
 {
 #ifdef GPUJPEG_USE_OPENGL
     #if defined(GPUJPEG_USE_GLX)
@@ -1283,7 +1283,7 @@ gpujpeg_opengl_init()
         Display* glx_display = XOpenDisplay(0);
         if ( glx_display == NULL ) {
             fprintf(stderr, "[GPUJPEG] [Error] Failed to open X display!\n");
-            return NULL;
+            return -1;
         }
 
         // Choose visual
@@ -1298,14 +1298,14 @@ gpujpeg_opengl_init()
         XVisualInfo* visual = glXChooseVisual(glx_display, DefaultScreen(glx_display), attributes);
         if ( visual == NULL ) {
             fprintf(stderr, "[GPUJPEG] [Error] Failed to choose visual!\n");
-            return NULL;
+            return -1;
         }
 
         // Create OpenGL context
         GLXContext glx_context = glXCreateContext(glx_display, visual, 0, GL_TRUE);
         if ( glx_context == NULL ) {
             fprintf(stderr, "[GPUJPEG] [Error] Failed to create OpenGL context!\n");
-            return NULL;
+            return -1;
         }
 
         // Create window
@@ -1329,21 +1329,21 @@ gpujpeg_opengl_init()
         glfwSetErrorCallback(glfw_error_callback);
         if (!glfwInit()) {
             fprintf(stderr, "[GPUJPEG] [Error] glfwInit failed!\n");
-            return NULL;
+            return -1;
         }
 
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         GLFWwindow* window = glfwCreateWindow(640, 480, "", NULL, NULL);
         if (window == NULL) {
             fprintf(stderr, "[GPUJPEG] [Error] Cannot create GLFW window!\n");
-            return NULL;
+            return -1;
         }
         glfwMakeContextCurrent(window);
     #endif
         GLenum err = glewInit();
         if (err != GLEW_OK) {
             fprintf(stderr, "[GPUJPEG] [Error] glewInit: %s\n", glewGetErrorString(err));
-            return NULL;
+            return -1;
         }
         struct gpujpeg_opengl_context *s = calloc(1, sizeof *s);
     #if defined(GPUJPEG_USE_GLFW)
@@ -1355,14 +1355,15 @@ gpujpeg_opengl_init()
         fprintf(stderr, "[GPUJPEG] [Error] gpujpeg_opengl_init not implemented in current build!\n");
         fprintf(stderr, "[GPUJPEG] [Note] You can still use custom OpenGL context!\n");
         free(s);
-        return NULL;
+        return -1;
     #endif
 
-        return s;
+        *ctx = s;
+        return 0;
 #else
-    GPUJPEG_MISSING_OPENGL(return NULL);
+    GPUJPEG_MISSING_OPENGL(return -2);
 #endif
-    return NULL;
+    return -1;
 }
 
 GPUJPEG_API void
