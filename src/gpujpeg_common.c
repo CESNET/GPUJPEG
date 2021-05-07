@@ -1360,7 +1360,7 @@ gpujpeg_opengl_init()
 
         return s;
 #else
-    GPUJPEG_EXIT_MISSING_OPENGL();
+    GPUJPEG_MISSING_OPENGL(return NULL);
 #endif
     return NULL;
 }
@@ -1404,7 +1404,7 @@ gpujpeg_opengl_texture_create(int width, int height, uint8_t* data)
 
     return texture_id;
 #else
-    GPUJPEG_EXIT_MISSING_OPENGL();
+    GPUJPEG_MISSING_OPENGL(return 0);
 #endif
 }
 
@@ -1425,7 +1425,7 @@ gpujpeg_opengl_texture_set_data(int texture_id, uint8_t* data)
 
     glBindTexture(GL_TEXTURE_2D, 0);
 #else
-    GPUJPEG_EXIT_MISSING_OPENGL();
+    GPUJPEG_MISSING_OPENGL(return -1);
 #endif
     return 0;
 }
@@ -1449,7 +1449,7 @@ gpujpeg_opengl_texture_get_data(int texture_id, uint8_t* data, int* data_size)
 
     glBindTexture(GL_TEXTURE_2D, 0);
 #else
-    GPUJPEG_EXIT_MISSING_OPENGL();
+    GPUJPEG_MISSING_OPENGL(return -1);
 #endif
     return 0;
 }
@@ -1461,7 +1461,7 @@ gpujpeg_opengl_texture_destroy(int texture_id)
 #ifdef GPUJPEG_USE_OPENGL
      glDeleteTextures(1, (GLuint*)&texture_id);
 #else
-    GPUJPEG_EXIT_MISSING_OPENGL();
+    GPUJPEG_MISSING_OPENGL();
 #endif
 }
 
@@ -1518,7 +1518,7 @@ gpujpeg_opengl_texture_register(int texture_id, enum gpujpeg_opengl_texture_type
     cudaGraphicsGLRegisterBuffer(&texture->texture_pbo_resource, texture->texture_pbo_id, cudaGraphicsMapFlagsNone);
     gpujpeg_cuda_check_error("Register OpenGL buffer", return NULL);
 #else
-    GPUJPEG_EXIT_MISSING_OPENGL();
+    GPUJPEG_MISSING_OPENGL(return NULL);
 #endif
 
     return texture;
@@ -1536,7 +1536,7 @@ gpujpeg_opengl_texture_unregister(struct gpujpeg_opengl_texture* texture)
         cudaGraphicsUnregisterResource(texture->texture_pbo_resource);
     }
 #else
-    GPUJPEG_EXIT_MISSING_OPENGL();
+    GPUJPEG_MISSING_OPENGL(return);
 #endif
 
     assert(texture != NULL);
@@ -1570,7 +1570,7 @@ gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_siz
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 #else
-    GPUJPEG_EXIT_MISSING_OPENGL();
+    GPUJPEG_MISSING_OPENGL(return NULL);
 #endif
 
     // Map pixel buffer object to cuda
@@ -1609,7 +1609,7 @@ gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
         glFinish();
     }
 #else
-    GPUJPEG_EXIT_MISSING_OPENGL();
+    GPUJPEG_MISSING_OPENGL(return);
 #endif
 
     // Dettach OpenGL context by callback
