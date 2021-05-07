@@ -200,10 +200,10 @@ gpujpeg_reader_read_segment_info(struct gpujpeg_decoder* decoder, uint8_t** imag
  * @param image
  * @retval 0 if JFIF was successfully parsed
  * @retval 1 if JFXX was read
- * @retval -1 on error (unexpected tag or malformed JFIF/JFXX)
+ * @retval -1 on error (no/unexpected tag or malformed JFIF/JFXX)
  */
-int
-gpujpeg_reader_read_app0(uint8_t** image)
+static int
+gpujpeg_reader_read_app0(uint8_t** image, int verbose)
 {
     int length = (int)gpujpeg_reader_read_2byte(*image);
 
@@ -228,6 +228,7 @@ gpujpeg_reader_read_app0(uint8_t** image)
             int ret = gpujpeg_reader_skip_jfxx(image, length);
             return ret == 0 ? 1 : ret;
         }
+        VERBOSE_MSG("APP0 marker identifier is not supported '%s'!\n", marker);
     } else {
         fprintf(stderr, "[GPUJPEG] [Warning] APP0 marker identifier either not terminated or not present!\n");
     }
@@ -1003,7 +1004,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         switch (marker)
         {
         case GPUJPEG_MARKER_APP0:
-            if ( gpujpeg_reader_read_app0(&image) == 0 ) {
+            if ( gpujpeg_reader_read_app0(&image, decoder->coder.param.verbose) == 0 ) {
                 header_color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             }
             break;
@@ -1193,7 +1194,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         {
         case GPUJPEG_MARKER_APP0:
         {
-            if (gpujpeg_reader_read_app0(&image) == 0) {
+            if (gpujpeg_reader_read_app0(&image, verbose) == 0) {
                 // if the marker defines a valid JFIF, it is YCbCr (CCIR 601-256 levels)
                 header_color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             }
