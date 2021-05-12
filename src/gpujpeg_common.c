@@ -1040,10 +1040,12 @@ int
 gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size)
 {
     enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
+#ifndef DISABLE_CPP
     image_load_delegate_t image_load_delegate = gpujpeg_get_image_load_delegate(format);
     if (image_load_delegate) {
         return image_load_delegate(filename, image_size, (void **) image, gpujpeg_cuda_malloc_host);
     }
+#endif // !defined DISABLE_CPP
 
     FILE* file;
     file = fopen(filename, "rb");
@@ -1077,10 +1079,12 @@ int
 gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size, const struct gpujpeg_image_parameters *param_image)
 {
     enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
+#ifndef DISABLE_CPP
     image_save_delegate_t image_save_delegate = gpujpeg_get_image_save_delegate(format);
     if (param_image && image_save_delegate) {
         return image_save_delegate(filename, param_image, (const char *) image);
     }
+#endif // !defined DISABLE_CPP
 
     FILE* file;
     file = fopen(filename, "wb");
@@ -1101,10 +1105,12 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size,
 int
 gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists)
 {
+#ifndef DISABLE_CPP
     image_probe_delegate_t image_probe_delegate = gpujpeg_get_image_probe_delegate(gpujpeg_image_get_file_format(filename));
     if (image_probe_delegate) {
         return image_probe_delegate(filename, param_image, file_exists);
     }
+#endif // !defined DISABLE_CPP
 
     return -1;
 }
