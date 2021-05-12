@@ -110,6 +110,7 @@ message(STATUS "Configured options: ${COMPILED_OPTIONS}")
 # GPUJPEG library
 file(GLOB H_FILES libgpujpeg/*.h ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg/gpujpeg_version.h)
 file(GLOB C_FILES src/*.c src/*/*.cpp src/*.cu)
+list(REMOVE_ITEM C_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c")
 add_library(gpujpeg ${H_FILES} ${C_FILES})
 target_compile_features(gpujpeg PRIVATE ${NEEDED_COMPILER_FEATURES})
 set_property(TARGET gpujpeg PROPERTY C_STANDARD 99)
