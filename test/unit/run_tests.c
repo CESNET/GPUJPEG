@@ -1,9 +1,14 @@
 #include <assert.h>
+#include <cuda_runtime.h>
 #include <libgpujpeg/gpujpeg_common.h>
+#include <libgpujpeg/gpujpeg_encoder.h>
 #include "../../src/gpujpeg_common_internal.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+
+#define TEST_IMAGE_WIDTH 1920
+#define TEST_IMAGE_HEIGHT 1080
 
 static void subsampling_name_test() {
         struct {
@@ -22,8 +27,50 @@ static void subsampling_name_test() {
         }
 }
 
+/*
+ * Test if we can encode GPU pointer as usual CPU pointer.
+ */
+static void encode_gpu_mem_as_cpu() {
+        struct gpujpeg_encoder *encoder = gpujpeg_encoder_create(0);
+        if (encoder == NULL) { // do not fail here if we do not have CUDA capable device - just skip this test
+                return;
+        }
+
+        struct gpujpeg_parameters param;
+        gpujpeg_set_default_parameters(&param);
+
+        struct gpujpeg_image_parameters param_image;
+        gpujpeg_image_set_default_parameters(&param_image);
+        param_image.width = TEST_IMAGE_WIDTH;
+        param_image.height = TEST_IMAGE_HEIGHT;
+        param_image.comp_count = 3;
+        param_image.color_space = GPUJPEG_YCBCR_BT709;
+        param_image.pixel_format = GPUJPEG_420_U8_P0P1P2;
+
+        uint8_t *image = NULL;
+        size_t len = param_image.width * param_image.height * 3 / 2;
+        if (cudaSuccess != cudaMalloc((void**) &image, len)) {
+                abort();
+        }
+        cudaMemset(image, 0, len);
+
+        struct gpujpeg_encoder_input encoder_input;
+        gpujpeg_encoder_input_set_image(&encoder_input, image);
+
+        uint8_t *image_compressed = NULL;
+        int image_compressed_size = 0;
+
+        if (gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size) != 0) {
+                abort();
+        }
+
+        cudaFree(image);
+        gpujpeg_encoder_destroy(encoder);
+}
+
 int main() {
         subsampling_name_test();
+        encode_gpu_mem_as_cpu();
         printf("PASSED\n");
 }
 
