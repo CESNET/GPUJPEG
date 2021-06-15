@@ -62,7 +62,7 @@ print_help()
            "\n");
     printf("   -q, --quality          set JPEG encoder quality level 0-100 (default 75)\n"
            "   -r, --restart          set JPEG encoder restart interval (default 8)\n"
-           "   -S, --subsampled[=<s>] set JPEG encoder to use chroma subsampling (default 420)\n"
+           "   -S, --subsampled[=<s>] set JPEG encoder chroma subsampling (444, 422 or 420; default 420)\n"
            "   -i  --interleaved      set JPEG encoder to use interleaved stream\n"
            "   -g  --segment-info     set JPEG encoder to use segment info in stream\n"
            "                          for fast decoding\n"
@@ -130,7 +130,7 @@ static int print_image_info(const char *filename, int verbose) {
 }
 
 static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image_parameters *param_image,
-        const char *in, const char *out, _Bool encode, _Bool chroma_subsampled, _Bool restart_interval_default) {
+        const char *in, const char *out, _Bool encode, int subsampling, _Bool restart_interval_default) {
     // if possible, read properties from file
     struct gpujpeg_image_parameters file_param_image = { 0, 0, 0, GPUJPEG_NONE, GPUJPEG_PIXFMT_NONE };
     gpujpeg_image_get_properties(encode ? in : out, &file_param_image, encode);
@@ -171,10 +171,16 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
         param_image->comp_count = 1;
     }
 
+    if (subsampling == 0) {
+        subsampling = gpujpeg_pixel_format_get_subsampling(param_image->pixel_format);
+    }
+
+    gpujpeg_parameters_chroma_subsampling(param, subsampling);
+
     // Adjust restart interval
     if ( restart_interval_default ) {
         // when chroma subsampling and interleaving is enabled, the restart interval should be smaller
-        if ( chroma_subsampled == 1 && param->interleaved == 1 ) {
+        if ( subsampling != 444 && param->interleaved == 1 ) {
             param->restart_interval = 2;
         }
         else {
@@ -228,7 +234,7 @@ main(int argc, char *argv[])
 
     // Flags
     int restart_interval_default = 1;
-    int chroma_subsampled = 0;
+    int subsampling = 0; // 0 - default, 420, 422 or 444
     int native_file_format = 0;
 
     int rc;
@@ -310,7 +316,6 @@ main(int argc, char *argv[])
                 return 1;
             }
             param_image.comp_count = gpujpeg_pixel_format_get_comp_count(param_image.pixel_format);
-            chroma_subsampled = gpujpeg_pixel_format_is_subsampled(param_image.pixel_format);
             break;
         case 'q':
             param.quality = atoi(optarg);
@@ -332,14 +337,13 @@ main(int argc, char *argv[])
                 param.segment_info = 0;
             break;
         case 'S':
-            chroma_subsampled = 1;
-            if ( optarg == NULL || strcmp(optarg, "420") == 0 )
-                gpujpeg_parameters_chroma_subsampling_420(&param);
-            else if ( strcmp(optarg, "422") == 0 )
-                gpujpeg_parameters_chroma_subsampling_422(&param);
-            else if ( strcmp(optarg, "444") == 0 )
-                chroma_subsampled = 0;
-            else {
+            if (optarg == NULL) {
+                subsampling = 420;
+                break;
+            }
+            subsampling = atoi(optarg);
+            if (subsampling != 0 && subsampling != GPUJPEG_SUBSAMPLING_444
+                    && subsampling != GPUJPEG_SUBSAMPLING_422 && subsampling != GPUJPEG_SUBSAMPLING_420) {
                 fprintf(stderr, "Unknown subsampling '%s'!\n", optarg);
                 return 1;
             }
@@ -489,7 +493,7 @@ main(int argc, char *argv[])
 
             param = param_saved;
             param_image = param_image_saved;
-            adjust_params(&param, &param_image, input, output, encode, chroma_subsampled, restart_interval_default);
+            adjust_params(&param, &param_image, input, output, encode, subsampling, restart_interval_default);
             if (param_image.width <= 0 || param_image.height <= 0) {
                 fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
             }
@@ -656,7 +660,7 @@ main(int argc, char *argv[])
 
             param = param_saved;
             param_image = param_image_saved;
-            adjust_params(&param, &param_image, input, output, encode, chroma_subsampled, restart_interval_default);
+            adjust_params(&param, &param_image, input, output, encode, subsampling, restart_interval_default);
 
             gpujpeg_decoder_set_output_format(decoder, param_image.color_space, param_image.pixel_format);
 

@@ -44,6 +44,14 @@ struct CUstream_st;
 typedef struct CUstream_st *cudaStream_t;
 #endif
 
+#if __cplusplus >= 201402L
+#define GPUJPEG_DEPRECATED [[deprecated]]
+#elif defined _MSC_VER
+#define GPUJPEG_DEPRECATED __declspec(deprecated)
+#else
+#define GPUJPEG_DEPRECATED __attribute__((deprecated))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -188,13 +196,25 @@ struct gpujpeg_parameters
 GPUJPEG_API void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param);
 
+#define GPUJPEG_SUBSAMPLING_444 444
+#define GPUJPEG_SUBSAMPLING_422 422
+#define GPUJPEG_SUBSAMPLING_420 420
+/**
+ * Set parameters for using specified chroma subsampling
+ * @param param       parameters for coder
+ * @param subsampling one of GPUJPEG_SUBSAMPLING_{444,422,420}
+ */
+GPUJPEG_API void
+gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, int subsampling);
+
 /**
  * Set parameters for using 4:2:2 chroma subsampling
  *
  * @param param  Parameters for coder
  * @return void
+ * @deprecated use gpujpeg_parameters_chroma_subsampling()
  */
-GPUJPEG_API void
+GPUJPEG_API GPUJPEG_DEPRECATED void
 gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param);
 
 /**
@@ -202,8 +222,9 @@ gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param);
  *
  * @param param  Parameters for coder
  * @return void
+ * @deprecated use gpujpeg_parameters_chroma_subsampling()
  */
-GPUJPEG_API void
+GPUJPEG_API GPUJPEG_DEPRECATED void
 gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param);
 
 /**
@@ -560,9 +581,9 @@ gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format);
 GPUJPEG_API int
 gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format);
 
-/** Returns true if a pixel format is subsampled */
+/** Returns 444, 422 or 420 */
 GPUJPEG_API int
-gpujpeg_pixel_format_is_subsampled(enum gpujpeg_pixel_format pixel_format);
+gpujpeg_pixel_format_get_subsampling(enum gpujpeg_pixel_format pixel_format);
 
 #ifdef __cplusplus
 }
