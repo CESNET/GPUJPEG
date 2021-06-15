@@ -584,8 +584,14 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
         component->type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
 
         // Set proper color component sizes in pixels based on sampling factors
-        int width = ((coder->param_image.width + coder->sampling_factor.horizontal - 1) / coder->sampling_factor.horizontal) * coder->sampling_factor.horizontal;
-        int height = ((coder->param_image.height + coder->sampling_factor.vertical - 1) / coder->sampling_factor.vertical) * coder->sampling_factor.vertical;
+        //
+        // Assume unstrided dimensions, eg. for 5x5 I420 - planes Y: 5x5, U: 3x3, V: 3x3 = 43 B
+        // This is different to how FFmpeg does (stride 2 also for Y) but consistent eg. with libyuv:
+        // https://github.com/Bilibili/libyuv/blob/master/source/convert_to_i420.cc
+        int div_h = coder->sampling_factor.horizontal / component->sampling_factor.horizontal;
+        int div_v = coder->sampling_factor.vertical / component->sampling_factor.vertical;
+        int width = ((coder->param_image.width + div_h - 1) / div_h) * div_h;
+        int height = ((coder->param_image.height + div_v - 1) / div_v) * div_v;
         int samp_factor_h = component->sampling_factor.horizontal;
         int samp_factor_v = component->sampling_factor.vertical;
         component->width = (width * samp_factor_h) / coder->sampling_factor.horizontal;
