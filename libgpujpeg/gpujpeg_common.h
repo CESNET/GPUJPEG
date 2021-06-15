@@ -235,31 +235,30 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param);
 
 /**
  * Image file formats
- *
- * If running out numbers, the representation may be more dense, eg. lower 2 bits for RAW/JPEG
- * and then GRAY -> 1|12, then 1|16, 1|20, 1|24 etc.
  */
 enum gpujpeg_image_file_format {
     /// Unknown image file format
     GPUJPEG_IMAGE_FILE_UNKNOWN = 0,
-    /// Raw file format
-    GPUJPEG_IMAGE_FILE_RAW = 1,
     /// JPEG file format
-    GPUJPEG_IMAGE_FILE_JPEG = 2,
-    /// RGB file format, simple data format without header [R G B] [R G B] ...
-    GPUJPEG_IMAGE_FILE_RGB = 1 | 4,
-    /// YUV file format, simple data format without header [Y U V] [Y U V] ...
-    GPUJPEG_IMAGE_FILE_YUV = 1 | 8,
+    GPUJPEG_IMAGE_FILE_JPEG = 1,
+    /// Raw file format
+    /// @note all following formats must be raw
+    GPUJPEG_IMAGE_FILE_RAW = 2,
     /// Gray file format
-    GPUJPEG_IMAGE_FILE_GRAY = 1 | 16,
+    GPUJPEG_IMAGE_FILE_GRAY,
+    /// RGB file format, simple data format without header [R G B] [R G B] ...
+    GPUJPEG_IMAGE_FILE_RGB,
     /// RGBX file format, simple data format without header [R G B X] [R G B X] ...
-    GPUJPEG_IMAGE_FILE_RGBA = 1 | 32,
-    /// i420 file format
-    GPUJPEG_IMAGE_FILE_I420 = 1 | 64,
+    GPUJPEG_IMAGE_FILE_RGBA,
     /// PNM file format
-    GPUJPEG_IMAGE_FILE_PNM = 1 | 128,
+    GPUJPEG_IMAGE_FILE_PNM,
     /// PAM file format
-    GPUJPEG_IMAGE_FILE_PAM = 1 | 256,
+    GPUJPEG_IMAGE_FILE_PAM,
+    /// YUV file format, simple data format without header [Y U V] [Y U V] ...
+    /// @note all following formats must be YUV
+    GPUJPEG_IMAGE_FILE_YUV,
+    /// i420 file format
+    GPUJPEG_IMAGE_FILE_I420,
 };
 
 /**
