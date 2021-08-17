@@ -41,6 +41,17 @@
 #include "libgpujpeg/gpujpeg_common.h"
 #include "libgpujpeg/gpujpeg_type.h"
 
+/** Contants */
+#define GPUJPEG_BLOCK_SIZE                      8
+#define GPUJPEG_BLOCK_SQUARED_SIZE              64
+#define GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE       (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE * 8)
+
+/** Maximum JPEG header size (MUST be divisible by 4!!!) */
+#define GPUJPEG_MAX_HEADER_SIZE                 (65536 - 100)
+
+/** Maximum number of segment info header in stream */
+#define GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT   100
+
 struct gpujpeg_timer {
     cudaEvent_t start;
     cudaEvent_t stop;
