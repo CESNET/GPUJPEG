@@ -18,6 +18,11 @@ REQUESTED_PSNR=40
 IMAGE=image_bt709_422.yuv
 #IMAGE=camera_bt709_422.yuv
 
+if ! command -v compare >/dev/null; then
+        echo "compare from ImageMagick not found!" >&2
+        exit 2
+fi
+
 # Create an image from source in specified mode ()
 #$GPUJPEG --size=1920x1080 --colorspace=ycbcr-bt709 --pixel-format=422-u8-p1020 \
 #    --convert $MODE $DIR/$IMAGE $DIR/$NAME.$EXTENSION
