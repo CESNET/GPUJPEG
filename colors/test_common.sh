@@ -50,7 +50,7 @@ PSNR=`compare -metric PSNR -depth 8 -size 1920x1080  $DIR/$NAME.rgb $DIR/$NAME.d
 
 echo PSNR: $PSNR
 
-if expr $PSNR \< $REQUESTED_PSNR; then
+if expr $PSNR != 0 && expr $PSNR \< $REQUESTED_PSNR; then
         exit 1
 fi
 
