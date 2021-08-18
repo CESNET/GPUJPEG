@@ -50,6 +50,9 @@ extern "C" {
 #define GPUJPEG_VERBOSE                         1
 #define GPUJPEG_OPENGL_INTEROPERABILITY         2
 
+/** Maximum number of segment info header in stream */
+#define GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT   100
+
 /** Errors */
 #define GPUJPEG_NOERR                           0
 #define GPUJPEG_ERROR                           (-1)

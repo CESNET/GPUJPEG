@@ -49,9 +49,6 @@
 /** Maximum JPEG header size (MUST be divisible by 4!!!) */
 #define GPUJPEG_MAX_HEADER_SIZE                 (65536 - 100)
 
-/** Maximum number of segment info header in stream */
-#define GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT   100
-
 struct gpujpeg_timer {
     cudaEvent_t start;
     cudaEvent_t stop;
