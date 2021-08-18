@@ -195,8 +195,11 @@ gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
                 enum gpujpeg_color_space color_space,
                 enum gpujpeg_pixel_format sampling_factor);
 
+/**
+ * @copydoc gpujpeg_reader_get_image_info
+ */
 GPUJPEG_API int
-gpujpeg_decoder_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count, int verbose);
+gpujpeg_decoder_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count);
 
 #ifdef __cplusplus
 }

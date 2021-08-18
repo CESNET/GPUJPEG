@@ -455,10 +455,9 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
     return 0;
 }
 
-/// @copydetails gpujpeg_reader_get_image_info
 int
-gpujpeg_decoder_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count, int verbose) {
-    return gpujpeg_reader_get_image_info(image, image_size, param_image, segment_count, verbose);
+gpujpeg_decoder_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count) {
+    return gpujpeg_reader_get_image_info(image, image_size, param_image, param, segment_count);
 }
 
 /* vi: set expandtab sw=4 : */

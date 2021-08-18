@@ -118,13 +118,15 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
  *
  * @param image  Image data
  * @param image_size  Image data size
- * @param param_image parameters obtained from image
+ * @param[out]    param_image   parameters obtained from image
+ * @param[in,out] param         parameters obtained from image (verbose parameter is used as input param)
+ * @param[out]    segment_count number of segments
  * @return 0 if succeeds, otherwise nonzero
  *
  * @todo refactorize common code with gpujpeg_reader_read_image()
  */
 int
-gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count, int verbose);
+gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count);
 
 #ifdef __cplusplus
 }

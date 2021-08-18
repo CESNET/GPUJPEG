@@ -622,13 +622,13 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
 /**
  * Read restart interval block from image
  *
- * @param decoder
+ * @param[in,out] out_restart_interval output value (checked if changed)
  * @param image
  * @retval  0 if succeeds
  * @retval -3 on restart interval redefinition
  */
-int
-gpujpeg_reader_read_dri(struct gpujpeg_decoder* decoder, uint8_t** image)
+static int
+gpujpeg_reader_read_dri(int *out_restart_interval, uint8_t** image)
 {
     int length = (int)gpujpeg_reader_read_2byte(*image);
     if ( length != 4 ) {
@@ -637,18 +637,19 @@ gpujpeg_reader_read_dri(struct gpujpeg_decoder* decoder, uint8_t** image)
     }
 
     int restart_interval = gpujpeg_reader_read_2byte(*image);
-    if ( restart_interval == decoder->reader->param.restart_interval )
+    if ( restart_interval == *out_restart_interval ) {
         return 0;
+    }
 
-    if ( decoder->reader->param.restart_interval != 0
-            && decoder->reader->param.restart_interval != restart_interval ) {
+    if ( *out_restart_interval != 0
+            && *out_restart_interval != restart_interval ) {
         fprintf(stderr, "[GPUJPEG] [Error] DRI marker can't redefine restart interval (%d to %d)!\n",
-                decoder->reader->param.restart_interval, restart_interval );
+               *out_restart_interval, restart_interval );
         fprintf(stderr, "This may be caused when more DRI markers are presented which is not supported!\n");
         return GPUJPEG_ERR_RESTART_CHANGE;
     }
 
-    decoder->reader->param.restart_interval = restart_interval;
+    *out_restart_interval = restart_interval;
 
     return 0;
 }
@@ -1097,7 +1098,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
 
         case GPUJPEG_MARKER_DRI:
-            rc = gpujpeg_reader_read_dri(decoder, &image);
+            rc = gpujpeg_reader_read_dri(&decoder->reader->param.restart_interval , &image);
             if ( rc != 0 )
                 return rc;
             break;
@@ -1165,7 +1166,7 @@ gcd(int a, int b)
 
 /* Documented at declaration */
 int
-gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, int *segment_count, int verbose)
+gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *params, int *segment_count)
 {
     struct gpujpeg_parameters param = {0};
     int segments = 0;
@@ -1194,7 +1195,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         {
         case GPUJPEG_MARKER_APP0:
         {
-            if (gpujpeg_reader_read_app0(&image, verbose) == 0) {
+            if (gpujpeg_reader_read_app0(&image, params->verbose) == 0) {
                 // if the marker defines a valid JFIF, it is YCbCr (CCIR 601-256 levels)
                 header_color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             }
@@ -1202,7 +1203,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         }
         case GPUJPEG_MARKER_APP8:
         {
-            if (gpujpeg_reader_read_app8(&image, &header_color_space, verbose) != 0) {
+            if (gpujpeg_reader_read_app8(&image, &header_color_space, params->verbose) != 0) {
                 return -1;
             }
             break;
@@ -1214,6 +1215,11 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
             }
             break;
         }
+        case GPUJPEG_MARKER_DRI:
+            if ( gpujpeg_reader_read_dri(&params->restart_interval , &image) != 0 ) {
+                return -1;
+            }
+            break;
         case GPUJPEG_MARKER_SOF0: // Baseline
         case GPUJPEG_MARKER_SOF1: // Extended sequential with Huffman coder
         {

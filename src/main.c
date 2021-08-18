@@ -102,26 +102,27 @@ static int print_image_info(const char *filename, int verbose) {
         fprintf(stderr, "Cannot read image contents.\n");
         return 1;
     }
-    struct gpujpeg_image_parameters params = { 0 };
+    struct gpujpeg_image_parameters params_image = { 0 };
+    struct gpujpeg_parameters params = { .verbose = verbose };
     int segment_count = 0;
-    if (gpujpeg_decoder_get_image_info(jpeg, len, &params, &segment_count, verbose) == 0) {
-        if (params.width) {
-            printf("width: %d\n", params.width);
+    if (gpujpeg_decoder_get_image_info(jpeg, len, &params_image, &params, &segment_count) == 0) {
+        if (params_image.width) {
+            printf("width: %d\n", params_image.width);
         }
-        if (params.height) {
-            printf("height: %d\n", params.height);
+        if (params_image.height) {
+            printf("height: %d\n", params_image.height);
         }
-        if (params.comp_count) {
-            printf("component count: %d\n", params.comp_count);
+        if (params_image.comp_count) {
+            printf("component count: %d\n", params_image.comp_count);
         }
-        if (params.color_space) {
-            printf("color space: %s\n", gpujpeg_color_space_get_name(params.color_space));
+        if (params_image.color_space) {
+            printf("color space: %s\n", gpujpeg_color_space_get_name(params_image.color_space));
         }
-        if (params.pixel_format) {
-            printf("internal representation: %s\n", gpujpeg_pixel_format_get_name(params.pixel_format));
+        if (params_image.pixel_format) {
+            printf("internal representation: %s\n", gpujpeg_pixel_format_get_name(params_image.pixel_format));
         }
         if (segment_count) {
-            printf("segment count: %d\n", segment_count);
+            printf("segment count: %d (DRI = %d)\n", segment_count, params.restart_interval);
         }
     }
     free(jpeg);
@@ -748,8 +749,9 @@ main(int argc, char *argv[])
             duration = gpujpeg_get_time();
 
             // Save image
-            struct gpujpeg_image_parameters decoded_param_image;
-            gpujpeg_decoder_get_image_info(image, image_size, &decoded_param_image, NULL, param.verbose);
+            struct gpujpeg_image_parameters decoded_param_image = { 0 };
+            struct gpujpeg_parameters decoded_param = { .verbose = param.verbose };
+            gpujpeg_decoder_get_image_info(image, image_size, &decoded_param_image, &decoded_param, NULL);
             decoded_param_image.color_space = param_image.color_space;
             decoded_param_image.pixel_format = param_image.pixel_format;
             if ( gpujpeg_image_save_to_file(output, data, data_size, &decoded_param_image) != 0 ) {
