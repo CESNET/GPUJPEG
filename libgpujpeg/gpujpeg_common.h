@@ -214,7 +214,7 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, int subs
  * @return void
  * @deprecated use gpujpeg_parameters_chroma_subsampling()
  */
-GPUJPEG_API GPUJPEG_DEPRECATED void
+GPUJPEG_DEPRECATED GPUJPEG_API void
 gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param);
 
 /**
@@ -224,7 +224,7 @@ gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param);
  * @return void
  * @deprecated use gpujpeg_parameters_chroma_subsampling()
  */
-GPUJPEG_API GPUJPEG_DEPRECATED void
+GPUJPEG_DEPRECATED GPUJPEG_API void
 gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param);
 
 /**
