@@ -16,6 +16,7 @@ on:
       - '**.m'
       - '**.mm'
       - 'CMakeLists.txt'
+      - 'libgpujpeg.pc.*'
 
 jobs:
   retag-continuous:
