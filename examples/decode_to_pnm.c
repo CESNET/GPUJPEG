@@ -61,7 +61,8 @@ static int decode(const char *input_filename, struct decode_data *d)
 
         // obtain parameters for PNM header
         struct gpujpeg_image_parameters param_image;
-        gpujpeg_decoder_get_image_info(d->input_image, input_image_size, &param_image, NULL, 0);
+        struct gpujpeg_parameters params = { .verbose = 0 };
+        gpujpeg_decoder_get_image_info(d->input_image, input_image_size, &param_image, &params, NULL);
         param_image.color_space = GPUJPEG_RGB;
         param_image.pixel_format = GPUJPEG_444_U8_P012;
 

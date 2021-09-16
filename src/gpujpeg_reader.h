@@ -118,9 +118,9 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
  *
  * @param image  Image data
  * @param image_size  Image data size
- * @param[out]    param_image   parameters obtained from image
- * @param[in,out] param         parameters obtained from image (verbose parameter is used as input param)
- * @param[out]    segment_count number of segments
+ * @param[out]    param_image   parameters obtained from image, must not be NULL
+ * @param[in,out] param         parameters obtained from image (verbose parameter is used as an input param), non-NULL
+ * @param[out]    segment_count number of segments (may be NULL if parameter segment_count is not needed)
  * @return 0 if succeeds, otherwise nonzero
  *
  * @todo refactorize common code with gpujpeg_reader_read_image()
