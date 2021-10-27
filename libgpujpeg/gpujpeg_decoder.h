@@ -144,12 +144,12 @@ gpujpeg_decoder_create(cudaStream_t stream);
  * image properties during decompression.
  *
  * @param decoder  Decoder structure
- * @param param  Parameters for coder
- * @param param_image  Parameters for image data
+ * @param[in] param        Parameters for coder, pointed structure is copied
+ * @param[in] param_image  Parameters for image data, pointed structure is copied
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image);
+gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_parameters* param, const struct gpujpeg_image_parameters* param_image);
 
 /**
  * Decompress image by decoder
