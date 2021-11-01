@@ -39,18 +39,19 @@ project, [UltraGrid](https://github.com/CESNET/UltraGrid) which is
 tightly personally linked.
 
 Please follow these rules when reporting the issue:
-1. use the _latest_ GPUJPEG version
-2. try to reproduce the issue either with the _sample console application_
+- use the _latest_ GPUJPEG code from GIT
+- try to reproduce the issue either with the _sample console application_
    or provide a _minimal working example_ demonstrating the problem.
    Use debug verbosity level (for _console application_  option `-vv`).
-3. _do not alter_ GPUJPEG code for the report. If unnecessary, include the
+- _do not alter_ GPUJPEG code for the report. If unnecessary, include the
    GPUJPEG patch in the bug report.
-4. provide relevant information to the problem, such as:
-   - SW/HW environment
-   - compilation options
-   - GPUJPEG parameters
-   - console output of the library/application
-   - image for which the problem occurs
+- provide relevant information to the problem, such as:
+   1. actual error description (messages, error codes etc.), ideally including a context
+   1. SW/HW environment
+   1. compilation options
+   1. GPUJPEG parameters
+   1. console output of the library/application
+   1. image for which the problem occurs
 
 Development
 -----------
