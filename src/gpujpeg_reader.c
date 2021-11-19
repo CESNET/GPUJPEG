@@ -44,6 +44,8 @@
 #define DEBUG_MSG(...) do { if (verbose >= 2) fprintf(stderr, "[GPUJPEG] [Info] " __VA_ARGS__); } while(0)
 #define VERBOSE_MSG(...) do { if (verbose >= 1) fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
 
+#define APP14_ADOBE_MARKER_LEN 14
+
 /* Documented at declaration */
 struct gpujpeg_reader*
 gpujpeg_reader_create()
@@ -368,34 +370,21 @@ gpujpeg_reader_read_app8(uint8_t** image, enum gpujpeg_color_space *color_space,
 }
 
 /**
- * Read Adobe APP14 marker (used for RGB images by GPUJPEG)
+ * Reads Adobe APP14 marker
  *
- * Obtains colorspace from APP14.
+ * Marker length should be 14:
+ * https://www.adobe.com/content/dam/acom/en/devnet/postscript/pdfs/5116.DCT_Filter.pdf#G3.851943
  *
- * @param decoder decoder state
- * @param image   JPEG data
- * @return        0 if succeeds, otherwise nonzero
+ * @todo
+ * Some Adobe markers have length 38, see:
+ * https://github.com/CESNET/GPUJPEG/issues/70
+ * For now we are just skipping the rest.
+ *
+ * @return        0 if succeeds, >0 if unsupported features were found, <0 on error
  */
 static int
-gpujpeg_reader_read_app14(uint8_t** image, enum gpujpeg_color_space *color_space)
+gpujpeg_reader_read_adobe_header(uint8_t** image, enum gpujpeg_color_space *color_space)
 {
-    int length = gpujpeg_reader_read_2byte(*image);
-    if (length != 14) {
-        fprintf(stderr, "[GPUJPEG] [Error] APP14 marker length should be 14 but %d was presented!\n", length);
-        return -1;
-    }
-
-    char adobe[6] = "";
-    adobe[0] = gpujpeg_reader_read_byte(*image);
-    adobe[1] = gpujpeg_reader_read_byte(*image);
-    adobe[2] = gpujpeg_reader_read_byte(*image);
-    adobe[3] = gpujpeg_reader_read_byte(*image);
-    adobe[4] = gpujpeg_reader_read_byte(*image);
-    if (strcmp(adobe, "Adobe") != 0) {
-        fprintf(stderr, "[GPUJPEG] [Error] APP14 marker identifier should be 'Adobe' but '%s' was presented!\n", adobe);
-        return -1;
-    }
-
     int version = gpujpeg_reader_read_2byte(*image);
     int flags0 = gpujpeg_reader_read_2byte(*image);
     int flags1 = gpujpeg_reader_read_2byte(*image);
@@ -407,13 +396,52 @@ gpujpeg_reader_read_app14(uint8_t** image, enum gpujpeg_color_space *color_space
         *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
     } else if (color_transform == 2) {
         fprintf(stderr, "[GPUJPEG] [Error] Unsupported YCCK color transformation was presented!\n");
-        return -1;
+        return 1;
     } else {
         fprintf(stderr, "[GPUJPEG] [Error] Unsupported color transformation value '%d' was presented in APP14 marker!\n", color_transform);
-        return -1;
+        return 1;
     }
 
     return 0;
+}
+
+/**
+ * Read Adobe APP14 marker (used for RGB images by GPUJPEG)
+ *
+ * Obtains colorspace from APP14.
+ *
+ * @param decoder decoder state
+ * @param image   JPEG data
+ * @return        0 if succeeds, >0 if unsupported features were found, <0 on error
+ */
+static int
+gpujpeg_reader_read_app14(uint8_t** image, enum gpujpeg_color_space *color_space)
+{
+    int length = gpujpeg_reader_read_2byte(*image);
+    const char adobe_tag[] = { 'A', 'd', 'o' ,'b', 'e' };
+    if (length >= APP14_ADOBE_MARKER_LEN && strncmp((char *) *image, adobe_tag, sizeof adobe_tag) == 0) {
+        *image += sizeof adobe_tag;
+        int rc = gpujpeg_reader_read_adobe_header(image, color_space);
+        *image += length - APP14_ADOBE_MARKER_LEN;
+        if (length > APP14_ADOBE_MARKER_LEN) {
+            fprintf(stderr, "[GPUJPEG] [Warning] APP14 Adobe marker length should be 14 but %d was presented!\n", length);
+            rc = rc < 0 ? rc : 1;
+        }
+        return rc;
+    }
+
+    length -= 2;
+    fprintf(stderr, "[GPUJPEG] [Warning] Unknown APP14 marker %dB long was presented: ", length);
+    while (length > 0 && isprint(**image)) {
+        putc(*(*image)++, stderr);
+        length--;
+    }
+    putc('\n', stderr);
+    while (length-- > 0) {
+        (*image)++;
+    }
+
+    return 1;
 }
 
 static int
@@ -1019,7 +1047,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
                 return -1;
             break;
         case GPUJPEG_MARKER_APP14:
-            if ( gpujpeg_reader_read_app14(&image, &header_color_space) != 0 ) {
+            if ( gpujpeg_reader_read_app14(&image, &header_color_space) < 0 ) {
                 return -1;
             }
             break;
@@ -1210,7 +1238,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         }
         case GPUJPEG_MARKER_APP14:
         {
-            if (gpujpeg_reader_read_app14(&image, &header_color_space) != 0) {
+            if (gpujpeg_reader_read_app14(&image, &header_color_space) < 0) {
                 return -1;
             }
             break;
