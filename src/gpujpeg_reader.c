@@ -1146,6 +1146,9 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
                        decoder->comp_id, &image) != 0 ) {
                 return -1;
             }
+            if ( decoder->reader->param_image.pixel_format == GPUJPEG_PIXFMT_NONE ) {
+                decoder->reader->param_image.pixel_format = decoder->reader->param_image.comp_count == 1 ? GPUJPEG_U8 : GPUJPEG_444_U8_P012;
+            }
             break;
 
         case GPUJPEG_MARKER_DHT:
