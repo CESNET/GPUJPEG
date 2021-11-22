@@ -994,6 +994,93 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     return 0;
 }
 
+/**
+ * Common handling for gpujpeg_reader_read_image() and gpujpeg_reader_get_image_info()
+ *
+ * @retval -1 error
+ * @retval 0  success
+ * @retval 1  marker was not processed
+ */
+static int gpujpeg_reader_read_common_markers(uint8_t **image, int marker, int log_level, enum gpujpeg_color_space *color_space, int *restart_interval) {
+    switch (marker)
+    {
+        case GPUJPEG_MARKER_APP0:
+            if ( gpujpeg_reader_read_app0(image, log_level) == 0 ) {
+                *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+            }
+            break;
+        case GPUJPEG_MARKER_APP8:
+            if ( gpujpeg_reader_read_app8(image, color_space, log_level ) != 0 ) {
+                return -1;
+            }
+            break;
+        case GPUJPEG_MARKER_APP14:
+            if ( gpujpeg_reader_read_app14(image, color_space) < 0 ) {
+                return -1;
+            }
+            break;
+        case GPUJPEG_MARKER_APP1:
+        case GPUJPEG_MARKER_APP2:
+        case GPUJPEG_MARKER_APP3:
+        case GPUJPEG_MARKER_APP4:
+        case GPUJPEG_MARKER_APP5:
+        case GPUJPEG_MARKER_APP6:
+        case GPUJPEG_MARKER_APP7:
+        case GPUJPEG_MARKER_APP9:
+        case GPUJPEG_MARKER_APP10:
+        case GPUJPEG_MARKER_APP11:
+        case GPUJPEG_MARKER_APP12:
+        case GPUJPEG_MARKER_APP15:
+            if ( log_level > 0 ) {
+                fprintf(stderr, "[GPUJPEG] [Warning] JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
+            }
+            gpujpeg_reader_skip_marker_content(image);
+            break;
+        case GPUJPEG_MARKER_SOF2:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF2 (Progressive with Huffman coding) is not supported!\n");
+            return -1;
+        case GPUJPEG_MARKER_SOF3:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF3 (Lossless with Huffman coding) is not supported!\n");
+            return -1;
+        case GPUJPEG_MARKER_SOF5:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF5 (Differential sequential with Huffman coding) is not supported!\n");
+            return -1;
+        case GPUJPEG_MARKER_SOF6:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF6 (Differential progressive with Huffman coding) is not supported!\n");
+            return -1;
+        case GPUJPEG_MARKER_SOF7:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF7 (Extended lossless with Arithmetic coding) is not supported!\n");
+            return -1;
+        case GPUJPEG_MARKER_JPG:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker JPG (Reserved for JPEG extensions ) is not supported!\n");
+            return -1;
+        case GPUJPEG_MARKER_SOF10:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF10 (Progressive with Arithmetic coding) is not supported!\n");
+            return -1;
+        case GPUJPEG_MARKER_SOF11:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF11 (Lossless with Arithmetic coding) is not supported!\n");
+            return -1;
+        case GPUJPEG_MARKER_SOF13:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF13 (Differential sequential with Arithmetic coding) is not supported!\n");
+            return -1;
+        case GPUJPEG_MARKER_SOF14:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF14 (Differential progressive with Arithmetic coding) is not supported!\n");
+            return -1;
+        case GPUJPEG_MARKER_SOF15:
+            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF15 (Differential lossless with Arithmetic coding) is not supported!\n");
+            return -1;
+
+        case GPUJPEG_MARKER_COM:
+            if ( gpujpeg_reader_read_com(image, color_space) != 0 ) {
+                return -1;
+            }
+            break;
+        default:
+            return 1;
+    }
+    return 0;
+}
+
 /* Documented at declaration */
 int
 gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size)
@@ -1030,45 +1117,19 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         }
 
         // Read more info according to the marker
+        int rc = gpujpeg_reader_read_common_markers(&image, marker, decoder->coder.param.verbose, &header_color_space, &decoder->reader->param.restart_interval);
+        if (rc < 0) {
+            return rc;
+        }
+        if (rc == 0) { // already processed
+            continue;
+        }
         switch (marker)
         {
-        case GPUJPEG_MARKER_APP0:
-            if ( gpujpeg_reader_read_app0(&image, decoder->coder.param.verbose) == 0 ) {
-                header_color_space = GPUJPEG_YCBCR_BT601_256LVLS;
-            }
-            break;
-        case GPUJPEG_MARKER_APP8:
-            if ( gpujpeg_reader_read_app8(&image, &header_color_space, decoder->coder.param.verbose ) != 0 ) {
-                return -1;
-            }
-            break;
         case GPUJPEG_MARKER_APP13:
             if ( gpujpeg_reader_read_app13(decoder, &image) != 0 )
                 return -1;
             break;
-        case GPUJPEG_MARKER_APP14:
-            if ( gpujpeg_reader_read_app14(&image, &header_color_space) < 0 ) {
-                return -1;
-            }
-            break;
-        case GPUJPEG_MARKER_APP1:
-        case GPUJPEG_MARKER_APP2:
-        case GPUJPEG_MARKER_APP3:
-        case GPUJPEG_MARKER_APP4:
-        case GPUJPEG_MARKER_APP5:
-        case GPUJPEG_MARKER_APP6:
-        case GPUJPEG_MARKER_APP7:
-        case GPUJPEG_MARKER_APP9:
-        case GPUJPEG_MARKER_APP10:
-        case GPUJPEG_MARKER_APP11:
-        case GPUJPEG_MARKER_APP12:
-        case GPUJPEG_MARKER_APP15:
-            if ( decoder->coder.param.verbose ) {
-                fprintf(stderr, "[GPUJPEG] [Warning] JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
-            }
-            gpujpeg_reader_skip_marker_content(&image);
-            break;
-
         case GPUJPEG_MARKER_DQT:
             if ( gpujpeg_reader_read_dqt(decoder, &image) != 0 )
                 return -1;
@@ -1086,39 +1147,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
                 return -1;
             }
             break;
-        case GPUJPEG_MARKER_SOF2:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF2 (Progressive with Huffman coding) is not supported!\n");
-            return -1;
-        case GPUJPEG_MARKER_SOF3:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF3 (Lossless with Huffman coding) is not supported!\n");
-            return -1;
-        case GPUJPEG_MARKER_SOF5:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF5 (Differential sequential with Huffman coding) is not supported!\n");
-            return -1;
-        case GPUJPEG_MARKER_SOF6:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF6 (Differential progressive with Huffman coding) is not supported!\n");
-            return -1;
-        case GPUJPEG_MARKER_SOF7:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF7 (Extended lossless with Arithmetic coding) is not supported!\n");
-            return -1;
-        case GPUJPEG_MARKER_JPG:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker JPG (Reserved for JPEG extensions ) is not supported!\n");
-            return -1;
-        case GPUJPEG_MARKER_SOF10:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF10 (Progressive with Arithmetic coding) is not supported!\n");
-            return -1;
-        case GPUJPEG_MARKER_SOF11:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF11 (Lossless with Arithmetic coding) is not supported!\n");
-            return -1;
-        case GPUJPEG_MARKER_SOF13:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF13 (Differential sequential with Arithmetic coding) is not supported!\n");
-            return -1;
-        case GPUJPEG_MARKER_SOF14:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF14 (Differential progressive with Arithmetic coding) is not supported!\n");
-            return -1;
-        case GPUJPEG_MARKER_SOF15:
-            fprintf(stderr, "[GPUJPEG] [Error] Marker SOF15 (Differential lossless with Arithmetic coding) is not supported!\n");
-            return -1;
 
         case GPUJPEG_MARKER_DHT:
             if ( gpujpeg_reader_read_dht(decoder, &image) != 0 )
@@ -1138,12 +1166,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
 
         case GPUJPEG_MARKER_EOI:
             eoi_presented = 1;
-            break;
-
-        case GPUJPEG_MARKER_COM:
-            if ( gpujpeg_reader_read_com(&image, &header_color_space) != 0 ) {
-                return -1;
-            }
             break;
 
         case GPUJPEG_MARKER_DAC:
@@ -1219,35 +1241,15 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         }
 
         // Read more info according to the marker
+        int rc = gpujpeg_reader_read_common_markers(&image, marker, params->verbose, &header_color_space, &params->restart_interval);
+        if (rc < 0) {
+            return rc;
+        }
+        if (rc == 0) { // already processed
+            continue;
+        }
         switch (marker)
         {
-        case GPUJPEG_MARKER_APP0:
-        {
-            if (gpujpeg_reader_read_app0(&image, params->verbose) == 0) {
-                // if the marker defines a valid JFIF, it is YCbCr (CCIR 601-256 levels)
-                header_color_space = GPUJPEG_YCBCR_BT601_256LVLS;
-            }
-            break;
-        }
-        case GPUJPEG_MARKER_APP8:
-        {
-            if (gpujpeg_reader_read_app8(&image, &header_color_space, params->verbose) != 0) {
-                return -1;
-            }
-            break;
-        }
-        case GPUJPEG_MARKER_APP14:
-        {
-            if (gpujpeg_reader_read_app14(&image, &header_color_space) < 0) {
-                return -1;
-            }
-            break;
-        }
-        case GPUJPEG_MARKER_DRI:
-            if ( gpujpeg_reader_read_dri(&params->restart_interval , &image) != 0 ) {
-                return -1;
-            }
-            break;
         case GPUJPEG_MARKER_SOF0: // Baseline
         case GPUJPEG_MARKER_SOF1: // Extended sequential with Huffman coder
         {
@@ -1257,21 +1259,6 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
             }
             param_image->color_space = param.color_space_internal;
             break;
-        }
-        case GPUJPEG_MARKER_SOF2:
-        case GPUJPEG_MARKER_SOF3:
-        case GPUJPEG_MARKER_SOF5:
-        case GPUJPEG_MARKER_SOF6:
-        case GPUJPEG_MARKER_SOF7:
-        case GPUJPEG_MARKER_SOF9:
-        case GPUJPEG_MARKER_SOF10:
-        case GPUJPEG_MARKER_SOF11:
-        case GPUJPEG_MARKER_SOF13:
-        case GPUJPEG_MARKER_SOF14:
-        case GPUJPEG_MARKER_SOF15:
-        {
-            fprintf(stderr, "Unsupported encoding process!\n");
-            return -1;
         }
         case GPUJPEG_MARKER_RST0:
         case GPUJPEG_MARKER_RST1:
@@ -1298,13 +1285,6 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
             while (*image != 0xff || (*image == 0xff && image[1] == 0x00)) { if (*image == 0xff) image++; image++; }
             break;
         }
-
-        case GPUJPEG_MARKER_COM:
-            if ( gpujpeg_reader_read_com(&image, &header_color_space) != 0 ) {
-                return -1;
-            }
-            break;
-
         case GPUJPEG_MARKER_EOI:
         {
             eoi_presented = 1;
