@@ -71,6 +71,9 @@ struct gpujpeg_decoder_output
     /// Decompressed data size
     int data_size;
 
+    /// Decoded color space
+    enum gpujpeg_color_space color_space;
+
     /// Decoded pixel format
     enum gpujpeg_pixel_format pixel_format;
 
