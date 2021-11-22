@@ -101,7 +101,7 @@ int pam_save_delegate(const char *filename, const struct gpujpeg_image_parameter
         depth = 4;
         break;
     default:
-        fprintf(stderr, "Wrong pixel format for PAM! Only planar formats are supported.\n");
+        fprintf(stderr, "Wrong pixel format %s for PAM! Only planar formats are supported.\n", gpujpeg_pixel_format_get_name(param_image->pixel_format));
         return -1;
     }
 
@@ -188,7 +188,7 @@ int pnm_save_delegate(const char *filename, const struct gpujpeg_image_parameter
         type = PNM::P6;
         break;
     default:
-        fprintf(stderr, "Wrong pixel format for PNM! Only planar RGB and grayscale is supported!\n");
+        fprintf(stderr, "Wrong pixel format %s for PNM! Only planar formats are supported.\n", gpujpeg_pixel_format_get_name(param_image->pixel_format));
         return -1;
     }
 
