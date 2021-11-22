@@ -365,6 +365,11 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
         return 0;
     }
 
+    if (coder->param_image.comp_count == 1 && gpujpeg_pixel_format_get_comp_count(coder->param_image.pixel_format) > 1) {
+        coder->param.verbose >= 0 && fprintf(stderr, "[GPUJPEG] [Error] Decoding single component JPEG allowed only to single component output format!\n");
+        return -1;
+    }
+
     assert(coder->param_image.comp_count == 3);
 
     if (coder->param.color_space_internal == GPUJPEG_NONE) {
