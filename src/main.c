@@ -755,7 +755,7 @@ main(int argc, char *argv[])
             struct gpujpeg_parameters decoded_param = { .verbose = param.verbose };
             gpujpeg_decoder_get_image_info(image, image_size, &decoded_param_image, &decoded_param, NULL);
             decoded_param_image.color_space = param_image.color_space;
-            decoded_param_image.pixel_format = param_image.pixel_format;
+            decoded_param_image.pixel_format = decoder_output.pixel_format;
             if ( gpujpeg_image_save_to_file(output, data, data_size, &decoded_param_image) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", output);
                 return -1;

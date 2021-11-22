@@ -335,6 +335,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
 
     // Set decompressed image size
     output->data_size = coder->data_raw_size * sizeof(uint8_t);
+    output->pixel_format = decoder->reader->param_image.pixel_format;
 
     // Set decompressed image
     if (output->type == GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER) {

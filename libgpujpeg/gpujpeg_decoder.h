@@ -71,6 +71,9 @@ struct gpujpeg_decoder_output
     /// Decompressed data size
     int data_size;
 
+    /// Decoded pixel format
+    enum gpujpeg_pixel_format pixel_format;
+
     /// OpenGL texture
     struct gpujpeg_opengl_texture* texture;
 };
