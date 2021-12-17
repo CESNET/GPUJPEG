@@ -102,14 +102,20 @@ gpujpeg_reader_destroy(struct gpujpeg_reader* reader)
  * @return marker code or -1 if failed
  */
 int
-gpujpeg_reader_read_marker(uint8_t** image)
+gpujpeg_reader_read_marker(uint8_t** image, int* image_size)
 {
+    if(*image_size < 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to read marker from JPEG data (end of data)\n");
+        return -1;
+    }
+
     uint8_t byte = gpujpeg_reader_read_byte(*image);
     if( byte != 0xFF ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to read marker from JPEG data (0xFF was expected but 0x%X was presented)\n", byte);
         return -1;
     }
     int marker = gpujpeg_reader_read_byte(*image);
+    *image_size -= 2;
     return marker;
 }
 
@@ -119,31 +125,49 @@ gpujpeg_reader_read_marker(uint8_t** image)
  * @param image
  * @return void
  */
-void
-gpujpeg_reader_skip_marker_content(uint8_t** image)
+int
+gpujpeg_reader_skip_marker_content(uint8_t** image, int* image_size)
 {
-    int length = (int)gpujpeg_reader_read_2byte(*image);
+    if(*image_size < 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to skip marker content (end of data)\n");
+        return -1;
+    }
+    *image_size -= 2;
 
-    *image += length - 2;
+    int length = (int)gpujpeg_reader_read_2byte(*image);
+    length -= 2;
+
+    if(length > *image_size) {
+        fprintf(stderr, "[GPUJPEG] [Error] Marker content goes beyond data size\n");
+        return -1;
+    }
+    *image += length;
+    *image_size -= length;
 }
 
 /**
  * @param length  length field of the marker
  */
-int gpujpeg_reader_read_jfif(uint8_t** image, int length)
+int gpujpeg_reader_read_jfif(uint8_t** image, int* image_size, int length)
 {
-    int version_major = gpujpeg_reader_read_byte(*image);
-    int version_minor = gpujpeg_reader_read_byte(*image);
-    if ( version_major != 1 || ( version_minor < 0 || version_minor > 2) ) {
-        fprintf(stderr, "[GPUJPEG] [Error] JFIF marker version should be 1.00 to 1.02 but %d.%02d was presented!\n", version_major, version_minor);
+    if(*image_size < 9) {
+        fprintf(stderr, "[GPUJPEG] [Error] JFIF segment goes beyond end of data\n");
         return -1;
     }
 
+    int version_major = gpujpeg_reader_read_byte(*image);
+    int version_minor = gpujpeg_reader_read_byte(*image);
     int pixel_units = gpujpeg_reader_read_byte(*image);
     int pixel_xdpu = gpujpeg_reader_read_2byte(*image);
     int pixel_ydpu = gpujpeg_reader_read_2byte(*image);
     int thumbnail_width = gpujpeg_reader_read_byte(*image);
     int thumbnail_height = gpujpeg_reader_read_byte(*image);
+    *image_size -= 9;
+
+    if ( version_major != 1 || ( version_minor < 0 || version_minor > 2) ) {
+        fprintf(stderr, "[GPUJPEG] [Error] JFIF marker version should be 1.00 to 1.02 but %d.%02d was presented!\n", version_major, version_minor);
+        return -1;
+    }
 
     int thumbnail_length = thumbnail_width * thumbnail_height * 3;
     int expected_length = 16 + thumbnail_length;
@@ -153,15 +177,17 @@ int gpujpeg_reader_read_jfif(uint8_t** image, int length)
     }
 
     *image += length - 16;
+    *image_size -= length - 16;
     return 0;
 }
 
 /**
  * @param length  length field of the marker
  */
-static int gpujpeg_reader_skip_jfxx(uint8_t** image, int length)
+static int gpujpeg_reader_skip_jfxx(uint8_t** image, int* image_size, int length)
 {
     *image += length - 7;
+    *image_size -= length - 7;
 
     return 0;
 }
@@ -175,15 +201,23 @@ static int gpujpeg_reader_skip_jfxx(uint8_t** image, int length)
  * @return 0 if succeeds, otherwise nonzero
  */
 static int
-gpujpeg_reader_read_segment_info(struct gpujpeg_decoder* decoder, uint8_t** image, int length)
+gpujpeg_reader_read_segment_info(struct gpujpeg_decoder* decoder, uint8_t** image, int* image_size, int length)
 {
+    if(*image_size < 1) {
+        fprintf(stderr, "[GPUJPEG] [Error] Segment info goes beyond end of data\n");
+        return -1;
+    }
+
     int scan_index = (int)gpujpeg_reader_read_byte(*image);
+    *image_size -= 1;
+
     int data_size = length - 3;
     if ( scan_index != decoder->reader->scan_count ) {
         fprintf(stderr, "[GPUJPEG] [Warning] %s marker (segment info) scan index should be %d but %d was presented!"
                 " (marker not a segment info?)\n",
                 gpujpeg_marker_name(GPUJPEG_MARKER_SEGMENT_INFO), decoder->reader->scan_count, scan_index);
         *image += data_size;
+        *image_size -= data_size;
         return -1;
     }
 
@@ -192,6 +226,7 @@ gpujpeg_reader_read_segment_info(struct gpujpeg_decoder* decoder, uint8_t** imag
     decoder->reader->segment_info_size += data_size;
 
     *image += data_size;
+    *image_size -= data_size;
 
     return 0;
 }
@@ -205,9 +240,20 @@ gpujpeg_reader_read_segment_info(struct gpujpeg_decoder* decoder, uint8_t** imag
  * @retval -1 on error (no/unexpected tag or malformed JFIF/JFXX)
  */
 static int
-gpujpeg_reader_read_app0(uint8_t** image, int verbose)
+gpujpeg_reader_read_app0(uint8_t** image, int* image_size, int verbose)
 {
+    if(*image_size < 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Could not read APP0 length\n");
+        return -1;
+    }
+
     int length = (int)gpujpeg_reader_read_2byte(*image);
+    *image_size -= 2;
+
+    if(*image_size < length) {
+        fprintf(stderr, "[GPUJPEG] [Error] APP0 goes beyond end of data\n");
+        return -1;
+    }
 
     if(length < 7)
     {
@@ -222,12 +268,14 @@ gpujpeg_reader_read_app0(uint8_t** image, int verbose)
     marker[2] = gpujpeg_reader_read_byte(*image);
     marker[3] = gpujpeg_reader_read_byte(*image);
     marker[4] = gpujpeg_reader_read_byte(*image);
+    *image_size -= 5;
+
     if ( marker[4] == '\0' ) {
         if ( strcmp(marker, "JFIF") == 0 ) {
-            return gpujpeg_reader_read_jfif(image, length);
+            return gpujpeg_reader_read_jfif(image, image_size, length);
         }
         if ( strcmp(marker, "JFXX") == 0 ) {
-            int ret = gpujpeg_reader_skip_jfxx(image, length);
+            int ret = gpujpeg_reader_skip_jfxx(image, image_size, length);
             return ret == 0 ? 1 : ret;
         }
         VERBOSE_MSG("APP0 marker identifier is not supported '%s'!\n", marker);
@@ -236,6 +284,7 @@ gpujpeg_reader_read_app0(uint8_t** image, int verbose)
     }
     // Something else - skip contents
     *image += length - 2 - 5;
+    *image_size -= length - 2 - 5;
     return -1;
 }
 
@@ -251,12 +300,23 @@ gpujpeg_reader_read_app0(uint8_t** image, int verbose)
  * (see http://www.ozhiker.com/electronics/pjmt/jpeg_info/app_segments.html)
  */
 static int
-gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
+gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image, int* image_size)
 {
+    if(*image_size < 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Could not read APP13 length (end of data)\n");
+        return -1;
+    }
+
     int length = (int)gpujpeg_reader_read_2byte(*image);
+    *image_size -= 2;
     if ( length <= 3 ) {
         fprintf(stderr, "[GPUJPEG] [Error] APP13 marker (segment info) length should be greater than 3 but %d was presented!\n",
                 length);
+        return -1;
+    }
+
+    if(*image_size < length) {
+        fprintf(stderr, "[GPUJPEG] [Error] APP13 marker data goes beyond end of data\n");
         return -1;
     }
 
@@ -267,6 +327,7 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
                 fprintf(stderr, "[GPUJPEG] [Warning] Skipping unsupported %s APP13 marker!\n", ignored_hdrs[i]);
             }
             *image += length - 2;
+            *image_size -= length - 2;
             return 0;
         }
     }
@@ -277,11 +338,11 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
     if (length >= 2 + sizeof gpujpeg_str && memcmp((char *) image, gpujpeg_str, sizeof gpujpeg_str) == 0) {
         *image += sizeof gpujpeg_str;
         length -= sizeof gpujpeg_str;
-        return gpujpeg_reader_read_segment_info(decoder, image, length);
+        return gpujpeg_reader_read_segment_info(decoder, image, image_size, length);
     }
     // suppose segment info marker - current GPUJPEG doesn't tag it
-    gpujpeg_reader_read_segment_info(decoder, image, length); // ignore return code since we are
-                                                              // not sure if it is ours
+    gpujpeg_reader_read_segment_info(decoder, image, image_size, length); // ignore return code since we are
+                                                                          // not sure if it is ours
     return 0;
 }
 
@@ -298,22 +359,34 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image)
  * @return        0 if succeeds, otherwise nonzero
  */
 static int
-gpujpeg_reader_read_app8(uint8_t** image, enum gpujpeg_color_space *color_space, int verbose)
+gpujpeg_reader_read_app8(uint8_t** image, int* image_size, enum gpujpeg_color_space *color_space, int verbose)
 {
+    if(*image_size < 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Could not read APP8 marker length (end of data)\n");
+        return -1;
+    }
     int length = gpujpeg_reader_read_2byte(*image);
+    *image_size -= 2;
     if (length != SPIFF_MARKER_LEN) {
         VERBOSE_MSG("APP8 segment length is %d, expected 32 for SPIFF.\n", length);
         *image += length - 2;
+        *image_size -= length - 2;
         return 0;
     }
 
     length -= 2;
+
+    if(*image_size < length) {
+        fprintf(stderr, "[GPUJPEG] [Error] APP8 marker goes beyond end of data\n");
+        return -1;
+    }
 
     const char expected_marker_name[] = { 'S', 'P', 'I', 'F', 'F', '\0' };
     char marker_name[sizeof expected_marker_name];
     int i = 0;
     for (i = 0; i < sizeof marker_name; i++) {
         marker_name[i] = gpujpeg_reader_read_byte(*image);
+        *image_size -= 1;
         if (!isprint(marker_name[i])) {
             marker_name[i] = '\0';
         }
@@ -323,6 +396,7 @@ gpujpeg_reader_read_app8(uint8_t** image, enum gpujpeg_color_space *color_space,
     if (strcmp(marker_name, expected_marker_name) != 0) {
         VERBOSE_MSG("APP8 marker identifier should be 'SPIFF\\0' but '%-6.6s' was presented!\n", marker_name);
         *image += length - 2;
+        *image_size -= length - 2;
         return 0;
     }
 
@@ -337,6 +411,7 @@ gpujpeg_reader_read_app8(uint8_t** image, enum gpujpeg_color_space *color_space,
     gpujpeg_reader_read_byte(*image); // resolution units
     gpujpeg_reader_read_4byte(*image); // vertical res
     gpujpeg_reader_read_4byte(*image); // horizontal res
+    *image_size -= 24;
 
     if (compression != SPIFF_COMPRESSION_JPEG) {
             ERROR_MSG("Unexpected compression index %d, expected %d (JPEG)\n", compression, SPIFF_COMPRESSION_JPEG);
@@ -383,12 +458,18 @@ gpujpeg_reader_read_app8(uint8_t** image, enum gpujpeg_color_space *color_space,
  * @return        0 if succeeds, >0 if unsupported features were found, <0 on error
  */
 static int
-gpujpeg_reader_read_adobe_header(uint8_t** image, enum gpujpeg_color_space *color_space)
+gpujpeg_reader_read_adobe_header(uint8_t** image, int* image_size, enum gpujpeg_color_space *color_space)
 {
+    if(*image_size < 7) {
+        fprintf(stderr, "[GPUJPEG] [Error] APP14 marker goes beyond end of data\n");
+        return -1;
+    }
+
     int version = gpujpeg_reader_read_2byte(*image);
     int flags0 = gpujpeg_reader_read_2byte(*image);
     int flags1 = gpujpeg_reader_read_2byte(*image);
     int color_transform = gpujpeg_reader_read_byte(*image);
+    *image_size -= 7;
 
     if (color_transform == 0) {
         *color_space = GPUJPEG_RGB;
@@ -415,14 +496,28 @@ gpujpeg_reader_read_adobe_header(uint8_t** image, enum gpujpeg_color_space *colo
  * @return        0 if succeeds, >0 if unsupported features were found, <0 on error
  */
 static int
-gpujpeg_reader_read_app14(uint8_t** image, enum gpujpeg_color_space *color_space)
+gpujpeg_reader_read_app14(uint8_t** image, int* image_size, enum gpujpeg_color_space *color_space)
 {
+    if(*image_size < 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Could not read APP14 marker size (end of data)\n");
+        return -1;
+    }
+
     int length = gpujpeg_reader_read_2byte(*image);
+    *image_size -= 2;
+
+    if(length > *image_size) {
+        fprintf(stderr, "[GPUJPEG] [Error] APP14 segment goes beyond end of data\n");
+        return -1;
+    }
+
     const char adobe_tag[] = { 'A', 'd', 'o' ,'b', 'e' };
     if (length >= APP14_ADOBE_MARKER_LEN && strncmp((char *) *image, adobe_tag, sizeof adobe_tag) == 0) {
         *image += sizeof adobe_tag;
-        int rc = gpujpeg_reader_read_adobe_header(image, color_space);
+        *image_size -= sizeof adobe_tag;
+        int rc = gpujpeg_reader_read_adobe_header(image, image_size, color_space);
         *image += length - APP14_ADOBE_MARKER_LEN;
+        *image_size -= length - APP14_ADOBE_MARKER_LEN;
         if (length > APP14_ADOBE_MARKER_LEN) {
             fprintf(stderr, "[GPUJPEG] [Warning] APP14 Adobe marker length should be 14 but %d was presented!\n", length);
             rc = rc < 0 ? rc : 1;
@@ -434,20 +529,33 @@ gpujpeg_reader_read_app14(uint8_t** image, enum gpujpeg_color_space *color_space
     fprintf(stderr, "[GPUJPEG] [Warning] Unknown APP14 marker %dB long was presented: ", length);
     while (length > 0 && isprint(**image)) {
         putc(*(*image)++, stderr);
+        (*image_size)++;
         length--;
     }
     putc('\n', stderr);
     while (length-- > 0) {
         (*image)++;
+        (*image_size)--;
     }
 
-    return 1;
+    return 0;
 }
 
 static int
-gpujpeg_reader_read_com(uint8_t** image, enum gpujpeg_color_space *color_space)
+gpujpeg_reader_read_com(uint8_t** image, int* image_size, enum gpujpeg_color_space *color_space)
 {
+    if(*image_size < 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Could not read com length\n");
+        return -1;
+    }
+
     int length = (int)gpujpeg_reader_read_2byte(*image);
+    *image_size -= 2;
+
+    if(length - 2 > *image_size) {
+        fprintf(stderr, "[GPUJPEG] [Error] COM goes beyond end of data\n");
+        return -1;
+    }
 
     const char cs_itu601[] = "CS=ITU601";
     char buf[sizeof cs_itu601];
@@ -459,6 +567,7 @@ gpujpeg_reader_read_com(uint8_t** image, enum gpujpeg_color_space *color_space)
     }
 
     *image += length - 2;
+    *image_size -= length - 2;
 
     return 0;
 }
@@ -471,10 +580,21 @@ gpujpeg_reader_read_com(uint8_t** image, enum gpujpeg_color_space *color_space)
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image)
+gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image, int* image_size)
 {
+    if(*image_size < 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Could not read dqt length\n");
+        return -1;
+    }
+
     int length = (int)gpujpeg_reader_read_2byte(*image);
+    *image_size -= 2;
     length -= 2;
+
+    if(length > *image_size) {
+        fprintf(stderr, "[GPUJPEG] [Error] DQT marker goes beyond end of data\n");
+        return -1;
+    }
 
     if ( (length % 65) != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] DQT marker length should be 65 but %d was presented!\n", length);
@@ -483,6 +603,8 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image)
 
     for (;length > 0; length-=65) {
         int index = gpujpeg_reader_read_byte(*image);
+        (*image_size)--;
+
         struct gpujpeg_table_quantization* table;
         int Pq = index >> 4; // precision - 0 for 8-bit, 1 for 16-bit
         int Tq = index & 0xF; // destination (0-3)
@@ -499,6 +621,8 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image)
         for ( int i = 0; i < 64; i++ ) {
             table->table_raw[i] = gpujpeg_reader_read_byte(*image);
         }
+        *image_size -= 64;
+
         // Prepare quantization table for read raw table
         gpujpeg_table_quantization_decoder_compute(table);
     }
@@ -525,28 +649,41 @@ static uint8_t gpujpeg_reader_get_component_id(int index, enum gpujpeg_color_spa
  * @return 0 if succeeds, otherwise nonzero
  */
 static int
-gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_color_space header_color_space, int quant_map[4], uint8_t comp_id[4], uint8_t** image)
+gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_color_space header_color_space, int quant_map[4], uint8_t comp_id[4], uint8_t** image, int* image_size)
 {
+    if(*image_size < 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Could not read SOF0 size (end of data)\n");
+        return -1;
+    }
+
     int length = (int)gpujpeg_reader_read_2byte(*image);
-    if ( length < 6 ) {
-        fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker length should be greater than 6 but %d was presented!\n", length);
+    *image_size -= 2;
+    if ( length < 8 ) {
+        fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker length should be greater than 8 but %d was presented!\n", length);
         return -1;
     }
     length -= 2;
 
+    if(length > *image_size) {
+        fprintf(stderr, "[GPUJPEG] [Error] SOF0 goes beyond end of data\n");
+        return -1;
+    }
+
     int precision = (int)gpujpeg_reader_read_byte(*image);
+    param_image->height = (int)gpujpeg_reader_read_2byte(*image);
+    param_image->width = (int)gpujpeg_reader_read_2byte(*image);
+    param_image->comp_count = (int)gpujpeg_reader_read_byte(*image);
+    *image_size -= 6;
+    length -= 6;
+
     if ( precision != 8 ) {
         fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker precision should be 8 but %d was presented!\n", precision);
         return -1;
     }
 
-    param_image->height = (int)gpujpeg_reader_read_2byte(*image);
-    param_image->width = (int)gpujpeg_reader_read_2byte(*image);
-    param_image->comp_count = (int)gpujpeg_reader_read_byte(*image);
-    length -= 6;
-
     for ( int comp = 0; comp < param_image->comp_count; comp++ ) {
         int id = (int)gpujpeg_reader_read_byte(*image);
+        (*image_size)--;
         int expected_id = gpujpeg_reader_get_component_id(comp, param->color_space_internal);
         if ( id != expected_id ) {
             // if color space not matched and not read from header -> deduce from comp ID
@@ -565,10 +702,12 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
         comp_id[comp] = id;
 
         int sampling = (int)gpujpeg_reader_read_byte(*image);
+        (*image_size)--;
         param->sampling_factor[comp].horizontal = (sampling >> 4) & 15;
         param->sampling_factor[comp].vertical = (sampling) & 15;
 
         int table_index = (int)gpujpeg_reader_read_byte(*image);
+        (*image_size)--;
         if ( table_index < 0 || table_index > 3 ) {
             fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker contains unexpected quantization table index %d!\n", table_index);
             return -1;
@@ -581,6 +720,7 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
     if ( length > 0 ) {
         fprintf(stderr, "[GPUJPEG] [Warning] SOF0 marker contains %d more bytes than needed!\n", length);
         *image += length;
+        *image_size -= length;
     }
 
     return 0;
@@ -594,10 +734,21 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
+gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image, int* image_size)
 {
+    if(*image_size < 2) {
+        fprintf(stderr, "[GPUJPEG] [Error] Could not read DHT size (end of data)\n");
+        return -1;
+    }
+
     int length = (int)gpujpeg_reader_read_2byte(*image);
     length -= 2;
+    *image_size -= 2;
+
+    if(length > *image_size) {
+        fprintf(stderr, "[GPUJPEG] [Error] DHT goes beyond end of data\n");
+        return -1;
+    }
 
     while (length > 0) {
         int index = gpujpeg_reader_read_byte(*image);
@@ -611,6 +762,7 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
         }
         table = &decoder->table_huffman[Th][Tc];
         d_table = decoder->d_table_huffman[Th][Tc];
+        (*image_size)--;
         length -= 1;
 
         // Read in bits[]
@@ -618,6 +770,7 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
         int count = 0;
         for ( int i = 1; i <= 16; i++ ) {
             table->bits[i] = gpujpeg_reader_read_byte(*image);
+            (*image_size)--;
             count += table->bits[i];
             if ( length > 0 ) {
                 length--;
@@ -630,6 +783,7 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
         // Read in huffval
         for ( int i = 0; i < count; i++ ){
             table->huffval[i] = gpujpeg_reader_read_byte(*image);
+            (*image_size)--;
             if ( length > 0 ) {
                 length--;
             } else {
@@ -656,15 +810,22 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image)
  * @retval -3 on restart interval redefinition
  */
 static int
-gpujpeg_reader_read_dri(int *out_restart_interval, uint8_t** image)
+gpujpeg_reader_read_dri(int *out_restart_interval, uint8_t** image, int* image_size)
 {
+    if(*image_size < 4) {
+        fprintf(stderr, "[GPUJPEG] [Error] Could not read DRI (end of data)\n");
+        return -1;
+    }
+
     int length = (int)gpujpeg_reader_read_2byte(*image);
+    *image_size -= 2;
     if ( length != 4 ) {
         fprintf(stderr, "[GPUJPEG] [Error] DRI marker length should be 4 but %d was presented!\n", length);
         return -1;
     }
 
     int restart_interval = gpujpeg_reader_read_2byte(*image);
+    *image_size -= 2;
     if ( restart_interval == *out_restart_interval ) {
         return 0;
     }
@@ -870,6 +1031,11 @@ gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder
     // Increase number of segment count in reader
     decoder->reader->segment_count += scan->segment_count;
 
+    if(*image + scan_start >= image_end) {
+        fprintf(stderr, "[GPUJPEG] [Error] scan data goes beyond end of data\n");
+        return -1;
+    }
+
     // Copy scan data to buffer
     memcpy(
         &decoder->coder.data_compressed[decoder->reader->data_compressed_size],
@@ -897,6 +1063,11 @@ gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder
 int
 gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_t* image_end)
 {
+    if(*image + 3 > image_end) {
+        fprintf(stderr, "[GPUJPEG] [Error] SOS goes beyond end of data\n");
+        return -1;
+    }
+
     int length = (int)gpujpeg_reader_read_2byte(*image);
     length -= 2;
 
@@ -937,6 +1108,11 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     // Collect the component-spec parameters
     for ( int comp = 0; comp < comp_count; comp++ )
     {
+        if(*image + 2 > image_end) {
+            fprintf(stderr, "[GPUJPEG] [Error] SOS goes beyond end of data\n");
+            return -1;
+        }
+
         int comp_id = (int)gpujpeg_reader_read_byte(*image);
         int table = (int)gpujpeg_reader_read_byte(*image);
         int table_dc = (table >> 4) & 15;
@@ -959,6 +1135,11 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     }
 
     // Collect the additional scan parameters Ss, Se, Ah/Al.
+    if(*image + 3 > image_end) {
+        fprintf(stderr, "[GPUJPEG] [Error] SOS goes beyond end of data\n");
+        return -1;
+    }
+
     int Ss = (int)gpujpeg_reader_read_byte(*image);
     int Se = (int)gpujpeg_reader_read_byte(*image);
     int Ax = (int)gpujpeg_reader_read_byte(*image);
@@ -1001,21 +1182,21 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
  * @retval 0  success
  * @retval 1  marker was not processed
  */
-static int gpujpeg_reader_read_common_markers(uint8_t **image, int marker, int log_level, enum gpujpeg_color_space *color_space, int *restart_interval) {
+static int gpujpeg_reader_read_common_markers(uint8_t **image, int* image_size, int marker, int log_level, enum gpujpeg_color_space *color_space, int *restart_interval) {
     switch (marker)
     {
         case GPUJPEG_MARKER_APP0:
-            if ( gpujpeg_reader_read_app0(image, log_level) == 0 ) {
+            if ( gpujpeg_reader_read_app0(image, image_size, log_level) == 0 ) {
                 *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             }
             break;
         case GPUJPEG_MARKER_APP8:
-            if ( gpujpeg_reader_read_app8(image, color_space, log_level ) != 0 ) {
+            if ( gpujpeg_reader_read_app8(image, image_size, color_space, log_level ) != 0 ) {
                 return -1;
             }
             break;
         case GPUJPEG_MARKER_APP14:
-            if ( gpujpeg_reader_read_app14(image, color_space) < 0 ) {
+            if ( gpujpeg_reader_read_app14(image, image_size, color_space) < 0 ) {
                 return -1;
             }
             break;
@@ -1034,7 +1215,7 @@ static int gpujpeg_reader_read_common_markers(uint8_t **image, int marker, int l
             if ( log_level > 0 ) {
                 fprintf(stderr, "[GPUJPEG] [Warning] JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
             }
-            gpujpeg_reader_skip_marker_content(image);
+            gpujpeg_reader_skip_marker_content(image, image_size);
             break;
         case GPUJPEG_MARKER_SOF2:
             fprintf(stderr, "[GPUJPEG] [Error] Marker SOF2 (Progressive with Huffman coding) is not supported!\n");
@@ -1071,7 +1252,7 @@ static int gpujpeg_reader_read_common_markers(uint8_t **image, int marker, int l
             return -1;
 
         case GPUJPEG_MARKER_COM:
-            if ( gpujpeg_reader_read_com(image, color_space) != 0 ) {
+            if ( gpujpeg_reader_read_com(image, image_size, color_space) != 0 ) {
                 return -1;
             }
             break;
@@ -1102,7 +1283,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     uint8_t* image_end = image + image_size;
 
     // Check first SOI marker
-    int marker_soi = gpujpeg_reader_read_marker(&image);
+    int marker_soi = gpujpeg_reader_read_marker(&image, &image_size);
     if ( marker_soi != GPUJPEG_MARKER_SOI ) {
         fprintf(stderr, "[GPUJPEG] [Error] JPEG data should begin with SOI marker, but marker %s was found!\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker_soi));
         return -1;
@@ -1111,13 +1292,13 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     int eoi_presented = 0;
     while ( eoi_presented == 0 ) {
         // Read marker
-        int marker = gpujpeg_reader_read_marker(&image);
+        int marker = gpujpeg_reader_read_marker(&image, &image_size);
         if ( marker == -1 ) {
             return -1;
         }
 
         // Read more info according to the marker
-        int rc = gpujpeg_reader_read_common_markers(&image, marker, decoder->coder.param.verbose, &header_color_space, &decoder->reader->param.restart_interval);
+        int rc = gpujpeg_reader_read_common_markers(&image, &image_size, marker, decoder->coder.param.verbose, &header_color_space, &decoder->reader->param.restart_interval);
         if (rc < 0) {
             return rc;
         }
@@ -1127,11 +1308,11 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         switch (marker)
         {
         case GPUJPEG_MARKER_APP13:
-            if ( gpujpeg_reader_read_app13(decoder, &image) != 0 )
+            if ( gpujpeg_reader_read_app13(decoder, &image, &image_size) != 0 )
                 return -1;
             break;
         case GPUJPEG_MARKER_DQT:
-            if ( gpujpeg_reader_read_dqt(decoder, &image) != 0 )
+            if ( gpujpeg_reader_read_dqt(decoder, &image, &image_size) != 0 )
                 return -1;
             break;
 
@@ -1143,7 +1324,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
                 decoder->reader->param.color_space_internal = header_color_space;
             }
             if ( gpujpeg_reader_read_sof0(&decoder->reader->param, &decoder->reader->param_image, header_color_space, decoder->comp_table_quantization_map,
-                       decoder->comp_id, &image) != 0 ) {
+                       decoder->comp_id, &image, &image_size) != 0 ) {
                 return -1;
             }
             if ( decoder->reader->param_image.pixel_format == GPUJPEG_PIXFMT_NONE ) {
@@ -1152,12 +1333,12 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
             break;
 
         case GPUJPEG_MARKER_DHT:
-            if ( gpujpeg_reader_read_dht(decoder, &image) != 0 )
+            if ( gpujpeg_reader_read_dht(decoder, &image, &image_size) != 0 )
                 return -1;
             break;
 
         case GPUJPEG_MARKER_DRI:
-            rc = gpujpeg_reader_read_dri(&decoder->reader->param.restart_interval , &image);
+            rc = gpujpeg_reader_read_dri(&decoder->reader->param.restart_interval , &image, &image_size);
             if ( rc != 0 )
                 return rc;
             break;
@@ -1174,12 +1355,12 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         case GPUJPEG_MARKER_DAC:
         case GPUJPEG_MARKER_DNL:
             fprintf(stderr, "[GPUJPEG] [Warning] JPEG data contains not supported %s marker\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
-            gpujpeg_reader_skip_marker_content(&image);
+            gpujpeg_reader_skip_marker_content(&image, &image_size);
             break;
 
         default:
             fprintf(stderr, "[GPUJPEG] [Error] JPEG data contains not supported %s marker!\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker));
-            gpujpeg_reader_skip_marker_content(&image);
+            gpujpeg_reader_skip_marker_content(&image, &image_size);
             return -1;
         }
     }
@@ -1229,7 +1410,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
     enum gpujpeg_color_space header_color_space = GPUJPEG_NONE;
 
     // Check first SOI marker
-    int marker_soi = gpujpeg_reader_read_marker(&image);
+    int marker_soi = gpujpeg_reader_read_marker(&image, &image_size);
     if (marker_soi != GPUJPEG_MARKER_SOI) {
         fprintf(stderr, "[GPUJPEG] [Error] JPEG data should begin with SOI marker, but marker %s was found!\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker_soi));
         return -1;
@@ -1238,13 +1419,13 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
     int eoi_presented = 0;
     while (eoi_presented == 0) {
         // Read marker
-        int marker = gpujpeg_reader_read_marker(&image);
+        int marker = gpujpeg_reader_read_marker(&image, &image_size);
         if (marker == -1) {
             return -1;
         }
 
         // Read more info according to the marker
-        int rc = gpujpeg_reader_read_common_markers(&image, marker, params->verbose, &header_color_space, &params->restart_interval);
+        int rc = gpujpeg_reader_read_common_markers(&image, &image_size, marker, params->verbose, &header_color_space, &params->restart_interval);
         if (rc < 0) {
             return rc;
         }
@@ -1257,7 +1438,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         case GPUJPEG_MARKER_SOF1: // Extended sequential with Huffman coder
         {
             param.color_space_internal = header_color_space;
-            if (gpujpeg_reader_read_sof0(&param, param_image, header_color_space, unused, unused2, &image) != 0) {
+            if (gpujpeg_reader_read_sof0(&param, param_image, header_color_space, unused, unused2, &image, &image_size) != 0) {
                 return -1;
             }
             param_image->color_space = param.color_space_internal;
@@ -1275,6 +1456,11 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         {
             segments++;
             if (marker == GPUJPEG_MARKER_SOS) {
+                if(image_size < 3) {
+                    fprintf(stderr, "[GPUJPEG] [Error] SOS ends prematurely\n");
+                    return -1;
+                }
+
                 int length = (int) gpujpeg_reader_read_2byte(image); // length
                 assert(length > 3);
                 int comp_count = (int) gpujpeg_reader_read_byte(image); // comp count in the segment
@@ -1285,7 +1471,36 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
                     eoi_presented = 1;
                 }
             }
-            while (*image != 0xff || (*image == 0xff && image[1] == 0x00)) { if (*image == 0xff) image++; image++; }
+
+            while(1) {
+                if(image_size < 1) {
+                    fprintf(stderr, "[GPUJPEG] [Error] SOS ends prematurely\n");
+                    return -1;
+                }
+
+                if(*image != 0xff)
+                {
+                    image++;
+                    image_size--;
+                    continue;
+                }
+
+                // 0xff, so check if next byte is 0x00
+                if(image_size < 2) {
+                    fprintf(stderr, "[GPUJPEG] [Error] SOS ends prematurely\n");
+                    return -1;
+                }
+
+                if(image[1] == 0x00)
+                {
+                    image += 2;
+                    image_size -= 2;
+                    continue;
+                }
+
+                // 0xff not followed by 0x00, so break here
+                break;
+            }
             break;
         }
         case GPUJPEG_MARKER_EOI:
@@ -1294,7 +1509,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
             break;
         }
         default:
-            gpujpeg_reader_skip_marker_content(&image);
+            gpujpeg_reader_skip_marker_content(&image, &image_size);
             break;
         }
     }
