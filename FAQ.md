@@ -29,6 +29,8 @@ an encoder other than GPUJPEG). You can check number of segments with followng
 command:
 
     gpujpeg -I image.jpg
+    [...]
+    Segment count: 129600 (DRI = 12)
 
 The values in the order of magnitude in hundreds or thousands mean that the number
 of segments should not be a problem.
@@ -36,6 +38,17 @@ of segments should not be a problem.
 You can also benchmark and find the potential bottleneck by running:
 
     gpujpeg -v -d image.jpg image.pnm
+    [...]
+     -Stream Reader:         543.33 ms
+     -Copy To Device:          1.26 ms
+     -Huffman Decoder:         1.27 ms
+     -DCT & Quantization:      4.27 ms
+     -Postprocessing:          2.89 ms
+     -Copy From Device:        8.43 ms
+    Decode Image GPU:         56.64 ms (only in-GPU processing)
+    Decode Image Bare:       600.00 ms (without copy to/from GPU memory)
+    Decode Image:            609.70 ms
+    Save Image:              139.37 ms
 
 which shows duration of individual decoding steps.
 
