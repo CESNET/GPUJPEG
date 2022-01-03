@@ -53,6 +53,8 @@ Please follow these rules when reporting the issue:
    1. console output of the library/application
    1. image for which the problem occurs
 
+Also please look into [FAQ.md](FAQ.md) to see if the the issue isn't already solved.
+
 Development
 -----------
 Contributing by your own code is definitely highly appreciated. There
