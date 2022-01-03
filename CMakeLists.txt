@@ -165,7 +165,7 @@ if(GPUJPEG_OPENGL_ENABLED AND GLUT_FOUND)
     add_executable(decoder_gltex ${FILES})
     target_compile_features(decoder_gltex PRIVATE ${NEEDED_COMPILER_FEATURES})
     set_property(TARGET decoder_gltex PROPERTY C_STANDARD 99)
-    target_link_libraries(decoder_gltex gpujpeg)
+    target_link_libraries(decoder_gltex gpujpeg -lglut)
 
     # OpenGL interoperability example (currently not working)
     #file(GLOB FILES test/opengl_interop/*.c test/opengl_interop/*.h test/opengl_interop/*.cu)
