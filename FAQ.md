@@ -33,6 +33,12 @@ command:
 The values in the order of magnitude in hundreds or thousands mean that the number
 of segments should not be a problem.
 
+You can also benchmark and find the potential bottleneck by running:
+
+    gpujpeg -v -d image.jpg image.pnm
+
+which shows duration of individual decoding steps.
+
 ## Encoding different color spaces than full-range YCbCr BT.601
 For compatibility reasons, GPUJPEG produces a full-range **YCbCr BT.601** with **JFIF**
 header, color space conversions are performed by the encoder if needed. There is, however,
