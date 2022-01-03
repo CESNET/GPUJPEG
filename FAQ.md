@@ -8,15 +8,20 @@
 
 ## What is an restart interval
 A **restart interval** and related option in UltraGrid is a way how to
-increase paralelism to allow efficient Huffman encoding on GPU. It is
-given in number of MCU (minmum coded units, approximately same as macroblocks)
-that can be encoded independently.
+increase paralelism to allow efficient Huffman encoding and decoding on GPU.
+It is given by the number of MCU (minmum coded units, approximately same as
+macroblocks) that can be encoded or decoded independently.
 
-Higher value result in smaller JPEG images but slower encoding. Good values
-are around 10 – 8 or 16 are usually a good bet. Disabling restart intervals
-(setting value to 0) causes that the Huffman encoding/decoding is done on CPU
-(while the rest is still performed by GPU). On larger images, the restart
-interval can be a bit larger because ther is more MCUs.
+For the _encoder_ the restart interval is given as a option (enabled by default
+with a runtime-determined value). Higher value result in smaller JPEG images
+but slower encoding. Good values are around 10 – 8 or 16 are usually a good
+bet. Disabling restart intervals (setting value to 0) causes that the Huffman
+encoding/decoding is done on CPU (while the rest is still performed by GPU). On
+larger images, the restart interval can be a bit larger because ther is more
+MCUs.
+
+For the _decoder_ the value cannot be changed by the decoder because it is an
+attribute of the encoded JPEG.
 
 ## Decoding is too slow
 It can be an effect of not using restart intervals in the JPEG (eg. by using
