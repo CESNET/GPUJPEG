@@ -23,10 +23,13 @@ pkgconfig_DATA = libgpujpeg.pc
 library_include_HEADERS = $(srcdir)/libgpujpeg/*.h libgpujpeg/gpujpeg_version.h
 nodist_gpujpeg_libinclude_HEADERS = config.h
 
-gpujpeg_SOURCES = src/main.c
+gpujpeg_SOURCES = src/main.c dummy.cc
 gpujpeg_CFLAGS = -std=c11 @COMMON_FLAGS@
 gpujpeg_LDADD = libgpujpeg.la
 gpujpeg_LDFLAGS = @GPUJPEG_LDFLAGS@
+
+dummy.cc:
+	echo 'static void dummy();' > $@
 
 # gpu jpeg library sources
 libgpujpeg_la_SOURCES = src/gpujpeg_common.c \
@@ -97,6 +100,7 @@ build/x86_64/%.cu.o: src/%.cu
 
 clean-local:
 	rm -rf src/*.cu.lo src/*.cu.o
+	rm -f dummy.cc dummy.o
 	rm -rf build
 
 cscope:
