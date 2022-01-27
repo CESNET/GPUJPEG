@@ -18,12 +18,9 @@ $LIBTOOLIZE --copy && \
 aclocal -I m4 && \
 automake --copy --add-missing && \
 autoconf && \
+cd $ORIGDIR && $srcdir/configure "$@"
 
 STATUS=$?
-
-cd $ORIGDIR
-
-$srcdir/configure "$@"
 
 ([ $STATUS -eq 0 ] && echo "Autogen done." ) || echo "Autogen failed."
 
