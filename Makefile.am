@@ -116,9 +116,8 @@ build/x86_64/%.cu.o: src/%.cu
 	$(CUDA_COMPILER) -m64 $(CUDA_FLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) -c $< -o $@
 
 clean-local:
-	rm -rf src/*.cu.lo src/*.cu.o
-	rm -f dummy.cc dummy.o
-	rm -rf build
+	$(RM) src/*.cu.lo src/*.cu.o
+	$(RM) dummy.cc dummy.o
 
 cscope:
 	cscope -bv $(srcdir)/src/*cu $(srcdir)/src/*c $(srcdir)/libgpujpeg/*h
