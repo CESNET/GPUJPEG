@@ -18,7 +18,7 @@ GPUJPEG_LIBRARY_VERSION=0:1:0
 AC_SUBST(GPUJPEG_LIBRARY_VERSION)
 
 LT_PREREQ([2.2])
-LT_INIT
+LT_INIT([disable-static])
 
 # Checks for programs.
 AC_PROG_CXX
@@ -30,6 +30,11 @@ AM_PROG_CC_C_O
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug], [compile with debug info]) )
 if test x$enable_debug = x ; then
 	enable_debug=no
+fi
+
+AM_CONDITIONAL([STATIC], [test x$enable_static = xyes])
+if test "$enable_static" = yes && test "$enable_shared" = yes; then
+	AC_MSG_ERROR([Currently only one of --enable-static/--enable-shared can be specified at once.])
 fi
 
 AC_ARG_VAR([CUDA_FLAGS], [Flags passed to nvcc])
@@ -188,7 +193,6 @@ AC_SUBST(CUDA_EXTRA_ARCH)
 AC_SUBST(CUDA_INSTALL_PATH)
 AC_SUBST(CUDA_INSTALL_LIB)
 AC_SUBST(COMMON_FLAGS)
-AC_SUBST(GPUJPEG_LIBS)
 AC_SUBST(GPUJPEG_CFLAGS)
 AC_SUBST(GPUJPEG_LDFLAGS)
 AC_SUBST(GPUJPEG_LIBS)
@@ -205,7 +209,9 @@ Configuration summary:
 
   Target ...................... $host
   Prefix ...................... $prefix
-  Debug ....................... $debug
+  Debug ....................... $enable_debug
+  Shared library .............. $enable_shared
+  Static library .............. $enable_static
 
   Huffman const tables ........ $enable_huffman_gpu_const_tables
   OpenGL ...................... $opengl ($opengl_context)

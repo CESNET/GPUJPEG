@@ -16,7 +16,6 @@ library_includedir=$(includedir)/libgpujpeg/
 gpujpeg_libincludedir = $(libdir)/libgpujpeg
 
 EXTRA_DIST = AUTHORS CONTRIBUTING.md COPYING FAQ.md INSTALL NEWS.md README.md
-lib_LTLIBRARIES = libgpujpeg.la
 bin_PROGRAMS = gpujpeg
 pkgconfig_DATA = libgpujpeg.pc
 
@@ -25,31 +24,49 @@ nodist_gpujpeg_libinclude_HEADERS = config.h
 
 gpujpeg_SOURCES = src/main.c dummy.cc
 gpujpeg_CFLAGS = -std=c11 @COMMON_FLAGS@
-gpujpeg_LDADD = libgpujpeg.la
 gpujpeg_LDFLAGS = @GPUJPEG_LDFLAGS@
 
 dummy.cc:
 	echo 'static void dummy();' > $@
 
 # gpu jpeg library sources
-libgpujpeg_la_SOURCES = src/gpujpeg_common.c \
-			src/gpujpeg_dct_cpu.c \
-			src/gpujpeg_decoder.c \
-			src/gpujpeg_encoder.c \
-			src/gpujpeg_huffman_cpu_decoder.c \
-			src/gpujpeg_huffman_cpu_encoder.c \
-			src/gpujpeg_reader.c \
-			src/gpujpeg_table.c \
-			src/gpujpeg_writer.c \
-			src/utils/image_delegate.cpp
+libgpujpeg_SRC = src/gpujpeg_common.c \
+	     	src/gpujpeg_dct_cpu.c \
+	     	src/gpujpeg_decoder.c \
+	     	src/gpujpeg_encoder.c \
+	     	src/gpujpeg_huffman_cpu_decoder.c \
+	     	src/gpujpeg_huffman_cpu_encoder.c \
+	     	src/gpujpeg_reader.c \
+	     	src/gpujpeg_table.c \
+	     	src/gpujpeg_writer.c \
+	     	src/utils/image_delegate.cpp
 
-libgpujpeg_la_DEPENDENCIES = @LIBGPUJPEG_CUDA_OBJS@
+libgpujpeg_DEP = @LIBGPUJPEG_CUDA_OBJS@
 
-libgpujpeg_la_LIBADD = $(libgpujpeg_la_DEPENDENCIES) -lm
-libgpujpeg_la_LDFLAGS = -export-dynamic -version-info $(GPUJPEG_LIBRARY_VERSION) @GPUJPEG_LDFLAGS@ @GPUJPEG_LIBS@
-libgpujpeg_la_CFLAGS = -std=c99 -fPIC @COMMON_FLAGS@
-libgpujpeg_la_CXXFLAGS = -fPIC @COMMON_FLAGS@
-#libgpujpeg_la_LINK = g++ -fPIC
+libgpujpeg_LIB = $(libgpujpeg_DEP) -lm
+libgpujpeg_LD = -export-dynamic -version-info $(GPUJPEG_LIBRARY_VERSION) @GPUJPEG_LDFLAGS@ @GPUJPEG_LIBS@
+libgpujpeg_CFLAGS = -std=c99 -fPIC @COMMON_FLAGS@
+libgpujpeg_CXXFLAGS = -fPIC @COMMON_FLAGS@
+#libgpujpeg_a_LINK = g++ -fPIC
+if STATIC
+gpujpeg_LDFLAGS += @GPUJPEG_LIBS@
+lib_LIBRARIES = libgpujpeg.a
+libgpujpeg_a_DEPENDENCIES = $(libgpujpeg_DEP)
+libgpujpeg_a_SOURCES = $(libgpujpeg_SRC)
+libgpujpeg_a_LIBADD = $(libgpujpeg_LIB)
+libgpujpeg_a_CFLAGS = $(libgpujpeg_CFLAGS)
+libgpujpeg_a_CXXFLAGS = $(libgpujpeg_CXXFLAGS)
+gpujpeg_LDADD = $(lib_LIBRARIES)
+else
+lib_LTLIBRARIES = libgpujpeg.la
+libgpujpeg_la_DEPENDENCIES = $(libgpujpeg_DEP)
+libgpujpeg_la_SOURCES = $(libgpujpeg_SRC)
+libgpujpeg_la_LIBADD = $(libgpujpeg_LIB)
+libgpujpeg_la_LDFLAGS = $(libgpujpeg_LD)
+libgpujpeg_la_CFLAGS = $(libgpujpeg_CFLAGS)
+libgpujpeg_la_CXXFLAGS = $(libgpujpeg_CXXFLAGS)
+gpujpeg_LDADD = $(lib_LTLIBRARIES)
+endif
 
 check-TESTS: tests
 tests:
