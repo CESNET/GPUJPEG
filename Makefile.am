@@ -49,14 +49,13 @@ libgpujpeg_CFLAGS = -std=c99 -fPIC @COMMON_FLAGS@
 libgpujpeg_CXXFLAGS = -fPIC @COMMON_FLAGS@
 #libgpujpeg_a_LINK = g++ -fPIC
 if STATIC
-gpujpeg_LDFLAGS += @GPUJPEG_LIBS@
 lib_LIBRARIES = libgpujpeg.a
 libgpujpeg_a_DEPENDENCIES = $(libgpujpeg_DEP)
 libgpujpeg_a_SOURCES = $(libgpujpeg_SRC)
-libgpujpeg_a_LIBADD = $(libgpujpeg_LIB)
+libgpujpeg_a_LIBADD = $(libgpujpeg_DEP)
 libgpujpeg_a_CFLAGS = $(libgpujpeg_CFLAGS)
 libgpujpeg_a_CXXFLAGS = $(libgpujpeg_CXXFLAGS)
-gpujpeg_LDADD = $(lib_LIBRARIES)
+gpujpeg_LDADD = $(lib_LIBRARIES) @GPUJPEG_LIBS@
 else
 lib_LTLIBRARIES = libgpujpeg.la
 libgpujpeg_la_DEPENDENCIES = $(libgpujpeg_DEP)
