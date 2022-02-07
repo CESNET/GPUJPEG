@@ -29,6 +29,7 @@
  */
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <libgpujpeg/gpujpeg_decoder.h>
 #include <string.h>
 
@@ -629,17 +630,45 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image, int* i
     return 0;
 }
 
-/**
- * Return component ID that matches given index and color space.
- */
-static uint8_t gpujpeg_reader_get_component_id(int index, enum gpujpeg_color_space color_space) {
-    if (color_space == GPUJPEG_RGB) {
-            assert(index < 3);
-            static const uint8_t rgb_ids[3] = { 'R', 'G', 'B' };
-            return rgb_ids[index];
-    } else {
-            return index + 1;
+static const char *array_serialize(int comp_count, const uint8_t *comp_id) {
+    _Thread_local static char buffer[1024] = "[";
+    if (comp_count >= 1) {
+        snprintf(buffer + strlen(buffer), sizeof buffer - strlen(buffer), "%" PRIu8, comp_id[0]);
     }
+    for (int i = 1; i < comp_count; ++i) {
+        snprintf(buffer + strlen(buffer), sizeof buffer - strlen(buffer), ",%" PRIu8, comp_id[i]);
+    }
+    strncat(buffer, "]", sizeof(buffer) - strlen(buffer) - 1);
+    return buffer;
+}
+
+static enum gpujpeg_color_space gpujpeg_reader_process_cid(int comp_count, uint8_t *comp_id, enum gpujpeg_color_space header_color_space) {
+    static_assert(GPUJPEG_MAX_COMPONENT_COUNT >= 3, "An array of at least 3 components expected");
+    static const uint8_t ycbcr_ids[] = { 1, 2, 3 };
+    static const uint8_t rgb_ids[] = { 'R', 'G', 'B' };
+    static const uint8_t bg_rgb_ids[] = { 'r', 'g', 'b' }; // big gamut sRGB (see ILG libjpeg - seemingly handled as above)
+    if (comp_count < 3) {
+        return GPUJPEG_NONE;
+    }
+    if (header_color_space == GPUJPEG_NONE) {
+        if (memcmp(comp_id, ycbcr_ids, sizeof ycbcr_ids) == 0) {
+            return GPUJPEG_YCBCR_BT601_256LVLS;
+        }
+        if (memcmp(comp_id, rgb_ids, sizeof rgb_ids) == 0 || memcmp(comp_id, bg_rgb_ids, sizeof bg_rgb_ids) == 0) {
+            return GPUJPEG_RGB;
+        }
+        fprintf(stderr, "[GPUJPEG] [Warning] SOF0 unexpected component id %s was presented!\n", array_serialize(3, comp_id));
+        return GPUJPEG_NONE;
+    }
+    if (header_color_space >= GPUJPEG_YCBCR_BT601 && header_color_space <= GPUJPEG_YCBCR_BT709
+            && memcmp(comp_id, ycbcr_ids, sizeof ycbcr_ids) != 0) {
+        fprintf(stderr, "[GPUJPEG] [Warning] SOF0 marker component id should be %s but %s was presented!\n", array_serialize(3, ycbcr_ids), array_serialize(3, comp_id));
+    }
+    if (header_color_space == GPUJPEG_RGB
+            && memcmp(comp_id, rgb_ids, sizeof rgb_ids) != 0 && memcmp(comp_id, bg_rgb_ids, sizeof bg_rgb_ids) != 0) {
+        fprintf(stderr, "[GPUJPEG] [Warning] SOF0 marker component id should be %s but %s was presented!\n", array_serialize(3, rgb_ids), array_serialize(3, comp_id));
+    }
+    return GPUJPEG_NONE;
 }
 
 /**
@@ -649,7 +678,8 @@ static uint8_t gpujpeg_reader_get_component_id(int index, enum gpujpeg_color_spa
  * @return 0 if succeeds, otherwise nonzero
  */
 static int
-gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_color_space header_color_space, int quant_map[4], uint8_t comp_id[4], uint8_t** image, int* image_size)
+gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image, enum gpujpeg_color_space header_color_space,
+        int quant_map[GPUJPEG_MAX_COMPONENT_COUNT], uint8_t comp_id[GPUJPEG_MAX_COMPONENT_COUNT], uint8_t** image, int* image_size)
 {
     if(*image_size < 2) {
         fprintf(stderr, "[GPUJPEG] [Error] Could not read SOF0 size (end of data)\n");
@@ -684,21 +714,6 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
     for ( int comp = 0; comp < param_image->comp_count; comp++ ) {
         int id = (int)gpujpeg_reader_read_byte(*image);
         (*image_size)--;
-        int expected_id = gpujpeg_reader_get_component_id(comp, param->color_space_internal);
-        if ( id != expected_id ) {
-            // if color space not matched and not read from header -> deduce from comp ID
-            if (header_color_space == GPUJPEG_NONE) {
-                if (gpujpeg_reader_get_component_id(comp, GPUJPEG_RGB)) {
-                    param->color_space_internal = GPUJPEG_RGB;
-                } else {
-                    param->color_space_internal = GPUJPEG_YCBCR_BT601_256LVLS;
-                }
-                const int verbose = param->verbose;
-                VERBOSE_MSG("Deduced color space %s.\n", gpujpeg_color_space_get_name(param->color_space_internal));
-            } else {
-                fprintf(stderr, "[GPUJPEG] [Warning] SOF0 marker component %d id should be %d but %d was presented!\n", comp, expected_id, id);
-            }
-        }
         comp_id[comp] = id;
 
         int sampling = (int)gpujpeg_reader_read_byte(*image);
@@ -714,6 +729,14 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
         }
         quant_map[comp] = table_index;
         length -= 3;
+    }
+
+    // Deduce color space if not known from headers
+    enum gpujpeg_color_space detected_color_space = gpujpeg_reader_process_cid(param_image->comp_count, comp_id, header_color_space);
+    if (header_color_space == GPUJPEG_NONE && detected_color_space != GPUJPEG_NONE) {
+        const int verbose = param->verbose;
+        VERBOSE_MSG("Deduced color space %s.\n", gpujpeg_color_space_get_name(detected_color_space));
+        param->color_space_internal = detected_color_space;
     }
 
     // Check length

@@ -43,7 +43,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 # Common settings
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
-set(NEEDED_COMPILER_FEATURES c_static_assert cxx_delegating_constructors cxx_nullptr)
+set(NEEDED_COMPILER_FEATURES c_std_11 cxx_delegating_constructors cxx_nullptr)
 
 set(COMPILED_OPTIONS)
 
