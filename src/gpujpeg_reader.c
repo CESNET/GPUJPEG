@@ -41,6 +41,10 @@
 #undef MIN
 #define MIN(a, b)      (((a) < (b))? (a): (b))
 
+#if defined(_MSC_VER) && (__STDC_VERSION__ < 201112 || defined __STDC_NO_THREADS__)
+#define _Thread_local __declspec(thread)
+#endif
+
 #define ERROR_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__); } while(0)
 #define DEBUG_MSG(...) do { if (verbose >= 2) fprintf(stderr, "[GPUJPEG] [Info] " __VA_ARGS__); } while(0)
 #define VERBOSE_MSG(...) do { if (verbose >= 1) fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
