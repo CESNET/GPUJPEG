@@ -208,15 +208,15 @@ main(int argc, char *argv[])
 
     // Other parameters
     int device_id = 0;
-    int encode = 0;
-    int decode = 0;
-    int convert = 0;
-    int component_range = 0;
+    _Bool encode = 0;
+    _Bool decode = 0;
+    _Bool convert = 0;
+    _Bool component_range = 0;
     int iterate = 1;
-    int use_opengl = 0;
+    _Bool use_opengl = 0;
 
     // Flags
-    int restart_interval_default = 1;
+    _Bool restart_interval_default = 1;
     int subsampling = 0; // 0 - default, 420, 422 or 444
     int native_file_format = 0;
 
