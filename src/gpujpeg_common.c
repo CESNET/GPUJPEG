@@ -102,7 +102,7 @@
 #endif
 
 #define PLANAR   1u
-const static struct {
+static const struct {
     enum gpujpeg_pixel_format pixel_format;
     uint32_t flags;
     int comp_count;
@@ -183,6 +183,7 @@ gpujpeg_print_devices_info()
         printf("  Total number of registers available per block: %d\n", device_info->register_count);
         printf("  Multiprocessors: %d\n", device_info->multiprocessor_count);
     }
+    return 0;
 }
 
 /* Documented at declaration */
@@ -411,7 +412,7 @@ gpujpeg_image_get_file_format(const char* filename)
     if ( ext == NULL )
         return GPUJPEG_IMAGE_FILE_UNKNOWN;
     ext++;
-    for ( int i = 0; i < sizeof(format) / sizeof(*format); i++ ) {
+    for ( unsigned i = 0; i < sizeof(format) / sizeof(*format); i++ ) {
         if ( strcasecmp(ext, extension[i]) == 0 ) {
             return format[i];
         }
@@ -796,7 +797,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     }
     //for idct we must add some memory - it rounds up the block count, computes all and the extra bytes are omitted
     /// @todo idct_overhead computation looks suspicious
-    int idct_overhead = (GPUJPEG_IDCT_BLOCK_X * GPUJPEG_IDCT_BLOCK_Y * GPUJPEG_IDCT_BLOCK_Z / coder->component[0].data_width + 1)
+    size_t idct_overhead = ((size_t) GPUJPEG_IDCT_BLOCK_X * GPUJPEG_IDCT_BLOCK_Y * GPUJPEG_IDCT_BLOCK_Z / coder->component[0].data_width + 1)
       * GPUJPEG_BLOCK_SIZE * coder->component[0].data_width;
     if (coder->data_size + idct_overhead > coder->data_allocated_size) {
         coder->data_allocated_size = 0;
@@ -848,7 +849,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     }
 
     // Allocate compressed data
-    int max_compressed_data_size = coder->data_compressed_size;
+    size_t max_compressed_data_size = coder->data_compressed_size;
     max_compressed_data_size += GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE;
     //max_compressed_data_size *= 2;
     if (max_compressed_data_size > coder->data_compressed_allocated_size) {
@@ -1107,7 +1108,7 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
     uint8_t* data = NULL;
     cudaMallocHost((void**)&data, *image_size * sizeof(uint8_t));
     gpujpeg_cuda_check_error("Initialize CUDA host buffer", return -1);
-    if ( *image_size != fread(data, sizeof(uint8_t), *image_size, file) ) {
+    if ( *image_size != (int) fread(data, sizeof(uint8_t), *image_size, file) ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to load image data [%d bytes] from file %s!\n", *image_size, filename);
         return -1;
     }
@@ -1137,7 +1138,7 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size,
         return -1;
     }
 
-    if ( image_size != fwrite(image, sizeof(uint8_t), image_size, file) ) {
+    if ( image_size != (int) fwrite(image, sizeof(uint8_t), image_size, file) ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to write image data [%d bytes] to file %s!\n", image_size, filename);
         return -1;
     }

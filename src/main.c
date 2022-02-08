@@ -271,7 +271,7 @@ main(int argc, char *argv[])
         {"use-opengl",              no_argument,       0,  'o' },
         {"info",                    required_argument, 0,  'I' },
         {"native",                  no_argument,       0,  'N' },
-        0
+        {0}
     };
     int ch = '\0';
     int optindex = 0;
