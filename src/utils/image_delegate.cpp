@@ -124,7 +124,11 @@ static int pnm_load_delegate(const char *filename, int *image_size, void **image
     ifs.seekg( 0, std::ios::beg );
 
     ifs >> PNM::load( (uint8_t*) *image_data, info );
-    return info.valid() ? 0 : 1;
+    if (!info.valid()) {
+        return 0;
+    }
+    *image_size = info.width() * info.height() * info.channel() * info.depth() / 8;
+    return 1;
 }
 
 static int pnm_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists) {

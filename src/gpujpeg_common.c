@@ -1083,8 +1083,8 @@ static void *gpujpeg_cuda_malloc_host(size_t size) {
 int
 gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size)
 {
-    enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
 #ifndef DISABLE_CPP
+    enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
     image_load_delegate_t image_load_delegate = gpujpeg_get_image_load_delegate(format);
     if (image_load_delegate) {
         return image_load_delegate(filename, image_size, (void **) image, gpujpeg_cuda_malloc_host);
