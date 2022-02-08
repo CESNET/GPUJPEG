@@ -77,6 +77,7 @@ print_help()
            "                          iterations for each image\n"
            "   -o  --use-opengl       use an OpenGL texture as input/output\n"
            "   -I  --info             print JPEG file info\n"
+           "   -a  --alpha            encode alpha channel (otherwise stripped)\n"
            "   -N  --native           create native JPEG (Adobe RGB for RGB, SPIFF for Y709;\n"
            "                                              may be incompatible with some decoders;\n"
            "                                              works also for decoding)\n"
@@ -132,7 +133,7 @@ static int print_image_info(const char *filename, int verbose) {
 }
 
 static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image_parameters *param_image,
-        const char *in, const char *out, _Bool encode, int subsampling, _Bool restart_interval_default) {
+        const char *in, const char *out, _Bool encode, int subsampling, _Bool restart_interval_default, _Bool keep_alpha) {
     // if possible, read properties from file
     struct gpujpeg_image_parameters file_param_image = { 0, 0, 0, GPUJPEG_NONE, GPUJPEG_PIXFMT_NONE };
     gpujpeg_image_get_properties(encode ? in : out, &file_param_image, encode);
@@ -141,7 +142,15 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
     param_image->color_space = param_image->color_space == GPUJPEG_NONE ? file_param_image.color_space : param_image->color_space;
     if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && file_param_image.pixel_format != GPUJPEG_PIXFMT_NONE ) {
         param_image->pixel_format = file_param_image.pixel_format;
+    }
+    if (param_image->comp_count == 0) {
         param_image->comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);
+        if (keep_alpha && (param_image->comp_count != 0 && param_image->comp_count != 4)) {
+                fprintf(stderr, "Keep-alpha option is pointless here, RAW image pixel format has only %d channels.\n", param_image->comp_count);
+        }
+        if (!keep_alpha && param_image->comp_count == 4) {
+            param_image->comp_count = 3;
+        }
     }
 
     // Detect color space
@@ -218,11 +227,13 @@ main(int argc, char *argv[])
     // Flags
     _Bool restart_interval_default = 1;
     int subsampling = 0; // 0 - default, 420, 422 or 444
-    int native_file_format = 0;
+    _Bool native_file_format = 0;
+    _Bool keep_alpha = 0;
 
     int rc;
 
     param_image.color_space = GPUJPEG_NONE;
+    param_image.comp_count = 0;
     param_image.pixel_format = GPUJPEG_PIXFMT_NONE;
 
     // Parse command line
@@ -230,6 +241,7 @@ main(int argc, char *argv[])
     #define OPTION_CONVERT         3
     #define OPTION_COMPONENT_RANGE 4
     struct option longopts[] = {
+        {"alpha",                   no_argument,       0, 'a'},
         {"help",                    no_argument,       0, 'h'},
         {"verbose",                 optional_argument, 0, 'v'},
         {"device",                  required_argument, 0, 'D'},
@@ -255,8 +267,11 @@ main(int argc, char *argv[])
     int ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "hvD:s:C:f:c:q:r:g::i::edn:oI:NS::", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "ahvD:s:C:f:c:q:r:g::i::edn:oI:NS::", longopts, &optindex)) != -1 ) {
         switch (ch) {
+        case 'a':
+            keep_alpha = 1;
+            break;
         case 'h':
             print_help();
             return 0;
@@ -298,7 +313,6 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Unknown pixel format '%s'!\n", optarg);
                 return 1;
             }
-            param_image.comp_count = gpujpeg_pixel_format_get_comp_count(param_image.pixel_format);
             break;
         case 'q':
             param.quality = atoi(optarg);
@@ -476,7 +490,7 @@ main(int argc, char *argv[])
 
             param = param_saved;
             param_image = param_image_saved;
-            adjust_params(&param, &param_image, input, output, encode, subsampling, restart_interval_default);
+            adjust_params(&param, &param_image, input, output, encode, subsampling, restart_interval_default, keep_alpha);
             if (param_image.width <= 0 || param_image.height <= 0) {
                 fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
             }
@@ -643,7 +657,7 @@ main(int argc, char *argv[])
 
             param = param_saved;
             param_image = param_image_saved;
-            adjust_params(&param, &param_image, input, output, encode, subsampling, restart_interval_default);
+            adjust_params(&param, &param_image, input, output, encode, subsampling, restart_interval_default, keep_alpha);
             if (native_file_format) {
                 param_image.color_space = GPUJPEG_NONE;
             }
