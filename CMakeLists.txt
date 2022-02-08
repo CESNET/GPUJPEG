@@ -14,6 +14,7 @@ set_property(CACHE OPENGL_CONTEXT PROPERTY STRINGS AUTO GLX GLFW NONE)
 
 if(WIN32)
     set(CMAKE_INSTALL_PREFIX "$ENV{ProgramFiles}/${CMAKE_PROJECT_NAME}")
+    string(REPLACE "\\" "/" CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 endif()
 
 cmake_policy(SET CMP0010 NEW) # error on undefined variable
