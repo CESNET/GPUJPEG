@@ -66,19 +66,24 @@ MAYBE_UNUSED static bool pam_read(const char *filename, unsigned int *width, uns
                 getline(file, line);
                 *width = 0, *height = 0, *depth = 0;
                 while (!file.eof()) {
-                        if (line.compare(0, std::string("WIDTH ").length(), "WIDTH") == 0) {
-                                *width = atoi(line.c_str() + std::string("WIDTH ").length());
-                        } else if (line.compare(0, std::string("HEIGHT ").length(), "HEIGHT") == 0) {
-                                *height = atoi(line.c_str() + std::string("HEIGHT ").length());
-                        } else if (line.compare(0, std::string("DEPTH ").length(), "DEPTH") == 0) {
-                                *depth = atoi(line.c_str() + std::string("DEPTH ").length());
-                        } else if (line.compare(0, std::string("MAXVAL ").length(), "MAXVAL") == 0) {
-                                if (atoi(line.c_str() + std::string("MAXVAL ").length()) != 255) {
-                                        throw std::string("Only supported maxval is 255.");
+                        size_t pos = line.find(' ');
+                        if (pos != std::string::npos) {
+                                std::string key = line.substr(0, pos);
+                                std::string val = line.substr(pos + 1);
+                                if (key == "WIDTH") {
+                                        *width = stoi(val);
+                                } else if (key == "HEIGHT") {
+                                        *height = stoi(val);
+                                } else if (key == "DEPTH") {
+                                        *depth = stoi(val);
+                                } else if (key == "MAXVAL") {
+                                        if (stoi(val) != 255) {
+                                                throw std::string("Only supported maxval is 255.");
+                                        }
+                                } else if (key == "TUPLETYPE") {
+                                        // ignored - assuming MAXVAL == 255, value of DEPTH is sufficient
+                                        // to determine pixel format
                                 }
-                        } else if (line.compare(0, std::string("TUPLETYPE").length(), "TUPLETYPE") == 0) {
-                                // ignored - assuming MAXVAL == 255, value of DEPTH is sufficient
-                                // to determine pixel format
                         } else if (line.compare(0, std::string("ENDHDR").length(), "ENDHDR") == 0) {
                                 break;
                         }
