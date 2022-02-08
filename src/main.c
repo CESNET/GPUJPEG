@@ -146,7 +146,8 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
 
     // Detect color space
     if ( param_image->color_space == GPUJPEG_NONE ) {
-        if ( gpujpeg_image_get_file_format(encode ? in : out) >= GPUJPEG_IMAGE_FILE_YUV ) {
+        enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(encode ? in : out);
+        if ( format >= GPUJPEG_IMAGE_FILE_YUV || format == GPUJPEG_IMAGE_FILE_GRAY ) {
             param_image->color_space = GPUJPEG_YCBCR_JPEG;
         } else {
             param_image->color_space = GPUJPEG_RGB;
