@@ -154,28 +154,6 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
         }
     }
 
-    if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
-        enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(encode ? in : out);
-        switch (format) {
-        case GPUJPEG_IMAGE_FILE_GRAY:
-            param_image->pixel_format = GPUJPEG_U8;
-            break;
-        case GPUJPEG_IMAGE_FILE_RGBA:
-            param_image->pixel_format = GPUJPEG_444_U8_P012A;
-            break;
-        case GPUJPEG_IMAGE_FILE_I420:
-            param_image->pixel_format = GPUJPEG_420_U8_P0P1P2;
-            break;
-        case GPUJPEG_IMAGE_FILE_PAM:
-        case GPUJPEG_IMAGE_FILE_PNM:
-            param_image->pixel_format = GPUJPEG_PIXFMT_NONE; // set by gpujpeg_reader
-            break;
-        default:
-            param_image->pixel_format = GPUJPEG_444_U8_P012;
-            break;
-        }
-    }
-
     if (subsampling == 0) {
         subsampling = gpujpeg_pixel_format_get_subsampling(param_image->pixel_format);
     }

@@ -355,8 +355,13 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size,
 /**
  * Reads/obtains properties from uncompressed file (PNM etc.)
  *
+ * For raw files it obtains only pixel format deduced from file extension.
+ *
+ * gpujpeg_image_parameters::comp_size is not set by the function and should be deduced from pixel_format
+ *
  * May also return some with a null value - eg. when the file doesn't exist
  * but color space may be deduced from extension.
+ * @retval 0 on success; != 0 on error
  */
 GPUJPEG_API int
 gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists);
