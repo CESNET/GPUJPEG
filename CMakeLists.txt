@@ -125,7 +125,7 @@ endif()
 
 if(HUFFMAN_GPU_CONST_TABLES)
     add_definitions("-DHUFFMAN_GPU_CONST_TABLES")
-    set(COMPILED_OPTIONS "${COMPILED_OPTIONS Huffman_const_tables")
+    set(COMPILED_OPTIONS "${COMPILED_OPTIONS} Huffman_const_tables")
 endif()
 
 if(DEFINED GLEW_USE_STATIC_LIBS)
