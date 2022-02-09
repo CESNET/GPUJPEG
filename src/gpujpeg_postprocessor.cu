@@ -301,10 +301,12 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     else if ( coder->param_image.color_space == GPUJPEG_YCBCR_BT709 ) {
         RETURN_KERNEL(coder->param_image.pixel_format, GPUJPEG_YCBCR_BT709)
     }
+#ifndef ENABLE_YUV
     // YUV color space
     else if ( coder->param_image.color_space == GPUJPEG_YUV ) {
         RETURN_KERNEL(coder->param_image.pixel_format, GPUJPEG_YUV)
     }
+#endif
     // Unknown color space
     else {
         assert(false);

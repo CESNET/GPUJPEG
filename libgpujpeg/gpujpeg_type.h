@@ -70,7 +70,7 @@ enum gpujpeg_color_space {
     GPUJPEG_YCBCR_JPEG = GPUJPEG_YCBCR_BT601_256LVLS,
     GPUJPEG_YCBCR_BT709 = 4,         ///< limited-range YCbCr BT.709
     GPUJPEG_YCBCR = GPUJPEG_YCBCR_BT709,
-    GPUJPEG_YUV = 5                  ///< @deprecated will be removed soon (is this ever needed?)
+    GPUJPEG_YUV = 5                  ///< @deprecated will be removed soon (is this ever needed?), define ENABLE_YUV to enable pre/post processors
 };
 
 /**
