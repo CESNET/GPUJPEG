@@ -63,18 +63,19 @@ inline __device__ uint8_t gpujpeg_clamp(int value)
  */
 template<int bit_depth>
 inline __device__ void
-gpujpeg_color_transform_to(uint8_t & c1, uint8_t & c2, uint8_t & c3, const int matrix[9], int base1, int base2, int base3)
+gpujpeg_color_transform_to(uchar4 &c, const int matrix[9], int base1, int base2, int base3)
 {
     // Prepare integer constants
     const int middle = 1 << (bit_depth - 1);
 
     // Perform color transform
-    int r1 = (int)c1 * 256 / 255;
-    int r2 = (int)c2 * 256 / 255;
-    int r3 = (int)c3 * 256 / 255;
-    c1 = gpujpeg_clamp(((matrix[0] * r1 + matrix[1] * r2 + matrix[2] * r3 + middle) >> bit_depth) + base1);
-    c2 = gpujpeg_clamp(((matrix[3] * r1 + matrix[4] * r2 + matrix[5] * r3 + middle) >> bit_depth) + base2);
-    c3 = gpujpeg_clamp(((matrix[6] * r1 + matrix[7] * r2 + matrix[8] * r3 + middle) >> bit_depth) + base3);
+    int4 r;
+    r.x = (int)c.x * 256 / 255;
+    r.y = (int)c.y * 256 / 255;
+    r.z = (int)c.z * 256 / 255;
+    c.x = gpujpeg_clamp(((matrix[0] * r.x + matrix[1] * r.y + matrix[2] * r.z + middle) >> bit_depth) + base1);
+    c.y = gpujpeg_clamp(((matrix[3] * r.x + matrix[4] * r.y + matrix[5] * r.z + middle) >> bit_depth) + base2);
+    c.z = gpujpeg_clamp(((matrix[6] * r.x + matrix[7] * r.y + matrix[8] * r.z + middle) >> bit_depth) + base3);
 }
 
 /**
@@ -84,18 +85,19 @@ gpujpeg_color_transform_to(uint8_t & c1, uint8_t & c2, uint8_t & c3, const int m
  */
 template<int bit_depth>
 inline __device__ void
-gpujpeg_color_transform_from(uint8_t & c1, uint8_t & c2, uint8_t & c3, const int matrix[9], int base1, int base2, int base3)
+gpujpeg_color_transform_from(uchar4 & c, const int matrix[9], int base1, int base2, int base3)
 {
     // Prepare integer constants
     const int middle = 1 << (bit_depth - 1);
 
     // Perform color transform
-    int r1 = ((int)c1 - base1) * 256 / 255;
-    int r2 = ((int)c2 - base2) * 256 / 255;
-    int r3 = ((int)c3 - base3) * 256 / 255;
-    c1 = gpujpeg_clamp((matrix[0] * r1 + matrix[1] * r2 + matrix[2] * r3 + middle) >> bit_depth);
-    c2 = gpujpeg_clamp((matrix[3] * r1 + matrix[4] * r2 + matrix[5] * r3 + middle) >> bit_depth);
-    c3 = gpujpeg_clamp((matrix[6] * r1 + matrix[7] * r2 + matrix[8] * r3 + middle) >> bit_depth);
+    int4 r;
+    r.x = ((int)c.x - base1) * 256 / 255;
+    r.y = ((int)c.y - base2) * 256 / 255;
+    r.z = ((int)c.z - base3) * 256 / 255;
+    c.x = gpujpeg_clamp((matrix[0] * r.x + matrix[1] * r.y + matrix[2] * r.z + middle) >> bit_depth);
+    c.y = gpujpeg_clamp((matrix[3] * r.x + matrix[4] * r.y + matrix[5] * r.z + middle) >> bit_depth);
+    c.z = gpujpeg_clamp((matrix[6] * r.x + matrix[7] * r.y + matrix[8] * r.z + middle) >> bit_depth);
 }
 
 /**
@@ -105,7 +107,7 @@ gpujpeg_color_transform_from(uint8_t & c1, uint8_t & c2, uint8_t & c3, const int
  */
 template<int bit_depth>
 inline __device__ void
-gpujpeg_color_transform_to(uint8_t & c1, uint8_t & c2, uint8_t & c3, const double matrix[9], int base1, int base2, int base3)
+gpujpeg_color_transform_to(uchar4 & c, const double matrix[9], int base1, int base2, int base3)
 {
     // Prepare integer matrix
     const int max = 1 << bit_depth;
@@ -122,7 +124,7 @@ gpujpeg_color_transform_to(uint8_t & c1, uint8_t & c2, uint8_t & c3, const doubl
 //     }
 // #endif
     // Perform transformation
-    gpujpeg_color_transform_to<bit_depth>(c1, c2, c3, matrix_int, base1, base2, base3);
+    gpujpeg_color_transform_to<bit_depth>(c, matrix_int, base1, base2, base3);
 }
 
 /**
@@ -132,7 +134,7 @@ gpujpeg_color_transform_to(uint8_t & c1, uint8_t & c2, uint8_t & c3, const doubl
  */
 template<int bit_depth>
 inline __device__ void
-gpujpeg_color_transform_from(uint8_t & c1, uint8_t & c2, uint8_t & c3, const double matrix[9], int base1, int base2, int base3)
+gpujpeg_color_transform_from(uint8_t & c, const double matrix[9], int base1, int base2, int base3)
 {
     // Prepare integer matrix
     const int max = 1 << bit_depth;
@@ -149,7 +151,7 @@ gpujpeg_color_transform_from(uint8_t & c1, uint8_t & c2, uint8_t & c3, const dou
 //     }
 // #endif
     // Perform transformation
-    gpujpeg_color_transform_from<bit_depth>(c1, c2, c3, matrix_int, base1, base2, base3);
+    gpujpeg_color_transform_from<bit_depth>(c, matrix_int, base1, base2, base3);
 }
 
 /**
@@ -162,7 +164,7 @@ template<enum gpujpeg_color_space color_space_from, enum gpujpeg_color_space col
 struct gpujpeg_color_transform
 {
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(color_space_from, color_space_to, "Undefined");
         assert(false);
     }
@@ -173,7 +175,7 @@ template<enum gpujpeg_color_space color_space>
 struct gpujpeg_color_transform<color_space, color_space> {
     /** None transform */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(color_space, color_space, "Do nothing");
         // Same color space thus do nothing
     }
@@ -184,7 +186,7 @@ template<enum gpujpeg_color_space color_space>
 struct gpujpeg_color_transform<GPUJPEG_NONE, color_space> {
     /** None transform */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_NONE, color_space, "Do nothing");
         // None color space thus do nothing
     }
@@ -194,7 +196,7 @@ template<enum gpujpeg_color_space color_space>
 struct gpujpeg_color_transform<color_space, GPUJPEG_NONE> {
     /** None transform */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(color_space, GPUJPEG_NONE, "Do nothing");
         // None color space thus do nothing
     }
@@ -204,7 +206,7 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_NONE, GPUJPEG_NONE> {
     /** None transform */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_NONE, GPUJPEG_NONE, "Do nothing");
         // None color space thus do nothing
     }
@@ -215,7 +217,7 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601> {
     /** RGB -> YCbCr (ITU-R Recommendation BT.601) transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YCBCR_BT601, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
         /*const double matrix[] = {
@@ -224,7 +226,7 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601> {
               0.439000, -0.368000, -0.071000
         };*/
         const int matrix[] = {66, 129, 25, -38, -74, 112, 112, -94, -18};
-        gpujpeg_color_transform_to<8>(c1, c2, c3, matrix, 16, 128, 128);
+        gpujpeg_color_transform_to<8>(c, matrix, 16, 128, 128);
     }
 };
 /** Specialization [color_space_from = GPUJPEG_YCBCR_BT601, color_space_to = GPUJPEG_RGB] */
@@ -232,7 +234,7 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_RGB> {
     /** YCbCr (ITU-R Recommendation BT.601) -> RGB transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YCBCR_BT601, GPUJPEG_RGB, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
         /*const double matrix[] = {
@@ -241,7 +243,7 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_RGB> {
              1.164000,  2.017000,  0.000000
         };*/
         const int matrix[] = {298, 0, 409, 298, -100, -208, 298, 516, 0};
-        gpujpeg_color_transform_from<8>(c1, c2, c3, matrix, 16, 128, 128);
+        gpujpeg_color_transform_from<8>(c, matrix, 16, 128, 128);
     }
 };
 
@@ -250,7 +252,7 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS> {
     /** RGB -> YCbCr (ITU-R Recommendation BT.601 with 256 levels) transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS, "Transformation");
         // Source: http://www.ecma-international.org/publications/files/ECMA-TR/TR-098.pdf, page 3
         /*const double matrix[] = {
@@ -259,7 +261,7 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS> {
              0.500000, -0.418700, -0.081300
         };*/
         const int matrix[] = {77, 150, 29, -43, -85, 128, 128, -107, -21};
-        gpujpeg_color_transform_to<8>(c1, c2, c3, matrix, 0, 128, 128);
+        gpujpeg_color_transform_to<8>(c, matrix, 0, 128, 128);
     }
 };
 /** Specialization [color_space_from = GPUJPEG_YCBCR_BT601_256LVLS, color_space_to = GPUJPEG_RGB] */
@@ -267,7 +269,7 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB> {
     /** YCbCr (ITU-R Recommendation BT.601 with 256 levels) -> RGB transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB, "Transformation");
         // Source: http://www.ecma-international.org/publications/files/ECMA-TR/TR-098.pdf, page 4
         /*const double matrix[] = {
@@ -276,7 +278,7 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB> {
             1.000000,  1.772000,  0.000000
         };*/
         const int matrix[] = {256, 0, 359, 256, -88, -183, 256, 454, 0};
-        gpujpeg_color_transform_from<8>(c1, c2, c3, matrix, 0, 128, 128);
+        gpujpeg_color_transform_from<8>(c, matrix, 0, 128, 128);
     }
 };
 
@@ -285,7 +287,7 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709> {
     /** RGB -> YCbCr (ITU-R Recommendation BT.709) transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YCBCR_BT709, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
         /*const double matrix[] = {
@@ -294,7 +296,7 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709> {
               0.439216, -0.398942, -0.040274
         };*/
         const int matrix[] = {47, 157, 16, -26, -87, 112, 112, -102, -10};
-        gpujpeg_color_transform_to<8>(c1, c2, c3, matrix, 16, 128, 128);
+        gpujpeg_color_transform_to<8>(c, matrix, 16, 128, 128);
     }
 };
 /** Specialization [color_space_from = GPUJPEG_YCBCR_BT709, color_space_to = GPUJPEG_RGB] */
@@ -302,7 +304,7 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_RGB> {
     /** YCbCr (ITU-R Recommendation BT.709) -> RGB transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YCBCR_BT709, GPUJPEG_RGB, "Transformation");
         // Source: http://www.equasys.de/colorconversion.html
         /*const double matrix[] = {
@@ -311,7 +313,7 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_RGB> {
              1.164384,  2.112402,  0.000000
         };*/
         const int matrix[] = {298, 0, 459, 298, -55, -136, 298, 541, 0};
-        gpujpeg_color_transform_from<8>(c1, c2, c3, matrix, 16, 128, 128);
+        gpujpeg_color_transform_from<8>(c, matrix, 16, 128, 128);
     }
 };
 
@@ -320,7 +322,7 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YUV> {
     /** RGB -> YUV transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_RGB, GPUJPEG_YUV, "Transformation");
         /*const double matrix[] = {
               0.299000,  0.587000,  0.114000,
@@ -328,7 +330,7 @@ struct gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YUV> {
               0.615000, -0.515000, -0.100000
         };*/
         const int matrix[] = {77, 150, 29, -38, -74, 112, 157, -132, -26};
-        gpujpeg_color_transform_to<8>(c1, c2, c3, matrix, 0, 128, 128);
+        gpujpeg_color_transform_to<8>(c, matrix, 0, 128, 128);
     }
 };
 /** Specialization [color_space_from = GPUJPEG_YUV, color_space_to = GPUJPEG_RGB] */
@@ -336,7 +338,7 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_YUV, GPUJPEG_RGB> {
     /** YUV -> RGB transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
+    perform(uchar4 & c) {
         GPUJPEG_COLOR_TRANSFORM_DEBUG(GPUJPEG_YUV, GPUJPEG_RGB, "Transformation");
         /*const double matrix[] = {
              1.000000,  0.000000,  1.140000,
@@ -344,7 +346,7 @@ struct gpujpeg_color_transform<GPUJPEG_YUV, GPUJPEG_RGB> {
              1.000000,  2.032000,  0.000000
         };*/
         const int matrix[] = {256, 0, 292, 256, -101, -149, 256, 520, 0};
-        gpujpeg_color_transform_from<8>(c1, c2, c3, matrix, 0, 128, 128);
+        gpujpeg_color_transform_from<8>(c, matrix, 0, 128, 128);
     }
 };
 
@@ -353,9 +355,9 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_YCBCR_BT601_256LVLS> {
     /** YCbCr (ITU-R Recommendation BT.709) -> YCbCr (ITU-R Recommendation BT.601 with 256 levels) transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_RGB>::perform(c1,c2,c3);
-        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS>::perform(c1,c2,c3);
+    perform(uchar4 & c) {
+        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_RGB>::perform(c);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS>::perform(c);
 
     }
 };
@@ -364,9 +366,9 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_YCBCR_BT601> {
     /** YCbCr (ITU-R Recommendation BT.601 with 256 levels) -> YCbCr (ITU-R Recommendation BT.709) transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB>::perform(c1,c2,c3);
-        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601>::perform(c1,c2,c3);
+    perform(uchar4 & c) {
+        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB>::perform(c);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601>::perform(c);
     }
 };
 
@@ -375,9 +377,9 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_YCBCR_BT601_256LVLS> {
     /** YCbCr (ITU-R Recommendation BT.709) -> YCbCr (ITU-R Recommendation BT.601 with 256 levels) transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_RGB>::perform(c1,c2,c3);
-        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS>::perform(c1,c2,c3);
+    perform(uchar4 & c) {
+        gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_RGB>::perform(c);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS>::perform(c);
 
     }
 };
@@ -385,9 +387,9 @@ struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT709, GPUJPEG_YCBCR_BT601_256LVLS>
 template<>
 struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601, GPUJPEG_YCBCR_BT709> {
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB>::perform(c1,c2,c3);
-        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709>::perform(c1,c2,c3);
+    perform(uchar4 & c) {
+        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB>::perform(c);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709>::perform(c);
     }
 };
 
@@ -396,9 +398,9 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_YCBCR_BT709> {
     /** YCbCr (ITU-R Recommendation BT.601 with 256 levels) -> YCbCr (ITU-R Recommendation BT.709) transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB>::perform(c1,c2,c3);
-        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709>::perform(c1,c2,c3);
+    perform(uchar4 & c) {
+        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB>::perform(c);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT709>::perform(c);
     }
 };
 
@@ -407,9 +409,9 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_YUV, GPUJPEG_YCBCR_BT601_256LVLS> {
     /** YUV -> YCbCr (ITU-R Recommendation BT.601 with 256 levels) transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        gpujpeg_color_transform<GPUJPEG_YUV, GPUJPEG_RGB>::perform(c1,c2,c3);
-        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS>::perform(c1,c2,c3);
+    perform(uchar4 & c) {
+        gpujpeg_color_transform<GPUJPEG_YUV, GPUJPEG_RGB>::perform(c);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YCBCR_BT601_256LVLS>::perform(c);
 
     }
 };
@@ -418,10 +420,11 @@ template<>
 struct gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_YUV> {
     /** YCbCr (ITU-R Recommendation BT.601 with 256 levels) -> YUV transform (8 bit) */
     static __device__ void
-    perform(uint8_t & c1, uint8_t & c2, uint8_t & c3) {
-        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB>::perform(c1,c2,c3);
-        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YUV>::perform(c1,c2,c3);
+    perform(uchar4 & c) {
+        gpujpeg_color_transform<GPUJPEG_YCBCR_BT601_256LVLS, GPUJPEG_RGB>::perform(c);
+        gpujpeg_color_transform<GPUJPEG_RGB, GPUJPEG_YUV>::perform(c);
     }
 };
 
 #endif // GPUJPEG_COLORSPACE_H
+/* vim: set expandtab sw=4 filetype=cuda: */

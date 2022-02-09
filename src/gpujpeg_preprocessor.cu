@@ -62,69 +62,69 @@ gpujpeg_preprocessor_raw_to_comp_store(uint8_t value, unsigned int position_x, u
 }
 
 template<enum gpujpeg_pixel_format>
-inline __device__ void raw_to_comp_load(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3);
+inline __device__ void raw_to_comp_load(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r);
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_U8>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+inline __device__ void raw_to_comp_load<GPUJPEG_U8>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
 {
-    r1 = d_data_raw[image_position];
-    r2 = 128;
-    r3 = 128;
+    r.x = d_data_raw[image_position];
+    r.y = 128;
+    r.z = 128;
 }
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P0P1P2>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P0P1P2>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
 {
-    r1 = d_data_raw[image_position];
-    r2 = d_data_raw[image_width * image_height + image_position];
-    r3 = d_data_raw[2 * image_width * image_height + image_position];
+    r.x = d_data_raw[image_position];
+    r.y = d_data_raw[image_width * image_height + image_position];
+    r.z = d_data_raw[2 * image_width * image_height + image_position];
 }
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P0P1P2>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P0P1P2>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
 {
-    r1 = d_data_raw[image_position];
-    r2 = d_data_raw[image_width * image_height + image_position / 2];
-    r3 = d_data_raw[image_width * image_height + image_height * ((image_width + 1) / 2) + image_position / 2];
+    r.x = d_data_raw[image_position];
+    r.y = d_data_raw[image_width * image_height + image_position / 2];
+    r.z = d_data_raw[image_width * image_height + image_height * ((image_width + 1) / 2) + image_position / 2];
 }
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_420_U8_P0P1P2>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+inline __device__ void raw_to_comp_load<GPUJPEG_420_U8_P0P1P2>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
 {
-    r1 = d_data_raw[image_position];
-    r2 = d_data_raw[image_width * image_height + y / 2 * ((image_width + 1) / 2) + x / 2];
-    r3 = d_data_raw[image_width * image_height + ((image_height + 1) / 2 + y / 2) * ((image_width + 1) / 2) + x / 2];
+    r.x = d_data_raw[image_position];
+    r.y = d_data_raw[image_width * image_height + y / 2 * ((image_width + 1) / 2) + x / 2];
+    r.z = d_data_raw[image_width * image_height + ((image_height + 1) / 2 + y / 2) * ((image_width + 1) / 2) + x / 2];
 }
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
 {
     const unsigned int offset = image_position * 3;
-    r1 = d_data_raw[offset];
-    r2 = d_data_raw[offset + 1];
-    r3 = d_data_raw[offset + 2];
+    r.x = d_data_raw[offset];
+    r.y = d_data_raw[offset + 1];
+    r.z = d_data_raw[offset + 2];
 }
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012A>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012A>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
 {
     const unsigned int offset = image_position * 4;
-    r1 = d_data_raw[offset];
-    r2 = d_data_raw[offset + 1];
-    r3 = d_data_raw[offset + 2];
+    r.x = d_data_raw[offset];
+    r.y = d_data_raw[offset + 1];
+    r.z = d_data_raw[offset + 2];
 }
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P1020>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uint8_t &r1, uint8_t &r2, uint8_t &r3)
+inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P1020>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
 {
     const unsigned int offset = image_position * 2;
-    r1 = d_data_raw[offset + 1];
+    r.x = d_data_raw[offset + 1];
     if ( image_position % 2 == 0 ) {
-        r2 = d_data_raw[offset];
-        r3 = d_data_raw[offset + 2];
+        r.y = d_data_raw[offset];
+        r.z = d_data_raw[offset + 2];
     } else {
-        r2 = d_data_raw[offset - 2];
-        r3 = d_data_raw[offset];
+        r.y = d_data_raw[offset - 2];
+        r.z = d_data_raw[offset];
     }
 }
 
@@ -159,19 +159,17 @@ gpujpeg_preprocessor_raw_to_comp_kernel(struct gpujpeg_preprocessor_data data, c
     int image_position_x = image_position - (image_position_y * image_width);
 
     // Load
-    uint8_t r1;
-    uint8_t r2;
-    uint8_t r3;
-    raw_to_comp_load<pixel_format>(d_data_raw, image_width, image_height, image_position, image_position_x, image_position_y, r1, r2, r3);
+    uchar4 r;
+    raw_to_comp_load<pixel_format>(d_data_raw, image_width, image_height, image_position, image_position_x, image_position_y, r);
 
     // Color transform
-    gpujpeg_color_transform<color_space, color_space_internal>::perform(r1, r2, r3);
+    gpujpeg_color_transform<color_space, color_space_internal>::perform(r);
 
     // Store
     if ( image_position < (image_width * image_height) ) {
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(r1, image_position_x, image_position_y, data.comp[0]);
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(r2, image_position_x, image_position_y, data.comp[1]);
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>(r3, image_position_x, image_position_y, data.comp[2]);
+        gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(r.x, image_position_x, image_position_y, data.comp[0]);
+        gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(r.y, image_position_x, image_position_y, data.comp[1]);
+        gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>(r.z, image_position_x, image_position_y, data.comp[2]);
     }
 }
 
