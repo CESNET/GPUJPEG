@@ -115,6 +115,15 @@ inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012A>(const uint8_t* d_d
 }
 
 template<>
+inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012Z>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
+{
+    const unsigned int offset = image_position * 4;
+    r.x = d_data_raw[offset];
+    r.y = d_data_raw[offset + 1];
+    r.z = d_data_raw[offset + 2];
+}
+
+template<>
 inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P1020>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
 {
     const unsigned int offset = image_position * 2;
@@ -201,6 +210,8 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
         } \
         if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012, P1, P2, P3, P4, P5, P6>; \
+        } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012A || coder->param_image.comp_count == 4 ) { \
+            return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012A, P1, P2, P3, P4, P5, P6>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012A || PIXEL_FORMAT == GPUJPEG_444_U8_P012Z ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012A, P1, P2, P3, P4, P5, P6>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_422_U8_P1020 ) { \
@@ -320,7 +331,7 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
         return 0;
     }
 
-    assert(coder->param_image.comp_count == 3);
+    assert(coder->param_image.comp_count == 3 || coder->param_image.comp_count == 4);
 
     if (coder->param.color_space_internal == GPUJPEG_NONE) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_NONE>(coder);

@@ -262,7 +262,7 @@ int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, const struct gpuj
 int
 gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, int* image_compressed_size)
 {
-    assert(param_image->comp_count == 1 || param_image->comp_count == 3);
+    assert(param_image->comp_count == 1 || param_image->comp_count == 3 || param_image->comp_count == 4);
     assert(param_image->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     assert(param->quality >= 0 && param->quality <= 100);
     assert(param->restart_interval >= 0);
