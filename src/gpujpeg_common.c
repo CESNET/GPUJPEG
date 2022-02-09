@@ -286,7 +286,7 @@ static void
 do_gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param)
 {
     for (int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++) {
-        if (comp == 0) {
+        if (comp == 0 || comp == 3) {
             param->sampling_factor[comp].horizontal = 2;
         }
         else {
@@ -300,7 +300,7 @@ static void
 do_gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param)
 {
     for (int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++) {
-        if (comp == 0) {
+        if (comp == 0 || comp == 3) {
             param->sampling_factor[comp].horizontal = 2;
             param->sampling_factor[comp].vertical = 2;
         }
