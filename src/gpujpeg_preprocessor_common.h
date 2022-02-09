@@ -46,7 +46,7 @@ struct gpujpeg_preprocessor_data_component
  */
 struct gpujpeg_preprocessor_data
 {
-    struct gpujpeg_preprocessor_data_component comp[3];
+    struct gpujpeg_preprocessor_data_component comp[GPUJPEG_MAX_COMPONENT_COUNT];
 };
 
 /** Value that means that sampling factor has dynamic value */

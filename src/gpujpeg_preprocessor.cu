@@ -46,7 +46,7 @@ template<
     unsigned int s_samp_factor_v
 >
 static __device__ void
-gpujpeg_preprocessor_raw_to_comp_store(uint8_t value, unsigned int position_x, unsigned int position_y, struct gpujpeg_preprocessor_data_component & comp)
+gpujpeg_preprocessor_raw_to_comp_store_comp(uint8_t value, unsigned int position_x, unsigned int position_y, struct gpujpeg_preprocessor_data_component & comp)
 {
     const unsigned int samp_factor_h = ( s_samp_factor_h == GPUJPEG_DYNAMIC ) ? comp.sampling_factor.horizontal : s_samp_factor_h;
     const unsigned int samp_factor_v = ( s_samp_factor_v == GPUJPEG_DYNAMIC ) ? comp.sampling_factor.vertical : s_samp_factor_v;
@@ -60,6 +60,34 @@ gpujpeg_preprocessor_raw_to_comp_store(uint8_t value, unsigned int position_x, u
     const unsigned int data_position = position_y * comp.data_width + position_x;
     comp.d_data[data_position] = value;
 }
+
+template<
+    enum gpujpeg_pixel_format pixel_format,
+    uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
+    uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
+    uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v
+>
+struct gpujpeg_preprocessor_raw_to_comp_store {
+    static __device__ void perform(uchar4 value, unsigned int position_x, unsigned int position_y, struct gpujpeg_preprocessor_data & data) {
+        gpujpeg_preprocessor_raw_to_comp_store_comp<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(value.x, position_x, position_y, data.comp[0]);
+        gpujpeg_preprocessor_raw_to_comp_store_comp<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(value.y, position_x, position_y, data.comp[1]);
+        gpujpeg_preprocessor_raw_to_comp_store_comp<s_comp3_samp_factor_h, s_comp3_samp_factor_v>(value.z, position_x, position_y, data.comp[2]);
+    }
+};
+
+template<
+    uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
+    uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
+    uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v
+>
+struct gpujpeg_preprocessor_raw_to_comp_store<GPUJPEG_444_U8_P012A, s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v> {
+    static __device__ void perform (uchar4 value, unsigned int position_x, unsigned int position_y, struct gpujpeg_preprocessor_data & data) {
+        gpujpeg_preprocessor_raw_to_comp_store_comp<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(value.x, position_x, position_y, data.comp[0]);
+        gpujpeg_preprocessor_raw_to_comp_store_comp<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(value.y, position_x, position_y, data.comp[1]);
+        gpujpeg_preprocessor_raw_to_comp_store_comp<s_comp3_samp_factor_h, s_comp3_samp_factor_v>(value.z, position_x, position_y, data.comp[2]);
+        gpujpeg_preprocessor_raw_to_comp_store_comp<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(value.w, position_x, position_y, data.comp[3]);
+    }
+};
 
 template<enum gpujpeg_pixel_format>
 inline __device__ void raw_to_comp_load(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r);
@@ -112,6 +140,7 @@ inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012A>(const uint8_t* d_d
     r.x = d_data_raw[offset];
     r.y = d_data_raw[offset + 1];
     r.z = d_data_raw[offset + 2];
+    r.w = d_data_raw[offset + 3];
 }
 
 template<>
@@ -176,9 +205,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel(struct gpujpeg_preprocessor_data data, c
 
     // Store
     if ( image_position < (image_width * image_height) ) {
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(r.x, image_position_x, image_position_y, data.comp[0]);
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(r.y, image_position_x, image_position_y, data.comp[1]);
-        gpujpeg_preprocessor_raw_to_comp_store<s_comp3_samp_factor_h, s_comp3_samp_factor_v>(r.z, image_position_x, image_position_y, data.comp[2]);
+        gpujpeg_preprocessor_raw_to_comp_store<pixel_format, s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform(r, image_position_x, image_position_y, data);
     }
 }
 
@@ -201,6 +228,11 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
         coder->sampling_factor.vertical / coder->component[2].sampling_factor.vertical
     );
 
+    /// @todo allow also different susbsampling for 4rd channel than for first
+    assert(coder->param_image.comp_count != 4 ||
+            (coder->component[0].sampling_factor.horizontal == coder->component[3].sampling_factor.horizontal &&
+             coder->component[0].sampling_factor.vertical == coder->component[3].sampling_factor.vertical));
+
 #define RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, P1, P2, P3, P4, P5, P6) \
     if ( sampling_factor == gpujpeg_preprocessor_make_sampling_factor(P1, P2, P3, P4, P5, P6) ) { \
         int max_h = max(P1, max(P3, P5)); \
@@ -210,10 +242,10 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
         } \
         if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012 ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012, P1, P2, P3, P4, P5, P6>; \
-        } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012A || coder->param_image.comp_count == 4 ) { \
+        } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012A && coder->param_image.comp_count == 4 ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012A, P1, P2, P3, P4, P5, P6>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P012A || PIXEL_FORMAT == GPUJPEG_444_U8_P012Z ) { \
-            return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012A, P1, P2, P3, P4, P5, P6>; \
+            return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012Z, P1, P2, P3, P4, P5, P6>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_422_U8_P1020 ) { \
             return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P1020, P1, P2, P3, P4, P5, P6>; \
         } else if ( PIXEL_FORMAT == GPUJPEG_444_U8_P0P1P2 ) { \
@@ -361,8 +393,6 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder* coder = &encoder->coder;
 
-    assert(coder->param_image.comp_count == 3);
-
     cudaMemsetAsync(coder->d_data, 0, coder->data_size * sizeof(uint8_t), encoder->stream);
     gpujpeg_cuda_check_error("Preprocessor memset failed", return -1);
 
@@ -402,7 +432,7 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
 
     // Run kernel
     struct gpujpeg_preprocessor_data data;
-    for ( int comp = 0; comp < 3; comp++ ) {
+    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
         assert(coder->sampling_factor.horizontal % coder->component[comp].sampling_factor.horizontal == 0);
         assert(coder->sampling_factor.vertical % coder->component[comp].sampling_factor.vertical == 0);
         data.comp[comp].d_data = coder->component[comp].d_data;
