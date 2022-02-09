@@ -158,8 +158,6 @@ gpujpeg_decoder_create(cudaStream_t stream)
 int
 gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_parameters* param, const struct gpujpeg_image_parameters* param_image)
 {
-    assert(param_image->comp_count == 1 || param_image->comp_count == 3);
-
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
 
