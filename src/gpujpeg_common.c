@@ -390,32 +390,34 @@ gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , cons
 enum gpujpeg_image_file_format
 gpujpeg_image_get_file_format(const char* filename)
 {
-    static const char *extension[] = { "raw", "rgb", "rgba",, "rgbz" "yuv", "i420", "r", "jpg", "jpeg", "jfif", "pbm", "pnm", "pgm", "ppm", "pam" };
-    static const enum gpujpeg_image_file_format format[] = {
-        GPUJPEG_IMAGE_FILE_RAW,
-        GPUJPEG_IMAGE_FILE_RGB,
-        GPUJPEG_IMAGE_FILE_RGBA,
-        GPUJPEG_IMAGE_FILE_RGBZ,
-        GPUJPEG_IMAGE_FILE_YUV,
-        GPUJPEG_IMAGE_FILE_I420,
-        GPUJPEG_IMAGE_FILE_GRAY,
-        GPUJPEG_IMAGE_FILE_JPEG,
-        GPUJPEG_IMAGE_FILE_JPEG,
-        GPUJPEG_IMAGE_FILE_JPEG,
-        GPUJPEG_IMAGE_FILE_PNM,
-        GPUJPEG_IMAGE_FILE_PNM,
-        GPUJPEG_IMAGE_FILE_PNM,
-        GPUJPEG_IMAGE_FILE_PNM,
-        GPUJPEG_IMAGE_FILE_PAM,
+    static const struct {
+        const char *ext;
+        enum gpujpeg_image_file_format format;
+    } extensions[] = {
+        { "raw",  GPUJPEG_IMAGE_FILE_RAW },
+        { "rgb",  GPUJPEG_IMAGE_FILE_RGB},
+        { "rgba", GPUJPEG_IMAGE_FILE_RGBA},
+        { "rgbz", GPUJPEG_IMAGE_FILE_RGBZ},
+        { "yuv",  GPUJPEG_IMAGE_FILE_YUV},
+        { "i420", GPUJPEG_IMAGE_FILE_I420},
+        { "r",    GPUJPEG_IMAGE_FILE_GRAY},
+        { "jpg",  GPUJPEG_IMAGE_FILE_JPEG},
+        { "jpeg", GPUJPEG_IMAGE_FILE_JPEG},
+        { "jfif", GPUJPEG_IMAGE_FILE_JPEG},
+        { "pbm",  GPUJPEG_IMAGE_FILE_PNM},
+        { "pnm",  GPUJPEG_IMAGE_FILE_PNM},
+        { "pgm",  GPUJPEG_IMAGE_FILE_PNM},
+        { "ppm",  GPUJPEG_IMAGE_FILE_PNM},
+        { "pam",  GPUJPEG_IMAGE_FILE_PAM},
     };
 
     const char * ext = strrchr(filename, '.');
     if ( ext == NULL )
         return GPUJPEG_IMAGE_FILE_UNKNOWN;
     ext++;
-    for ( unsigned i = 0; i < sizeof(format) / sizeof(*format); i++ ) {
-        if ( strcasecmp(ext, extension[i]) == 0 ) {
-            return format[i];
+    for ( unsigned i = 0; i < sizeof extensions / sizeof extensions[0]; i++ ) {
+        if ( strcasecmp(ext, extensions[i].ext) == 0 ) {
+            return extensions[i].format;
         }
     }
     return GPUJPEG_IMAGE_FILE_UNKNOWN;
