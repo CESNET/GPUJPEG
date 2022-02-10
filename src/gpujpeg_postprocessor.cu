@@ -272,7 +272,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     if ( sampling_factor == gpujpeg_preprocessor_make_sampling_factor(P1, P2, P3, P4, P5, P6) ) { \
         int max_h = max(P1, max(P3, P5)); \
         int max_v = max(P2, max(P4, P6)); \
-        if ( coder->param.verbose >= 2 ) { \
+        if ( coder->param.verbose >= 1 ) { \
             printf("Using faster kernel for postprocessor (precompiled %dx%d, %dx%d, %dx%d).\n", max_h / P1, max_v / P2, max_h / P3, max_v / P4, max_h / P5, max_v / P6); \
         } \
         switch ( PIXEL_FORMAT ) { \
@@ -294,7 +294,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 2, 1, 2, 1) /* 4:2:2 */ \
     else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 4, 4, 4, 4) \
     else { \
-        if ( coder->param.verbose >= 2 ) { \
+        if ( coder->param.verbose >= 0 ) { \
             printf("Using slower kernel for postprocessor (dynamic %dx%d, %dx%d, %dx%d).\n", coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical, coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical, coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical); \
         } \
         switch ( PIXEL_FORMAT ) { \
