@@ -61,7 +61,7 @@ typedef int gpujpeg_preprocessor_sampling_factor_t;
  * Source: http://www.hackersdelight.org/HDcode/magic.c.txt
  * Modified for positive numbers only.
  */
-static void
+static void inline
 gpujpeg_const_div_prepare(const uint32_t d, uint32_t & pre_div_mul, uint32_t & pre_div_shift) {
     if(d > 1) {
         uint32_t delta;
