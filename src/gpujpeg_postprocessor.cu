@@ -492,8 +492,6 @@ gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
         return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);
     }
 
-    assert(coder->param_image.comp_count == 3 || coder->param_image.comp_count == 4);
-
     // Select kernel
     gpujpeg_preprocessor_decode_kernel kernel = (gpujpeg_preprocessor_decode_kernel)coder->preprocessor;
     assert(kernel != NULL);
@@ -525,7 +523,7 @@ gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 
     // Run kernel
     struct gpujpeg_preprocessor_data data;
-    for ( int comp = 0; comp < 3; comp++ ) {
+    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
         assert(coder->sampling_factor.horizontal % coder->component[comp].sampling_factor.horizontal == 0);
         assert(coder->sampling_factor.vertical % coder->component[comp].sampling_factor.vertical == 0);
         data.comp[comp].d_data = coder->component[comp].d_data;
