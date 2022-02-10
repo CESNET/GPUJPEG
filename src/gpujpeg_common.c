@@ -1168,6 +1168,9 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
         case GPUJPEG_IMAGE_FILE_RGBA:
             param_image->pixel_format = GPUJPEG_444_U8_P012A;
             break;
+        case GPUJPEG_IMAGE_FILE_RGBZ:
+            param_image->pixel_format = GPUJPEG_444_U8_P012Z;
+            break;
         case GPUJPEG_IMAGE_FILE_I420:
             param_image->pixel_format = GPUJPEG_420_U8_P0P1P2;
             break;
@@ -1180,7 +1183,7 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
             break;
     }
 
-    return -1;
+    return 1;
 }
 
 /* Documented at declaration */

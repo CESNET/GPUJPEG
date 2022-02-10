@@ -364,6 +364,8 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size,
  * May also return some with a null value - eg. when the file doesn't exist
  * but color space may be deduced from extension.
  * @retval 0 on success; != 0 on error
+ * @retval -1 on error
+ * @retval 1 only pixel format was deduced from file extension
  */
 GPUJPEG_API int
 gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists);
