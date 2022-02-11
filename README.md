@@ -423,11 +423,12 @@ References
 [4]: https://www.ecma-international.org/publications/files/ECMA-TR/ECMA%20TR-098.pdf
 [5]: https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-T.84-199607-I!!PDF-E&type=items
 [6]: https://www.fileformat.info/format/spiff/egff.htm
+[7]: https://docs.oracle.com/javase/8/docs/api/javax/imageio/metadata/doc-files/jpeg_metadata.html#optcolor
 
 1. [ITU-T Rec T.81][1]
 2. [ILG][2]
 3. [SiGenGPU][3] (currently defunct)
 4. [ECMA TR/098 (JFIF)][4]
 5. [ITU-T Rec T.84 (SPIFF)][5]
-5. [SPIFF File Format Summary (FileFormat.Info)][6]
-
+6. [SPIFF File Format Summary (FileFormat.Info)][6]
+7. [Component ID registration][7]

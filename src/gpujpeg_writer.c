@@ -256,8 +256,8 @@ gpujpeg_writer_write_dqt(struct gpujpeg_encoder* encoder, enum gpujpeg_component
 
 static uint8_t gpujpeg_writer_get_component_id(int index, enum gpujpeg_color_space color_space) {
     if (color_space == GPUJPEG_RGB) {
-            assert(index < 3);
-            static const uint8_t rgb_ids[3] = { 'R', 'G', 'B' };
+            static const uint8_t rgb_ids[4] = { 'R', 'G', 'B', 'A' };
+            assert((unsigned) index < sizeof rgb_ids / sizeof rgb_ids[0]);
             return rgb_ids[index];
     } else {
             return index + 1;
