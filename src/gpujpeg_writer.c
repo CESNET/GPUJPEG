@@ -427,11 +427,13 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 
     gpujpeg_writer_write_sof0(encoder);
 
-    gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_LUMINANCE, GPUJPEG_HUFFMAN_DC);   // DC table for Y component
-    gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_LUMINANCE, GPUJPEG_HUFFMAN_AC);   // AC table for Y component
-    if ( encoder->coder.param_image.comp_count > 1 ) {
-        gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_CHROMINANCE, GPUJPEG_HUFFMAN_DC); // DC table for Cb or Cr component
-        gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_CHROMINANCE, GPUJPEG_HUFFMAN_AC); // AC table for Cb or Cr component
+    unsigned dht_type_emitted = 0U;
+    for (int i = 0; i < encoder->coder.param_image.comp_count; ++i) {
+        if ((dht_type_emitted & (1U << encoder->coder.component[i].type)) == 0) {
+            gpujpeg_writer_write_dht(encoder, encoder->coder.component[i].type, GPUJPEG_HUFFMAN_DC);   // DC table
+            gpujpeg_writer_write_dht(encoder, encoder->coder.component[i].type, GPUJPEG_HUFFMAN_AC);   // AC table
+            dht_type_emitted |= 1U << encoder->coder.component[i].type;
+        }
     }
 
     gpujpeg_writer_write_dri(encoder);
