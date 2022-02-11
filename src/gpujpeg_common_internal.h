@@ -50,6 +50,7 @@
 #define GPUJPEG_MAX_HEADER_SIZE                 (65536 - 100)
 
 struct gpujpeg_timer {
+    int started;
     cudaEvent_t start;
     cudaEvent_t stop;
 };
@@ -58,6 +59,7 @@ struct gpujpeg_timer {
     do { \
         GPUJPEG_CHECK(cudaEventCreate(&(name).start), err_action); \
         GPUJPEG_CHECK(cudaEventCreate(&(name).stop), err_action); \
+        name.started = 0; \
     } while (0)
 
 #define GPUJPEG_CUSTOM_TIMER_DESTROY(name, err_action) \
@@ -73,6 +75,7 @@ struct gpujpeg_timer {
  * @todo stream
  */
 #define GPUJPEG_CUSTOM_TIMER_START(name, stream, err_action) \
+    name.started = 1; \
     GPUJPEG_CHECK(cudaEventRecord((name).start, stream), err_action)
 
 /**
@@ -89,7 +92,7 @@ struct gpujpeg_timer {
  * @param name
  */
 #define GPUJPEG_CUSTOM_TIMER_DURATION(name) \
-    gpujpeg_custom_timer_get_duration((name).start, (name).stop)
+    (name).started ? gpujpeg_custom_timer_get_duration((name).start, (name).stop) : 0
 
 #ifdef __cplusplus
 extern "C" {
