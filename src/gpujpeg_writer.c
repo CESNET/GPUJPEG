@@ -168,21 +168,25 @@ static void gpujpeg_writer_write_app8(struct gpujpeg_encoder* encoder)
         gpujpeg_writer_emit_byte(writer, spiff[i]);
     }
     int color_space;
-    switch (encoder->coder.param.color_space_internal) {
-        case GPUJPEG_YCBCR_BT709:
-            color_space = 1;
-            break;
-        case GPUJPEG_YCBCR_BT601_256LVLS:
-            color_space = 3;
-            break;
-        case GPUJPEG_YCBCR_BT601:
-            color_space = 4;
-            break;
-        case GPUJPEG_RGB:
-            color_space = encoder->coder.param_image.comp_count == 1 ? 8 : 10; // Gray-scale or RGB
-            break;
-        default:
-            color_space = 2; // no color space specified
+    if (encoder->coder.param_image.comp_count == 1) {
+        color_space = 8
+    }  else {
+        switch (encoder->coder.param.color_space_internal) {
+            case GPUJPEG_YCBCR_BT709:
+                color_space = 1;
+                break;
+            case GPUJPEG_YCBCR_BT601_256LVLS:
+                color_space = 3;
+                break;
+            case GPUJPEG_YCBCR_BT601:
+                color_space = 4;
+                break;
+            case GPUJPEG_RGB:
+                color_space = 10;
+                break;
+            default:
+                color_space = 2; // no color space specified
+        }
     }
     int profile = color_space == 3 || color_space == 8 ? 1 : 0; // 0 = No profile
     gpujpeg_writer_emit_2byte(writer, 0x100); // Version 1.00
