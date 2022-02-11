@@ -169,7 +169,7 @@ static void gpujpeg_writer_write_app8(struct gpujpeg_encoder* encoder)
     }
     int color_space;
     if (encoder->coder.param_image.comp_count == 1) {
-        color_space = 8
+        color_space = 8;
     }  else {
         switch (encoder->coder.param.color_space_internal) {
             case GPUJPEG_YCBCR_BT709:

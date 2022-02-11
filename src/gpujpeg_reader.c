@@ -430,12 +430,12 @@ gpujpeg_reader_read_app8(uint8_t** image, int* image_size, enum gpujpeg_color_sp
         case 2: // NOLINT
             break;
         case 3: // NOLINT
+        case 8: /* grayscale */ // NOLINT
             *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             break;
         case 4: // NOLINT
             *color_space = GPUJPEG_YCBCR_BT601;
             break;
-        case 8: // NOLINT
         case 10: // NOLINT
             *color_space = GPUJPEG_RGB;
             break;
