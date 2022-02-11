@@ -280,6 +280,8 @@ enum gpujpeg_image_file_format {
     /// YUV file format, simple data format without header [Y U V] [Y U V] ...
     /// @note all following formats must be YUV
     GPUJPEG_IMAGE_FILE_YUV,
+    /// YUV file format with alpha channel [Y U V A] [Y U V A] ...
+    GPUJPEG_IMAGE_FILE_YUVA,
     /// i420 file format
     GPUJPEG_IMAGE_FILE_I420,
 };

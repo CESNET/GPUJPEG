@@ -399,6 +399,7 @@ gpujpeg_image_get_file_format(const char* filename)
         { "rgba", GPUJPEG_IMAGE_FILE_RGBA},
         { "rgbz", GPUJPEG_IMAGE_FILE_RGBZ},
         { "yuv",  GPUJPEG_IMAGE_FILE_YUV},
+        { "yuva", GPUJPEG_IMAGE_FILE_YUVA},
         { "i420", GPUJPEG_IMAGE_FILE_I420},
         { "r",    GPUJPEG_IMAGE_FILE_GRAY},
         { "jpg",  GPUJPEG_IMAGE_FILE_JPEG},
@@ -1166,6 +1167,7 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
             param_image->pixel_format = GPUJPEG_U8;
             break;
         case GPUJPEG_IMAGE_FILE_RGBA:
+        case GPUJPEG_IMAGE_FILE_YUVA:
             param_image->pixel_format = GPUJPEG_444_U8_P012A;
             break;
         case GPUJPEG_IMAGE_FILE_RGBZ:
