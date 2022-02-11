@@ -655,22 +655,29 @@ static enum gpujpeg_color_space gpujpeg_reader_process_cid(int comp_count, uint8
         return GPUJPEG_NONE;
     }
     if (header_color_space == GPUJPEG_NONE) {
+        // avoid comparing alpha
         if (memcmp(comp_id, ycbcr_ids, sizeof ycbcr_ids) == 0) {
+            if (comp_count == 4 && comp_id[3] != 4) {
+                fprintf(stderr, "[GPUJPEG] [Warning] Unexpected 3rd channel id %d!\n", comp_id[3]);
+            }
             return GPUJPEG_YCBCR_BT601_256LVLS;
         }
         if (memcmp(comp_id, rgb_ids, sizeof rgb_ids) == 0 || memcmp(comp_id, bg_rgb_ids, sizeof bg_rgb_ids) == 0) {
+            if (comp_count == 4 && toupper(comp_id[3]) != 'R') {
+                fprintf(stderr, "[GPUJPEG] [Warning] Unexpected 3rd channel id %d!\n", comp_id[3]);
+            }
             return GPUJPEG_RGB;
         }
-        fprintf(stderr, "[GPUJPEG] [Warning] SOF0 unexpected component id %s was presented!\n", array_serialize(3, comp_id));
+        fprintf(stderr, "[GPUJPEG] [Warning] SOF0 unexpected component id %s was presented!\n", array_serialize(comp_count, comp_id));
         return GPUJPEG_NONE;
     }
     if (header_color_space >= GPUJPEG_YCBCR_BT601 && header_color_space <= GPUJPEG_YCBCR_BT709
             && memcmp(comp_id, ycbcr_ids, sizeof ycbcr_ids) != 0) {
-        fprintf(stderr, "[GPUJPEG] [Warning] SOF0 marker component id should be %s but %s was presented!\n", array_serialize(3, ycbcr_ids), array_serialize(3, comp_id));
+        fprintf(stderr, "[GPUJPEG] [Warning] SOF0 marker component id should be %s but %s was presented!\n", array_serialize(sizeof ycbcr_ids, ycbcr_ids), array_serialize(comp_count, comp_id));
     }
     if (header_color_space == GPUJPEG_RGB
             && memcmp(comp_id, rgb_ids, sizeof rgb_ids) != 0 && memcmp(comp_id, bg_rgb_ids, sizeof bg_rgb_ids) != 0) {
-        fprintf(stderr, "[GPUJPEG] [Warning] SOF0 marker component id should be %s but %s was presented!\n", array_serialize(3, rgb_ids), array_serialize(3, comp_id));
+        fprintf(stderr, "[GPUJPEG] [Warning] SOF0 marker component id should be %s but %s was presented!\n", array_serialize(sizeof rgb_ids, rgb_ids), array_serialize(comp_count, comp_id));
     }
     return GPUJPEG_NONE;
 }
