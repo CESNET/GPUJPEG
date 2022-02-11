@@ -624,7 +624,7 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
         struct gpujpeg_component* component = &coder->component[comp];
 
         // Get quantization table
-        enum gpujpeg_component_type type = (comp == 0) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
+        enum gpujpeg_component_type type = encoder->coder.component[comp].type;
         const float* const d_quantization_table = encoder->table_quantization[type].d_table_forward;
 
         // copy the quantization table into constant memory for devices of CC < 2.0
@@ -719,3 +719,4 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
 
     return 0;
 }
+/* vi: set expandtab sw=4: */

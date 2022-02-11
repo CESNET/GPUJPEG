@@ -420,9 +420,12 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
             break;
     }
 
-    gpujpeg_writer_write_dqt(encoder, GPUJPEG_COMPONENT_LUMINANCE);
-    if ( encoder->coder.param_image.comp_count > 1 ) {
-        gpujpeg_writer_write_dqt(encoder, GPUJPEG_COMPONENT_CHROMINANCE);
+    unsigned dqt_type_emitted = 0U;
+    for (int i = 0; i < encoder->coder.param_image.comp_count; ++i) {
+        if ((dqt_type_emitted & (1U << encoder->coder.component[i].type)) == 0) {
+            gpujpeg_writer_write_dqt(encoder, encoder->coder.component[i].type);
+            dqt_type_emitted |= 1U << encoder->coder.component[i].type;
+        }
     }
 
     gpujpeg_writer_write_sof0(encoder);
