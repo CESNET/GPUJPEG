@@ -49,6 +49,8 @@
 /** Maximum JPEG header size (MUST be divisible by 4!!!) */
 #define GPUJPEG_MAX_HEADER_SIZE                 (65536 - 100)
 
+#define GPUJPEG_ASSERT(cond) do { if (!(cond)) { fprintf(stderr, "%s:%d: %s: Assertion `" #cond "' failed.\n", __FILE__, __LINE__, __func__); abort(); } } while(0)
+
 struct gpujpeg_timer {
     int started;
     cudaEvent_t start;
