@@ -293,7 +293,6 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 2, 2, 2, 2, 1, 1) /* 4:2:0 */ \
     else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 1, 2, 1, 2, 1, 1) /* 4:4:0 */ \
     else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 2, 1, 2, 1, 1, 1) /* 4:2:2 */ \
-    else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 4, 4, 4, 4, 1, 1) \
     else { \
         if ( coder->param.verbose >= 0 ) { \
             printf("Using slower kernel for postprocessor (dynamic %dx%d, %dx%d, %dx%d).\n", coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical, coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical, coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical); \
