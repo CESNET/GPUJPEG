@@ -225,7 +225,8 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
         coder->sampling_factor.horizontal / coder->component[1].sampling_factor.horizontal,
         coder->sampling_factor.vertical / coder->component[1].sampling_factor.vertical,
         coder->sampling_factor.horizontal / coder->component[2].sampling_factor.horizontal,
-        coder->sampling_factor.vertical / coder->component[2].sampling_factor.vertical
+        coder->sampling_factor.vertical / coder->component[2].sampling_factor.vertical,
+        0, 0 // it's for comparison only, not kernel selection - use dummy value to accept any val for those components if comp_count < 4
     );
 
     /// @todo allow also different susbsampling for 4rd channel than for first
@@ -247,7 +248,7 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
         }
 
 #define RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, P1, P2, P3, P4, P5, P6) \
-    if ( sampling_factor == gpujpeg_preprocessor_make_sampling_factor(P1, P2, P3, P4, P5, P6) ) { \
+    if ( sampling_factor == gpujpeg_preprocessor_make_sampling_factor(P1, P2, P3, P4, P5, P6, 0, 0) ) { \
         int max_h = max(P1, max(P3, P5)); \
         int max_v = max(P2, max(P4, P6)); \
         if ( coder->param.verbose >= 1 ) { \
