@@ -1434,9 +1434,8 @@ gcd(int a, int b)
 
 /* Documented at declaration */
 int
-gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *params, int *segment_count)
+gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count)
 {
-    struct gpujpeg_parameters param = {0};
     int segments = 0;
     int interleaved = 0;
     int unused[4];
@@ -1459,7 +1458,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         }
 
         // Read more info according to the marker
-        int rc = gpujpeg_reader_read_common_markers(&image, &image_size, marker, params->verbose, &header_color_space, &params->restart_interval);
+        int rc = gpujpeg_reader_read_common_markers(&image, &image_size, marker, param->verbose, &header_color_space, &param->restart_interval);
         if (rc < 0) {
             return rc;
         }
@@ -1471,11 +1470,11 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         case GPUJPEG_MARKER_SOF0: // Baseline
         case GPUJPEG_MARKER_SOF1: // Extended sequential with Huffman coder
         {
-            param.color_space_internal = header_color_space;
-            if (gpujpeg_reader_read_sof0(&param, param_image, header_color_space, unused, unused2, &image, &image_size) != 0) {
+            param->color_space_internal = header_color_space;
+            if (gpujpeg_reader_read_sof0(param, param_image, header_color_space, unused, unused2, &image, &image_size) != 0) {
                 return -1;
             }
-            param_image->color_space = param.color_space_internal;
+            param_image->color_space = param->color_space_internal;
             break;
         }
         case GPUJPEG_MARKER_RST0:
@@ -1559,20 +1558,20 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
     }
     if (param_image->comp_count == 3) {
         // reduce [2, 2; 1, 2; 1, 2] (FFmpeg) to [2, 1; 1, 1; 1, 1]
-        int horizontal_gcd = param.sampling_factor[0].horizontal;
-        int vertical_gcd = param.sampling_factor[0].vertical;
+        int horizontal_gcd = param->sampling_factor[0].horizontal;
+        int vertical_gcd = param->sampling_factor[0].vertical;
         for (int i = 1; i < 3; ++i) {
-            horizontal_gcd = gcd(horizontal_gcd, param.sampling_factor[i].horizontal);
-            vertical_gcd = gcd(vertical_gcd, param.sampling_factor[i].vertical);
+            horizontal_gcd = gcd(horizontal_gcd, param->sampling_factor[i].horizontal);
+            vertical_gcd = gcd(vertical_gcd, param->sampling_factor[i].vertical);
         }
         for (int i = 0; i < 3; ++i) {
-            param.sampling_factor[i].horizontal /= horizontal_gcd;
-            param.sampling_factor[i].vertical /= vertical_gcd;
+            param->sampling_factor[i].horizontal /= horizontal_gcd;
+            param->sampling_factor[i].vertical /= vertical_gcd;
         }
 
-        if (param.sampling_factor[1].horizontal == 1 && param.sampling_factor[1].vertical == 1
-                && param.sampling_factor[2].horizontal == 1 && param.sampling_factor[2].vertical == 1) {
-            int sum = interleaved << 16 | param.sampling_factor[0].horizontal << 8 |  param.sampling_factor[0].vertical; // NOLINT
+        if (param->sampling_factor[1].horizontal == 1 && param->sampling_factor[1].vertical == 1
+                && param->sampling_factor[2].horizontal == 1 && param->sampling_factor[2].vertical == 1) {
+            int sum = interleaved << 16 | param->sampling_factor[0].horizontal << 8 |  param->sampling_factor[0].vertical; // NOLINT
             switch (sum) {
                 case 1<<16 | 1<<8 | 1: param_image->pixel_format = GPUJPEG_444_U8_P012; break;   // NOLINT
                 case 0<<16 | 1<<8 | 1: param_image->pixel_format = GPUJPEG_444_U8_P0P1P2; break; // NOLINT
