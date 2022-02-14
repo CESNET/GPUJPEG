@@ -285,7 +285,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
             case GPUJPEG_444_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P0P1P2, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
             case GPUJPEG_422_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P0P1P2, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
             case GPUJPEG_420_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_420_U8_P0P1P2, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
-            case GPUJPEG_PIXFMT_NONE: abort(); \
+            case GPUJPEG_PIXFMT_NONE: GPUJPEG_ASSERT(0 && "Postprocess to GPUJPEG_PIXFMT_NONE not allowed"); \
         } \
     }
 #define RETURN_KERNEL(PIXEL_FORMAT, COLOR) \
@@ -306,7 +306,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
             case GPUJPEG_444_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P0P1P2, 3, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
             case GPUJPEG_422_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P0P1P2, 3, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
             case GPUJPEG_420_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_420_U8_P0P1P2, 3, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC>; \
-            case GPUJPEG_PIXFMT_NONE: abort(); \
+            case GPUJPEG_PIXFMT_NONE: GPUJPEG_ASSERT(0 && "Postprocess to GPUJPEG_PIXFMT_NONE not allowed"); \
         } \
     } \
 
