@@ -1714,7 +1714,7 @@ const char *gpujpeg_version_to_string(int version)
 }
 
 const char*
-gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component *components)
+gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component_sampling_factor *sampling_factor)
 {
     thread_local static char buf[128];
     if (comp_count == 1) { // monochrome
@@ -1723,20 +1723,20 @@ gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component *com
     }
 
     const int J = 4;
-    if (comp_count == 2 && components[0].sampling_factor.vertical == components[1].sampling_factor.vertical) { // monochrome + alpha
-        snprintf(buf, sizeof buf, "4:0:0:%d", J / components[0].sampling_factor.horizontal * components[1].sampling_factor.horizontal);
+    if (comp_count == 2 && sampling_factor[0].vertical == sampling_factor[1].vertical) { // monochrome + alpha
+        snprintf(buf, sizeof buf, "4:0:0:%d", J / sampling_factor[0].horizontal * sampling_factor[1].horizontal);
         return buf;
     }
 
-    if (components[1].sampling_factor.horizontal == components[2].sampling_factor.horizontal
-            && components[1].sampling_factor.vertical == components[2].sampling_factor.horizontal && (comp_count == 3 ||
-                (comp_count == 4 && components[0].sampling_factor.vertical == components[3].sampling_factor.vertical))) {
-        int a = J / components[0].sampling_factor.horizontal * components[1].sampling_factor.horizontal;
-        int vert_change = 2 / components[0].sampling_factor.vertical * components[1].sampling_factor.vertical == 2; // 1 if there is a vertical chroma change between 2 lines, 0 otherwise
+    if (sampling_factor[1].horizontal == sampling_factor[2].horizontal
+            && sampling_factor[1].vertical == sampling_factor[2].horizontal && (comp_count == 3 ||
+                (comp_count == 4 && sampling_factor[0].vertical == sampling_factor[3].vertical))) {
+        int a = J / sampling_factor[0].horizontal * sampling_factor[1].horizontal;
+        int vert_change = 2 / sampling_factor[0].vertical * sampling_factor[1].vertical == 2; // 1 if there is a vertical chroma change between 2 lines, 0 otherwise
         int b = a * vert_change;
         snprintf(buf, sizeof buf, "%d:%d:%d", J, a, b);
         if (comp_count == 4) {
-            snprintf(buf + strlen(buf), sizeof buf - strlen(buf), ":%d", J / components[0].sampling_factor.horizontal * components[3].sampling_factor.horizontal);
+            snprintf(buf + strlen(buf), sizeof buf - strlen(buf), ":%d", J / sampling_factor[0].horizontal * sampling_factor[3].horizontal);
         }
         return buf;
     }
@@ -1745,19 +1745,19 @@ gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component *com
     buf[0] = '\0';
     for (int i = 0; i < comp_count; ++i) {
         snprintf(buf + strlen(buf), sizeof buf - strlen(buf), "%s%d-%d", i != 0 ? ":" : "",
-                components[i].sampling_factor.horizontal, components[i].sampling_factor.vertical);
+                sampling_factor[i].horizontal, sampling_factor[i].vertical);
     }
 
     return buf;
 }
 
-const struct gpujpeg_component *
-gpujpeg_get_component_subsampling(enum gpujpeg_pixel_format pixel_format) {
-    thread_local static struct gpujpeg_component ret[4] = { 0 };
+const struct gpujpeg_component_sampling_factor *
+gpujpeg_get_subsampling(enum gpujpeg_pixel_format pixel_format) {
+    thread_local static struct gpujpeg_component_sampling_factor ret[4] = { 0 };
     const int *samp = gpujpeg_pixel_format_get_sampling_factor(pixel_format);
     for (int i = 0; i < gpujpeg_pixel_format_get_comp_count(pixel_format); ++i) {
-        ret[i].sampling_factor.horizontal = samp[i * 2];
-        ret[i].sampling_factor.vertical = samp[i * 2 + 1];
+        ret[i].horizontal = samp[i * 2];
+        ret[i].vertical = samp[i * 2 + 1];
     }
     return ret;
 }

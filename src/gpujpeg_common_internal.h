@@ -350,18 +350,11 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder);
 struct gpujpeg_component;
 
 /**
- * Returns convenient name for subsampling (4:2:0 etc.). If it cannot be constructed
- * returns the format W1xH1:W2xH2:W3xH3.
- */
-const char*
-gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component *components);
-
-/**
- * Returns gpujpeg_component[] which has sampling factors set
+ * Returns gpujpeg_component_sampling_factor[] which has sampling factors set
  * native to given pixel_format
  */
-const struct gpujpeg_component *
-gpujpeg_get_component_subsampling(enum gpujpeg_pixel_format pixel_format);
+const struct gpujpeg_component_sampling_factor *
+gpujpeg_get_subsampling(enum gpujpeg_pixel_format pixel_format);
 
 /**
  * Returns subsampling configuration of a planar pixel format in array of 8

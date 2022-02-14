@@ -228,6 +228,13 @@ GPUJPEG_DEPRECATED GPUJPEG_API void
 gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param);
 
 /**
+ * Returns convenient name for subsampling (4:2:0 etc.). If it cannot be constructed
+ * returns the format W1xH1:W2xH2:W3xH3.
+ */
+GPUJPEG_API const char*
+gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component_sampling_factor *sampling_factor);
+
+/**
  * Image parameters. This structure should not be initialized only be hand,
  * but at first gpujpeg_image_set_default_parameters should be call and then
  * some parameters could be changed.

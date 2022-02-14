@@ -121,7 +121,7 @@ static int print_image_info(const char *filename, int verbose) {
             printf("color space: %s\n", gpujpeg_color_space_get_name(params_image.color_space));
         }
         if (params_image.pixel_format) {
-            printf("internal representation: %s\n", gpujpeg_pixel_format_get_name(params_image.pixel_format));
+            printf("internal representation: %s (%s)\n", gpujpeg_pixel_format_get_name(params_image.pixel_format), gpujpeg_subsampling_get_name(params_image.comp_count, params.sampling_factor));
         }
         if (segment_count) {
             printf("segment count: %d (DRI = %d)\n", segment_count, params.restart_interval);
