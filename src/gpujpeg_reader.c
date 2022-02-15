@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2022, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -46,7 +46,12 @@
 #endif
 
 #define ERROR_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__); } while(0)
-#define DEBUG_MSG(...) do { if (verbose >= 2) fprintf(stderr, "[GPUJPEG] [Info] " __VA_ARGS__); } while(0)
+#ifndef NDEBUG
+#define DEBUG2_MSG(...) do { if (verbose >= 3) fprintf(stderr, "[GPUJPEG] [Debug2] " __VA_ARGS__); } while(0)
+#else
+#define DEBUG2_MSG(...)
+#endif
+#define DEBUG_MSG(...) do { if (verbose >= 2) fprintf(stderr, "[GPUJPEG] [Debug] " __VA_ARGS__); } while(0)
 #define VERBOSE_MSG(...) do { if (verbose >= 1) fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
 
 #define APP14_ADOBE_MARKER_LEN 14
@@ -353,6 +358,34 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image, int*
     return 0;
 }
 
+/** @retval -1 error
+ *  @retval  0 no error */
+static int
+gpujpeg_reader_read_spiff_directory(uint8_t** image, int* image_size, int verbose, int length, _Bool *in_spiff)
+{
+    if (length < 4) {
+        fprintf(stderr, "[GPUJPEG] [Error] APP8 spiff directory too short (%d bytes)\n", length);
+        image += length;
+        *image_size -= length;
+        return -1;
+    }
+    uint32_t tag = gpujpeg_reader_read_4byte(*image);
+    *image_size -= 4;
+    length -= 4;
+    DEBUG2_MSG("Read SPIFF tag 0x%x with length %d.\n", tag, length + 2);
+    if (tag == 0x1 && length == 2) {
+        int marker_soi = gpujpeg_reader_read_marker(image, image_size);
+        if ( marker_soi != GPUJPEG_MARKER_SOI ) {
+            VERBOSE_MSG("SPIFF entry 0x1 should be followed directly with SOI.\n");
+            return -1;
+        }
+        DEBUG2_MSG("SPIFF EOD presented.\n");
+        *in_spiff = 0;
+    }
+    *image_size -= length;
+    return 0;
+}
+
 #define SPIFF_MARKER_LEN 32 ///< including length field
 #define SPIFF_COMPRESSION_JPEG 5
 /**
@@ -366,7 +399,7 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image, int*
  * @return        0 if succeeds, otherwise nonzero
  */
 static int
-gpujpeg_reader_read_app8(uint8_t** image, int* image_size, enum gpujpeg_color_space *color_space, int verbose)
+gpujpeg_reader_read_app8(uint8_t** image, int* image_size, enum gpujpeg_color_space *color_space, int verbose, _Bool *in_spiff)
 {
     if(*image_size < 2) {
         fprintf(stderr, "[GPUJPEG] [Error] Could not read APP8 marker length (end of data)\n");
@@ -374,22 +407,25 @@ gpujpeg_reader_read_app8(uint8_t** image, int* image_size, enum gpujpeg_color_sp
     }
     int length = gpujpeg_reader_read_2byte(*image);
     *image_size -= 2;
-    if (length != SPIFF_MARKER_LEN) {
-        VERBOSE_MSG("APP8 segment length is %d, expected 32 for SPIFF.\n", length);
-        *image += length - 2;
-        *image_size -= length - 2;
-        return 0;
-    }
-
     length -= 2;
-
     if(*image_size < length) {
         fprintf(stderr, "[GPUJPEG] [Error] APP8 marker goes beyond end of data\n");
         return -1;
     }
 
-    const char expected_marker_name[6] = { 'S', 'P', 'I', 'F', 'F', '\0' };
-    char marker_name[sizeof expected_marker_name];
+    if (*in_spiff) {
+        return gpujpeg_reader_read_spiff_directory(image, image_size, verbose, length, in_spiff);
+    }
+
+    if (length + 2 != SPIFF_MARKER_LEN) {
+        VERBOSE_MSG("APP8 segment length is %d, expected 32 for SPIFF.\n", length + 2);
+        *image += length;
+        *image_size -= length;
+        return 0;
+    }
+
+    const char spiff_marker_name[6] = { 'S', 'P', 'I', 'F', 'F', '\0' };
+    char marker_name[sizeof spiff_marker_name];
     for (unsigned i = 0; i < sizeof marker_name; i++) {
         marker_name[i] = gpujpeg_reader_read_byte(*image);
         *image_size -= 1;
@@ -399,7 +435,7 @@ gpujpeg_reader_read_app8(uint8_t** image, int* image_size, enum gpujpeg_color_sp
     }
     length -= sizeof marker_name;
 
-    if (strcmp(marker_name, expected_marker_name) != 0) {
+    if (strcmp(marker_name, spiff_marker_name) != 0) {
         VERBOSE_MSG("APP8 marker identifier should be 'SPIFF\\0' but '%-6.6s' was presented!\n", marker_name);
         *image += length - 2;
         *image_size -= length - 2;
@@ -453,6 +489,7 @@ gpujpeg_reader_read_app8(uint8_t** image, int* image_size, enum gpujpeg_color_sp
     }
 
     DEBUG_MSG("APP8 SPIFF parsed succesfully, internal color space: %s\n", gpujpeg_color_space_get_name(*color_space));
+    *in_spiff = 1;
 
     return 0;
 }
@@ -1226,7 +1263,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
  * @retval 0  success
  * @retval 1  marker was not processed
  */
-static int gpujpeg_reader_read_common_markers(uint8_t **image, int* image_size, int marker, int log_level, enum gpujpeg_color_space *color_space, int *restart_interval) {
+static int gpujpeg_reader_read_common_markers(uint8_t **image, int* image_size, int marker, int log_level, enum gpujpeg_color_space *color_space, int *restart_interval, _Bool *in_spiff) {
     int rc = 0;
     switch (marker)
     {
@@ -1236,7 +1273,7 @@ static int gpujpeg_reader_read_common_markers(uint8_t **image, int* image_size, 
             }
             break;
         case GPUJPEG_MARKER_APP8:
-            if ( gpujpeg_reader_read_app8(image, image_size, color_space, log_level ) != 0 ) {
+            if ( gpujpeg_reader_read_app8(image, image_size, color_space, log_level, in_spiff ) != 0 ) {
                 return -1;
             }
             break;
@@ -1340,6 +1377,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
     }
 
     int eoi_presented = 0;
+    _Bool in_spiff = 0;
     while ( eoi_presented == 0 ) {
         // Read marker
         int marker = gpujpeg_reader_read_marker(&image, &image_size);
@@ -1348,7 +1386,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         }
 
         // Read more info according to the marker
-        int rc = gpujpeg_reader_read_common_markers(&image, &image_size, marker, decoder->coder.param.verbose, &header_color_space, &decoder->reader->param.restart_interval);
+        int rc = gpujpeg_reader_read_common_markers(&image, &image_size, marker, decoder->coder.param.verbose, &header_color_space, &decoder->reader->param.restart_interval, &in_spiff);
         if (rc < 0) {
             return rc;
         }
@@ -1460,6 +1498,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
     }
 
     int eoi_presented = 0;
+    _Bool in_spiff = 0;
     while (eoi_presented == 0) {
         // Read marker
         int marker = gpujpeg_reader_read_marker(&image, &image_size);
@@ -1468,7 +1507,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         }
 
         // Read more info according to the marker
-        int rc = gpujpeg_reader_read_common_markers(&image, &image_size, marker, param->verbose, &header_color_space, &param->restart_interval);
+        int rc = gpujpeg_reader_read_common_markers(&image, &image_size, marker, param->verbose, &header_color_space, &param->restart_interval, &in_spiff);
         if (rc < 0) {
             return rc;
         }
