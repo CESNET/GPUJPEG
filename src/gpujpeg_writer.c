@@ -40,7 +40,7 @@
 
 /* Documented at declaration */
 struct gpujpeg_writer*
-gpujpeg_writer_create(struct gpujpeg_encoder* encoder)
+gpujpeg_writer_create()
 {
     struct gpujpeg_writer* writer = (struct gpujpeg_writer*) malloc(sizeof(struct gpujpeg_writer));
     if (writer == NULL) {
@@ -58,7 +58,7 @@ int
 gpujpeg_writer_init(struct gpujpeg_writer * writer, struct gpujpeg_image_parameters * param_image)
 {
     // Allocate output buffer
-    int buffer_size = 1000;
+    size_t buffer_size = 1000;
     buffer_size += param_image->width * param_image->height * param_image->comp_count * 2;
 
     if (buffer_size > writer->buffer_allocated_size) {
@@ -164,7 +164,7 @@ static void gpujpeg_writer_write_app8(struct gpujpeg_encoder* encoder)
 
     // Identifier: ASCII "SPIFF\0"
     char spiff[] = { 'S', 'P', 'I', 'F', 'F', '\0' };
-    for (int i = 0; i < sizeof spiff; ++i) {
+    for (unsigned i = 0; i < sizeof spiff; ++i) {
         gpujpeg_writer_emit_byte(writer, spiff[i]);
     }
     int color_space;
@@ -388,7 +388,7 @@ gpujpeg_writer_write_com(struct gpujpeg_encoder* encoder, const char *str)
     // Length
     gpujpeg_writer_emit_2byte(encoder->writer, 2 + strlen(str) + 1);
 
-    for ( int i = 0; i <= strlen(str); i++ )  { // include terminating '\0'
+    for ( unsigned i = 0; i <= strlen(str); i++ )  { // include terminating '\0'
         gpujpeg_writer_emit_byte(encoder->writer, str[i]);
     }
 }
