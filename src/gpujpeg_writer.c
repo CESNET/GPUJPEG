@@ -147,17 +147,23 @@ void gpujpeg_writer_write_app0(struct gpujpeg_writer* writer)
     gpujpeg_writer_emit_byte(writer, 0);
 }
 
+static void
+gpujpeg_writer_write_app8(struct gpujpeg_writer* writer)
+{
+    gpujpeg_writer_emit_marker(writer, GPUJPEG_MARKER_APP8);
+}
+
 /**
- * Write APP8 block
+ * Write SPIFF header block
  *
  * This marker is used for color spaces that neither JFIF nor Adobe APP14 cannot represent
  *
  * @param writer  Writer structure
  */
-static void gpujpeg_writer_write_app8(struct gpujpeg_encoder* encoder)
+static void gpujpeg_writer_write_spiff_header(struct gpujpeg_encoder* encoder)
 {
     struct gpujpeg_writer* writer = encoder->writer;
-    gpujpeg_writer_emit_marker(writer, GPUJPEG_MARKER_APP8);
+    gpujpeg_writer_write_app8(writer);
 
     // Length
     gpujpeg_writer_emit_2byte(writer, 32)
@@ -200,6 +206,26 @@ static void gpujpeg_writer_write_app8(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_emit_byte(writer, 0);   // resolution units: 1 - ratio
     gpujpeg_writer_emit_4byte(writer, 1U); // VerticalResolution
     gpujpeg_writer_emit_4byte(writer, 1U); // HorizontalResolution
+}
+
+static void gpujpeg_writer_write_spiff_directory_eod(struct gpujpeg_writer* writer)
+{
+    gpujpeg_writer_write_app8(writer);
+    gpujpeg_writer_emit_2byte(writer, 8) // length is 2 bytes longer for EOD to contain also following SOI
+    gpujpeg_writer_emit_4byte(writer, 0x1)
+}
+
+static void gpujpeg_writer_write_spiff_directory(struct gpujpeg_encoder* encoder)
+{
+    struct gpujpeg_writer* writer = encoder->writer;
+    gpujpeg_writer_write_spiff_directory_eod(writer); // this must be last directory entry
+}
+
+static void gpujpeg_writer_write_spiff(struct gpujpeg_encoder* encoder)
+{
+    gpujpeg_writer_write_spiff_header(encoder);
+    gpujpeg_writer_write_spiff_directory(encoder);
+    gpujpeg_writer_write_soi(encoder->writer); // in SPIFF there is SOI once more starting the actual image data
 }
 
 /**
@@ -412,12 +438,12 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_write_soi(encoder->writer);
 
     if (encoder->coder.param_image.comp_count == 4) {
-            gpujpeg_writer_write_app8(encoder);
+            gpujpeg_writer_write_spiff(encoder);
     } else {
         switch (encoder->coder.param.color_space_internal) {
             case GPUJPEG_YCBCR_BT601:
             case GPUJPEG_YCBCR_BT709:
-                gpujpeg_writer_write_app8(encoder);
+                gpujpeg_writer_write_spiff(encoder);
                 break;
             case GPUJPEG_RGB:
                 gpujpeg_writer_write_app14(encoder->writer);
