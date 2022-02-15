@@ -1227,6 +1227,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
  * @retval 1  marker was not processed
  */
 static int gpujpeg_reader_read_common_markers(uint8_t **image, int* image_size, int marker, int log_level, enum gpujpeg_color_space *color_space, int *restart_interval) {
+    int rc = 0;
     switch (marker)
     {
         case GPUJPEG_MARKER_APP0:
@@ -1261,6 +1262,12 @@ static int gpujpeg_reader_read_common_markers(uint8_t **image, int* image_size, 
             }
             gpujpeg_reader_skip_marker_content(image, image_size);
             break;
+        case GPUJPEG_MARKER_DRI:
+            if ( (rc = gpujpeg_reader_read_dri(restart_interval, image, image_size)) != 0 ) {
+                return rc;
+            }
+            break;
+
         case GPUJPEG_MARKER_SOF2:
             fprintf(stderr, "[GPUJPEG] [Error] Marker SOF2 (Progressive with Huffman coding) is not supported!\n");
             return -1;
@@ -1378,12 +1385,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
         case GPUJPEG_MARKER_DHT:
             if ( gpujpeg_reader_read_dht(decoder, &image, &image_size) != 0 )
                 return -1;
-            break;
-
-        case GPUJPEG_MARKER_DRI:
-            rc = gpujpeg_reader_read_dri(&decoder->reader->param.restart_interval , &image, &image_size);
-            if ( rc != 0 )
-                return rc;
             break;
 
         case GPUJPEG_MARKER_SOS:
