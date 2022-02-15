@@ -128,9 +128,9 @@ gpujpeg_reader_read_marker(uint8_t** image, int* image_size)
  * Skip marker content (read length and that much bytes - 2)
  *
  * @param image
- * @return void
+ * @return 0 on success
  */
-int
+static int
 gpujpeg_reader_skip_marker_content(uint8_t** image, int* image_size)
 {
     if(*image_size < 2) {
@@ -148,6 +148,7 @@ gpujpeg_reader_skip_marker_content(uint8_t** image, int* image_size)
     }
     *image += length;
     *image_size -= length;
+    return 0;
 }
 
 /**
@@ -167,6 +168,7 @@ int gpujpeg_reader_read_jfif(uint8_t** image, int* image_size, int length)
     int pixel_ydpu = gpujpeg_reader_read_2byte(*image);
     int thumbnail_width = gpujpeg_reader_read_byte(*image);
     int thumbnail_height = gpujpeg_reader_read_byte(*image);
+    (void) pixel_units, (void) pixel_xdpu, (void) pixel_ydpu;
     *image_size -= 9;
 
     if ( version_major != 1 || ( version_minor < 0 || version_minor > 2) ) {
@@ -327,7 +329,7 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image, int*
 
     char *ignored_hdrs[] = { "Adobe_Photoshop2.5", "Photoshop 3.0", "Adobe_CM" };
     for (size_t i = 0; i < sizeof ignored_hdrs / sizeof ignored_hdrs[0]; ++i) {
-        if (length >= 2 + sizeof ignored_hdrs[i] - 1 && memcmp((char *) *image, ignored_hdrs[i], sizeof ignored_hdrs[i] - 1) == 0) {
+        if ((size_t) length >= 2 + sizeof ignored_hdrs[i] - 1 && memcmp((char *) *image, ignored_hdrs[i], sizeof ignored_hdrs[i] - 1) == 0) {
             if ( decoder->coder.param.verbose ) {
                 fprintf(stderr, "[GPUJPEG] [Warning] Skipping unsupported %s APP13 marker!\n", ignored_hdrs[i]);
             }
@@ -340,7 +342,7 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image, int*
     // forward compatibility - expect future GPUJPEG version to tag the segment info marker,
     // which is currently not written
     char gpujpeg_str[] = "GPUJPEG"; // with terminating '\0'
-    if (length >= 2 + sizeof gpujpeg_str && memcmp((char *) image, gpujpeg_str, sizeof gpujpeg_str) == 0) {
+    if ((size_t) length >= 2 + sizeof gpujpeg_str && memcmp((char *) image, gpujpeg_str, sizeof gpujpeg_str) == 0) {
         *image += sizeof gpujpeg_str;
         length -= sizeof gpujpeg_str;
         return gpujpeg_reader_read_segment_info(decoder, image, image_size, length);
@@ -386,10 +388,9 @@ gpujpeg_reader_read_app8(uint8_t** image, int* image_size, enum gpujpeg_color_sp
         return -1;
     }
 
-    const char expected_marker_name[] = { 'S', 'P', 'I', 'F', 'F', '\0' };
+    const char expected_marker_name[6] = { 'S', 'P', 'I', 'F', 'F', '\0' };
     char marker_name[sizeof expected_marker_name];
-    int i = 0;
-    for (i = 0; i < sizeof marker_name; i++) {
+    for (unsigned i = 0; i < sizeof marker_name; i++) {
         marker_name[i] = gpujpeg_reader_read_byte(*image);
         *image_size -= 1;
         if (!isprint(marker_name[i])) {
@@ -405,19 +406,26 @@ gpujpeg_reader_read_app8(uint8_t** image, int* image_size, enum gpujpeg_color_sp
         return 0;
     }
 
-    gpujpeg_reader_read_2byte(*image); // version
-    gpujpeg_reader_read_byte(*image); // profile ID
-    gpujpeg_reader_read_byte(*image); // component count
-    gpujpeg_reader_read_4byte(*image); // width
-    gpujpeg_reader_read_4byte(*image); // height
+    int version = gpujpeg_reader_read_2byte(*image); // version
+    int profile_id = gpujpeg_reader_read_byte(*image); // profile ID
+    int comp_count = gpujpeg_reader_read_byte(*image); // component count
+    int width = gpujpeg_reader_read_4byte(*image); // width
+    int height = gpujpeg_reader_read_4byte(*image); // height
     int spiff_color_space = gpujpeg_reader_read_byte(*image);
-    gpujpeg_reader_read_byte(*image); // bits per sample
+    int bps = gpujpeg_reader_read_byte(*image); // bits per sample
     int compression = gpujpeg_reader_read_byte(*image);
-    gpujpeg_reader_read_byte(*image); // resolution units
-    gpujpeg_reader_read_4byte(*image); // vertical res
-    gpujpeg_reader_read_4byte(*image); // horizontal res
+    int pixel_units = gpujpeg_reader_read_byte(*image); // resolution units
+    int pixel_xdpu = gpujpeg_reader_read_4byte(*image); // vertical res
+    int pixel_ydpu = gpujpeg_reader_read_4byte(*image); // horizontal res
+    (void) profile_id, (void) comp_count, (void) width, (void) height, (void) pixel_units, (void) pixel_xdpu, (void) pixel_ydpu;
     *image_size -= 24;
 
+    if (version != 0x100) {
+        VERBOSE_MSG("Unknown SPIFF version %d.%d.\n", version >> 8, version & 0xFF);
+    }
+    if (bps != 8) {
+        ERROR_MSG("Wrong bits per sample %d, only 8 is supported.\n", bps);
+    }
     if (compression != SPIFF_COMPRESSION_JPEG) {
             ERROR_MSG("Unexpected compression index %d, expected %d (JPEG)\n", compression, SPIFF_COMPRESSION_JPEG);
             return -1;
@@ -474,6 +482,7 @@ gpujpeg_reader_read_adobe_header(uint8_t** image, int* image_size, enum gpujpeg_
     int flags0 = gpujpeg_reader_read_2byte(*image);
     int flags1 = gpujpeg_reader_read_2byte(*image);
     int color_transform = gpujpeg_reader_read_byte(*image);
+    (void) version, (void) flags0, (void) flags1;
     *image_size -= 7;
 
     if (color_transform == 0) {
@@ -564,7 +573,7 @@ gpujpeg_reader_read_com(uint8_t** image, int* image_size, enum gpujpeg_color_spa
 
     const char cs_itu601[] = "CS=ITU601";
     char buf[sizeof cs_itu601];
-    size_t str_len = MIN(sizeof buf - 1, length - 2);
+    size_t str_len = MIN(sizeof buf - 1, (size_t) length - 2);
     memcpy(buf, *image, str_len);
     buf[str_len] = '\0'; // terminate if needed
     if (strcmp(buf, cs_itu601) == 0) {
@@ -1179,6 +1188,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
     int Ax = (int)gpujpeg_reader_read_byte(*image);
     int Ah = (Ax >> 4) & 15;
     int Al = (Ax) & 15;
+    (void) Ss, (void) Se, (void) Ax, (void) Ah, (void) Al;
 
     // Check maximum scan count
     if ( decoder->reader->scan_count >= GPUJPEG_MAX_COMPONENT_COUNT ) {
@@ -1300,7 +1310,6 @@ static int gpujpeg_reader_read_common_markers(uint8_t **image, int* image_size, 
 int
 gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size)
 {
-    int rc;
     // Setup reader and decoder
     decoder->reader->param = decoder->coder.param;
     decoder->reader->param.restart_interval = 0;
