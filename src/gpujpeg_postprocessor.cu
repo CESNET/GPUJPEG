@@ -267,8 +267,8 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         coder->sampling_factor.vertical / coder->component[1].sampling_factor.vertical,
         coder->sampling_factor.horizontal / coder->component[2].sampling_factor.horizontal,
         coder->sampling_factor.vertical / coder->component[2].sampling_factor.vertical,
-        coder->sampling_factor.horizontal / coder->component[3].sampling_factor.horizontal,
-        coder->sampling_factor.vertical / coder->component[3].sampling_factor.vertical
+        coder->param_image.comp_count == 4 ? coder->sampling_factor.horizontal / coder->component[3].sampling_factor.horizontal : 1,
+        coder->param_image.comp_count == 4 ? coder->sampling_factor.vertical / coder->component[3].sampling_factor.vertical : 1
     );
 
 #define RETURN_KERNEL_SWITCH(PIXEL_FORMAT, COLOR, P1, P2, P3, P4, P5, P6, P7, P8) \
