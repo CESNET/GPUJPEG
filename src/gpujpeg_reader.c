@@ -1584,6 +1584,20 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
         }
     }
 
+    if (param_image->comp_count == 4) {
+        _Bool subsampling_is4444 = 1;
+        for (int i = 1; i < 4; ++i) {
+            if (param->sampling_factor[i].horizontal != param->sampling_factor[0].horizontal
+                    || param->sampling_factor[i].vertical != param->sampling_factor[0].vertical) {
+                subsampling_is4444 = 0;
+                break;
+            }
+        }
+        if (subsampling_is4444) {
+            param_image->pixel_format = GPUJPEG_444_U8_P012A;
+        }
+    }
+
     return 0;
 }
 
