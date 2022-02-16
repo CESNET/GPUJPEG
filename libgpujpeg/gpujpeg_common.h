@@ -158,7 +158,7 @@ gpujpeg_init_device(int device_id, int flags);
 struct gpujpeg_parameters
 {
     /// Verbosity level - show more information, collects duration of each phase, etc.
-    /// 0 - normal, 1 - verbose, 2 - debug
+    /// 0 - normal, 1 - verbose, 2 - debug, 3 - debug2 (if not defined NDEBUG)
     int verbose;
 
     /// Encoder quality level (0-100)

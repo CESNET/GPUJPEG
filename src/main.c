@@ -45,7 +45,7 @@ print_help()
 {
     printf("gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
            "   -h, --help             print help\n"
-           "   -v, --verbose          verbose output (multiply to increase verbosity - max 2) \n"
+           "   -v, --verbose          verbose output (multiply to increase verbosity - max 3) \n"
            "   -D, --device           set cuda device id (default 0)\n"
            "       --device-list      list cuda devices\n"
            "\n");
