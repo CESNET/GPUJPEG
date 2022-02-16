@@ -178,7 +178,6 @@ gpujpeg_idct_cpu_perform_column(int16_t* blk)
 void gpujpeg_idct_cpu_perform(int16_t* block, int16_t* table)
 {
     for ( int i = 0; i < 64; i++ ) {
-        int pos = i;
         block[i] = (int)block[i] * (int)table[i];
     }
 
@@ -236,7 +235,7 @@ gpujpeg_idct_cpu(struct gpujpeg_decoder* decoder)
             for ( int x = 0; x < width; x++ ) {
                 for ( int c = 0; c < (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE); c++ ) {
                     int coefficient_index = (y * width + x) * (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE) + c;
-                    uint16_t coefficient = component->data_quantized[coefficient_index];
+                    int16_t coefficient = component->data_quantized[coefficient_index];
                     coefficient += 128;
                     if ( coefficient > 255 )
                         coefficient = 255;

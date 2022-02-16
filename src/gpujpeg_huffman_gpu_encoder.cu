@@ -1051,6 +1051,9 @@ gpujpeg_huffman_gpu_encoder_destroy(struct gpujpeg_huffman_gpu_encoder * huffman
  * Get grid size for specified count of threadblocks. (Grid size is limited
  * to 65536 in both directions, so if we need more threadblocks, we must use
  * both x and y coordinates.)
+ *
+ * @note
+ * Post-Fermi cards increased maximal value for x coordinate to 2^31-1.
  */
 dim3
 gpujpeg_huffman_gpu_encoder_grid_size(int tblock_count)
@@ -1124,7 +1127,6 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujp
 
         // Run codeword serialization kernel
         const int num_serialization_tblocks = gpujpeg_div_and_round_up(coder->segment_count, SERIALIZATION_THREADS_PER_TBLOCK);
-        const dim3 serialization_grid = gpujpeg_huffman_gpu_encoder_grid_size(num_serialization_tblocks);
         gpujpeg_huffman_encoder_serialization_kernel<<<num_serialization_tblocks, SERIALIZATION_THREADS_PER_TBLOCK, 0, encoder->stream>>>(
             coder->d_segment,
             coder->segment_count,

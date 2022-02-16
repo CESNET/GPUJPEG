@@ -537,7 +537,7 @@ main(int argc, char *argv[])
                     printf("\nIteration #%d:\n", iteration + 1);
                 }
 
-                double duration = gpujpeg_get_time();
+                duration = gpujpeg_get_time();
 
                 rc = gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size);
                 if ( rc != GPUJPEG_NOERR ) {
@@ -700,7 +700,7 @@ main(int argc, char *argv[])
                     printf("\nIteration #%d:\n", iteration + 1);
                 }
 
-                double duration = gpujpeg_get_time();
+                duration = gpujpeg_get_time();
 
                 // Decode image
                 if ( (rc = gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output)) != 0 ) {

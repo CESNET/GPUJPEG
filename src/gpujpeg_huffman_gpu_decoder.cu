@@ -250,8 +250,7 @@ gpujpeg_huffman_gpu_decoder_value_from_category(int nbits, int code)
     
 //     // Method 1: 
 //     // On some machines, a shift and add will be faster than a table lookup.
-//     // #define HUFF_EXTEND(x,s) \
-//     // ((x)< (1<<((s)-1)) ? (x) + (((-1)<<(s)) + 1) : (x)) 
+//     // #define HUFF_EXTEND(x,s) ((x)< (1<<((s)-1)) ? (x) + (((-1)<<(s)) + 1) : (x))
 // 
 //     // Method 2: Table lookup
 //     // If (offset < half[category]), then value is below zero

@@ -249,7 +249,7 @@ struct gpujpeg_coder
     /// Image data height
     int data_height;
     /// Number of raw image bytes
-    int data_raw_size;
+    long data_raw_size;
     /// Number of coefficient count for all components
     int data_size;
     /// Number of compressed bytes
@@ -274,7 +274,7 @@ struct gpujpeg_coder
     /// Memory allocated by gpujpeg
     uint8_t* d_data_raw_allocated;
     /// Allocated data size
-    size_t data_raw_allocated_size;
+    long data_raw_allocated_size;
 
     /// Preprocessor data in device memory (output/input for encoder/decoder)
     uint8_t* d_data;

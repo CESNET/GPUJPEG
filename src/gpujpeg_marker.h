@@ -111,16 +111,13 @@ enum gpujpeg_marker_code {
 #define SPIFF_ENTRY_TAG_EOD_LENGHT 8 // length is 2 bytes longer for EOD to contain also following SOI
 #define SPIFF_MARKER_LEN 32 ///< including length field
 
-static const char*
-gpujpeg_marker_name(enum gpujpeg_marker_code code) ATTRIBUTE_UNUSED;
-
 /**
  * Get marker name from code
  *
  * @param code
  * @return marker name
  */
-static const char*
+static inline const char*
 gpujpeg_marker_name(enum gpujpeg_marker_code code)
 {
     switch (code) {

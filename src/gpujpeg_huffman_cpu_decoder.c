@@ -165,8 +165,7 @@ gpujpeg_huffman_cpu_decoder_value_from_category(int category, int offset)
 {
     // Method 1: 
     // On some machines, a shift and add will be faster than a table lookup.
-    // #define HUFF_EXTEND(x,s) \
-    // ((x)< (1<<((s)-1)) ? (x) + (((-1)<<(s)) + 1) : (x)) 
+    // #define HUFF_EXTEND(x,s) ((x)< (1<<((s)-1)) ? (x) + (((-1)<<(s)) + 1) : (x))
 
     // Method 2: Table lookup
     // If (offset < half[category]), then value is below zero
@@ -177,6 +176,12 @@ gpujpeg_huffman_cpu_decoder_value_from_category(int category, int offset)
         0x0080, 0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000
     };
 
+#if defined __GNUC_
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshift-negative-value"
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif // defined __GNUC_
+    _Static_assert((-1)<<1 == -2, "Implementation defined behavior doesn't work as assumed.");
     //start[i] is the starting value in this category; surely it is below zero
     // entry n is (-1 << n) + 1
     static const int start[16] = { 
@@ -185,6 +190,9 @@ gpujpeg_huffman_cpu_decoder_value_from_category(int category, int offset)
         ((-1)<<9) + 1, ((-1)<<10) + 1, ((-1)<<11) + 1, ((-1)<<12) + 1,
         ((-1)<<13) + 1, ((-1)<<14) + 1, ((-1)<<15) + 1 
     };    
+#if defined __GNUC_
+#pragma GCC diagnostic pop
+#endif // defined __GNUC_
 
     return (offset < half[category]) ? (offset + start[category]) : offset;    
 }
@@ -357,9 +365,6 @@ gpujpeg_huffman_cpu_decoder_decode_mcu(struct gpujpeg_huffman_cpu_decoder* coder
 int
 gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder)
 {
-    int block_cx = (decoder->coder.param_image.width + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
-    int block_cy = (decoder->coder.param_image.height + GPUJPEG_BLOCK_SIZE - 1) / GPUJPEG_BLOCK_SIZE;
-    
     // Initialize huffman coder
     struct gpujpeg_huffman_cpu_decoder coder;
     coder.component = decoder->coder.component;

@@ -595,7 +595,7 @@ namespace PNM
          {
           switch( m_type )
            {
-            default: m_channel =0;
+            default: m_channel =0; break;
             case(PNM::P1): m_channel = 1; break;
             case(PNM::P4): m_channel = 1; break;
             case(PNM::P2): m_channel = 1; break;

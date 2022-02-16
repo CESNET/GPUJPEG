@@ -183,6 +183,7 @@ void glutOnIdle(void)
 
 void glutOnKeyboard(unsigned char key, int x, int y)
 {
+    (void) x, (void) y;
     switch(key)
     {
         case 27: // ESCAPE key

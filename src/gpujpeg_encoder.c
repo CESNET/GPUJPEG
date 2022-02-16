@@ -142,9 +142,7 @@ size_t gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpuj
 
     int current_max_pixels = 0;
     size_t current_max_pixels_memory_size = 0;
-    int result = 0;
     int pixels = 10000;
-    int iteration = 0;
     while (true) {
         param_image->width = (int) sqrt((float) pixels);
         param_image->height = (pixels + param_image->width - 1) / param_image->width;
@@ -175,9 +173,6 @@ size_t gpujpeg_encoder_max_pixels(struct gpujpeg_parameters * param, struct gpuj
             pixels = next_pixels;
         }
         else  {
-            if (current_max_pixels == 0){
-                result = -1;
-            }
             break;
         }
     }
@@ -440,7 +435,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_memory_from, encoder->stream, return -1);
 
         // Copy compressed data from device memory to cpu memory
-        if ( cudaSuccess != cudaMemcpyAsync(coder->data_compressed, coder->d_data_compressed, output_size, cudaMemcpyDeviceToHost, encoder->stream) != 0 ) {
+        if ( cudaSuccess != cudaMemcpyAsync(coder->data_compressed, coder->d_data_compressed, output_size, cudaMemcpyDeviceToHost, encoder->stream) ) {
             return -1;
         }
         // Copy segments from device memory

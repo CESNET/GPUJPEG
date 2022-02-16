@@ -335,7 +335,7 @@ GPUJPEG_API void gpujpeg_set_device(int index);
  * @param param  Image parameters
  * @return calculate size
  */
-GPUJPEG_API int
+GPUJPEG_API long
 gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param);
 
 /**

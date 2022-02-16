@@ -1055,23 +1055,23 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
 }
 
 /* Documented at declaration */
-int
+long
 gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
 {
     int bpp = gpujpeg_pixel_format_get_unit_size(param->pixel_format);
     if (bpp != 0) {
-        return param->width * param->height * bpp;
+        return (long) param->width * param->height * bpp;
     }
     switch (param->pixel_format) {
     case GPUJPEG_444_U8_P0P1P2:
         assert(param->comp_count == 3);
-        return param->width * param->height * param->comp_count;
+        return (long) param->width * param->height * param->comp_count;
     case GPUJPEG_422_U8_P0P1P2:
         assert(param->comp_count == 3);
-        return param->width * param->height + 2 * ((param->width + 1) / 2) * param->height;
+        return (long) param->width * param->height + 2 * ((param->width + 1) / 2) * param->height;
     case GPUJPEG_420_U8_P0P1P2:
         assert(param->comp_count == 3);
-        return param->width * param->height + 2 * ((param->width + 1) / 2) * ((param->height + 1) / 2);
+        return (long) param->width * param->height + 2 * ((param->width + 1) / 2) * ((param->height + 1) / 2);
     default:
         assert(0);
         return 0;
@@ -1266,8 +1266,9 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
         struct gpujpeg_image_parameters param_image_to)
 {
     fprintf(stderr, "[GPUJPEG] [Error] GPUJPEG conversions are currently defunct, report to developers if needed!\n");
+    (void) input, (void) output, (void) param_image_from, (void) param_image_to;
     return -1;
-
+#if 0
     assert(param_image_from.width == param_image_to.width);
     assert(param_image_from.height == param_image_to.height);
     assert(param_image_from.comp_count == param_image_to.comp_count);
@@ -1332,12 +1333,13 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     gpujpeg_coder_deinit(coder);
 
     return 0;
+#endif
 }
 
 #if defined GPUJPEG_USE_GLFW
 static void glfw_error_callback(int error, const char* description)
 {
-    fprintf(stderr, "[GPUJPEG] [Error] GLFW: %s\n", description);
+    fprintf(stderr, "[GPUJPEG] [Error] GLFW: %s (%d)\n", description, error);
 }
 #endif
 
@@ -1442,7 +1444,6 @@ gpujpeg_opengl_init(struct gpujpeg_opengl_context **ctx)
 #else
     GPUJPEG_MISSING_OPENGL(return -2);
 #endif
-    return -1;
 }
 
 GPUJPEG_API void
@@ -1870,8 +1871,7 @@ int gpujpeg_pixel_format_get_subsampling(enum gpujpeg_pixel_format pixel_format)
 
 float gpujpeg_custom_timer_get_duration(cudaEvent_t start, cudaEvent_t stop) {
     float elapsedTime = NAN;
-    cudaError_t err = cudaSuccess;
-    err = cudaEventSynchronize(stop);
+    cudaError_t err = cudaEventSynchronize(stop);
     if (err != cudaSuccess) {
         if (err != cudaErrorInvalidResourceHandle) {
             gpujpeg_cuda_check_error("cudaEventSynchronize", );

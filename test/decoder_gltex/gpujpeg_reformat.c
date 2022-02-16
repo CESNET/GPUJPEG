@@ -420,6 +420,7 @@ gpujpeg_reformat_read_sos(struct gpujpeg_rewriter * rewriter, uint8_t** image, u
     int Ax = (int)gpujpeg_reformat_read_byte(*image);
     int Ah = (Ax >> 4) & 15;
     int Al = (Ax) & 15;
+    (void) Ss, (void) Se, (void) Ax, (void) Ah, (void) Al;
 
     // Check maximum scan count
     if ( rewriter->scan_count >= GPUJPEG_MAX_COMPONENT_COUNT ) {
