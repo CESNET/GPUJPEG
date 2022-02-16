@@ -4,7 +4,7 @@ src/*.o
 src/*.lo
 *.rgb
 *.vim
-/build*/
+/build*
 configure
 Makefile
 Makefile.in
@@ -20,6 +20,7 @@ config.status
 config.sub
 cscope.out
 depcomp
+/examples/build*
 /doc/
 install-sh
 libgpujpeg.pc
@@ -31,6 +32,7 @@ src/.deps/
 src/.dirstamp
 stamp-h1
 libgpujpeg.la
+tags
 test-driver
 
 # VS
