@@ -54,8 +54,6 @@
 #define DEBUG_MSG(...) do { if (verbose >= 2) fprintf(stderr, "[GPUJPEG] [Debug] " __VA_ARGS__); } while(0)
 #define VERBOSE_MSG(...) do { if (verbose >= 1) fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
 
-#define APP14_ADOBE_MARKER_LEN 14
-
 /* Documented at declaration */
 struct gpujpeg_reader*
 gpujpeg_reader_create()
@@ -346,20 +344,73 @@ gpujpeg_reader_read_app13(struct gpujpeg_decoder* decoder, uint8_t** image, cons
     return 0;
 }
 
+static int
+gpujpeg_reader_read_spiff_header(uint8_t** image, int verbose, enum gpujpeg_color_space *color_space, _Bool *in_spiff)
+{
+    int version = gpujpeg_reader_read_2byte(*image); // version
+    int profile_id = gpujpeg_reader_read_byte(*image); // profile ID
+    int comp_count = gpujpeg_reader_read_byte(*image); // component count
+    int width = gpujpeg_reader_read_4byte(*image); // width
+    int height = gpujpeg_reader_read_4byte(*image); // height
+    int spiff_color_space = gpujpeg_reader_read_byte(*image);
+    int bps = gpujpeg_reader_read_byte(*image); // bits per sample
+    int compression = gpujpeg_reader_read_byte(*image);
+    int pixel_units = gpujpeg_reader_read_byte(*image); // resolution units
+    int pixel_xdpu = gpujpeg_reader_read_4byte(*image); // vertical res
+    int pixel_ydpu = gpujpeg_reader_read_4byte(*image); // horizontal res
+    (void) profile_id, (void) comp_count, (void) width, (void) height, (void) pixel_units, (void) pixel_xdpu, (void) pixel_ydpu;
+
+    if (version != SPIFF_VERSION) {
+        VERBOSE_MSG("Unknown SPIFF version %d.%d.\n", version >> 8, version & 0xFF);
+    }
+    if (bps != 8) {
+        ERROR_MSG("Wrong bits per sample %d, only 8 is supported.\n", bps);
+    }
+    if (compression != SPIFF_COMPRESSION_JPEG) {
+            ERROR_MSG("Unexpected compression index %d, expected %d (JPEG)\n", compression, SPIFF_COMPRESSION_JPEG);
+            return -1;
+    }
+
+    switch (spiff_color_space) {
+        case 1: // NOLINT
+            *color_space = GPUJPEG_YCBCR_BT709;
+            break;
+        case 2: // NOLINT
+            break;
+        case 3: // NOLINT
+        case 8: /* grayscale */ // NOLINT
+            *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+            break;
+        case 4: // NOLINT
+            *color_space = GPUJPEG_YCBCR_BT601;
+            break;
+        case 10: // NOLINT
+            *color_space = GPUJPEG_RGB;
+            break;
+        default:
+            ERROR_MSG("Unsupported or unrecongnized SPIFF color space %d!\n", spiff_color_space);
+            return -1;
+    }
+
+    DEBUG_MSG("APP8 SPIFF parsed succesfully, internal color space: %s\n", gpujpeg_color_space_get_name(*color_space));
+    *in_spiff = 1;
+
+    return 0;
+}
+
 /** @retval -1 error
  *  @retval  0 no error */
 static int
 gpujpeg_reader_read_spiff_directory(uint8_t** image, const uint8_t* image_end, int verbose, int length, _Bool *in_spiff)
 {
     if (length < 4) {
-        fprintf(stderr, "[GPUJPEG] [Error] APP8 spiff directory too short (%d bytes)\n", length);
+        fprintf(stderr, "[GPUJPEG] [Error] APP8 SPIFF directory too short (%d bytes)\n", length + 2);
         image += length;
         return -1;
     }
     uint32_t tag = gpujpeg_reader_read_4byte(*image);
-    length -= 4;
     DEBUG2_MSG("Read SPIFF tag 0x%x with length %d.\n", tag, length + 2);
-    if (tag == 0x1 && length == 2) {
+    if (tag == SPIFF_ENTRY_TAG_EOD && length == SPIFF_ENTRY_TAG_EOD_LENGHT - 2) {
         int marker_soi = gpujpeg_reader_read_marker(image, image_end);
         if ( marker_soi != GPUJPEG_MARKER_SOI ) {
             VERBOSE_MSG("SPIFF entry 0x1 should be followed directly with SOI.\n");
@@ -367,12 +418,14 @@ gpujpeg_reader_read_spiff_directory(uint8_t** image, const uint8_t* image_end, i
         }
         DEBUG2_MSG("SPIFF EOD presented.\n");
         *in_spiff = 0;
+    } else if (tag >> 24U != 0) {
+        VERBOSE_MSG("Erroneous SPIFF tag 0x%x (first byte should be 0).", tag);
+    } else {
+        DEBUG2_MSG("SPIFF tag 0x%x with length %d presented.\n", tag, length + 2);
     }
     return 0;
 }
 
-#define SPIFF_MARKER_LEN 32 ///< including length field
-#define SPIFF_COMPRESSION_JPEG 5
 /**
  * Read APP8 marker
  *
@@ -423,55 +476,7 @@ gpujpeg_reader_read_app8(uint8_t** image, const uint8_t* image_end, enum gpujpeg
         return 0;
     }
 
-    int version = gpujpeg_reader_read_2byte(*image); // version
-    int profile_id = gpujpeg_reader_read_byte(*image); // profile ID
-    int comp_count = gpujpeg_reader_read_byte(*image); // component count
-    int width = gpujpeg_reader_read_4byte(*image); // width
-    int height = gpujpeg_reader_read_4byte(*image); // height
-    int spiff_color_space = gpujpeg_reader_read_byte(*image);
-    int bps = gpujpeg_reader_read_byte(*image); // bits per sample
-    int compression = gpujpeg_reader_read_byte(*image);
-    int pixel_units = gpujpeg_reader_read_byte(*image); // resolution units
-    int pixel_xdpu = gpujpeg_reader_read_4byte(*image); // vertical res
-    int pixel_ydpu = gpujpeg_reader_read_4byte(*image); // horizontal res
-    (void) profile_id, (void) comp_count, (void) width, (void) height, (void) pixel_units, (void) pixel_xdpu, (void) pixel_ydpu;
-
-    if (version != 0x100) {
-        VERBOSE_MSG("Unknown SPIFF version %d.%d.\n", version >> 8, version & 0xFF);
-    }
-    if (bps != 8) {
-        ERROR_MSG("Wrong bits per sample %d, only 8 is supported.\n", bps);
-    }
-    if (compression != SPIFF_COMPRESSION_JPEG) {
-            ERROR_MSG("Unexpected compression index %d, expected %d (JPEG)\n", compression, SPIFF_COMPRESSION_JPEG);
-            return -1;
-    }
-
-    switch (spiff_color_space) {
-        case 1: // NOLINT
-            *color_space = GPUJPEG_YCBCR_BT709;
-            break;
-        case 2: // NOLINT
-            break;
-        case 3: // NOLINT
-        case 8: /* grayscale */ // NOLINT
-            *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
-            break;
-        case 4: // NOLINT
-            *color_space = GPUJPEG_YCBCR_BT601;
-            break;
-        case 10: // NOLINT
-            *color_space = GPUJPEG_RGB;
-            break;
-        default:
-            ERROR_MSG("Unsupported or unrecongnized SPIFF color space %d!\n", spiff_color_space);
-            return -1;
-    }
-
-    DEBUG_MSG("APP8 SPIFF parsed succesfully, internal color space: %s\n", gpujpeg_color_space_get_name(*color_space));
-    *in_spiff = 1;
-
-    return 0;
+    return gpujpeg_reader_read_spiff_header(image, verbose, color_space, in_spiff);
 }
 
 /**

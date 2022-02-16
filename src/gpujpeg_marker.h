@@ -104,6 +104,13 @@ enum gpujpeg_marker_code {
     GPUJPEG_MARKER_ERROR = 0x100
 };
 
+#define APP14_ADOBE_MARKER_LEN 14
+#define SPIFF_VERSION 0x100 // Version 1.00
+#define SPIFF_COMPRESSION_JPEG 5
+#define SPIFF_ENTRY_TAG_EOD 0x1
+#define SPIFF_ENTRY_TAG_EOD_LENGHT 8 // length is 2 bytes longer for EOD to contain also following SOI
+#define SPIFF_MARKER_LEN 32 ///< including length field
+
 static const char*
 gpujpeg_marker_name(enum gpujpeg_marker_code code) ATTRIBUTE_UNUSED;
 

@@ -166,7 +166,7 @@ static void gpujpeg_writer_write_spiff_header(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_write_app8(writer);
 
     // Length
-    gpujpeg_writer_emit_2byte(writer, 32)
+    gpujpeg_writer_emit_2byte(writer, SPIFF_MARKER_LEN)
 
     // Identifier: ASCII "SPIFF\0"
     char spiff[] = { 'S', 'P', 'I', 'F', 'F', '\0' };
@@ -195,14 +195,14 @@ static void gpujpeg_writer_write_spiff_header(struct gpujpeg_encoder* encoder)
         }
     }
     int profile = color_space == 3 || color_space == 8 ? 1 : 0; // 0 = No profile
-    gpujpeg_writer_emit_2byte(writer, 0x100); // Version 1.00
+    gpujpeg_writer_emit_2byte(writer, SPIFF_VERSION);
     gpujpeg_writer_emit_byte(writer, profile);   // ProfileID
     gpujpeg_writer_emit_byte(writer, encoder->coder.param_image.comp_count);   // number of components
     gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.height);
     gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.width);
     gpujpeg_writer_emit_byte(writer, color_space);
     gpujpeg_writer_emit_byte(writer, 8);   // bits per sample
-    gpujpeg_writer_emit_byte(writer, 5);   // compression type: 5 - JPEG
+    gpujpeg_writer_emit_byte(writer, SPIFF_COMPRESSION_JPEG);   // compression type: 5 - JPEG
     gpujpeg_writer_emit_byte(writer, 0);   // resolution units: 1 - ratio
     gpujpeg_writer_emit_4byte(writer, 1U); // VerticalResolution
     gpujpeg_writer_emit_4byte(writer, 1U); // HorizontalResolution
@@ -211,8 +211,8 @@ static void gpujpeg_writer_write_spiff_header(struct gpujpeg_encoder* encoder)
 static void gpujpeg_writer_write_spiff_directory_eod(struct gpujpeg_writer* writer)
 {
     gpujpeg_writer_write_app8(writer);
-    gpujpeg_writer_emit_2byte(writer, 8) // length is 2 bytes longer for EOD to contain also following SOI
-    gpujpeg_writer_emit_4byte(writer, 0x1)
+    gpujpeg_writer_emit_2byte(writer, SPIFF_ENTRY_TAG_EOD_LENGHT)
+    gpujpeg_writer_emit_4byte(writer, SPIFF_ENTRY_TAG_EOD)
 }
 
 static void gpujpeg_writer_write_spiff_directory(struct gpujpeg_encoder* encoder)
@@ -241,7 +241,7 @@ static void gpujpeg_writer_write_app14(struct gpujpeg_writer* writer)
     gpujpeg_writer_emit_marker(writer, GPUJPEG_MARKER_APP14);
 
     // Length
-    gpujpeg_writer_emit_2byte(writer, 2 + 5 + 2 + 2 + 2 + 1)
+    gpujpeg_writer_emit_2byte(writer, APP14_ADOBE_MARKER_LEN)
 
     // Identifier: ASCII "Adobe"
     gpujpeg_writer_emit_byte(writer, 0x41);
