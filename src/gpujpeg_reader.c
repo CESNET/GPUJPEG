@@ -54,6 +54,48 @@
 #define DEBUG_MSG(...) do { if (verbose >= 2) fprintf(stderr, "[GPUJPEG] [Debug] " __VA_ARGS__); } while(0)
 #define VERBOSE_MSG(...) do { if (verbose >= 1) fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
 
+/** JPEG reader scan structure */
+struct gpujpeg_reader_scan
+{
+    /// Global segment index
+    int segment_index;
+    /// Segment count in scan
+    int segment_count;
+};
+
+/** JPEG reader structure */
+struct gpujpeg_reader
+{
+    /// Parameters
+    struct gpujpeg_parameters param;
+
+    /// Parameters for image data
+    struct gpujpeg_image_parameters param_image;
+
+    /// Loaded component count
+    int comp_count;
+
+    /// Loaded scans
+    struct gpujpeg_reader_scan scan[GPUJPEG_MAX_COMPONENT_COUNT];
+
+    /// Loaded scans count
+    int scan_count;
+
+    /// Total segment count
+    int segment_count;
+
+    /// Total readed size
+    int data_compressed_size;
+
+    /// Segment info (every buffer is placed inside another header)
+    uint8_t* segment_info[GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT];
+    /// Segment info buffers count (equals number of segment info headers)
+    int segment_info_count;
+    /// Segment info total buffers size
+    int segment_info_size;
+};
+
+
 /* Documented at declaration */
 struct gpujpeg_reader*
 gpujpeg_reader_create()
