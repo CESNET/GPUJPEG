@@ -176,7 +176,7 @@ gpujpeg_huffman_cpu_decoder_value_from_category(int category, int offset)
         0x0080, 0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000
     };
 
-#if defined __GNUC_
+#if !defined __GNUC_
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wshift-negative-value"
 #pragma GCC diagnostic ignored "-Wpedantic"

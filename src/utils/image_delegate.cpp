@@ -25,11 +25,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <fstream>
 #include <iostream>
 #include <string.h>
 
 #include "image_delegate.h"
-#include "pam.hpp"
+#include "pam.h"
 #include "pnm.hpp"
 
 #if defined(_MSC_VER)
