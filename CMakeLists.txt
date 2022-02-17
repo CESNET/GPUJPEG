@@ -136,7 +136,7 @@ message(STATUS "Configured options: ${COMPILED_OPTIONS}")
 
 # GPUJPEG library
 file(GLOB H_FILES libgpujpeg/*.h ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg/gpujpeg_version.h)
-file(GLOB C_FILES src/*.c src/*.cu)
+file(GLOB_RECURSE C_FILES src/*.c src/*.cu)
 if(NOT DISABLE_CPP)
     file(GLOB_RECURSE CPP_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 endif()
@@ -146,11 +146,7 @@ include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_compile_features(gpujpeg PRIVATE ${NEEDED_COMPILER_FEATURES})
 set_property(TARGET gpujpeg PROPERTY C_STANDARD 99)
 set_target_properties(gpujpeg PROPERTIES SOVERSION 0)
-SET_TARGET_PROPERTIES(
-  gpujpeg
-PROPERTIES
-  PUBLIC_HEADER "${H_FILES}"
-)
+set_target_properties(gpujpeg PROPERTIES PUBLIC_HEADER "${H_FILES}")
 if(GPUJPEG_OPENGL_ENABLED)
     target_link_libraries(gpujpeg ${GPUJPEG_OPENGL_LIBRARIES})
 endif()

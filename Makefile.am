@@ -39,7 +39,8 @@ libgpujpeg_SRC = src/gpujpeg_common.c \
 	     	src/gpujpeg_reader.c \
 	     	src/gpujpeg_table.c \
 	     	src/gpujpeg_writer.c \
-	     	src/utils/image_delegate.cpp
+	     	src/utils/image_delegate.c \
+	     	src/utils/image_delegate_pnm.cpp
 
 libgpujpeg_DEP = @LIBGPUJPEG_CUDA_OBJS@
 
@@ -124,3 +125,4 @@ cscope:
 universal-ctags:
 	ctags-universal $$(find $(srcdir)/src $(srcdir)/test \( -name '*.c' -o -name '*.cpp' -o -name '*.cu' -o -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \))
 
+# vim: set noexpandtabs:

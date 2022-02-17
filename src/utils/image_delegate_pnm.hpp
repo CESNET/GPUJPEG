@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, CESNET z.s.p.o
+ * Copyright (c) 2022, CESNET z.s.p.o
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,28 +25,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#ifndef GPUJPEG_IMAGE_DELEGATE_H_0EE4DE91_F6E7_4C02_A4A6_0FFF8C402AE8
-#define GPUJPEG_IMAGE_DELEGATE_H_0EE4DE91_F6E7_4C02_A4A6_0FFF8C402AE8
-
-#include "libgpujpeg/gpujpeg_common.h"
-
 #ifdef __cplusplus
 extern "C" {
-#endif // defined __cplusplus
-
-typedef void *(*allocator_t)(size_t);
-typedef int (*image_load_delegate_t)(const char *filename, int *image_size, void **image_data, allocator_t alloc);
-typedef int (*image_probe_delegate_t)(const char *filename, struct gpujpeg_image_parameters *, int file_exists);
-typedef int (*image_save_delegate_t)(const char *filename, const struct gpujpeg_image_parameters *, const char *data);
-
-image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format);
-image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_format format);
-image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_format format);
+#endif
+struct gpujpeg_image_parameters;
+int pnm_load_delegate(const char *filename, int *image_size, void **image_data, allocator_t alloc);
+int pnm_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists);
+int pnm_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data);
 
 #ifdef __cplusplus
-} // extern "C"
-#endif // defined __cplusplus
+}
+#endif
 
-#endif // ! defined GPUJPEG_IMAGE_DELEGATE_H_0EE4DE91_F6E7_4C02_A4A6_0FFF8C402AE8
-
+/* vi: set expandtab sw=4 : */
