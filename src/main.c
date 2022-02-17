@@ -171,22 +171,25 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
 
     // Adjust restart interval
     if ( restart_interval_default ) {
+        int comp_count = param_image->comp_count > 0 ? param_image->comp_count : 3;
+        // Adjust according to Mpix count
+        double coefficient = ((double)param_image->width * param_image->height * comp_count) / (1000000.0 * 3.0);
+        if ( coefficient < 1.0 ) {
+            param->restart_interval = 4;
+        } else if ( coefficient < 3.0 ) {
+            param->restart_interval = 8;
+        } else if ( coefficient < 9.0 ) {
+            param->restart_interval = 10;
+        } else {
+            param->restart_interval = 12;
+        }
         // when chroma subsampling and interleaving is enabled, the restart interval should be smaller
         if ( subsampling != 444 && param->interleaved == 1 ) {
-            param->restart_interval = 2;
+            param->restart_interval /= 2;
         }
-        else {
-            // Adjust according to Mpix count
-            double coefficient = ((double)param_image->width * param_image->height * param_image->comp_count) / (1000000.0 * 3.0);
-            if ( coefficient < 1.0 ) {
-                param->restart_interval = 4;
-            } else if ( coefficient < 3.0 ) {
-                param->restart_interval = 8;
-            } else if ( coefficient < 9.0 ) {
-                param->restart_interval = 10;
-            } else {
-                param->restart_interval = 12;
-            }
+        // when not interleaved, restart interval applies to each segment so actual number is higher
+        if ( !param->interleaved ) {
+            param->restart_interval *= comp_count;
         }
         if ( param->verbose >= 1 ) {
             printf("\nAuto-adjusting restart interval to %d for better performance.\n", param->restart_interval);
