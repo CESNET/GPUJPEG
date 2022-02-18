@@ -74,7 +74,10 @@ int pnm_probe_delegate(const char *filename, struct gpujpeg_image_parameters *pa
             param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             param_image->pixel_format = GPUJPEG_U8;
         } else if (strcasecmp(suffix, "ppm") == 0) {
+            param_image->color_space = GPUJPEG_RGB;
             param_image->pixel_format = GPUJPEG_444_U8_P012;
+        } else if (strcasecmp(suffix, "pnm") == 0) {
+            param_image->pixel_format = (gpujpeg_pixel_format) GPUJPEG_PIXFMT_NO_ALPHA;
         }
         return 0;
     }

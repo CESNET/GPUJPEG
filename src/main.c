@@ -166,11 +166,12 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
         }
     }
 
-    if (subsampling == 0) {
-        subsampling = gpujpeg_pixel_format_get_subsampling(param_image->pixel_format);
+    if (encode) {
+        if (subsampling == 0) {
+            subsampling = gpujpeg_pixel_format_get_subsampling(param_image->pixel_format);
+        }
+        gpujpeg_parameters_chroma_subsampling(param, subsampling);
     }
-
-    gpujpeg_parameters_chroma_subsampling(param, subsampling);
 
     // Adjust restart interval
     if ( restart_interval_default ) {
