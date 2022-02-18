@@ -281,6 +281,8 @@ enum gpujpeg_image_file_format {
     /// RGBZ file format, simple data format without header [R G B 0] [R G B 0] ...
     GPUJPEG_IMAGE_FILE_RGBZ,
     /// PNM file format
+    GPUJPEG_IMAGE_FILE_PGM,
+    GPUJPEG_IMAGE_FILE_PPM,
     GPUJPEG_IMAGE_FILE_PNM,
     /// PAM file format
     GPUJPEG_IMAGE_FILE_PAM,

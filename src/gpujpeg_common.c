@@ -405,10 +405,10 @@ gpujpeg_image_get_file_format(const char* filename)
         { "jpg",  GPUJPEG_IMAGE_FILE_JPEG},
         { "jpeg", GPUJPEG_IMAGE_FILE_JPEG},
         { "jfif", GPUJPEG_IMAGE_FILE_JPEG},
-        { "pbm",  GPUJPEG_IMAGE_FILE_PNM},
+        //{ "pbm",  GPUJPEG_IMAGE_FILE_PNM},
         { "pnm",  GPUJPEG_IMAGE_FILE_PNM},
-        { "pgm",  GPUJPEG_IMAGE_FILE_PNM},
-        { "ppm",  GPUJPEG_IMAGE_FILE_PNM},
+        { "pgm",  GPUJPEG_IMAGE_FILE_PGM},
+        { "ppm",  GPUJPEG_IMAGE_FILE_PPM},
         { "pam",  GPUJPEG_IMAGE_FILE_PAM},
     };
 
@@ -1169,6 +1169,12 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
             break;
         case GPUJPEG_IMAGE_FILE_I420:
             param_image->pixel_format = GPUJPEG_420_U8_P0P1P2;
+            break;
+        case GPUJPEG_IMAGE_FILE_PGM:
+            param_image->pixel_format = GPUJPEG_U8;
+            break;
+        case GPUJPEG_IMAGE_FILE_PPM:
+            param_image->pixel_format = GPUJPEG_444_U8_P012;
             break;
         case GPUJPEG_IMAGE_FILE_PAM:
         case GPUJPEG_IMAGE_FILE_PNM:
