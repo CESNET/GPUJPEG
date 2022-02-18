@@ -123,7 +123,7 @@ int pnm_save_delegate(const char *filename, const struct gpujpeg_image_parameter
         type = PNM::P6;
         break;
     default:
-        fprintf(stderr, "Wrong pixel format %s for PNM! Only planar formats are supported.\n", gpujpeg_pixel_format_get_name(param_image->pixel_format));
+        fprintf(stderr, "Wrong pixel format %s for PNM! Only packed formats with 1 or 3 channels are supported.\n", gpujpeg_pixel_format_get_name(param_image->pixel_format));
         return -1;
     }
 
