@@ -1422,7 +1422,12 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
                 return -1;
             }
             if ( decoder->reader->param_image.pixel_format == GPUJPEG_PIXFMT_NONE ) {
-                decoder->reader->param_image.pixel_format = decoder->reader->param_image.comp_count == 1 ? GPUJPEG_U8 : GPUJPEG_444_U8_P012;
+                switch (decoder->reader->param_image.comp_count) {
+                    case 1: decoder->reader->param_image.pixel_format = GPUJPEG_U8; break;
+                    case 3: decoder->reader->param_image.pixel_format = GPUJPEG_444_U8_P012; break;
+                    case 4: decoder->reader->param_image.pixel_format = GPUJPEG_444_U8_P012A; break;
+                    default: GPUJPEG_ASSERT(0 && "Unhandled JPEG internal component count detected!");
+                }
             }
             break;
 
