@@ -1,3 +1,7 @@
+2022-01-21 - 0.20.2
+----------
+- support for encoding alpha
+
 2021-01-21 - 0.14.0
 ----------
 - Support for encoding arbitrary images in planar formats

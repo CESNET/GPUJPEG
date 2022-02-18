@@ -5,6 +5,9 @@
 - [Encoding different color spaces than full-range YCbCr BT.601](#encoding-different-color-spaces-than-full-range-ycbcr-bt601)
 - [Optimizing encoding/decoding performance](#optimizing-encodingdecoding-performance)
 - [Decoding (foreign) JPEG fails](#decoding-foreign-jpeg-fails)
+- [Encoding/decoding alpha channel](#encodingdecoding-alpha-channel)
+   - [Alpha support in command-line application](#alpha-support-in-command-line-application)
+   - [API for alpha](#api-for-alpha)
 
 ## What is an restart interval
 A **restart interval** and related option in UltraGrid is a way how to
@@ -93,3 +96,34 @@ are supported. Basically a **baseline** **DCT-based** **Huffman-encoded** JPEGs 
 Few features of **extended** process are supported as well (4 Huffman tables). If the decoder
 is incapable of decoding the above mentioned JPEG, you are encouraged to fill a bug report.
 
+## Encoding/decoding alpha channel
+Encoding is currently supported only for a single packed pixel format
+444-u8-p012a (`GPUJPEG_444_U8_P012A`). Let us know if you'd need some other
+like planar format.
+
+### Alpha support in command-line application
+To use with command line application, you'd need to use option `-a` for encode
+and use a pixel format that suppors 4 channels eg. RGBA, some examples:
+
+     gpujpeg -a -e -s 1920x1080 input.rgba output.jpg
+     gpujpeg -a -e input.pam output.jpg
+     gpujpeg -a -e input.yuv -f 444-u8-p102a output.jpg # YUVA
+
+For decoding, you'd need to have 4-channel JPEG, no special tweaking is needed,
+just using proper output pixel format, eg:
+
+    gpujpeg -d input.jpg output.rgba
+    gpujpeg -d input.jpg output.pam
+
+
+**Note:** _GPUJPEG_ produces SPIFF headers for generated JPEG files - only a
+few will recognize that but some do recognize component IDs ('R', 'G', 'B', 'A'
+and 0x01, 0x02, 0x03, 0x04).
+
+### API for alpha
+#### Encode
+Encoding alpha is quite simple, as indicated above, just set the pixel format `GPUJPEG_444_U8_P012A`
+as `gpujpeg_image_parameters::pixel_format` and `gpujpeg_image_parameters` to **4**.
+
+#### Decode
+Select output pixel format either `GPUJPEG_444_U8_P012A` or `GPUJPEG_NONE` (autodetect).
