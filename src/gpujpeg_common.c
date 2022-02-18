@@ -339,7 +339,7 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, int subs
             do_gpujpeg_parameters_chroma_subsampling_420(param);
             break;
         default:
-            abort();
+            GPUJPEG_ASSERT(0 && "Unsupported subsampling!");
     }
 }
 
