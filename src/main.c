@@ -40,6 +40,8 @@
     #include <getopt.h>
 #endif
 
+#define USE_IF_NOT_NULL_ELSE(cond, alt_val) (cond) ? (cond) : (alt_val)
+
 void
 print_help()
 {
@@ -136,10 +138,11 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
         const char *in, const char *out, _Bool encode, int subsampling, _Bool restart_interval_default, _Bool keep_alpha) {
     // if possible, read properties from file
     struct gpujpeg_image_parameters file_param_image = { 0, 0, 0, GPUJPEG_NONE, GPUJPEG_PIXFMT_NONE };
-    gpujpeg_image_get_properties(encode ? in : out, &file_param_image, encode);
-    param_image->width = param_image->width == 0 ? file_param_image.width : param_image->width;
-    param_image->height = param_image->height == 0 ? file_param_image.height : param_image->height;
-    param_image->color_space = param_image->color_space == GPUJPEG_NONE ? file_param_image.color_space : param_image->color_space;
+    const char *raw_file = encode ? in : out;
+    gpujpeg_image_get_properties(raw_file, &file_param_image, encode);
+    param_image->width = USE_IF_NOT_NULL_ELSE(param_image->width, file_param_image.width);
+    param_image->height = USE_IF_NOT_NULL_ELSE(param_image->height, file_param_image.height);
+    param_image->color_space = USE_IF_NOT_NULL_ELSE(param_image->color_space, file_param_image.color_space);
     if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && file_param_image.pixel_format != GPUJPEG_PIXFMT_NONE ) {
         param_image->pixel_format = file_param_image.pixel_format;
     }
@@ -155,7 +158,7 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
 
     // Detect color space
     if ( param_image->color_space == GPUJPEG_NONE ) {
-        enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(encode ? in : out);
+        enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(raw_file);
         if ( format >= GPUJPEG_IMAGE_FILE_YUV || format == GPUJPEG_IMAGE_FILE_GRAY ) {
             param_image->color_space = GPUJPEG_YCBCR_JPEG;
         } else {
@@ -171,7 +174,7 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
 
     // Adjust restart interval
     if ( restart_interval_default ) {
-        int comp_count = param_image->comp_count > 0 ? param_image->comp_count : 3;
+        int comp_count = USE_IF_NOT_NULL_ELSE(param_image->comp_count, 3);
         // Adjust according to Mpix count
         double coefficient = ((double)param_image->width * param_image->height * comp_count) / (1000000.0 * 3.0);
         if ( coefficient < 1.0 ) {
