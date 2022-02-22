@@ -32,6 +32,7 @@
 #include <libgpujpeg/gpujpeg.h>
 #include <libgpujpeg/gpujpeg_common.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #if defined(_MSC_VER)
@@ -134,7 +135,7 @@ static int print_image_info(const char *filename, int verbose) {
     return 0;
 }
 
-static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image_parameters *param_image,
+static bool adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image_parameters *param_image,
         const char *in, const char *out, _Bool encode, int subsampling, _Bool restart_interval_default, _Bool keep_alpha) {
     // if possible, read properties from file
     struct gpujpeg_image_parameters file_param_image = { 0, 0, 0, GPUJPEG_NONE, GPUJPEG_PIXFMT_NONE };
@@ -199,6 +200,17 @@ static void adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
             printf("\nAuto-adjusting restart interval to %d for better performance.\n", param->restart_interval);
         }
     }
+
+    if (param_image->width <= 0 || param_image->height <= 0) {
+        fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
+        return false;
+    }
+    if (param_image->pixel_format == GPUJPEG_PIXFMT_NONE) {
+        fprintf(stderr, "Pixel format must be set!\n");
+        return false;
+    }
+
+    return true;
 }
 
 #ifndef GIT_REV
@@ -210,6 +222,7 @@ main(int argc, char *argv[])
 {
     printf("GPUJPEG rev %s\n", strlen(GIT_REV) > 0 ? GIT_REV : "unknown");
 
+    int ret = EXIT_SUCCESS;
     // Default coder parameters
     struct gpujpeg_parameters param;
     gpujpeg_set_default_parameters(&param);
@@ -497,9 +510,8 @@ main(int argc, char *argv[])
 
             param = param_saved;
             param_image = param_image_saved;
-            adjust_params(&param, &param_image, input, output, encode, subsampling, restart_interval_default, keep_alpha);
-            if (param_image.width <= 0 || param_image.height <= 0) {
-                fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
+            if (!adjust_params(&param, &param_image, input, output, encode, subsampling, restart_interval_default, keep_alpha)) {
+                ret = EXIT_FAILURE; continue;
             }
 
             if (native_file_format) {
@@ -792,7 +804,7 @@ main(int argc, char *argv[])
         gpujpeg_opengl_destroy(gl_context);
     }
 
-    return 0;
+    return ret;
 }
 
 /* vim: set expandtab sw=4: */
