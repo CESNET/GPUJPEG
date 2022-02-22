@@ -505,7 +505,7 @@ main(int argc, char *argv[])
             }
             if ( output_format != GPUJPEG_IMAGE_FILE_JPEG ) {
                 fprintf(stderr, "Encoder output file [%s] should be JPEG image (*.jpg)!\n", output);
-                return -1;
+                ret = EXIT_FAILURE; continue;
             }
 
             param = param_saved;
@@ -529,7 +529,7 @@ main(int argc, char *argv[])
             uint8_t* image = NULL;
             if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
-                return -1;
+                ret = EXIT_FAILURE; continue;
             }
 
             duration = gpujpeg_get_time() - duration;
@@ -561,7 +561,7 @@ main(int argc, char *argv[])
                         fprintf(stderr, "Consider using '--subsampling' option!\n");
                     }
                     fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
-                    return -1;
+                    ret = EXIT_FAILURE; continue;
                 }
 
                 duration = gpujpeg_get_time() - duration;
@@ -595,7 +595,7 @@ main(int argc, char *argv[])
             // Save image
             if ( gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size, &param_image) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
-                return -1;
+                ret = EXIT_FAILURE; continue;
             }
 
             duration = gpujpeg_get_time() - duration;
@@ -670,7 +670,7 @@ main(int argc, char *argv[])
             if ( (output_format >= GPUJPEG_IMAGE_FILE_RAW) == 0 ) {
                 fprintf(stderr, "[Warning] Decoder output file [%s] should be raw image (*.rgb, *.yuv, *.r, *.pnm)!\n", output);
                 if ( output_format & GPUJPEG_IMAGE_FILE_JPEG ) {
-                    return -1;
+                    ret = EXIT_FAILURE; continue;
                 }
             }
 
@@ -695,7 +695,7 @@ main(int argc, char *argv[])
             uint8_t* image = NULL;
             if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
-                return -1;
+                ret = EXIT_FAILURE; continue;
             }
 
             duration = gpujpeg_get_time() - duration;
@@ -724,7 +724,7 @@ main(int argc, char *argv[])
                         fprintf(stderr, "Hint: Do not enter image dimensions to avoid preinitialization or correctly specify restart interval.\n");
                     }
                     fprintf(stderr, "Failed to decode image [%s]!\n", argv[index]);
-                    return -1;
+                    ret = EXIT_FAILURE; continue;
                 }
 
                 duration = gpujpeg_get_time() - duration;
@@ -774,7 +774,7 @@ main(int argc, char *argv[])
             decoded_param_image.pixel_format = decoder_output.pixel_format;
             if ( gpujpeg_image_save_to_file(output, data, data_size, &decoded_param_image) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", output);
-                return -1;
+                ret = EXIT_FAILURE; continue;
             }
 
             duration = gpujpeg_get_time() - duration;
