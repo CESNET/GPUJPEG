@@ -202,14 +202,10 @@ install(EXPORT GPUJPEGTargets
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/GPUJPEGConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/GPUJPEGConfigVersion.cmake
     DESTINATION lib/cmake/GPUJPEG)
 
-exec_program(find ARGS ${CMAKE_SOURCE_DIR}/libgpujpeg ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/test -type f '\(' -name '*.c' -o -name '*.cpp' -o -name '*.cu' -o -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' '\)'
-    OUTPUT_VARIABLE file_list)
-string(REPLACE "\n" " " file_list ${file_list})
-separate_arguments(file_list)
-
-add_custom_target(cscope cscope -bv ${file_list})
-add_custom_target(ctags ctags ${file_list})
-add_custom_target(universal-ctags ctags-universal ${file_list})
+file(GLOB_RECURSE ALL_SOURCES *.c *.cpp *.cu *.cuh *.h *.hpp)
+add_custom_target(cscope cscope -bv ${ALL_SOURCES})
+add_custom_target(ctags ctags ${ALL_SOURCES})
+add_custom_target(universal-ctags ctags-universal ${ALL_SOURCES})
 
 add_test(NAME unittests COMMAND make -C test/unit LIBDIR=${CMAKE_BINARY_DIR} CPATH=${CMAKE_CUDA_COMPILER_TOOLKIT_ROOT}/include LIBRARY_PATH=${CMAKE_CUDA_COMPILER_TOOLKIT_ROOT}/include
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
