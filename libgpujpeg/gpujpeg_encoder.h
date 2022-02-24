@@ -171,6 +171,22 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
 GPUJPEG_API int
 gpujpeg_encoder_get_stats(struct gpujpeg_encoder *encoder, struct gpujpeg_duration_stats *stats);
 
+enum gpujpeg_header_type {
+        GPUJPEG_HEADER_DEFAULT = 0,
+        GPUJPEG_HEADER_JFIF    = 1<<0,
+        GPUJPEG_HEADER_SPIFF   = 1<<1,
+        GPUJPEG_HEADER_ADOBE   = 1<<2, ///< Adobe APP8 header
+};
+
+/**
+ * Forces JPEG header to be emitted.
+ *
+ * Header type should be capable of describing the resulting JPEG, eg. JFIF only for BT.601
+ * full-scale YCbCr images. If not, resulting JPEG image may be incompatible with decoders.
+ */
+GPUJPEG_API void
+gpujpeg_encoder_set_jpeg_header(struct gpujpeg_encoder *encoder, enum gpujpeg_header_type header_type);
+
 /**
  * Destory JPEG encoder
  *

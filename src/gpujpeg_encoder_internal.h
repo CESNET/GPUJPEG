@@ -31,7 +31,8 @@
 #ifndef GPUJPEG_ENCODER_INTERNAL_H
 #define GPUJPEG_ENCODER_INTERNAL_H
 
-#include <libgpujpeg/gpujpeg_common.h>
+#include "libgpujpeg/gpujpeg_common.h"
+#include "libgpujpeg/gpujpeg_encoder.h"
 #include "gpujpeg_common_internal.h"
 #include "gpujpeg_table.h"
 #include "gpujpeg_writer.h"
@@ -58,6 +59,9 @@ struct gpujpeg_encoder
 
     /// Huffman GPU encoder
     struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder;
+
+    /// JPEG header to be emitted
+    enum gpujpeg_header_type header_type;
 
     // Stream
     cudaStream_t stream;

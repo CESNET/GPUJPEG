@@ -437,21 +437,34 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 {
     gpujpeg_writer_write_soi(encoder->writer);
 
-    if (encoder->coder.param_image.comp_count == 4) {
+    switch (encoder->header_type) {
+    case GPUJPEG_HEADER_DEFAULT:
+        if (encoder->coder.param_image.comp_count == 4) {
             gpujpeg_writer_write_spiff(encoder);
-    } else {
-        switch (encoder->coder.param.color_space_internal) {
-            case GPUJPEG_YCBCR_BT601:
-            case GPUJPEG_YCBCR_BT709:
-                gpujpeg_writer_write_spiff(encoder);
-                break;
-            case GPUJPEG_RGB:
-                gpujpeg_writer_write_app14(encoder->writer);
-                break;
-            default: // ordinary JFIF
-                gpujpeg_writer_write_app0(encoder->writer);
-                break;
+        } else {
+            switch (encoder->coder.param.color_space_internal) {
+                case GPUJPEG_YCBCR_BT601:
+                case GPUJPEG_YCBCR_BT709:
+                    gpujpeg_writer_write_spiff(encoder);
+                    break;
+                case GPUJPEG_RGB:
+                    gpujpeg_writer_write_app14(encoder->writer);
+                    break;
+                default: // ordinary JFIF
+                    gpujpeg_writer_write_app0(encoder->writer);
+                    break;
+            }
         }
+        break;
+    case GPUJPEG_HEADER_JFIF:
+        gpujpeg_writer_write_app0(encoder->writer);
+        break;
+    case GPUJPEG_HEADER_SPIFF:
+        gpujpeg_writer_write_spiff(encoder);
+        break;
+    case GPUJPEG_HEADER_ADOBE:
+        gpujpeg_writer_write_app14(encoder->writer);
+        break;
     }
 
     unsigned dqt_type_emitted = 0U;

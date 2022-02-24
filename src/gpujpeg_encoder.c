@@ -71,11 +71,10 @@ gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gp
 struct gpujpeg_encoder*
 gpujpeg_encoder_create(cudaStream_t stream)
 {
-    struct gpujpeg_encoder* encoder = (struct gpujpeg_encoder*) malloc(sizeof(struct gpujpeg_encoder));
+    struct gpujpeg_encoder* encoder = (struct gpujpeg_encoder*) calloc(1, sizeof(struct gpujpeg_encoder));
     if ( encoder == NULL ) {
         return NULL;
     }
-    memset(encoder, 0, sizeof(struct gpujpeg_encoder));
 
     // Get coder
     struct gpujpeg_coder* coder = &encoder->coder;
@@ -518,6 +517,13 @@ int
 gpujpeg_encoder_get_stats(struct gpujpeg_encoder *encoder, struct gpujpeg_duration_stats *stats)
 {
     return gpujpeg_coder_get_stats(&encoder->coder, stats);
+}
+
+// Documented at declaration
+void
+gpujpeg_encoder_set_jpeg_header(struct gpujpeg_encoder *encoder, enum gpujpeg_header_type header_type)
+{
+    encoder->header_type = header_type;
 }
 
 /* Documented at declaration */
