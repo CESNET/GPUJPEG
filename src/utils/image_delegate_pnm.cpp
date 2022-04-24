@@ -56,10 +56,10 @@ int pnm_load_delegate(const char *filename, int *image_size, void **image_data, 
 
     ifs >> PNM::load( (uint8_t*) *image_data, info );
     if (!info.valid()) {
-        return 0;
+        return 1;
     }
     *image_size = info.width() * info.height() * info.channel() * info.depth() / 8;
-    return 1;
+    return 0;
 }
 
 int pnm_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists) {
