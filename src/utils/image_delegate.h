@@ -35,10 +35,33 @@
 extern "C" {
 #endif // defined __cplusplus
 
+/// @brief malloc-compatible allocator to allocate data
 typedef void *(*allocator_t)(size_t);
+/**
+ * @param[in]  filename   image filename
+ * @param[out] image_size loaded image size
+ * @param[out] image_data loaded image data allocated with alloc
+ * @param[in]  alloc      allocator to allocate image_data
+ * @returns               0 if succeeded; non-zero otherwise
+ */
 typedef int (*image_load_delegate_t)(const char *filename, int *image_size, void **image_data, allocator_t alloc);
-typedef int (*image_probe_delegate_t)(const char *filename, struct gpujpeg_image_parameters *, int file_exists);
-typedef int (*image_save_delegate_t)(const char *filename, const struct gpujpeg_image_parameters *, const char *data);
+/**
+ * Reads image metadata without actually reading the file contents.
+ * @param[in]  filename    image filename
+ * @param[out] params      probed image parameters
+ * @param[in]  file_exists boolean value to indicated if the file exists. The aim of this option is to allow
+ *                         obtaining at least a piece of information, namely channel count from pnm-family ext.
+ * @returns                0 if succeeded; non-zero otherwise
+ */
+typedef int (*image_probe_delegate_t)(const char *filename, struct gpujpeg_image_parameters *params, int file_exists);
+/**
+ * Writes image data with appropriate filetype header.
+ * @param[in]  filename    output image filename
+ * @param[out] params      image parameters to use
+ * @param[in]  data        image contents to be written, length will be deduced from parameters thus not given explicitly
+ * @returns                0 if succeeded; non-zero otherwise
+ */
+typedef int (*image_save_delegate_t)(const char *filename, const struct gpujpeg_image_parameters *params, const char *data);
 
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format);
 image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_format format);
