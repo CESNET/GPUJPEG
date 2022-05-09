@@ -145,12 +145,12 @@ add_library(gpujpeg ${H_FILES} ${C_FILES} ${CPP_FILES})
 target_include_directories(${PROJECT_NAME}
     PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 )
-target_compile_features(gpujpeg PRIVATE ${NEEDED_COMPILER_FEATURES})
-set_property(TARGET gpujpeg PROPERTY C_STANDARD 99)
-set_target_properties(gpujpeg PROPERTIES SOVERSION 0)
-set_target_properties(gpujpeg PROPERTIES PUBLIC_HEADER "${H_FILES}")
+target_compile_features(${PROJECT_NAME} PRIVATE ${NEEDED_COMPILER_FEATURES})
+set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
+set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION 0)
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${H_FILES}")
 if(GPUJPEG_OPENGL_ENABLED)
-    target_link_libraries(gpujpeg ${GPUJPEG_OPENGL_LIBRARIES})
+    target_link_libraries(${PROJECT_NAME} ${GPUJPEG_OPENGL_LIBRARIES})
 endif()
 
 # GPUJPEG commmand-line application
@@ -160,7 +160,7 @@ set_property(TARGET gpujpeg-bin PROPERTY C_STANDARD 99)
 target_link_libraries(gpujpeg-bin gpujpeg)
 set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg")
 
-install(TARGETS gpujpeg gpujpeg-bin
+install(TARGETS ${PROJECT_NAME} gpujpeg-bin
         EXPORT GPUJPEGTargets
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
@@ -180,7 +180,7 @@ if(GPUJPEG_OPENGL_ENABLED AND GLUT_FOUND)
     add_executable(decoder_gltex ${FILES})
     target_compile_features(decoder_gltex PRIVATE ${NEEDED_COMPILER_FEATURES})
     set_property(TARGET decoder_gltex PROPERTY C_STANDARD 99)
-    target_link_libraries(decoder_gltex gpujpeg -lglut)
+    target_link_libraries(decoder_gltex ${PROJECT_NAME} -lglut)
 
     # OpenGL interoperability example (currently not working)
     #file(GLOB FILES test/opengl_interop/*.c test/opengl_interop/*.h test/opengl_interop/*.cu)
