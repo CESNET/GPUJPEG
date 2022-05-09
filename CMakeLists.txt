@@ -42,7 +42,7 @@ add_definitions("-DHAVE_GPUJPEG_VERSION_H")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 # Common settings
-include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 set(NEEDED_COMPILER_FEATURES c_std_11 cxx_delegating_constructors cxx_nullptr)
 
@@ -142,7 +142,9 @@ if(NOT DISABLE_CPP)
 endif()
 list(REMOVE_ITEM C_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c")
 add_library(gpujpeg ${H_FILES} ${C_FILES} ${CPP_FILES})
-include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+target_include_directories(${PROJECT_NAME}
+    PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+)
 target_compile_features(gpujpeg PRIVATE ${NEEDED_COMPILER_FEATURES})
 set_property(TARGET gpujpeg PROPERTY C_STANDARD 99)
 set_target_properties(gpujpeg PROPERTIES SOVERSION 0)
