@@ -29,7 +29,6 @@
  */
 
 #include <math.h>
-#include <stdbool.h>
 #include <string.h>
 #include <libgpujpeg/gpujpeg_encoder.h>
 #include "gpujpeg_preprocessor.h"
@@ -250,6 +249,35 @@ int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, const struct gpuj
     }
 
     return 0;
+}
+
+int
+gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* param_image, int subsampling, bool interleaved, int verbose)
+{
+    int restart_interval;
+    // Adjust according to Mpix count
+    double coefficient = ((double)param_image->width * param_image->height * param_image->comp_count) / (1000000.0 * 3.0);
+    if ( coefficient < 1.0 ) {
+        restart_interval = 4;
+    } else if ( coefficient < 3.0 ) {
+        restart_interval = 8;
+    } else if ( coefficient < 9.0 ) {
+        restart_interval = 10;
+    } else {
+        restart_interval = 12;
+    }
+    // when chroma subsampling and interleaving is enabled, the restart interval should be smaller
+    if ( subsampling != GPUJPEG_SUBSAMPLING_444 && interleaved ) {
+        restart_interval /= 2;
+    }
+    // when not interleaved, restart interval applies to each segment so actual number is higher
+    if ( !interleaved ) {
+        restart_interval *= param_image->comp_count;
+    }
+    if ( verbose >= 1 ) {
+        printf("\nAuto-adjusting restart interval to %d for better performance.\n", restart_interval);
+    }
+    return restart_interval;
 }
 
 /* Documented at declaration */

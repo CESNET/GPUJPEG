@@ -31,8 +31,15 @@
 #ifndef GPUJPEG_COMMON_H
 #define GPUJPEG_COMMON_H
 
+#ifdef __cplusplus
+#include <cstddef> // size_t
+#include <cstdint>
+#else
+#include <stdbool.h>
 #include <stddef.h> // size_t
 #include <stdint.h>
+#endif
+
 #include <libgpujpeg/gpujpeg_type.h>
 
 /**

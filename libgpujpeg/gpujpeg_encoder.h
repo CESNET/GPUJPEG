@@ -188,6 +188,14 @@ GPUJPEG_API void
 gpujpeg_encoder_set_jpeg_header(struct gpujpeg_encoder *encoder, enum gpujpeg_header_type header_type);
 
 /**
+ * Suggests optimal restart interval to be used for given param_image balancing both image
+ * size and performance.
+ * @param subsampling 444 422 or 420
+ */
+GPUJPEG_API int
+gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* param_image, int subsampling, bool interleaved, int verbose);
+
+/**
  * Destory JPEG encoder
  *
  * @param encoder  Encoder structure
