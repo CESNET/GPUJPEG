@@ -1445,6 +1445,7 @@ gpujpeg_opengl_init(struct gpujpeg_opengl_context **ctx)
         *ctx = s;
         return 0;
 #else
+    (void) ctx;
     GPUJPEG_MISSING_OPENGL(return -2);
 #endif
 }
@@ -1488,6 +1489,7 @@ gpujpeg_opengl_texture_create(int width, int height, uint8_t* data)
 
     return texture_id;
 #else
+    (void) width, (void) height, (void) data;
     GPUJPEG_MISSING_OPENGL(return 0);
 #endif
 }
@@ -1509,6 +1511,7 @@ gpujpeg_opengl_texture_set_data(int texture_id, uint8_t* data)
 
     glBindTexture(GL_TEXTURE_2D, 0);
 #else
+    (void) texture_id, (void) data;
     GPUJPEG_MISSING_OPENGL(return -1);
 #endif
     return 0;
@@ -1533,6 +1536,7 @@ gpujpeg_opengl_texture_get_data(int texture_id, uint8_t* data, int* data_size)
 
     glBindTexture(GL_TEXTURE_2D, 0);
 #else
+    (void) texture_id, (void) data, (void) data_size;
     GPUJPEG_MISSING_OPENGL(return -1);
 #endif
     return 0;
@@ -1545,6 +1549,7 @@ gpujpeg_opengl_texture_destroy(int texture_id)
 #ifdef GPUJPEG_USE_OPENGL
      glDeleteTextures(1, (GLuint*)&texture_id);
 #else
+    (void) texture_id;
     GPUJPEG_MISSING_OPENGL();
 #endif
 }
