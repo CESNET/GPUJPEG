@@ -17,6 +17,7 @@ if(WIN32)
         set(CMAKE_INSTALL_PREFIX "$ENV{ProgramFiles}/${CMAKE_PROJECT_NAME}")
     endif()
     string(REPLACE "\\" "/" CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 cmake_policy(SET CMP0010 NEW) # error on undefined variable
