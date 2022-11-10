@@ -1628,6 +1628,7 @@ gpujpeg_opengl_texture_unregister(struct gpujpeg_opengl_texture* texture)
     }
     cudaFreeHost(texture);
 #else
+    (void) texture;
     GPUJPEG_MISSING_OPENGL(return);
 #endif
 }
@@ -1644,9 +1645,9 @@ gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_siz
     if ( texture->texture_callback_attach_opengl != NULL )
         texture->texture_callback_attach_opengl(texture->texture_callback_param);
 
+#ifdef GPUJPEG_USE_OPENGL
     uint8_t* d_data = NULL;
 
-#ifdef GPUJPEG_USE_OPENGL
     if ( texture->texture_type == GPUJPEG_OPENGL_TEXTURE_READ ) {
         assert(texture->texture_pbo_type == GL_PIXEL_PACK_BUFFER);
 
@@ -1672,6 +1673,7 @@ gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_siz
 
     return d_data;
 #else
+    (void) data_size;
     GPUJPEG_MISSING_OPENGL(return NULL);
 #endif
 }
