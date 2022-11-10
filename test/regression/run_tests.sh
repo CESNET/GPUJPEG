@@ -1,6 +1,6 @@
 #!/bin/sh -eu
 
-GPUJPEG=${1:-$DIR/../gpujpeg}
+GPUJPEG=${1:-$DIR/../gpujpegtool}
 REQUESTED_PSNR=50
 
 test_commit_b620be2() {

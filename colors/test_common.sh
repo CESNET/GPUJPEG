@@ -13,7 +13,7 @@
 
 # Get script folder
 DIR=`dirname $0`
-GPUJPEG=${1:-$DIR/../gpujpeg}
+GPUJPEG=${1:-$DIR/../gpujpegtool}
 REQUESTED_PSNR=40
 IMAGE=image_bt709_422.yuv
 #IMAGE=camera_bt709_422.yuv

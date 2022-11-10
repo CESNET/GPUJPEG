@@ -160,7 +160,8 @@ add_executable(gpujpeg-bin src/main.c)
 target_compile_features(gpujpeg-bin PRIVATE ${NEEDED_COMPILER_FEATURES})
 set_property(TARGET gpujpeg-bin PROPERTY C_STANDARD 99)
 target_link_libraries(gpujpeg-bin gpujpeg)
-set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME "gpujpeg")
+set(GPUJPEG_BIN_OUTPUT_NAME "gpujpegtool")
+set_target_properties(gpujpeg-bin PROPERTIES OUTPUT_NAME ${GPUJPEG_BIN_OUTPUT_NAME})
 
 install(TARGETS ${PROJECT_NAME} gpujpeg-bin
         EXPORT GPUJPEGTargets
@@ -213,7 +214,7 @@ add_custom_target(universal-ctags ctags-universal ${ALL_SOURCES})
 
 add_test(NAME unittests COMMAND make -C test/unit LIBDIR=${CMAKE_BINARY_DIR} CPATH=${CMAKE_CUDA_COMPILER_TOOLKIT_ROOT}/include LIBRARY_PATH=${CMAKE_CUDA_COMPILER_TOOLKIT_ROOT}/lib
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-add_test(NAME test-colors COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/colors/run_tests.sh ${CMAKE_CURRENT_BINARY_DIR}/gpujpeg)
-add_test(NAME regression COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/regression/run_tests.sh ${CMAKE_CURRENT_BINARY_DIR}/gpujpeg)
+add_test(NAME test-colors COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/colors/run_tests.sh ${CMAKE_CURRENT_BINARY_DIR}/${GPUJPEG_BIN_OUTPUT_NAME})
+add_test(NAME regression COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/regression/run_tests.sh ${CMAKE_CURRENT_BINARY_DIR}/${GPUJPEG_BIN_OUTPUT_NAME})
 
 # vim: sw=4
