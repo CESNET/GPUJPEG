@@ -1510,11 +1510,11 @@ gpujpeg_opengl_texture_set_data(int texture_id, uint8_t* data)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 
     glBindTexture(GL_TEXTURE_2D, 0);
+    return 0;
 #else
     (void) texture_id, (void) data;
     GPUJPEG_MISSING_OPENGL(return -1);
 #endif
-    return 0;
 }
 
 /* Documented at declaration */
@@ -1535,11 +1535,11 @@ gpujpeg_opengl_texture_get_data(int texture_id, uint8_t* data, int* data_size)
         *data_size = width * height * 3;
 
     glBindTexture(GL_TEXTURE_2D, 0);
+    return 0;
 #else
     (void) texture_id, (void) data, (void) data_size;
     GPUJPEG_MISSING_OPENGL(return -1);
 #endif
-    return 0;
 }
 
 /* Documented at declaration */
@@ -1606,11 +1606,11 @@ gpujpeg_opengl_texture_register(int texture_id, enum gpujpeg_opengl_texture_type
     // Create CUDA PBO Resource
     cudaGraphicsGLRegisterBuffer(&texture->texture_pbo_resource, texture->texture_pbo_id, cudaGraphicsMapFlagsNone);
     gpujpeg_cuda_check_error("Register OpenGL buffer", return NULL);
+
+    return texture;
 #else
     GPUJPEG_MISSING_OPENGL(return NULL);
 #endif
-
-    return texture;
 }
 
 /* Documented at declaration */
@@ -1618,18 +1618,18 @@ void
 gpujpeg_opengl_texture_unregister(struct gpujpeg_opengl_texture* texture)
 {
 #ifdef GPUJPEG_USE_OPENGL
+    assert(texture != NULL);
+
     if ( texture->texture_pbo_id != 0 ) {
      glDeleteBuffers(1, (GLuint*)&texture->texture_pbo_id);
     }
     if ( texture->texture_pbo_resource != NULL ) {
         cudaGraphicsUnregisterResource(texture->texture_pbo_resource);
     }
+    cudaFreeHost(texture);
 #else
     GPUJPEG_MISSING_OPENGL(return);
 #endif
-
-    assert(texture != NULL);
-    cudaFreeHost(texture);
 }
 
 /* Documented at declaration */
@@ -1658,9 +1658,6 @@ gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_siz
         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
     }
-#else
-    GPUJPEG_MISSING_OPENGL(return NULL);
-#endif
 
     // Map pixel buffer object to cuda
     cudaGraphicsMapResources(1, &texture->texture_pbo_resource, 0);
@@ -1674,6 +1671,9 @@ gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_siz
         *data_size = d_data_size;
 
     return d_data;
+#else
+    GPUJPEG_MISSING_OPENGL(return NULL);
+#endif
 }
 
 /* Documented at declaration */
@@ -1697,13 +1697,13 @@ gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
         glBindTexture(GL_TEXTURE_2D, 0);
         glFinish();
     }
-#else
-    GPUJPEG_MISSING_OPENGL(return);
-#endif
 
     // Dettach OpenGL context by callback
     if ( texture->texture_callback_detach_opengl != NULL )
         texture->texture_callback_detach_opengl(texture->texture_callback_param);
+#else
+    GPUJPEG_MISSING_OPENGL(return);
+#endif
 }
 
 int gpujpeg_version()
