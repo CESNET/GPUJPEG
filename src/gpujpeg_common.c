@@ -1450,7 +1450,7 @@ gpujpeg_opengl_init(struct gpujpeg_opengl_context **ctx)
 #endif
 }
 
-GPUJPEG_API void
+void
 gpujpeg_opengl_destroy(struct gpujpeg_opengl_context *s)
 {
     if (s == NULL) {
