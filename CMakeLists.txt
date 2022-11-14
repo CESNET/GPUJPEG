@@ -35,15 +35,16 @@ execute_process(COMMAND git rev-parse --short HEAD
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 add_definitions(-DGIT_REV=\"${GIT_REV}\")
 
+if(NOT BUILD_SHARED_LIBS)
+    add_definitions("-DGPUJPEG_STATIC")
+    set(PC_CFLAGS "${PC_CFLAGS} -DGPUJPEG_STATIC")
+endif()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libgpujpeg/gpujpeg_version.h.cmakein
                ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg/gpujpeg_version.h @ONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libgpujpeg.pc.cmakein
                ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg.pc @ONLY)
 add_definitions("-DHAVE_GPUJPEG_VERSION_H")
-
-if(NOT BUILD_SHARED_LIBS)
-    add_definitions("-DGPUJPEG_STATIC")
-endif()
 
 # Include cmake modules in "cmake" directory (FindGLFW.cmake)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")

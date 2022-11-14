@@ -37,6 +37,11 @@ if test "$enable_static" = yes && test "$enable_shared" = yes; then
 	AC_MSG_ERROR([Currently only one of --enable-static/--enable-shared can be specified at once.])
 fi
 
+if test "$enable_static" = yes; then
+	pc_cflags="${pc_cflags:+$pc_cflags }-DGPUJPEG_STATIC"
+fi
+AC_SUBST(pc_cflags)
+
 AC_ARG_VAR([CUDA_FLAGS], [Flags passed to nvcc])
 
 if test x$enable_debug = xyes ; then
