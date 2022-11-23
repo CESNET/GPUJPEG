@@ -1,6 +1,8 @@
 /**
  * @file   utils/pam.h
  * @author Martin Pulec     <pulec@cesnet.cz>
+ *
+ * This file is part of GPUJPEG.
  */
 /*
  * Copyright (c) 2013-2022, CESNET z.s.p.o.
@@ -42,7 +44,17 @@
 #include <stdlib.h>
 #endif
 
-static inline bool pam_read(const char *filename, unsigned int *width, unsigned int *height, int *depth, unsigned char **data, void *(*allocator)(size_t)) {
+#ifdef __GNUC__
+#define PAM_ATTRIBUTE_UNUSED __attribute__((unused))
+#else
+#define PAM_ATTRIBUTE_UNUSED
+#endif
+
+/**
+ * @pram maxval may be NULL in which case equality to 255 is checked
+ */
+static inline bool pam_read(const char *filename, unsigned int *width, unsigned int *height, int *depth, int *maxval, unsigned char **data, void *(*allocator)(size_t)) PAM_ATTRIBUTE_UNUSED;
+static inline bool pam_read(const char *filename, unsigned int *width, unsigned int *height, int *depth, int *maxval, unsigned char **data, void *(*allocator)(size_t)) {
         char line[128];
         FILE *file = fopen(filename, "rb");
         if (!file) {
@@ -57,6 +69,7 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
         }
         fgets(line, sizeof line - 1, file);
         *width = 0, *height = 0, *depth = 0;
+        int maxv = 0;
         while (!feof(file) && !ferror(file)) {
                 char *spc = strchr(line, ' ');
                 if (spc != NULL) {
@@ -70,10 +83,14 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
                         } else if (strcmp(key, "DEPTH") == 0) {
                                 *depth = atoi(val);
                         } else if (strcmp(key, "MAXVAL") == 0) {
-                                if (atoi(val) != 255) {
-                                        fprintf(stderr, "Only supported maxval is 255.\n");
+                                maxv = atoi(val);
+                                if (maxval == NULL && maxv != 255) {
+                                        fprintf(stderr, "Maxval 255 is assumed but %d presented.\n", maxv);
                                         fclose(file);
                                         return false;
+                                }
+                                if (maxval != NULL) {
+                                        *maxval = maxv;
                                 }
                         } else if (strcmp(key, "TUPLETYPE") == 0) {
                                 // ignored - assuming MAXVAL == 255, value of DEPTH is sufficient
@@ -94,8 +111,13 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
                 fclose(file);
                 return false;
         }
+        if (maxv == 0) {
+                fprintf(stderr, "Unspecified maximal value field!");
+                fclose(file);
+                return false;
+        }
         if (data != NULL && allocator != NULL) {
-                int datalen = *depth * *width * *height;
+                int datalen = *depth * *width * *height * maxv <= 255 ? 1 : 2;
                 *data = (unsigned char *) allocator(datalen);
                 if (!*data) {
                         fprintf(stderr, "Unspecified depth header field!");
@@ -113,7 +135,8 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
         return true;
 }
 
-static bool pam_write(const char *filename, unsigned int width, unsigned int height, int depth, const unsigned char *data) {
+static bool pam_write(const char *filename, unsigned int width, unsigned int height, int depth, int maxval, const unsigned char *data) PAM_ATTRIBUTE_UNUSED;
+static bool pam_write(const char *filename, unsigned int width, unsigned int height, int depth, int maxval, const unsigned char *data) {
         FILE *file = fopen(filename, "wb");
         if (!file) {
                 fprintf(stderr, "Failed to open %s for writing!", filename);
@@ -131,11 +154,11 @@ static bool pam_write(const char *filename, unsigned int width, unsigned int hei
                 "WIDTH %u\n"
                 "HEIGHT %u\n"
                 "DEPTH %d\n"
-                "MAXVAL 255\n"
+                "MAXVAL %d\n"
                 "TUPLTYPE %s\n"
                 "ENDHDR\n",
-                width, height, depth, tuple_type);
-        fwrite((const char *) data, width * height * depth, 1, file);
+                width, height, depth, maxval, tuple_type);
+        fwrite((const char *) data, width * height * depth, maxval <= 255 ? 1 : 2, file);
         bool ret = !ferror(file);
         fclose(file);
         return ret;

@@ -36,7 +36,7 @@
 static int pam_load_delegate(const char *filename, int *image_size, void **image_data, allocator_t alloc) {
     unsigned int w, h;
     int d;
-    bool ret = pam_read(filename, &w, &h, &d, (unsigned char **) image_data, alloc);
+    bool ret = pam_read(filename, &w, &h, &d, NULL, (unsigned char **) image_data, alloc);
     if (ret) {
         *image_size = w * h * d;
     }
@@ -49,7 +49,7 @@ static int pam_probe_delegate(const char *filename, struct gpujpeg_image_paramet
     }
     int depth;
     unsigned int w, h;
-    if (pam_read(filename, &w, &h, &depth, NULL, NULL)) {
+    if (pam_read(filename, &w, &h, &depth, NULL, NULL, NULL)) {
         param_image->width = w;
         param_image->height = h;
         switch (depth) {
@@ -98,7 +98,7 @@ int pam_save_delegate(const char *filename, const struct gpujpeg_image_parameter
         return -1;
     }
 
-    bool ret = pam_write(filename, param_image->width, param_image->height, depth, (const unsigned char *) data);
+    bool ret = pam_write(filename, param_image->width, param_image->height, depth, 255, (const unsigned char *) data);
     return ret ? 0 : -1;
 }
 
