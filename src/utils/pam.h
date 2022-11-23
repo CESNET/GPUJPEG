@@ -36,12 +36,16 @@
 #define PAM_H_7E23A609_963A_45A8_88E2_ED4D3FDFF69F
 
 #ifdef __cplusplus
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #else
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #endif
 
 #ifdef __GNUC__
@@ -56,9 +60,10 @@
 static inline bool pam_read(const char *filename, unsigned int *width, unsigned int *height, int *depth, int *maxval, unsigned char **data, void *(*allocator)(size_t)) PAM_ATTRIBUTE_UNUSED;
 static inline bool pam_read(const char *filename, unsigned int *width, unsigned int *height, int *depth, int *maxval, unsigned char **data, void *(*allocator)(size_t)) {
         char line[128];
+        errno = 0;
         FILE *file = fopen(filename, "rb");
         if (!file) {
-                fprintf(stderr, "Failed to open %s!", filename);
+                fprintf(stderr, "Failed to open %s: %s", filename, strerror(errno));
                 return false;
         }
         fgets(line, sizeof line - 1, file);
@@ -133,7 +138,7 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
         }
         fread((char *) *data, datalen, 1, file);
         if (feof(file) || ferror(file)) {
-                fprintf(stderr, "Unable to load PAM data from file.");
+                perror("Unable to load PAM data from file");
                 fclose(file);
                 return false;
         }
@@ -143,9 +148,10 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
 
 static bool pam_write(const char *filename, unsigned int width, unsigned int height, int depth, int maxval, const unsigned char *data) PAM_ATTRIBUTE_UNUSED;
 static bool pam_write(const char *filename, unsigned int width, unsigned int height, int depth, int maxval, const unsigned char *data) {
+        errno = 0;
         FILE *file = fopen(filename, "wb");
         if (!file) {
-                fprintf(stderr, "Failed to open %s for writing!", filename);
+                fprintf(stderr, "Failed to open %s for writing: %s", filename, strerror(errno));
                 return false;
         }
         const char *tuple_type = "INVALID";
@@ -166,6 +172,9 @@ static bool pam_write(const char *filename, unsigned int width, unsigned int hei
                 width, height, depth, maxval, tuple_type);
         fwrite((const char *) data, width * height * depth, maxval <= 255 ? 1 : 2, file);
         bool ret = !ferror(file);
+        if (!ret) {
+                perror("Unable to write PAM data");
+        }
         fclose(file);
         return ret;
 }
