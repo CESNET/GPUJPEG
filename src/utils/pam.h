@@ -71,33 +71,37 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
         *width = 0, *height = 0, *depth = 0;
         int maxv = 0;
         while (!feof(file) && !ferror(file)) {
-                char *spc = strchr(line, ' ');
-                if (spc != NULL) {
-                        const char *key = line;
-                        *spc = '\0';
-                        const char *val = spc + 1;
-                        if (strcmp(key, "WIDTH") == 0) {
-                                *width = atoi(val);
-                        } else if (strcmp(key, "HEIGHT") == 0) {
-                                *height = atoi(val);
-                        } else if (strcmp(key, "DEPTH") == 0) {
-                                *depth = atoi(val);
-                        } else if (strcmp(key, "MAXVAL") == 0) {
-                                maxv = atoi(val);
-                                if (maxval == NULL && maxv != 255) {
-                                        fprintf(stderr, "Maxval 255 is assumed but %d presented.\n", maxv);
-                                        fclose(file);
-                                        return false;
-                                }
-                                if (maxval != NULL) {
-                                        *maxval = maxv;
-                                }
-                        } else if (strcmp(key, "TUPLETYPE") == 0) {
-                                // ignored - assuming MAXVAL == 255, value of DEPTH is sufficient
-                                // to determine pixel format
-                        }
-                } else if (strcmp(line, "ENDHDR\n") == 0) {
+                if (strcmp(line, "ENDHDR\n") == 0) {
                         break;
+                }
+                char *spc = strchr(line, ' ');
+                if (spc == NULL) {
+                        break;
+                }
+                const char *key = line;
+                *spc = '\0';
+                const char *val = spc + 1;
+                if (strcmp(key, "WIDTH") == 0) {
+                        *width = atoi(val);
+                } else if (strcmp(key, "HEIGHT") == 0) {
+                        *height = atoi(val);
+                } else if (strcmp(key, "DEPTH") == 0) {
+                        *depth = atoi(val);
+                } else if (strcmp(key, "MAXVAL") == 0) {
+                        maxv = atoi(val);
+                        if (maxval == NULL && maxv != 255) {
+                                fprintf(stderr, "Maxval 255 is assumed but %d presented.\n", maxv);
+                                fclose(file);
+                                return false;
+                        }
+                        if (maxval != NULL) {
+                                *maxval = maxv;
+                        }
+                } else if (strcmp(key, "TUPLETYPE") == 0) {
+                        // ignored - assuming MAXVAL == 255, value of DEPTH is sufficient
+                        // to determine pixel format
+                } else {
+                        fprintf(stderr, "unrecognized key %s in PAM header\n", key);
                 }
                 fgets(line, sizeof line - 1, file);
         }
@@ -116,20 +120,22 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
                 fclose(file);
                 return false;
         }
-        if (data != NULL && allocator != NULL) {
-                int datalen = *depth * *width * *height * maxv <= 255 ? 1 : 2;
-                *data = (unsigned char *) allocator(datalen);
-                if (!*data) {
-                        fprintf(stderr, "Unspecified depth header field!");
-                        fclose(file);
-                        return false;
-                }
-                fread((char *) *data, datalen, 1, file);
-                if (feof(file) || ferror(file)) {
-                        fprintf(stderr, "Unable to load PAM data from file.");
-                        fclose(file);
-                        return false;
-                }
+        if (data == NULL || allocator == NULL) {
+                fclose(file);
+                return true;
+        }
+        int datalen = *depth * *width * *height * maxv <= 255 ? 1 : 2;
+        *data = (unsigned char *) allocator(datalen);
+        if (!*data) {
+                fprintf(stderr, "Unspecified depth header field!");
+                fclose(file);
+                return false;
+        }
+        fread((char *) *data, datalen, 1, file);
+        if (feof(file) || ferror(file)) {
+                fprintf(stderr, "Unable to load PAM data from file.");
+                fclose(file);
+                return false;
         }
         fclose(file);
         return true;
