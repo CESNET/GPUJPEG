@@ -1,3 +1,6 @@
+/*
+ * Encodes raw image in a container (PNM/PAM or Y4M) to JPEG.
+ */
 #include <libgpujpeg/gpujpeg_common.h> // gpujpeg_image_get_properties
 #include <libgpujpeg/gpujpeg_encoder.h>
 #include <stdbool.h>
@@ -11,7 +14,7 @@
 
 static void usage(const char *progname) {
         printf("Usage:\n");
-        printf("\t%s file.{pam|pnm|ppm}\n", progname);
+        printf("\t%s file.{pam|pnm|ppm|y4m}\n", progname);
 }
 
 static bool check_params(int argc, char *argv[]) {
@@ -19,7 +22,7 @@ static bool check_params(int argc, char *argv[]) {
                 return false;
         }
         const char *ext = strrchr(argv[1], '.') + 1;
-        const char *allowed_ext[] = { "pnm", "ppm", "pam" };
+        const char *allowed_ext[] = { "pnm", "ppm", "pam", "y4m" };
         for (size_t i = 0; i < sizeof allowed_ext / sizeof allowed_ext[0]; ++i) {
                 if (strcasecmp(ext, allowed_ext[i]) == 0) {
                         return true;

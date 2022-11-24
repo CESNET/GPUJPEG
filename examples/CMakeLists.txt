@@ -4,8 +4,8 @@ project(gpujpeg-examples LANGUAGES C)
 find_package(GPUJPEG REQUIRED)
 find_package(CUDA)
 
-add_executable(encode_pnm encode_pnm.c)
-target_link_libraries(encode_pnm gpujpeg)
+add_executable(encode encode.c)
+target_link_libraries(encode gpujpeg)
 
 add_executable(encode_raw_rgb encode_raw_rgb.c)
 target_link_libraries(encode_raw_rgb gpujpeg)
