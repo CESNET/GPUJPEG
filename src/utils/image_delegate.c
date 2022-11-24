@@ -105,13 +105,45 @@ int pam_save_delegate(const char *filename, const struct gpujpeg_image_parameter
 }
 
 static int y4m_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists) {
-    (void) filename;
     if (!file_exists) {
         param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
         param_image->pixel_format = (enum gpujpeg_pixel_format) GPUJPEG_PIXFMT_PLANAR_STD;
         return 0;
     }
-    GPUJPEG_ASSERT(0 && "Reading existing Y4M file is not yet implemented!");
+
+    struct y4m_metadata info = { 0 };
+    if (!y4m_read(filename, &info, NULL, NULL)) {
+        return -1;
+    }
+    param_image->width = info.width;
+    param_image->height = info.height;
+    GPUJPEG_ASSERT(info.bitdepth == 8);
+    switch (info.subsampling) {
+        case 400:
+            param_image->pixel_format = GPUJPEG_U8;
+            break;
+        case 420:
+            param_image->pixel_format = GPUJPEG_420_U8_P0P1P2;
+            break;
+        case 422:
+            param_image->pixel_format = GPUJPEG_422_U8_P0P1P2;
+            break;
+        case 444:
+            param_image->pixel_format = GPUJPEG_444_U8_P0P1P2;
+            break;
+        default:
+            GPUJPEG_ASSERT(0 && "Wrong subsamplig in Y4M!");
+    }
+    param_image->color_space = info.limited ? GPUJPEG_YCBCR_BT601 : GPUJPEG_YCBCR_BT601_256LVLS;
+    return 0;
+}
+
+static int y4m_load_delegate(const char *filename, int *image_size, void **image_data, allocator_t alloc) {
+    struct y4m_metadata info = { 0 };
+    if ((*image_size = y4m_read(filename, &info, (unsigned char **) image_data, alloc)) == 0) {
+        return 1;
+    }
+    return 0;
 }
 
 int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data)
@@ -154,7 +186,9 @@ image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_fo
 #else
         fprintf(stderr, "Support for PNM disabled during compilation!\n");
 #endif
-        // fall through
+        return NULL;
+    case GPUJPEG_IMAGE_FILE_Y4M:
+        return y4m_load_delegate;
     default:
         return NULL;
     }
