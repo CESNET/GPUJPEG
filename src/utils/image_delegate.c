@@ -27,8 +27,10 @@
 
 #include <string.h>
 
+#include "../gpujpeg_common_internal.h" // GPUJPEG_ASSERT
 #include "image_delegate.h"
 #include "pam.h"
+#include "y4m.h"
 #ifndef DISABLE_CPP
 #include "image_delegate_pnm.hpp"
 #endif // ! defined DISABLE_CPP
@@ -102,6 +104,46 @@ int pam_save_delegate(const char *filename, const struct gpujpeg_image_parameter
     return ret ? 0 : -1;
 }
 
+static int y4m_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists) {
+    (void) filename;
+    if (!file_exists) {
+        param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+        param_image->pixel_format = (enum gpujpeg_pixel_format) GPUJPEG_PIXFMT_PLANAR_STD;
+        return 0;
+    }
+    GPUJPEG_ASSERT(0 && "Reading existing Y4M file is not yet implemented!");
+}
+
+int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data)
+{
+    if (param_image->color_space == GPUJPEG_RGB) {
+        fprintf(stderr, "Y4M cannot use RGB colorspace!\n");
+        return -1;
+    }
+    int subsampling = 0;
+    switch (param_image->pixel_format) {
+    case GPUJPEG_U8:
+        subsampling = 400;
+        break;
+    case GPUJPEG_420_U8_P0P1P2:
+        subsampling = GPUJPEG_SUBSAMPLING_420;
+        break;
+    case GPUJPEG_422_U8_P0P1P2:
+        subsampling = GPUJPEG_SUBSAMPLING_422;
+        break;
+    case GPUJPEG_444_U8_P0P1P2:
+        subsampling = GPUJPEG_SUBSAMPLING_444;
+        break;
+    default:
+        fprintf(stderr, "Wrong pixel format %s for Y4M! Only planar formats are supported.\n", gpujpeg_pixel_format_get_name(param_image->pixel_format));
+        return -1;
+    }
+
+    _Bool limited = param_image->color_space != GPUJPEG_YCBCR_JPEG;
+
+    return y4m_write(filename, param_image->width, param_image->height, subsampling, 8, limited, (const unsigned char *) data) ? 0 : -1;
+}
+
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format) {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_PAM:
@@ -129,7 +171,9 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
 #else
         fprintf(stderr, "Support for PNM disabled during compilation!\n");
 #endif
-        // fall through
+        return NULL;
+    case GPUJPEG_IMAGE_FILE_Y4M:
+        return y4m_probe_delegate;
     default:
         return NULL;
     }
@@ -146,7 +190,9 @@ image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_fo
 #else
         fprintf(stderr, "Support for PNM disabled during compilation!\n");
 #endif
-        // fall through
+        return NULL;
+    case GPUJPEG_IMAGE_FILE_Y4M:
+        return y4m_save_delegate;
     default:
         return NULL;
     }

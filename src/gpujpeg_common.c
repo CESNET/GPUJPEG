@@ -410,6 +410,7 @@ gpujpeg_image_get_file_format(const char* filename)
         { "pgm",  GPUJPEG_IMAGE_FILE_PGM},
         { "ppm",  GPUJPEG_IMAGE_FILE_PPM},
         { "pam",  GPUJPEG_IMAGE_FILE_PAM},
+        { "y4m",  GPUJPEG_IMAGE_FILE_Y4M},
     };
 
     const char * ext = strrchr(filename, '.');

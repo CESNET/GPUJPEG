@@ -108,6 +108,7 @@ enum gpujpeg_pixel_format {
     GPUJPEG_444_U8_P012A = 7,
 };
 #define GPUJPEG_PIXFMT_NO_ALPHA   (GPUJPEG_PIXFMT_NONE - 1) ///< placeholder for any pixel format without alpha channel, outside the enum to avoid -Wswitch warns
+#define GPUJPEG_PIXFMT_PLANAR_STD (GPUJPEG_PIXFMT_NONE - 2) ///< placeholder for a planar pixel format that is either 444, 422 or 420
 
 /**
  * Sampling factor for color component in JPEG format

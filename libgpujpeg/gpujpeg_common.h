@@ -293,6 +293,7 @@ enum gpujpeg_image_file_format {
     GPUJPEG_IMAGE_FILE_PNM,
     /// PAM file format
     GPUJPEG_IMAGE_FILE_PAM,
+    GPUJPEG_IMAGE_FILE_Y4M,
     /// YUV file format, simple data format without header [Y U V] [Y U V] ...
     /// @note all following formats must be YUV
     GPUJPEG_IMAGE_FILE_YUV,

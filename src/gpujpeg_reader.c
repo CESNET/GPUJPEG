@@ -1356,10 +1356,41 @@ gpujpeg_reader_read_common_markers(uint8_t **image, const uint8_t* image_end, in
     return 0;
 }
 
+static _Bool sampling_factor_compare(int count, struct gpujpeg_component_sampling_factor *a,
+    struct gpujpeg_component_sampling_factor *b) {
+    for (int comp = 0; comp < count; comp++) {
+        if (a[comp].vertical != b[comp].vertical ||
+                a[comp].horizontal != b[comp].horizontal) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static enum gpujpeg_pixel_format
-adjust_pixel_format(struct gpujpeg_image_parameters * param_image) {
+adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image) {
+    if (param_image->comp_count == 1) {
+        return GPUJPEG_U8;
+    }
+
+    if (param_image->pixel_format == GPUJPEG_PIXFMT_PLANAR_STD) {
+        if (param_image->comp_count == 4) {
+            param_image->comp_count = 3;
+        }
+        GPUJPEG_ASSERT(param_image->comp_count == 3);
+        struct gpujpeg_parameters tmp;
+        gpujpeg_parameters_chroma_subsampling(&tmp, GPUJPEG_SUBSAMPLING_420);
+        if (sampling_factor_compare(3, param->sampling_factor, tmp.sampling_factor)) {
+            return GPUJPEG_420_U8_P0P1P2;
+        }
+        gpujpeg_parameters_chroma_subsampling(&tmp, GPUJPEG_SUBSAMPLING_422);
+        if (sampling_factor_compare(3, param->sampling_factor, tmp.sampling_factor)) {
+            return GPUJPEG_422_U8_P0P1P2;
+        }
+        return GPUJPEG_444_U8_P0P1P2;
+    }
+
     switch (param_image->comp_count) {
-        case 1: return GPUJPEG_U8;
         case 3: return GPUJPEG_444_U8_P012;
         case 4: return param_image->pixel_format == GPUJPEG_PIXFMT_NO_ALPHA ? GPUJPEG_444_U8_P012 : GPUJPEG_444_U8_P012A;
         default: GPUJPEG_ASSERT(0 && "Unhandled JPEG internal component count detected!");
@@ -1432,7 +1463,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
                 return -1;
             }
             if ( decoder->reader->param_image.pixel_format <= GPUJPEG_PIXFMT_NONE ) {
-                decoder->reader->param_image.pixel_format = adjust_pixel_format(&decoder->reader->param_image);
+                decoder->reader->param_image.pixel_format = adjust_pixel_format(&decoder->reader->param, &decoder->reader->param_image);
             }
             break;
 
