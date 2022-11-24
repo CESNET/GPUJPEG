@@ -179,11 +179,11 @@ static bool adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
         param->restart_interval = gpujpeg_encoder_suggest_restart_interval(param_image, subsampling, param->interleaved, param->verbose);
     }
 
-    if (param_image->width <= 0 || param_image->height <= 0) {
+    if (encode && (param_image->width <= 0 || param_image->height <= 0)) {
         fprintf(stderr, "Image dimensions must be set to nonzero values!\n");
         return false;
     }
-    if (param_image->pixel_format == GPUJPEG_PIXFMT_NONE) {
+    if (encode && param_image->pixel_format == GPUJPEG_PIXFMT_NONE) {
         fprintf(stderr, "Pixel format must be set!\n");
         return false;
     }
