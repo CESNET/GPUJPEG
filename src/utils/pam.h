@@ -68,7 +68,7 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
         }
         fgets(line, sizeof line - 1, file);
         if (feof(file) || ferror(file) || strcmp(line, "P7\n") != 0) {
-               fprintf(stderr, "File '%s' doesn't seem to be valid PAM.", filename);
+               fprintf(stderr, "File '%s' doesn't seem to be valid PAM.\n", filename);
                fclose(file);
                return false;
         }
@@ -102,7 +102,7 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
                         if (maxval != NULL) {
                                 *maxval = maxv;
                         }
-                } else if (strcmp(key, "TUPLETYPE") == 0) {
+                } else if (strcmp(key, "TUPLTYPE") == 0) {
                         // ignored - assuming MAXVAL == 255, value of DEPTH is sufficient
                         // to determine pixel format
                 } else {
@@ -129,7 +129,7 @@ static inline bool pam_read(const char *filename, unsigned int *width, unsigned 
                 fclose(file);
                 return true;
         }
-        int datalen = *depth * *width * *height * maxv <= 255 ? 1 : 2;
+        int datalen = *depth * *width * *height * (maxv <= 255 ? 1 : 2);
         *data = (unsigned char *) allocator(datalen);
         if (!*data) {
                 fprintf(stderr, "Unspecified depth header field!");
