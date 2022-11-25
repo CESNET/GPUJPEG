@@ -131,6 +131,9 @@ static int y4m_probe_delegate(const char *filename, struct gpujpeg_image_paramet
         case Y4M_SUBS_444:
             param_image->pixel_format = GPUJPEG_444_U8_P0P1P2;
             break;
+        case Y4M_SUBS_YUVA:
+            fprintf(stderr, "Planar YCbCr with alpha is not currently supported!\n");
+            return -1;
         default:
             GPUJPEG_ASSERT(0 && "Wrong subsamplig in Y4M!");
     }

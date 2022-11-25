@@ -59,6 +59,7 @@ enum y4m_subsampling {
         Y4M_SUBS_420 = 420,
         Y4M_SUBS_422 = 422,
         Y4M_SUBS_444 = 444,
+        Y4M_SUBS_YUVA = 4444,
 };
 
 struct y4m_metadata {
@@ -78,8 +79,13 @@ static inline bool y4m_write(const char *filename, int width, int height, enum y
 
 static inline bool y4m_process_chroma_type(char *c, struct y4m_metadata *info) {
         info->bitdepth = 8;
+        if (strcmp(c, "444alpha") == 0) {
+                info->subsampling = Y4M_SUBS_YUVA;
+                return true;
+        }
         if (strncmp(c, "mono", 4) == 0) {
                 info->subsampling = Y4M_SUBS_MONO;
+                sscanf(c, "mono%d", &info->bitdepth);
                 return true;
         }
         int subsampling = 0;
@@ -97,8 +103,9 @@ static inline size_t y4m_get_data_len(int width, int height, enum y4m_subsamplin
                 case Y4M_SUBS_420: return (size_t) width * height + (size_t) 2 * ((width + 1) / 2) * ((height + 1) / 2);
                 case Y4M_SUBS_422: return (size_t) width * height + (size_t) 2 * ((width + 1) / 2) * height;
                 case Y4M_SUBS_444: return (size_t) width * height * 3;
+                case Y4M_SUBS_YUVA: return (size_t) width * height * 4;
                 default:
-                          fprintf(stderr, "Unsupported subsampling '%d'", subsampling);
+                          fprintf(stderr, "Unsupported subsampling '%d'\n", subsampling);
                           return 0;
         }
 }
@@ -156,31 +163,36 @@ static inline size_t y4m_read(const char *filename, struct y4m_metadata *info, u
 }
 
 static inline bool y4m_write(const char *filename, int width, int height, enum y4m_subsampling subsampling, int depth, bool limited, const unsigned char *data) {
-        char chroma_type_tmp[20];
-        const char *chroma_type = chroma_type_tmp;
-        if (subsampling == Y4M_SUBS_MONO) {
-                chroma_type = "mono";
-        } else {
-                snprintf(chroma_type_tmp, sizeof chroma_type_tmp, "%d", subsampling);
-        }
         errno = 0;
         FILE *file = fopen(filename, "wb");
         if (!file) {
                 fprintf(stderr, "Failed to open %s for writing: %s", filename, strerror(errno));
                 return false;
         }
-        char depth_suffix[20] = "";
+        char chroma_type[42];
+        if (subsampling == Y4M_SUBS_MONO) {
+                snprintf(chroma_type, sizeof chroma_type, "mono");
+        } else if (subsampling == Y4M_SUBS_YUVA) {
+                if (depth != 8) {
+                        fprintf(stderr, "Only 8-bit 444alpha is supported for Y4M!");
+                        return false;
+                }
+                snprintf(chroma_type, sizeof chroma_type, "444alpha");
+        } else {
+                snprintf(chroma_type, sizeof chroma_type, "%d", subsampling);
+        }
         size_t len = y4m_get_data_len(width, height, subsampling);
         if (len == 0) {
                 return false;
         }
         if (depth > 8) {
                 len *= 2;
-                snprintf(depth_suffix, sizeof depth_suffix, "p%d", depth);
+                snprintf(chroma_type + strlen(chroma_type), sizeof chroma_type - strlen(chroma_type), "%s%d",
+                                subsampling != Y4M_SUBS_MONO ? "p" : "", depth); // 'p' in 420p10 but not mono10
         }
 
-        fprintf(file, "YUV4MPEG2 W%d H%d F25:1 Ip A0:0 C%s%s XCOLORRANGE=%s\nFRAME\n",
-                        width, height, chroma_type, depth_suffix, limited ? "LIMITED" : "FULL");
+        fprintf(file, "YUV4MPEG2 W%d H%d F25:1 Ip A0:0 C%s XCOLORRANGE=%s\nFRAME\n",
+                        width, height, chroma_type, limited ? "LIMITED" : "FULL");
         fwrite((const char *) data, len, 1, file);
         bool ret = !ferror(file);
         if (!ret) {
