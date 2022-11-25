@@ -1,13 +1,12 @@
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
 # change version also in configure.ac
-project(gpujpeg VERSION 0.20.4 LANGUAGES C CXX CUDA)
+project(gpujpeg VERSION 0.20.4 LANGUAGES C CUDA)
 
 # options
 set(BUILD_OPENGL AUTO CACHE STRING "Build with OpenGL support, options are: AUTO ON OFF")
 set_property(CACHE BUILD_OPENGL PROPERTY STRINGS AUTO ON OFF)
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 option(CMAKE_CUDA_ARCHITECTURES "CUDA architectures to build for (needs CMake 3.18)" OFF)
-option(DISABLE_CPP "Disable C++ code (currently image delegates)" OFF)
 option(HUFFMAN_GPU_CONST_TABLES "Enable Huffman GPU decoder quick const tables" OFF)
 set(OPENGL_CONTEXT AUTO CACHE STRING "Use specifiedn OpenGL context creation, options are: AUTO GLX GLFW NONE")
 set_property(CACHE OPENGL_CONTEXT PROPERTY STRINGS AUTO GLX GLFW NONE)
@@ -68,11 +67,9 @@ endif()
 if (MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler /W4")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -Wall -Xcompiler -Wextra")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
 endif()
 
 # Find OpenGL, GLEW, GLUT and GLFW
@@ -126,11 +123,6 @@ elseif(BUILD_OPENGL STREQUAL "ON")
     message(FATAL_ERROR "OpenGL not found: ${OPENGL_ERROR}")
 endif()
 
-if(DISABLE_CPP)
-    add_definitions("-DDISABLE_CPP")
-    set(COMPILED_OPTIONS "${COMPILED_OPTIONS} No_cpp")
-endif()
-
 if(HUFFMAN_GPU_CONST_TABLES)
     add_definitions("-DHUFFMAN_GPU_CONST_TABLES")
     set(COMPILED_OPTIONS "${COMPILED_OPTIONS} Huffman_const_tables")
@@ -145,11 +137,8 @@ message(STATUS "Configured options: ${COMPILED_OPTIONS}")
 # GPUJPEG library
 file(GLOB H_FILES libgpujpeg/*.h ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg/gpujpeg_version.h)
 file(GLOB_RECURSE C_FILES src/*.c src/*.cu)
-if(NOT DISABLE_CPP)
-    file(GLOB_RECURSE CPP_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-endif()
 list(REMOVE_ITEM C_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c")
-add_library(gpujpeg ${H_FILES} ${C_FILES} ${CPP_FILES})
+add_library(gpujpeg ${H_FILES} ${C_FILES})
 target_include_directories(${PROJECT_NAME}
     PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 )
@@ -213,7 +202,7 @@ install(EXPORT GPUJPEGTargets
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/GPUJPEGConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/GPUJPEGConfigVersion.cmake
     DESTINATION lib/cmake/GPUJPEG)
 
-file(GLOB_RECURSE ALL_SOURCES *.c *.cpp *.cu *.cuh *.h *.hpp)
+file(GLOB_RECURSE ALL_SOURCES *.c *.cu *.cuh *.h *.hpp)
 add_custom_target(cscope cscope -bv ${ALL_SOURCES})
 add_custom_target(ctags ctags ${ALL_SOURCES})
 add_custom_target(universal-ctags ctags-universal ${ALL_SOURCES})

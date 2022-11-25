@@ -31,9 +31,6 @@
 #include "image_delegate.h"
 #include "pam.h"
 #include "y4m.h"
-#ifndef DISABLE_CPP
-#include "image_delegate_pnm.hpp"
-#endif // ! defined DISABLE_CPP
 
 static int pam_load_delegate(const char *filename, int *image_size, void **image_data, allocator_t alloc) {
     struct pam_metadata info;
@@ -76,7 +73,7 @@ static int pam_probe_delegate(const char *filename, struct gpujpeg_image_paramet
     return 0;
 }
 
-int pam_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data)
+int pampnm_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data, bool pnm)
 {
     if (param_image->pixel_format != GPUJPEG_U8 && param_image->color_space != GPUJPEG_RGB) {
         fprintf(stderr, "Wrong color space %s for PAM!\n", gpujpeg_color_space_get_name(param_image->color_space));
@@ -99,8 +96,18 @@ int pam_save_delegate(const char *filename, const struct gpujpeg_image_parameter
         return -1;
     }
 
-    bool ret = pam_write(filename, param_image->width, param_image->height, depth, 255, (const unsigned char *) data);
+    bool ret = pam_write(filename, param_image->width, param_image->height, depth, 255, (const unsigned char *) data, pnm);
     return ret ? 0 : -1;
+}
+
+int pam_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data)
+{
+    return pampnm_save_delegate(filename, param_image, data, false);
+}
+
+int pnm_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data)
+{
+    return pampnm_save_delegate(filename, param_image, data, true);
 }
 
 static int y4m_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists) {
@@ -181,14 +188,8 @@ int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameter
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format) {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_PAM:
-        return pam_load_delegate;
     case GPUJPEG_IMAGE_FILE_PNM:
-#ifndef DISABLE_CPP
-        return pnm_load_delegate;
-#else
-        fprintf(stderr, "Support for PNM disabled during compilation!\n");
-#endif
-        return NULL;
+        return pam_load_delegate;
     case GPUJPEG_IMAGE_FILE_Y4M:
         return y4m_load_delegate;
     default:
@@ -200,14 +201,8 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
 {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_PAM:
-        return pam_probe_delegate;
     case GPUJPEG_IMAGE_FILE_PNM:
-#ifndef DISABLE_CPP
-        return pnm_probe_delegate;
-#else
-        fprintf(stderr, "Support for PNM disabled during compilation!\n");
-#endif
-        return NULL;
+        return pam_probe_delegate;
     case GPUJPEG_IMAGE_FILE_Y4M:
         return y4m_probe_delegate;
     default:
@@ -221,12 +216,7 @@ image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_fo
     case GPUJPEG_IMAGE_FILE_PAM:
         return pam_save_delegate;
     case GPUJPEG_IMAGE_FILE_PNM:
-#ifndef DISABLE_CPP
         return pnm_save_delegate;
-#else
-        fprintf(stderr, "Support for PNM disabled during compilation!\n");
-#endif
-        return NULL;
     case GPUJPEG_IMAGE_FILE_Y4M:
         return y4m_save_delegate;
     default:
