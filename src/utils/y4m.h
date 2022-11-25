@@ -49,10 +49,17 @@
 #endif
 
 #ifdef __GNUC__
-#define PAM_ATTRIBUTE_UNUSED __attribute__((unused))
+#define Y4M_ATTRIBUTE_UNUSED __attribute__((unused))
 #else
-#define PAM_ATTRIBUTE_UNUSED
+#define Y4M_ATTRIBUTE_UNUSED
 #endif
+
+enum y4m_subsampling {
+        Y4M_SUBS_MONO = 400,
+        Y4M_SUBS_420 = 420,
+        Y4M_SUBS_422 = 422,
+        Y4M_SUBS_444 = 444,
+};
 
 struct y4m_metadata {
         int width;
@@ -62,36 +69,40 @@ struct y4m_metadata {
         bool limited;
 };
 
-static inline bool y4m_process_chroma_type(char *c, struct y4m_metadata *info) {
-        info->bitdepth = 8;
-        if (strncmp(c, "mono", 4) == 0) {
-                info->subsampling = 400;
-                return true;
-        }
-        if (sscanf(c, "%dp%d", &info->subsampling, &info->bitdepth) == 0) {
-                fprintf(stderr, "Y4M: unable to parse chroma type");
-                return false;
-        }
-        return true;
-}
-
-static inline size_t y4m_get_data_len(int width, int height, int subsampling) {
-        switch (subsampling) {
-                case 400: return (size_t) width * height;
-                case 420: return (size_t) width * height + (size_t) 2 * ((width + 1) / 2) * ((height + 1) / 2);
-                case 422: return (size_t) width * height + (size_t) 2 * ((width + 1) / 2) * height;
-                case 444: return (size_t) width * height * 3;
-                default:
-                          fprintf(stderr, "Wrong subsampling '%d'", subsampling);
-                          abort();
-        }
-}
-
 /**
  * @retval 0 on error
  * @returns number of raw image data
  */
-static inline size_t y4m_read(const char *filename, struct y4m_metadata *info, unsigned char **data, void *(*allocator)(size_t)) PAM_ATTRIBUTE_UNUSED;
+static inline size_t y4m_read(const char *filename, struct y4m_metadata *info, unsigned char **data, void *(*allocator)(size_t)) Y4M_ATTRIBUTE_UNUSED;
+static inline bool y4m_write(const char *filename, int width, int height, enum y4m_subsampling subsampling, int depth, bool limited, const unsigned char *data) Y4M_ATTRIBUTE_UNUSED;
+
+static inline bool y4m_process_chroma_type(char *c, struct y4m_metadata *info) {
+        info->bitdepth = 8;
+        if (strncmp(c, "mono", 4) == 0) {
+                info->subsampling = Y4M_SUBS_MONO;
+                return true;
+        }
+        int subsampling = 0;
+        if (sscanf(c, "%dp%d", &subsampling, &info->bitdepth) == 0) {
+                fprintf(stderr, "Y4M: unable to parse chroma type");
+                return false;
+        }
+        info->subsampling = subsampling;
+        return true;
+}
+
+static inline size_t y4m_get_data_len(int width, int height, enum y4m_subsampling subsampling) {
+        switch (subsampling) {
+                case Y4M_SUBS_MONO: return (size_t) width * height;
+                case Y4M_SUBS_420: return (size_t) width * height + (size_t) 2 * ((width + 1) / 2) * ((height + 1) / 2);
+                case Y4M_SUBS_422: return (size_t) width * height + (size_t) 2 * ((width + 1) / 2) * height;
+                case Y4M_SUBS_444: return (size_t) width * height * 3;
+                default:
+                          fprintf(stderr, "Unsupported subsampling '%d'", subsampling);
+                          return 0;
+        }
+}
+
 static inline size_t y4m_read(const char *filename, struct y4m_metadata *info, unsigned char **data, void *(*allocator)(size_t)) {
         FILE *file = fopen(filename, "rb");
         if (!file) {
@@ -136,7 +147,7 @@ static inline size_t y4m_read(const char *filename, struct y4m_metadata *info, u
         }
         fread((char *) *data, datalen, 1, file);
         if (feof(file) || ferror(file)) {
-                perror("Unable to load PAM data from file");
+                perror("Unable to load Y4M data from file");
                 fclose(file);
                 return 0;
         }
@@ -144,17 +155,13 @@ static inline size_t y4m_read(const char *filename, struct y4m_metadata *info, u
         return datalen;
 }
 
-static inline bool y4m_write(const char *filename, int width, int height, int subsampling, int depth, bool limited, const unsigned char *data) PAM_ATTRIBUTE_UNUSED;
-static inline bool y4m_write(const char *filename, int width, int height, int subsampling, int depth, bool limited, const unsigned char *data) {
-        const char *chroma_type = NULL;
-        switch (subsampling) {
-                case 400: chroma_type = "mono"; break;
-                case 420: chroma_type = "420"; break;
-                case 422: chroma_type = "422"; break;
-                case 444: chroma_type = "444"; break;
-                default:
-                          fprintf(stderr, "Wrong subsampling '%d'", subsampling);
-                          return false;
+static inline bool y4m_write(const char *filename, int width, int height, enum y4m_subsampling subsampling, int depth, bool limited, const unsigned char *data) {
+        char chroma_type_tmp[20];
+        const char *chroma_type = chroma_type_tmp;
+        if (subsampling == Y4M_SUBS_MONO) {
+                chroma_type = "mono";
+        } else {
+                snprintf(chroma_type_tmp, sizeof chroma_type_tmp, "%d", subsampling);
         }
         errno = 0;
         FILE *file = fopen(filename, "wb");
@@ -164,6 +171,9 @@ static inline bool y4m_write(const char *filename, int width, int height, int su
         }
         char depth_suffix[20] = "";
         size_t len = y4m_get_data_len(width, height, subsampling);
+        if (len == 0) {
+                return false;
+        }
         if (depth > 8) {
                 len *= 2;
                 snprintf(depth_suffix, sizeof depth_suffix, "p%d", depth);

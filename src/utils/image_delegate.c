@@ -119,16 +119,16 @@ static int y4m_probe_delegate(const char *filename, struct gpujpeg_image_paramet
     param_image->height = info.height;
     GPUJPEG_ASSERT(info.bitdepth == 8);
     switch (info.subsampling) {
-        case 400:
+        case Y4M_SUBS_MONO:
             param_image->pixel_format = GPUJPEG_U8;
             break;
-        case 420:
+        case Y4M_SUBS_420:
             param_image->pixel_format = GPUJPEG_420_U8_P0P1P2;
             break;
-        case 422:
+        case Y4M_SUBS_422:
             param_image->pixel_format = GPUJPEG_422_U8_P0P1P2;
             break;
-        case 444:
+        case Y4M_SUBS_444:
             param_image->pixel_format = GPUJPEG_444_U8_P0P1P2;
             break;
         default:
@@ -155,16 +155,16 @@ int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameter
     int subsampling = 0;
     switch (param_image->pixel_format) {
     case GPUJPEG_U8:
-        subsampling = 400;
+        subsampling = Y4M_SUBS_MONO;
         break;
     case GPUJPEG_420_U8_P0P1P2:
-        subsampling = GPUJPEG_SUBSAMPLING_420;
+        subsampling = Y4M_SUBS_420;
         break;
     case GPUJPEG_422_U8_P0P1P2:
-        subsampling = GPUJPEG_SUBSAMPLING_422;
+        subsampling = Y4M_SUBS_422;
         break;
     case GPUJPEG_444_U8_P0P1P2:
-        subsampling = GPUJPEG_SUBSAMPLING_444;
+        subsampling = Y4M_SUBS_444;
         break;
     default:
         fprintf(stderr, "Wrong pixel format %s for Y4M! Only planar formats are supported.\n", gpujpeg_pixel_format_get_name(param_image->pixel_format));
