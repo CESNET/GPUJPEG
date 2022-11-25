@@ -36,11 +36,11 @@
 #endif // ! defined DISABLE_CPP
 
 static int pam_load_delegate(const char *filename, int *image_size, void **image_data, allocator_t alloc) {
-    unsigned int w, h;
-    int d;
-    bool ret = pam_read(filename, &w, &h, &d, NULL, (unsigned char **) image_data, alloc);
+    struct pam_metadata info;
+    bool ret = pam_read(filename, &info, (unsigned char **) image_data, alloc);
     if (ret) {
-        *image_size = w * h * d;
+        assert(info.maxval == 255);
+        *image_size = info.width * info.height * info.depth;
     }
     return ret ? 0 : 1;
 }
@@ -49,12 +49,11 @@ static int pam_probe_delegate(const char *filename, struct gpujpeg_image_paramet
     if (!file_exists) {
         return 0;
     }
-    int depth;
-    unsigned int w, h;
-    if (pam_read(filename, &w, &h, &depth, NULL, NULL, NULL)) {
-        param_image->width = w;
-        param_image->height = h;
-        switch (depth) {
+    struct pam_metadata info;
+    if (pam_read(filename, &info, NULL, NULL)) {
+        param_image->width = info.width;
+        param_image->height = info.height;
+        switch (info.depth) {
         case 4:
             param_image->pixel_format = GPUJPEG_444_U8_P012A;
             break;
@@ -66,7 +65,7 @@ static int pam_probe_delegate(const char *filename, struct gpujpeg_image_paramet
             param_image->pixel_format = GPUJPEG_U8;
             break;
         default:
-            fprintf(stderr, "Wrong pam component count %d!\n", depth);
+            fprintf(stderr, "Wrong pam component count %d!\n", info.depth);
             return GPUJPEG_ERROR;
         }
     } else {
