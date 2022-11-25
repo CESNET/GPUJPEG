@@ -141,6 +141,9 @@ static inline size_t y4m_read(const char *filename, struct y4m_metadata *info, u
                         // F, I, A currently ignored
                 }
         }
+        if (getc(file) != '\n') { // after FRAME
+                return 0;
+        }
         size_t datalen = y4m_get_data_len(info->width, info->height, info->subsampling);
         if (data == NULL || allocator == NULL) {
                 fclose(file);
