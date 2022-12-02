@@ -40,6 +40,8 @@ libgpujpeg_SRC = src/gpujpeg_common.c \
 	     	src/gpujpeg_table.c \
 	     	src/gpujpeg_writer.c \
 	     	src/utils/image_delegate.c \
+	     	src/utils/pam.c \
+	     	src/utils/y4m.c \
 
 libgpujpeg_DEP = @LIBGPUJPEG_CUDA_OBJS@
 
