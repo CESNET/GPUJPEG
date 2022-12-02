@@ -3,10 +3,11 @@ exec_prefix=@CMAKE_INSTALL_PREFIX@
 libdir=@CMAKE_INSTALL_PREFIX@/lib
 includedir=@CMAKE_INSTALL_PREFIX@/include
 cflags=@PC_CFLAGS@
+libs=@PC_LIBS@
 
 Name: GPUjpeg
 Description: The first test implementation of the JPEG image compression standard for NVIDIA GPUs used for real-time transmission of high-definition video.
 Requires: 
 Version: @PROJECT_VERSION@
 Libs: -L"${libdir}" -lgpujpeg
-Cflags: -I"${includedir}" ${cflags}
+Cflags: -I"${includedir}" ${cflags} ${libs}

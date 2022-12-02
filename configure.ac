@@ -39,6 +39,7 @@ fi
 
 if test "$enable_static" = yes; then
 	pc_cflags="${pc_cflags:+$pc_cflags }-DGPUJPEG_STATIC"
+	pc_libs="${pc_libs:+$pc_libs }-lcudart"
 fi
 AC_SUBST(pc_cflags)
 

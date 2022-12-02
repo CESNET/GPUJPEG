@@ -37,6 +37,7 @@ add_definitions(-DGIT_REV=\"${GIT_REV}\")
 if(NOT BUILD_SHARED_LIBS)
     add_definitions("-DGPUJPEG_STATIC")
     set(PC_CFLAGS "${PC_CFLAGS} -DGPUJPEG_STATIC")
+    set(PC_LIBS "${PC_LIBS} -lcudart")
 endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libgpujpeg/gpujpeg_version.h.cmakein

@@ -3,10 +3,11 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 cflags=@pc_cflags@
+libs=@pc_libs@
 
 Name: GPUjpeg
 Description: The first test implementation of the JPEG image compression standard for NVIDIA GPUs used for real-time transmission of high-definition video.
 Requires: 
 Version: @PACKAGE_VERSION@
-Libs: -L"${libdir}" -lgpujpeg
+Libs: -L"${libdir}" -lgpujpeg ${libs}
 Cflags: -I"${includedir}" ${cflags}
