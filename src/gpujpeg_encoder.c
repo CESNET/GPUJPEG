@@ -75,6 +75,9 @@ gpujpeg_encoder_create(cudaStream_t stream)
         return NULL;
     }
 
+    // Stream
+    encoder->stream = stream;
+
     // Get coder
     struct gpujpeg_coder* coder = &encoder->coder;
 
@@ -114,9 +117,6 @@ gpujpeg_encoder_create(cudaStream_t stream)
     if (encoder->huffman_gpu_encoder == NULL) {
         result = 0;
     }
-
-    // Stream
-    encoder->stream = stream;
 
     if ( result == 0 ) {
         gpujpeg_encoder_destroy(encoder);

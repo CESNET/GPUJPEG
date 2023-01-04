@@ -984,8 +984,8 @@ gpujpeg_huffman_gpu_encoder_create(const struct gpujpeg_encoder * encoder)
 
     // Initialize decomposition lookup table
     cudaFuncSetCacheConfig(gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel, cudaFuncCachePreferShared);
-    gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel<<<32, 256>>>();  // 8192 threads total
-    cudaDeviceSynchronize();
+    gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel<<<32, 256, 0, encoder->stream>>>();  // 8192 threads total
+    cudaStreamSynchronize(encoder->stream);
     gpujpeg_cuda_check_error("Decomposition LUT initialization failed", return NULL);
 
     // compose GPU version of the huffman LUT and copy it into GPU memory (for CC >= 2.0)
