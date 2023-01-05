@@ -37,6 +37,7 @@
 
 #include <cuda_runtime.h>
 #include <math.h> // NAN
+#include <stdio.h>
 #include "gpujpeg_util.h"
 #include "libgpujpeg/gpujpeg_common.h"
 #include "libgpujpeg/gpujpeg_type.h"
@@ -50,6 +51,15 @@
 #define GPUJPEG_MAX_HEADER_SIZE                 (65536 - 100)
 
 #define GPUJPEG_ASSERT(cond) do { if (!(cond)) { fprintf(stderr, "%s:%d: %s: Assertion `" #cond "' failed.\n", __FILE__, __LINE__, __func__); abort(); } } while(0)
+
+#define ERROR_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__); } while(0)
+#define VERBOSE_MSG(log_level, ...) do { if (log_level >= 1) fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
+#define DEBUG_MSG(log_level, ...) do { if (log_level >= 2) fprintf(stderr, "[GPUJPEG] [Debug] " __VA_ARGS__); } while(0)
+#ifndef NDEBUG
+#define DEBUG2_MSG(log_level, ...) do { if (log_level >= 3) fprintf(stderr, "[GPUJPEG] [Debug2] " __VA_ARGS__); } while(0)
+#else
+#define DEBUG2_MSG(log_level, ...)
+#endif
 
 struct gpujpeg_timer {
     int started;

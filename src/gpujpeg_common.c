@@ -538,6 +538,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
         coder->param.perf_stats = param->perf_stats;
         return coder->allocated_gpu_memory_size;
     }
+    DEBUG_MSG(param->verbose, "coder image reconfiguration\n");
     size_t allocated_gpu_memory_size = 0;
 
     // Set parameters

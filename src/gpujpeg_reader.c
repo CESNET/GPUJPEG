@@ -45,15 +45,6 @@
 #define _Thread_local __declspec(thread)
 #endif
 
-#define ERROR_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__); } while(0)
-#ifndef NDEBUG
-#define DEBUG2_MSG(...) do { if (verbose >= 3) fprintf(stderr, "[GPUJPEG] [Debug2] " __VA_ARGS__); } while(0)
-#else
-#define DEBUG2_MSG(...)
-#endif
-#define DEBUG_MSG(...) do { if (verbose >= 2) fprintf(stderr, "[GPUJPEG] [Debug] " __VA_ARGS__); } while(0)
-#define VERBOSE_MSG(...) do { if (verbose >= 1) fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
-
 /** JPEG reader scan structure */
 struct gpujpeg_reader_scan
 {
@@ -321,7 +312,7 @@ gpujpeg_reader_read_app0(uint8_t** image, const uint8_t* image_end, int verbose)
             int ret = gpujpeg_reader_skip_jfxx(image, length);
             return ret == 0 ? 1 : ret;
         }
-        VERBOSE_MSG("APP0 marker identifier is not supported '%s'!\n", marker);
+        VERBOSE_MSG(verbose, "APP0 marker identifier is not supported '%s'!\n", marker);
     } else {
         fprintf(stderr, "[GPUJPEG] [Warning] APP0 marker identifier either not terminated or not present!\n");
     }
@@ -403,7 +394,7 @@ gpujpeg_reader_read_spiff_header(uint8_t** image, int verbose, enum gpujpeg_colo
     (void) profile_id, (void) comp_count, (void) width, (void) height, (void) pixel_units, (void) pixel_xdpu, (void) pixel_ydpu;
 
     if (version != SPIFF_VERSION) {
-        VERBOSE_MSG("Unknown SPIFF version %d.%d.\n", version >> 8, version & 0xFF);
+        VERBOSE_MSG(verbose, "Unknown SPIFF version %d.%d.\n", version >> 8, version & 0xFF);
     }
     if (bps != 8) {
         ERROR_MSG("Wrong bits per sample %d, only 8 is supported.\n", bps);
@@ -434,7 +425,7 @@ gpujpeg_reader_read_spiff_header(uint8_t** image, int verbose, enum gpujpeg_colo
             return -1;
     }
 
-    DEBUG_MSG("APP8 SPIFF parsed succesfully, internal color space: %s\n", gpujpeg_color_space_get_name(*color_space));
+    DEBUG_MSG(verbose, "APP8 SPIFF parsed succesfully, internal color space: %s\n", gpujpeg_color_space_get_name(*color_space));
     *in_spiff = 1;
 
     return 0;
@@ -451,19 +442,19 @@ gpujpeg_reader_read_spiff_directory(uint8_t** image, const uint8_t* image_end, i
         return -1;
     }
     uint32_t tag = gpujpeg_reader_read_4byte(*image);
-    DEBUG2_MSG("Read SPIFF tag 0x%x with length %d.\n", tag, length + 2);
+    DEBUG2_MSG(verbose, "Read SPIFF tag 0x%x with length %d.\n", tag, length + 2);
     if (tag == SPIFF_ENTRY_TAG_EOD && length == SPIFF_ENTRY_TAG_EOD_LENGHT - 2) {
         int marker_soi = gpujpeg_reader_read_marker(image, image_end);
         if ( marker_soi != GPUJPEG_MARKER_SOI ) {
-            VERBOSE_MSG("SPIFF entry 0x1 should be followed directly with SOI.\n");
+            VERBOSE_MSG(verbose, "SPIFF entry 0x1 should be followed directly with SOI.\n");
             return -1;
         }
-        DEBUG2_MSG("SPIFF EOD presented.\n");
+        DEBUG2_MSG(verbose, "SPIFF EOD presented.\n");
         *in_spiff = 0;
     } else if (tag >> 24U != 0) {
-        VERBOSE_MSG("Erroneous SPIFF tag 0x%x (first byte should be 0).", tag);
+        VERBOSE_MSG(verbose, "Erroneous SPIFF tag 0x%x (first byte should be 0).", tag);
     } else {
-        DEBUG2_MSG("SPIFF tag 0x%x with length %d presented.\n", tag, length + 2);
+        DEBUG2_MSG(verbose, "SPIFF tag 0x%x with length %d presented.\n", tag, length + 2);
     }
     return 0;
 }
@@ -497,7 +488,7 @@ gpujpeg_reader_read_app8(uint8_t** image, const uint8_t* image_end, enum gpujpeg
     }
 
     if (length + 2 != SPIFF_MARKER_LEN) {
-        VERBOSE_MSG("APP8 segment length is %d, expected 32 for SPIFF.\n", length + 2);
+        VERBOSE_MSG(verbose, "APP8 segment length is %d, expected 32 for SPIFF.\n", length + 2);
         *image += length;
         return 0;
     }
@@ -513,7 +504,7 @@ gpujpeg_reader_read_app8(uint8_t** image, const uint8_t* image_end, enum gpujpeg
     length -= sizeof marker_name;
 
     if (strcmp(marker_name, spiff_marker_name) != 0) {
-        VERBOSE_MSG("APP8 marker identifier should be 'SPIFF\\0' but '%-6.6s' was presented!\n", marker_name);
+        VERBOSE_MSG(verbose, "APP8 marker identifier should be 'SPIFF\\0' but '%-6.6s' was presented!\n", marker_name);
         *image += length - 2;
         return 0;
     }
@@ -802,8 +793,7 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
     // Deduce color space if not known from headers
     enum gpujpeg_color_space detected_color_space = gpujpeg_reader_process_cid(param_image->comp_count, comp_id, header_color_space);
     if (header_color_space == GPUJPEG_NONE && detected_color_space != GPUJPEG_NONE) {
-        const int verbose = param->verbose;
-        VERBOSE_MSG("Deduced color space %s.\n", gpujpeg_color_space_get_name(detected_color_space));
+        VERBOSE_MSG(param->verbose, "Deduced color space %s.\n", gpujpeg_color_space_get_name(detected_color_space));
         param->color_space_internal = detected_color_space;
     }
 
@@ -1030,8 +1020,7 @@ gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uin
             memcpy(&decoder->coder.data_compressed[segment->data_compressed_index], segment_data_start, segment->data_compressed_size);
 
             if ( segment->data_compressed_size == 0 ) { // skip FFMPEG empty segments after last RST before EOF (FF bug #8412)
-                const int verbose = decoder->coder.param.verbose;
-                VERBOSE_MSG("Empty segment detected!\n");
+                VERBOSE_MSG(decoder->coder.param.verbose, "Empty segment detected!\n");
                 scan->segment_count -= 1;
             }
 
