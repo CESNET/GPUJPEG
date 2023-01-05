@@ -50,7 +50,8 @@ int main(int argc, char *argv[]) {
         iterations = atoi(argv[1]);
         int threads = atoi(argv[2]);
 
-        uint8_t *input_image = malloc(WIDTH * HEIGHT * 3);
+        uint8_t *input_image = NULL;
+        cudaMallocHost((void *) &input_image, WIDTH * HEIGHT * 3);
         for (int i = 0; i < WIDTH * HEIGHT * 3; ++i) {
             input_image[i] = i % 255;
         }
@@ -66,6 +67,6 @@ int main(int argc, char *argv[]) {
                         return 1;
                 }
         }
-        free(input_image);
+        cudaFreeHost(input_image);
 }
 
