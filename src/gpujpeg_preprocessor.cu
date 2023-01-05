@@ -373,9 +373,6 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder* coder = &encoder->coder;
 
-    cudaMemsetAsync(coder->d_data, 0, coder->data_size * sizeof(uint8_t), encoder->stream);
-    gpujpeg_cuda_check_error("Preprocessor memset failed", return -1);
-
     // Select kernel
     gpujpeg_preprocessor_encode_kernel kernel = (gpujpeg_preprocessor_encode_kernel) coder->preprocessor;
     assert(kernel != NULL);

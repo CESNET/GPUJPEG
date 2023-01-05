@@ -91,6 +91,7 @@ gpujpeg_encoder_create(cudaStream_t stream)
     // Initialize coder
     if ( gpujpeg_coder_init(coder) != 0 )
         result = 0;
+    coder->encoder = 1;
 
     // Allocate quantization tables in device memory
     for ( int comp_type = 0; comp_type < GPUJPEG_COMPONENT_TYPE_COUNT; comp_type++ ) {

@@ -315,6 +315,8 @@ struct gpujpeg_coder
     struct gpujpeg_timer duration_in_gpu;
 
     size_t allocated_gpu_memory_size; ///< for gpujpeg_encoder_max_pixels() only (remove?)
+
+    int encoder; ///< 1 if we are encoder, 0 decoder
 };
 
 /**
