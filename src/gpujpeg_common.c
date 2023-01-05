@@ -264,6 +264,7 @@ void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
 {
     param->verbose = 0;
+    param->perf_stats = 0;
     param->quality = 75;
     param->restart_interval = 8;
     param->interleaved = 0;
@@ -348,8 +349,7 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, int subs
 int
 gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpujpeg_parameters *p2)
 {
-    if (p1->verbose != p2->verbose ||
-            p1->quality != p2->quality ||
+    if (p1->quality != p2->quality ||
             p1->restart_interval != p2->restart_interval ||
             p1->interleaved != p2->interleaved ||
             p1->segment_info != p2->segment_info ||
@@ -534,6 +534,8 @@ size_t
 gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_parameters * param, const struct gpujpeg_image_parameters * param_image, cudaStream_t stream)
 {
     if (gpujpeg_parameters_equals(&coder->param, param) && gpujpeg_image_parameters_equals(&coder->param_image, param_image)) {
+        coder->param.verbose = param->verbose;
+        coder->param.perf_stats = param->perf_stats;
         return coder->allocated_gpu_memory_size;
     }
     size_t allocated_gpu_memory_size = 0;

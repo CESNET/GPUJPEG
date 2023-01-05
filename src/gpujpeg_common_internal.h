@@ -61,7 +61,7 @@ struct gpujpeg_timer {
     do { \
         GPUJPEG_CHECK(cudaEventCreate(&(name).start), err_action); \
         GPUJPEG_CHECK(cudaEventCreate(&(name).stop), err_action); \
-        name.started = 0; \
+        (name).started = 0; \
     } while (0)
 
 #define GPUJPEG_CUSTOM_TIMER_DESTROY(name, err_action) \
@@ -76,17 +76,23 @@ struct gpujpeg_timer {
  * @param name
  * @todo stream
  */
-#define GPUJPEG_CUSTOM_TIMER_START(name, stream, err_action) \
-    name.started = 1; \
-    GPUJPEG_CHECK(cudaEventRecord((name).start, stream), err_action)
+#define GPUJPEG_CUSTOM_TIMER_START(name, record_perf, stream, err_action) \
+    if (record_perf) { \
+        (name).started = 1; \
+        GPUJPEG_CHECK(cudaEventRecord((name).start, stream), err_action); \
+    } else { \
+        (name).started = -1; \
+    }
 
 /**
  * Stop timer
  *
  * @param name
  */
-#define GPUJPEG_CUSTOM_TIMER_STOP(name, stream, err_action) \
-    GPUJPEG_CHECK(cudaEventRecord((name).stop, stream), err_action)
+#define GPUJPEG_CUSTOM_TIMER_STOP(name, record_perf, stream, err_action) \
+    if (record_perf) { \
+        GPUJPEG_CHECK(cudaEventRecord((name).stop, stream), err_action); \
+    }
 
 /**
  * Get duration for timer
@@ -94,7 +100,7 @@ struct gpujpeg_timer {
  * @param name
  */
 #define GPUJPEG_CUSTOM_TIMER_DURATION(name) \
-    (name).started ? gpujpeg_custom_timer_get_duration((name).start, (name).stop) : 0
+    (name).started == 1 ? gpujpeg_custom_timer_get_duration((name).start, (name).stop) : (name).started == 0 ? 0 : ( fprintf(stderr, "Debug timer disabled!\n"), 0)
 
 #ifdef __cplusplus
 extern "C" {
