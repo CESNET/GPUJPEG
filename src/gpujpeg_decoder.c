@@ -162,6 +162,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
     struct gpujpeg_coder* coder = &decoder->coder;
 
     coder->param.verbose = param->verbose;
+    coder->param.perf_stats = param->perf_stats;
     if (param_image->width * param_image->height * param_image->comp_count == 0) {
         return 0;
     }

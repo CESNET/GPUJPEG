@@ -712,24 +712,24 @@ main(int argc, char *argv[])
                 rc = gpujpeg_decoder_get_stats(decoder, &stats);
 
                 if ( rc == 0 && param.verbose >= 1 ) {
-                    printf(" -Stream Reader:     %10.2f ms\n", stats.duration_stream);
-                    printf(" -Copy To Device:    %10.2f ms\n", stats.duration_memory_to);
-                    printf(" -Huffman Decoder:   %10.2f ms\n", stats.duration_huffman_coder);
-                    printf(" -DCT & Quantization:%10.2f ms\n", stats.duration_dct_quantization);
-                    printf(" -Postprocessing:    %10.2f ms\n", stats.duration_preprocessor);
-                    printf(" -Copy From Device:  %10.2f ms\n", stats.duration_memory_from);
+                    printf(" -Stream Reader:     %10.4f ms\n", stats.duration_stream);
+                    printf(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
+                    printf(" -Huffman Decoder:   %10.4f ms\n", stats.duration_huffman_coder);
+                    printf(" -DCT & Quantization:%10.4f ms\n", stats.duration_dct_quantization);
+                    printf(" -Postprocessing:    %10.4f ms\n", stats.duration_preprocessor);
+                    printf(" -Copy From Device:  %10.4f ms\n", stats.duration_memory_from);
                     if ( stats.duration_memory_map != 0.0 && stats.duration_memory_unmap != 0.0 ) {
-                        printf(" -OpenGL Memory Map: %10.2f ms\n", stats.duration_memory_map);
-                        printf(" -OpenGL Memory Unmap:%9.2f ms\n", stats.duration_memory_unmap);
+                        printf(" -OpenGL Memory Map: %10.4f ms\n", stats.duration_memory_map);
+                        printf(" -OpenGL Memory Unmap:%9.4f ms\n", stats.duration_memory_unmap);
                     }
                 }
-                printf("Decode Image GPU:    %10.2f ms (only in-GPU processing)\n", stats.duration_in_gpu);
-                printf("Decode Image Bare:   %10.2f ms (without copy to/from GPU memory)\n", duration * 1000.0 - stats.duration_memory_to - stats.duration_memory_from);
-                printf("Decode Image:        %10.2f ms\n", duration * 1000.0);
+                printf("Decode Image GPU:    %10.4f ms (only in-GPU processing)\n", stats.duration_in_gpu);
+                printf("Decode Image Bare:   %10.4f ms (without copy to/from GPU memory)\n", duration * 1000.0 - stats.duration_memory_to - stats.duration_memory_from);
+                printf("Decode Image:        %10.4f ms\n", duration * 1000.0);
             }
             if ( iterate > 1 ) {
                 printf("\n");
-                printf("Avg Decode Duration: %10.2f ms\n\n", duration_all_iterations * 1000.0 / iterate);
+                printf("Avg Decode Duration: %10.4f ms\n\n", duration_all_iterations * 1000.0 / iterate);
             }
 
             uint8_t* data = NULL;
