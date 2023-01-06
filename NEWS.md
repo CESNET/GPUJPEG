@@ -1,3 +1,11 @@
+2023-01-06 - 0.20.4
+----------
+- added support for Y4M files (only one image per file)
+- removed implicit synchronization issues when multiple encoders are run in
+  parallel; also removed cudaMemcpy for the decoder (but not tested if there
+  are not any other issues)
+- very slight performance improvements
+
 2022-01-21 - 0.20.2
 ----------
 - support for encoding alpha
