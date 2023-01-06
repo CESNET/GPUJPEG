@@ -254,9 +254,6 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
     else {
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_memory_to, coder->param.perf_stats, decoder->stream, return -1);
 
-        // Reset huffman output
-        cudaMemsetAsync(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t), decoder->stream);
-
         // Copy scan data to device memory
         cudaMemcpyAsync(coder->d_data_compressed, coder->data_compressed, decoder->data_compressed_size * sizeof(uint8_t), cudaMemcpyHostToDevice, decoder->stream);
         gpujpeg_cuda_check_error("Decoder copy compressed data", return -1);
