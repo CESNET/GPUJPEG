@@ -8,7 +8,7 @@
  * This file is part of GPUJPEG.
  */
 /*
- * Copyright (c) 2013-2022, CESNET z.s.p.o.
+ * Copyright (c) 2013-2023, CESNET z.s.p.o.
  *
  * All rights reserved.
  *
@@ -75,14 +75,26 @@ static bool parse_pam(FILE *file, struct pam_metadata *info) {
         return true;
 }
 
+static bool check_nl(FILE *file) {
+        if (getc(file) != '\n') {
+                fprintf(stderr, "PNM maximal value isn't immediately followed by <NL>\n");
+                return false;
+        }
+        return true;
+}
+
 static bool parse_pnm(FILE *file, char pnm_id, struct pam_metadata *info) {
         switch (pnm_id) {
                 case '1':
                 case '2':
                 case '3':
-                case '4':
-                        fprintf(stderr, "Unsupported PNM P%c\n", pnm_id);
+                        fprintf(stderr, "Plain (ASCII) PNM are not supported, input is P%c\n", pnm_id);
                         return false;
+                case '4':
+                        info->depth = 1;
+                        info->maxval = 1;
+                        info->bitmap_pbm = true;
+                        break;
                 case '5':
                         info->depth = 1;
                         break;
@@ -90,7 +102,7 @@ static bool parse_pnm(FILE *file, char pnm_id, struct pam_metadata *info) {
                         info->depth = 3;
                         break;
                 default:
-                        fprintf(stderr, "Wrong PNM P%c\n", pnm_id);
+                        fprintf(stderr, "Wrong PNM type P%c\n", pnm_id);
                         return false;
         }
         int item_nr = 0;
@@ -103,14 +115,13 @@ static bool parse_pnm(FILE *file, char pnm_id, struct pam_metadata *info) {
                                         break;
                                 case 1:
                                         info->height = val;
+                                        if (info->bitmap_pbm) {
+                                                return check_nl(file);
+                                        }
                                         break;
                                 case 2:
                                         info->maxval = val;
-                                        if (getc(file) != '\n') {
-                                                fprintf(stderr, "PNM maximal value isn't immediately followed by <NL>\n");
-                                                return false;
-                                        }
-                                        return true;
+                                        return check_nl(file);
                         }
                 } else {
                         if (getc(file) == '#') {
@@ -131,7 +142,7 @@ bool pam_read(const char *filename, struct pam_metadata *info, unsigned char **d
         errno = 0;
         FILE *file = fopen(filename, "rb");
         if (!file) {
-                fprintf(stderr, "Failed to open %s: %s", filename, strerror(errno));
+                fprintf(stderr, "Failed to open %s: %s\n", filename, strerror(errno));
                 return false;
         }
         memset(info, 0, sizeof *info);
@@ -167,10 +178,15 @@ bool pam_read(const char *filename, struct pam_metadata *info, unsigned char **d
                 fclose(file);
                 return parse_rc;
         }
-        size_t datalen = (size_t) info->depth * info->width * info->height * (info->maxval <= 255 ? 1 : 2);
+        size_t datalen = (size_t) info->depth * info->width * info->height;
+        if (info->maxval == 1 && info->bitmap_pbm) {
+                datalen = (info->width + 7) / 8 * info->height;
+        } else if (info->maxval > 255) {
+                datalen *= 2;
+        }
         *data = (unsigned char *) allocator(datalen);
         if (!*data) {
-                fprintf(stderr, "Unspecified depth header field!");
+                fprintf(stderr, "Unspecified depth header field!\n");
                 fclose(file);
                 return false;
         }
@@ -189,7 +205,7 @@ bool pam_write(const char *filename, unsigned int width, unsigned int height, in
         errno = 0;
         FILE *file = fopen(filename, "wb");
         if (!file) {
-                fprintf(stderr, "Failed to open %s for writing: %s", filename, strerror(errno));
+                fprintf(stderr, "Failed to open %s for writing: %s\n", filename, strerror(errno));
                 return false;
         }
         if (pnm) {

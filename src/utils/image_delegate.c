@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, CESNET z.s.p.o
+ * Copyright (c) 2020-2023, CESNET z.s.p.o
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -182,7 +182,8 @@ int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameter
 
     _Bool limited = param_image->color_space != GPUJPEG_YCBCR_JPEG;
 
-    return y4m_write(filename, param_image->width, param_image->height, subsampling, 8, limited, (const unsigned char *) data) ? 0 : -1;
+    struct y4m_metadata info = { .width = param_image->width, .height = param_image->height, .bitdepth = 8, .subsampling = subsampling, .limited = limited };
+    return y4m_write(filename, &info, (const unsigned char *) data) ? 0 : -1;
 }
 
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format) {
