@@ -110,8 +110,12 @@ jobs:
       if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: .github/scripts/replace-asset.sh continuous GPUJPEG.zip application/zip Windows%20archive
-      shell: bash
+      run: |
+        pacman -Sy --noconfirm mingw-w64-x86_64-jq
+        PATH=/mingw64/bin:$PATH
+        echo 'PATH=/mingw64/bin:$PATH' >> ~/.bash_profile # store the path also for next step
+        .github/scripts/replace-asset.sh continuous GPUJPEG.zip application/zip Windows%20archive
+      shell: C:\shells\msys2bash.cmd {0}
 
     - name: Upload Release Installer Asset
       if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
@@ -120,6 +124,6 @@ jobs:
       run: |
         mv gpujpeg-*-win64.exe GPUJPEG.exe
         .github/scripts/replace-asset.sh continuous GPUJPEG.exe application/vnd.microsoft.portable-executable Windows%20installer
-      shell: bash
+      shell: C:\shells\msys2bash.cmd {0}
 
 # vi: set expandtab sw=2:
