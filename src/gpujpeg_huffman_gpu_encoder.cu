@@ -315,7 +315,7 @@ gpujpeg_huffman_encoder_encode_kernel_warp(
     int warpidx = threadIdx.x >> 5;
     int tid = threadIdx.x & 31;
 
-    constexpr int extradata = (GPUJPEG_MAX_COMPONENT_COUNT + (sizeof(int) - 1)) / sizeof(int);
+    enum { extradata = (GPUJPEG_MAX_COMPONENT_COUNT + (sizeof(int) - 1)) / sizeof(int) };
     __shared__ uint4 s_out_all[(64 + extradata) * WARPS_NUM];
     unsigned int * s_out = (unsigned int*)(s_out_all + warpidx * (64 + 1));
 
