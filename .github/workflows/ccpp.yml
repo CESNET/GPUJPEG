@@ -24,7 +24,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, we do not need to create own token.
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
       with:
         persist-credentials: true
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
     - name: Install
       run: |
         sudo apt update
@@ -58,7 +58,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
     - name: install CUDA
       run: |
         choco install cuda -y --no-progress
