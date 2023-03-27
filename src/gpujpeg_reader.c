@@ -700,9 +700,7 @@ static const char *array_serialize(int comp_count, const uint8_t *comp_id) {
 }
 
 static enum gpujpeg_color_space gpujpeg_reader_process_cid(int comp_count, uint8_t *comp_id, enum gpujpeg_color_space header_color_space) {
-#if ! defined _MSC_VER || _MSC_VER > 1900 // VS 2015
     _Static_assert(GPUJPEG_MAX_COMPONENT_COUNT >= 3, "An array of at least 3 components expected");
-#endif // ! VS <=2015
     static const uint8_t ycbcr_ids[] = { 1, 2, 3 };
     static const uint8_t rgb_ids[] = { 'R', 'G', 'B' };
     static const uint8_t bg_rgb_ids[] = { 'r', 'g', 'b' }; // big gamut sRGB (see ILG libjpeg - seemingly handled as above)

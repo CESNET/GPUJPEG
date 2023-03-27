@@ -38,9 +38,16 @@
 #include <cuda_runtime.h>
 #include <math.h> // NAN
 #include <stdio.h>
+#include <stdlib.h>
 #include "gpujpeg_util.h"
 #include "libgpujpeg/gpujpeg_common.h"
 #include "libgpujpeg/gpujpeg_type.h"
+
+// VS 2015 compat
+#if defined _MSC_VER && _MSC_VER <= 1900
+#define __func__ ""
+#define _Static_assert(cond, msg)
+#endif // VS <=2015
 
 /** Contants */
 #define GPUJPEG_BLOCK_SIZE                      8
@@ -50,11 +57,7 @@
 /** Maximum JPEG header size (MUST be divisible by 4!!!) */
 #define GPUJPEG_MAX_HEADER_SIZE                 (65536 - 100)
 
-#if defined _MSC_VER && _MSC_VER <= 1900 // VS 2015
-#define GPUJPEG_ASSERT(cond) do { if (!(cond)) { fprintf(stderr, "%s:%d: Assertion `" #cond "' failed.\n", __FILE__, __LINE__); abort(); } } while(0)
-#else
 #define GPUJPEG_ASSERT(cond) do { if (!(cond)) { fprintf(stderr, "%s:%d: %s: Assertion `" #cond "' failed.\n", __FILE__, __LINE__, __func__); abort(); } } while(0)
-#endif
 
 #define ERROR_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__); } while(0)
 #define VERBOSE_MSG(log_level, ...) do { if (log_level >= 1) fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
