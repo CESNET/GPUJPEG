@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2021, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -400,8 +400,8 @@ main(int argc, char *argv[])
     }
 
     // Source image and target image must be presented
-    if ( argc < 2 ) {
-        fprintf(stderr, "Please supply source and destination image filename!\n");
+    if ( argc < 2 || argc % 2 != 0 ) {
+        fprintf(stderr, "Please supply source and destination image filename(s)!\n");
         print_help();
         return -1;
     }
