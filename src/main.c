@@ -43,8 +43,8 @@
 
 #define USE_IF_NOT_NULL_ELSE(cond, alt_val) (cond) ? (cond) : (alt_val)
 
-void
-print_help()
+static void
+print_help(void)
 {
     printf("gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
            "   -h, --help             print help\n"
@@ -87,11 +87,29 @@ print_help()
            "\n");
 }
 
-static int print_image_info(const char *filename, int verbose) {
-    if (!filename) {
-        fprintf(stderr, "Missing filename!\n");
-        return 1;
-    }
+static void print_gpujpeg_image_parameters(struct gpujpeg_image_parameters params_image, const char *subsampling_details) {
+        if (params_image.width) {
+            printf("width: %d\n", params_image.width);
+        }
+        if (params_image.height) {
+            printf("height: %d\n", params_image.height);
+        }
+        if (params_image.comp_count) {
+            printf("component count: %d\n", params_image.comp_count);
+        }
+        if (params_image.color_space) {
+            printf("color space: %s\n", gpujpeg_color_space_get_name(params_image.color_space));
+        }
+        if (params_image.pixel_format) {
+            printf("internal representation: %s", gpujpeg_pixel_format_get_name(params_image.pixel_format));
+            if (subsampling_details) {
+                printf(" (%s)", subsampling_details);
+            }
+            printf("\n");
+        }
+}
+
+static int print_image_info_jpeg(const char *filename, int verbose) {
     FILE *f = fopen(filename, "rb");
     if (!f) {
         perror("Cannot open");
@@ -111,27 +129,31 @@ static int print_image_info(const char *filename, int verbose) {
     struct gpujpeg_parameters params = { .verbose = verbose };
     int segment_count = 0;
     if (gpujpeg_decoder_get_image_info(jpeg, len, &params_image, &params, &segment_count) == 0) {
-        if (params_image.width) {
-            printf("width: %d\n", params_image.width);
-        }
-        if (params_image.height) {
-            printf("height: %d\n", params_image.height);
-        }
-        if (params_image.comp_count) {
-            printf("component count: %d\n", params_image.comp_count);
-        }
-        if (params_image.color_space) {
-            printf("color space: %s\n", gpujpeg_color_space_get_name(params_image.color_space));
-        }
-        if (params_image.pixel_format) {
-            printf("internal representation: %s (%s)\n", gpujpeg_pixel_format_get_name(params_image.pixel_format), gpujpeg_subsampling_get_name(params_image.comp_count, params.sampling_factor));
-        }
+        print_gpujpeg_image_parameters(params_image, gpujpeg_subsampling_get_name(params_image.comp_count, params.sampling_factor));
         if (segment_count) {
             printf("segment count: %d (DRI = %d)\n", segment_count, params.restart_interval);
         }
     }
     free(jpeg);
 
+    return 0;
+}
+
+static int print_image_info(const char *filename, int verbose) {
+    if (!filename) {
+        fprintf(stderr, "Missing filename!\n");
+        return 1;
+    }
+    enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
+    if (format == GPUJPEG_IMAGE_FILE_JPEG ) {
+        return print_image_info_jpeg(filename, verbose);
+    }
+    struct gpujpeg_image_parameters param_image = { 0 };
+    if (gpujpeg_image_get_properties(filename, &param_image, 1) != 0) {
+        fprintf(stderr, "Error getting raw image %s info!\n", filename);
+        return 1;
+    }
+    print_gpujpeg_image_parameters(param_image, NULL);
     return 0;
 }
 
