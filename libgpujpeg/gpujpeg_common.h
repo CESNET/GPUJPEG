@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -85,7 +85,7 @@ GPUJPEG_API const char *gpujpeg_version_to_string(int version);
 
 /** @return current time in seconds */
 GPUJPEG_API double
-gpujpeg_get_time();
+gpujpeg_get_time(void);
 
 /** Marker used as segment info */
 #define GPUJPEG_MARKER_SEGMENT_INFO GPUJPEG_MARKER_APP13
@@ -135,7 +135,7 @@ struct gpujpeg_devices_info
  * @return devices info
  */
 GPUJPEG_API struct gpujpeg_devices_info
-gpujpeg_get_devices_info();
+gpujpeg_get_devices_info(void);
 
 /**
  * Print information about available devices
@@ -144,7 +144,7 @@ gpujpeg_get_devices_info();
  * @return -1 for error (eg. no devices were found)
  */
 GPUJPEG_API int
-gpujpeg_print_devices_info();
+gpujpeg_print_devices_info(void);
 
 /**
  * Init CUDA device
