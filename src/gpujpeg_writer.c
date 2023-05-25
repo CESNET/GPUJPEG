@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2019, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -59,7 +59,7 @@ gpujpeg_writer_init(struct gpujpeg_writer * writer, struct gpujpeg_image_paramet
 {
     // Allocate output buffer
     size_t buffer_size = 1000;
-    buffer_size += param_image->width * param_image->height * param_image->comp_count * 2;
+    buffer_size += (size_t) param_image->width * param_image->height * param_image->comp_count * 2;
 
     if (buffer_size > writer->buffer_allocated_size) {
         writer->buffer_allocated_size = 0;
