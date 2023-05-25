@@ -50,6 +50,10 @@ static bool parse_pam(FILE *file, struct pam_metadata *info) {
                 if (strcmp(line, "ENDHDR\n") == 0) {
                         break;
                 }
+                if (line[0] == '#') {
+                        fgets(line, sizeof line - 1, file);
+                        continue;
+                }
                 char *spc = strchr(line, ' ');
                 if (spc == NULL) {
                         break;
