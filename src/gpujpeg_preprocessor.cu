@@ -196,6 +196,10 @@ gpujpeg_preprocessor_raw_to_comp_kernel(struct gpujpeg_preprocessor_data data, c
     int image_position_y = gpujpeg_const_div_divide(image_position, width_div_mul, width_div_shift);
     int image_position_x = image_position - (image_position_y * image_width);
 
+    if ( image_position >= (image_width * image_height) ) {
+        return;
+    }
+
     // Load
     uchar4 r;
     raw_to_comp_load<pixel_format>(d_data_raw, image_width, image_height, image_position, image_position_x, image_position_y, r);
@@ -204,9 +208,7 @@ gpujpeg_preprocessor_raw_to_comp_kernel(struct gpujpeg_preprocessor_data data, c
     gpujpeg_color_transform<color_space, color_space_internal>::perform(r);
 
     // Store
-    if ( image_position < (image_width * image_height) ) {
-        gpujpeg_preprocessor_raw_to_comp_store<pixel_format, s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform(r, image_position_x, image_position_y, data);
-    }
+    gpujpeg_preprocessor_raw_to_comp_store<pixel_format, s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform(r, image_position_x, image_position_y, data);
 }
 
 /**
