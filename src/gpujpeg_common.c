@@ -179,9 +179,9 @@ gpujpeg_print_devices_info()
         struct gpujpeg_device_info* device_info = &devices_info.device[device_id];
         printf("\nDevice #%d: \"%s\"\n", device_info->id, device_info->name);
         printf("  Compute capability: %d.%d\n", device_info->cc_major, device_info->cc_minor);
-        printf("  Total amount of global memory: %zu kB\n", device_info->global_memory / 1024);
-        printf("  Total amount of constant memory: %zu kB\n", device_info->constant_memory / 1024);
-        printf("  Total amount of shared memory per block: %zu kB\n", device_info->shared_memory / 1024);
+        printf("  Total amount of global memory: %zu KiB\n", device_info->global_memory / 1024);
+        printf("  Total amount of constant memory: %zu KiB\n", device_info->constant_memory / 1024);
+        printf("  Total amount of shared memory per block: %zu KiB\n", device_info->shared_memory / 1024);
         printf("  Total number of registers available per block: %d\n", device_info->register_count);
         printf("  Multiprocessors: %d\n", device_info->multiprocessor_count);
     }
@@ -787,13 +787,13 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
         printf("\nAllocation Info:\n");
         printf("    Segment Count:            %d\n", coder->segment_count);
         printf("    Allocated Data Size:      %dx%d\n", coder->data_width, coder->data_height);
-        printf("    Raw Buffer Size:          %0.1f MB\n", (double)coder->data_raw_size / (1024.0 * 1024.0));
-        printf("    Preprocessor Buffer Size: %0.1f MB\n", (double)coder->data_size / (1024.0 * 1024.0));
-        printf("    DCT Buffer Size:          %0.1f MB\n", (double)2 * coder->data_size / (1024.0 * 1024.0));
-        printf("    Compressed Buffer Size:   %0.1f MB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
-        printf("    Huffman Temp buffer Size: %0.1f MB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
-        printf("    Structures Size:          %0.1f kB\n", (double)structures_size / (1024.0));
-        printf("    Total GPU Memory Size:    %0.1f MB\n", (double)total_size / (1024.0 * 1024.0));
+        printf("    Raw Buffer Size:          %0.1f MiB\n", (double)coder->data_raw_size / (1024.0 * 1024.0));
+        printf("    Preprocessor Buffer Size: %0.1f MiB\n", (double)coder->data_size / (1024.0 * 1024.0));
+        printf("    DCT Buffer Size:          %0.1f MiB\n", (double)2 * coder->data_size / (1024.0 * 1024.0));
+        printf("    Compressed Buffer Size:   %0.1f MiB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
+        printf("    Huffman Temp buffer Size: %0.1f MiB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
+        printf("    Structures Size:          %0.1f KiB\n", (double)structures_size / (1024.0));
+        printf("    Total GPU Memory Size:    %0.1f MiB\n", (double)total_size / (1024.0 * 1024.0));
         printf("\n");
     }
 
