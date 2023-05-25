@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -140,7 +140,7 @@ struct gpujpeg_segment
     /// Data compressed index (output/input data from/to segment for encoder/decoder)
     int data_compressed_index;
     /// Date temp index (temporary data of segment in CC 2.0 encoder)
-    int data_temp_index;
+    size_t data_temp_index;
     /// Data compressed size (output/input data from/to segment for encoder/decoder)
     int data_compressed_size;
 
@@ -276,7 +276,7 @@ struct gpujpeg_coder
     /// Number of coefficient count for all components
     int data_size;
     /// Number of compressed bytes
-    int data_compressed_size;
+    size_t data_compressed_size;
 
     /// Number od 8x8 blocks in all components
     int block_count;

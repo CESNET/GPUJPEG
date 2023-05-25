@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2019, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -437,7 +437,7 @@ gpujpeg_huffman_encoder_serialization_kernel(
     struct gpujpeg_segment* const segment = &d_segment[segment_index];
 
     // Input and output pointers
-    const int data_offset = segment->data_temp_index;
+    const size_t data_offset = segment->data_temp_index;
     uint4 * const d_dest_stream_start = (uint4*)(d_dest + data_offset);
     uint4 * d_dest_stream = d_dest_stream_start;
     const uint4 * d_src_codewords = (uint4*)(d_src + data_offset);

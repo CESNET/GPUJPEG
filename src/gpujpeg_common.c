@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2021, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -713,7 +713,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     // Prepare segments
     // While preparing segments compute input size and compressed size
     int data_index = 0;
-    int data_compressed_index = 0;
+    size_t data_compressed_index = 0;
     // Prepare segments based on (non-)interleaved mode
     if ( coder->param.interleaved == 1 ) {
         // Prepare segments for encoding (only one scan for all color components)
@@ -776,7 +776,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
         int structures_size = 0;
         structures_size += coder->segment_count * sizeof(struct gpujpeg_segment);
         structures_size += coder->param_image.comp_count * sizeof(struct gpujpeg_component);
-        int total_size = 0;
+        size_t total_size = 0;
         total_size += structures_size;
         total_size += coder->data_raw_size;
         total_size += coder->data_size;
