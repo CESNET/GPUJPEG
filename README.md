@@ -13,6 +13,9 @@ Table of contents
 - [Features](#features)
 - [Overview](#overview)
 - [Performance](#performance)
+  * [Encoding](#encoding)
+  * [Decoding](#decoding)
+- [Quality](#quality)
   * [Encoding 4K (4096x2160) and HD (1920x1080)](#encoding-4k-4096x2160-and-hd-1920x1080)
   * [Decoding 4K (4096x2160) and HD (1920x1080)](#decoding-4k-4096x2160-and-hd-1920x1080)
 - [Compile](#compile)
@@ -77,38 +80,92 @@ and they are implemented on CPU or/and GPU as follows:
 
 Performance
 -----------
-Following tables summarizes encoding/decoding performance using NVIDIA
+
+Source 16K (DCI) image ([8], [9]) was cropped to _15360x8640+0+0_ (1920x1080
+multiplied by 8 in both dimensions) and for lower resolutions downscaled.
+Encoding was done with default values with input in RGB (quality **75**,
+**non-interleaved**, rst 24-36, average from 99 measurements excluding first
+iteration) with following command:
+
+    gpujpegtool -e mediavision_frame.pnm output.jpg -n 100
+
+### Encoding
+
+|    GPU    | duration HD | duration 4K | duration 8K | duration 16K  |
+|-----------|-------------|-------------|-------------|---------------|
+| GTX 3080  |   0.54 ms   |   1.71 ms   |   6.20 ms   |   24.48 ms    |
+| GTX 1060M |   1.36 ms   |   4.55 ms   |  17.34 ms   |  _(low mem)_  |
+| GTX 580   |   2.38 ms   |   8.68 ms   | _(low mem)_ |  _(low mem)_  |
+
+Further measurements were performed on _GTX 3080_ only:
+
+|             quality              | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100 |
+|----------------------------------|----|----|----|----|----|----|----|----|----|-----|
+| duration HD (ms)                 |0.48|0.49|0.50|0.51|0.51|0.53|0.54|0.57|0.60| 0.82|
+| duration 4K (ms)                 |1.61|1.65|1.66|1.67|1.69|1.68|1.70|1.72|1.79| 2.44|
+| duration 8K (ms)                 |6.02|6.04|6.09|6.14|6.12|6.17|6.21|6.24|6.47| 8.56|
+| duration 8K (ms, w/o PCIe xfers) |2.13|2.14|2.18|2.24|2.23|2.25|2.28|2.33|2.50| 5.01|
+
+<!-- Additional notes (applies also for decode):
+ 1. device needs to be set to maximum performance, otherwise powermanagement influences esp. PCIe transmits
+ 2. stream formatter is starting to be a significant performance factor, eg. 0.82 ms for 8K Q=75 (contained in last line) -->
+
+### Decoding
+
+|   GPU     | duration HD | duration 4K | duration 8K | duration 16K  |
+|-----------|-------------|-------------|-------------|---------------|
+| GTX 3080  |   0.75 ms   |   1.94 ms   |   6.76 ms   |   31.50 ms    |
+| GTX 1060M |   1.68 ms   |   4.81 ms   |  17.56 ms   |  _(low mem)_  |
+| GTX 580   |   2.61 ms   |   7.96 ms   | _(low mem)_ |  _(low mem)_  |
+
+**Note**: _(low mem)_ above means that the card didn't have sufficient memory to
+encode or decode the picture.
+
+Following measurements were performed on _GTX 3080_ only:
+
+|              quality             | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100 |
+|----------------------------------|----|----|----|----|----|----|----|----|----|-----|
+| duration HD (ms)                 |0.58|0.60|0.63|0.65|0.67|0.69|0.73|0.78|0.89| 1.58|
+| duration 4K (ms)                 |1.77|1.80|1.83|1.84|1.87|1.89|1.92|1.95|2.11| 3.69|
+| duration 8K (ms)                 |6.85|6.88|6.90|6.92|6.98|6.70|6.74|6.84|7.17|12.43|
+| duration 8K (ms, w/o PCIe xfers) |2.14|2.18|2.21|2.24|2.27|2.29|2.34|2.42|2.71| 7.27|
+
+Quality
+-----------
+Following tables summarizes encoding/decoding quality using NVIDIA
 GTX 580 for non-interleaved and non-subsampled stream with different quality
-settings (time, PSNR and encoded size values are averages of encoding several
+settings (PSNR and encoded size values are averages of encoding several
 images, each of them multiple times):
 
 ### Encoding 4K (4096x2160) and HD (1920x1080)
- quality | duration 4K |  PSNR 4K |   size 4K  | duration HD |  PSNR HD |  size HD
- --------|-------------|----------|------------|-------------|----------|-----------
-   10    |   26.79 ms  | 29.33 dB |  539.30 kB |    6.71 ms  | 27.41 dB |  145.90 kB
-   20    |   26.91 ms  | 32.70 dB |  697.20 kB |    6.74 ms  | 30.32 dB |  198.30 kB
-   30    |   27.17 ms  | 34.63 dB |  850.60 kB |    6.84 ms  | 31.92 dB |  243.60 kB
-   40    |   27.19 ms  | 35.97 dB |  958.90 kB |    6.89 ms  | 32.99 dB |  282.20 kB
-   50    |   27.29 ms  | 36.94 dB | 1073.30 kB |    6.92 ms  | 33.82 dB |  319.10 kB
-   60    |   27.39 ms  | 37.96 dB | 1217.10 kB |    6.95 ms  | 34.65 dB |  360.00 kB
-   70    |   27.51 ms  | 39.22 dB | 1399.20 kB |    7.04 ms  | 35.71 dB |  422.10 kB
-   80    |   27.76 ms  | 40.67 dB | 1710.00 kB |    7.13 ms  | 37.15 dB |  526.70 kB
-   90    |   28.36 ms  | 42.83 dB | 2441.40 kB |    7.32 ms  | 39.84 dB |  768.40 kB
-  100    |   35.47 ms  | 47.09 dB | 7798.70 kB |    9.31 ms  | 47.21 dB | 2499.60 kB
+
+| quality |  PSNR 4K |   size 4K  |  PSNR HD |  size HD   |
+|---------|----------|------------|----------|------------|
+|   10    | 29.33 dB |  539.30 kB | 27.41 dB |  145.90 kB |
+|   20    | 32.70 dB |  697.20 kB | 30.32 dB |  198.30 kB |
+|   30    | 34.63 dB |  850.60 kB | 31.92 dB |  243.60 kB |
+|   40    | 35.97 dB |  958.90 kB | 32.99 dB |  282.20 kB |
+|   50    | 36.94 dB | 1073.30 kB | 33.82 dB |  319.10 kB |
+|   60    | 37.96 dB | 1217.10 kB | 34.65 dB |  360.00 kB |
+|   70    | 39.22 dB | 1399.20 kB | 35.71 dB |  422.10 kB |
+|   80    | 40.67 dB | 1710.00 kB | 37.15 dB |  526.70 kB |
+|   90    | 42.83 dB | 2441.40 kB | 39.84 dB |  768.40 kB |
+|  100    | 47.09 dB | 7798.70 kB | 47.21 dB | 2499.60 kB |
 
 ### Decoding 4K (4096x2160) and HD (1920x1080)
- quality | duration 4K |  PSNR 4K |   size 4K  | duration 4K |  PSNR 4K |  size 4K
- --------|-------------|----------|------------|-------------|----------|-----------
-   10    |   10.28 ms  | 29.33 dB |  539.30 kB |    3.13 ms  | 27.41 dB |  145.90 kB
-   20    |   11.31 ms  | 32.70 dB |  697.20 kB |    3.59 ms  | 30.32 dB |  198.30 kB
-   30    |   12.36 ms  | 34.63 dB |  850.60 kB |    3.97 ms  | 31.92 dB |  243.60 kB
-   40    |   12.90 ms  | 35.97 dB |  958.90 kB |    4.28 ms  | 32.99 dB |  282.20 kB
-   50    |   13.45 ms  | 36.94 dB | 1073.30 kB |    4.56 ms  | 33.82 dB |  319.10 kB
-   60    |   14.71 ms  | 37.96 dB | 1217.10 kB |    4.81 ms  | 34.65 dB |  360.00 kB
-   70    |   15.03 ms  | 39.22 dB | 1399.20 kB |    5.24 ms  | 35.71 dB |  422.10 kB
-   80    |   16.64 ms  | 40.67 dB | 1710.00 kB |    5.89 ms  | 37.15 dB |  526.70 kB
-   90    |   19.99 ms  | 42.83 dB | 2441.40 kB |    7.48 ms  | 39.84 dB |  768.40 kB
-  100    |   46.45 ms  | 47.09 dB | 7798.70 kB |   16.42 ms  | 47.21 dB | 2499.60 kB
+
+| quality |  PSNR 4K |   size 4K  |  PSNR 4K |  size 4K   |
+|---------|----------|------------|----------|------------|
+|   10    | 29.33 dB |  539.30 kB | 27.41 dB |  145.90 kB |
+|   20    | 32.70 dB |  697.20 kB | 30.32 dB |  198.30 kB |
+|   30    | 34.63 dB |  850.60 kB | 31.92 dB |  243.60 kB |
+|   40    | 35.97 dB |  958.90 kB | 32.99 dB |  282.20 kB |
+|   50    | 36.94 dB | 1073.30 kB | 33.82 dB |  319.10 kB |
+|   60    | 37.96 dB | 1217.10 kB | 34.65 dB |  360.00 kB |
+|   70    | 39.22 dB | 1399.20 kB | 35.71 dB |  422.10 kB |
+|   80    | 40.67 dB | 1710.00 kB | 37.15 dB |  526.70 kB |
+|   90    | 42.83 dB | 2441.40 kB | 39.84 dB |  768.40 kB |
+|  100    | 47.09 dB | 7798.70 kB | 47.21 dB | 2499.60 kB |
 
 Compile
 -------
@@ -415,6 +472,8 @@ References
 [5]: https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-T.84-199607-I!!PDF-E&type=items
 [6]: https://www.fileformat.info/format/spiff/egff.htm
 [7]: https://docs.oracle.com/javase/8/docs/api/javax/imageio/metadata/doc-files/jpeg_metadata.html#optcolor
+[8]: https://www.newsshooter.com/2019/07/25/beyond-imax-filming-with-a-gigantic-16k-200mp-sensor/
+[9]: https://we.tl/t-mjlrZM99EB
 
 1. [ITU-T Rec T.81][1]
 2. [ILG][2]
