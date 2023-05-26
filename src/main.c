@@ -549,6 +549,7 @@ main(int argc, char *argv[])
             uint8_t* image_compressed = NULL;
             int image_compressed_size = 0;
             double duration_all_iterations = 0;
+            double duration_first_iteration = 0;
             for ( int iteration = 0; iteration < iterate; iteration++ ) {
                 if ( iterate > 1 ) {
                     printf("\nIteration #%d:\n", iteration + 1);
@@ -567,6 +568,9 @@ main(int argc, char *argv[])
 
                 duration = gpujpeg_get_time() - duration;
                 duration_all_iterations += duration;
+                if ( iteration == 0 ) {
+                    duration_first_iteration = duration;
+                }
                 struct gpujpeg_duration_stats stats;
                 rc = gpujpeg_encoder_get_stats(encoder, &stats);
 
@@ -588,7 +592,11 @@ main(int argc, char *argv[])
             }
             if ( iterate > 1 ) {
                 printf("\n");
-                printf("Avg Encode Duration: %10.4f ms\n\n", duration_all_iterations * 1000.0 / iterate);
+                printf("Avg Encode Duration: %10.4f ms\n", duration_all_iterations * 1000.0 / iterate);
+                if ( param.verbose >= 1 ) {
+                    printf("Avg w/o 1st Iter:    %10.4f ms\n", (duration_all_iterations - duration_first_iteration) * 1000.0 / (iterate - 1));
+                }
+                printf("\n");
             }
 
             duration = gpujpeg_get_time();
@@ -711,6 +719,7 @@ main(int argc, char *argv[])
             }
 
             double duration_all_iterations = 0;
+            double duration_first_iteration = 0;
 
             for ( int iteration = 0; iteration < iterate; iteration++ ) {
                 if ( iterate > 1 ) {
@@ -730,6 +739,9 @@ main(int argc, char *argv[])
 
                 duration = gpujpeg_get_time() - duration;
                 duration_all_iterations += duration;
+                if ( iteration == 0 ) {
+                    duration_first_iteration = duration;
+                }
                 struct gpujpeg_duration_stats stats;
                 rc = gpujpeg_decoder_get_stats(decoder, &stats);
 
@@ -751,7 +763,11 @@ main(int argc, char *argv[])
             }
             if ( iterate > 1 ) {
                 printf("\n");
-                printf("Avg Decode Duration: %10.4f ms\n\n", duration_all_iterations * 1000.0 / iterate);
+                printf("Avg Decode Duration: %10.4f ms\n", duration_all_iterations * 1000.0 / iterate);
+                if ( param.verbose >= 1 ) {
+                    printf("Avg w/o 1st Iter:    %10.4f ms\n", (duration_all_iterations - duration_first_iteration) * 1000.0 / (iterate - 1));
+                }
+                printf("\n");
             }
 
             uint8_t* data = NULL;
