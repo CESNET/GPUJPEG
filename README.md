@@ -173,7 +173,7 @@ To build console application check [Requirements](#requirements) and go
 to `gpujpeg` directory (where [README.md](README.md) and [COPYING](COPYING)
 files are placed) and run `cmake` command:
 
-    cmake . -Bbuild
+    cmake -DCMAKE_BUILD_TYPE=Release -Bbuild .
     cmake --build build
 
 You can also use **autotools** to create a build recipe for the library and the
