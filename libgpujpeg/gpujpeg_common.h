@@ -103,7 +103,7 @@ struct gpujpeg_device_info
     /// Device id
     int id;
     /// Device name
-    char name[255];
+    char name[256];
     /// Compute capability major version
     int cc_major;
     /// Compute capability minor version

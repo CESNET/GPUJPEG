@@ -1581,6 +1581,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_ima
                 }
 
                 int length = (int) gpujpeg_reader_read_2byte(image); // length
+                (void) length; // ifdef NDEBUG unused variable
                 assert(length > 3);
                 int comp_count = (int) gpujpeg_reader_read_byte(image); // comp count in the segment
                 if (comp_count > 1) {

@@ -146,7 +146,7 @@ gpujpeg_get_devices_info()
         struct gpujpeg_device_info* device_info = &devices_info.device[device_id];
 
         device_info->id = device_id;
-        strncpy(device_info->name, device_properties.name, 255);
+        strncpy(device_info->name, device_properties.name, sizeof device_info->name);
         device_info->cc_major = device_properties.major;
         device_info->cc_minor = device_properties.minor;
         device_info->global_memory = device_properties.totalGlobalMem;
