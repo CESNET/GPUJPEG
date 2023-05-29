@@ -36,21 +36,36 @@ jobs:
 
   Ubuntu:
     name: run Ubuntu
-    runs-on: ubuntu-20.04
+    needs: retag-continuous
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
     - name: Install
       run: |
         sudo apt update
-        sudo apt install nvidia-cuda-toolkit cmake
+        sudo apt install cmake jq nvidia-cuda-toolkit
     - name: Build
       run: |
-        mkdir build
-        cd build
-        cmake ..
-        cmake --build . --parallel
+        cmake -Bbuild .
+        cmake --build build --parallel
         ctest -R unittests
+        cmake --install build --prefix GPUJPEG
+        tar caf GPUJPEG-Linux.tar.xz GPUJPEG
+
+    - name: Upload Archive
+      if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
+      uses: actions/upload-artifact@v3
+      with:
+        name: GPUJPEG CI Linux build
+        path: GPUJPEG
+
+    - name: Upload Release Build Asset
+      if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        .github/scripts/replace-asset.sh continuous GPUJPEG-Linux.tar.xz application/x-gtar Linux%20build
 
   Windows:
     name: run Windows
@@ -96,7 +111,7 @@ jobs:
       if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
       uses: actions/upload-artifact@v3
       with:
-        name: GPUJPEG CI Windows archive
+        name: GPUJPEG CI Windows build
         path: GPUJPEG
 
     - name: Upload Installer
@@ -106,7 +121,7 @@ jobs:
         name: GPUJPEG CI Windows installer
         path: gpujpeg-*-win64.exe
 
-    - name: Upload Release Archive Asset
+    - name: Upload Release Build Asset
       if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,7 +129,7 @@ jobs:
         pacman -Sy --noconfirm mingw-w64-x86_64-jq
         PATH=/mingw64/bin:$PATH
         echo 'PATH=/mingw64/bin:$PATH' >> ~/.bash_profile # store the path also for next step
-        .github/scripts/replace-asset.sh continuous GPUJPEG.zip application/zip Windows%20archive
+        .github/scripts/replace-asset.sh continuous GPUJPEG.zip application/zip Windows%20build
       shell: C:\shells\msys2bash.cmd {0}
 
     - name: Upload Release Installer Asset
