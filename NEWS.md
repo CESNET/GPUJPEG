@@ -1,3 +1,9 @@
+2023-05-29
+----------
+- support for larger images - until now, only pictures up to approx. 85 MP were
+  supported, now it is something like 512 megapixels (pratical limit is the
+  size of GPU RAM, however, 512 Mpix would currently require some 26.5 GB)
+
 2023-01-06 - 0.20.4
 ----------
 - added support for Y4M files (only one image per file)
