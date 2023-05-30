@@ -47,7 +47,7 @@ struct gpujpeg_reader;
  * @return reader structure if succeeds, otherwise NULL
  */
 struct gpujpeg_reader*
-gpujpeg_reader_create();
+gpujpeg_reader_create(void);
 
 /**
  * Destroy JPEG reader

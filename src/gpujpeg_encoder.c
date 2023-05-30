@@ -84,7 +84,7 @@ gpujpeg_encoder_create(cudaStream_t stream)
     int result = 1;
 
     // Create writer
-    encoder->writer = gpujpeg_writer_create(encoder);
+    encoder->writer = gpujpeg_writer_create();
     if ( encoder->writer == NULL )
         result = 0;
 

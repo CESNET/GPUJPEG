@@ -125,7 +125,7 @@ static const struct {
 
 /* Documented at declaration */
 struct gpujpeg_devices_info
-gpujpeg_get_devices_info()
+gpujpeg_get_devices_info(void)
 {
     struct gpujpeg_devices_info devices_info = { 0 };
 
@@ -163,7 +163,7 @@ gpujpeg_get_devices_info()
 
 /* Documented at declaration */
 int
-gpujpeg_print_devices_info()
+gpujpeg_print_devices_info(void)
 {
     struct gpujpeg_devices_info devices_info = gpujpeg_get_devices_info();
     if ( devices_info.device_count == 0 ) {
@@ -766,7 +766,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     }
     // Check data size
     //printf("%d == %d\n", coder->data_size, data_index);
-    assert(coder->data_size == data_index);
+    assert(coder->data_size == data_index); (void) data_index;
     // Set compressed size
     coder->data_compressed_size = data_compressed_index;
     //printf("Compressed size %d (segments %d)\n", coder->data_compressed_size, coder->segment_count);
@@ -1719,7 +1719,7 @@ gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
 #endif
 }
 
-int gpujpeg_version()
+int gpujpeg_version(void)
 {
 #ifdef HAVE_GPUJPEG_VERSION_H
     return GPUJPEG_VERSION_INT;

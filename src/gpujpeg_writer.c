@@ -40,7 +40,7 @@
 
 /* Documented at declaration */
 struct gpujpeg_writer*
-gpujpeg_writer_create()
+gpujpeg_writer_create(void)
 {
     struct gpujpeg_writer* writer = (struct gpujpeg_writer*) malloc(sizeof(struct gpujpeg_writer));
     if (writer == NULL) {

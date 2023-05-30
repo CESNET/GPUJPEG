@@ -89,7 +89,7 @@ struct gpujpeg_reader
 
 /* Documented at declaration */
 struct gpujpeg_reader*
-gpujpeg_reader_create()
+gpujpeg_reader_create(void)
 {
     struct gpujpeg_reader* reader = (struct gpujpeg_reader*)
             malloc(sizeof(struct gpujpeg_reader));

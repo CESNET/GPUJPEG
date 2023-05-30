@@ -191,7 +191,7 @@ void gpujpeg_idct_cpu_perform(int16_t* block, int16_t* table)
 /**
  * Init inverse DCT
  */
-void gpujpeg_idct_cpu_init()
+void gpujpeg_idct_cpu_init(void)
 {
     iclp = iclip + 512;
     for ( int i = -512; i < 512; i++ )

@@ -68,7 +68,7 @@ struct gpujpeg_writer
  * @return writer structure if succeeds, otherwise NULL
  */
 struct gpujpeg_writer*
-gpujpeg_writer_create();
+gpujpeg_writer_create(void);
 
 /**
  * Init JPEG writer.
