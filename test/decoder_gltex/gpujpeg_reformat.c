@@ -300,9 +300,11 @@ int
 gpujpeg_reformat_read_sos(struct gpujpeg_rewriter * rewriter, uint8_t** image, uint8_t* image_end)
 {
     int length = (int) gpujpeg_reformat_read_2byte(*image);
-    length -= 2;
-
     int comp_count = (int) gpujpeg_reformat_read_byte(*image);
+    if (length != comp_count * 2 + 6) {
+        fprintf(stderr, "[GPUJPEG] [Error] Wrong SOS length (expected %d, got %d)\n", comp_count * 2 + 6, length);
+        return -1;
+    }
     // Not interleaved mode
     if (comp_count == 1) {
         rewriter->interleaved = 0;
