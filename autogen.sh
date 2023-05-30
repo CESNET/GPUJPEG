@@ -1,12 +1,13 @@
 #!/bin/sh
-srcdir=`dirname $0`
+srcdir=$(dirname "$0")
 test -z "$srcdir" && srcdir=.
 
-ORIGDIR=`pwd`
+ORIGDIR=$(pwd)
 
-cd $srcdir
+cd "$srcdir" || return
 
-if [ `uname -s` = "Darwin" ]; then
+uname_s=$(uname -s)
+if [ "$uname_s" = "Darwin" ]; then
     LIBTOOLIZE=glibtoolize
 else 
     LIBTOOLIZE=libtoolize
@@ -18,7 +19,7 @@ $LIBTOOLIZE --copy && \
 aclocal -I m4 && \
 automake --copy --add-missing && \
 autoconf && \
-cd $ORIGDIR && $srcdir/configure "$@"
+cd "$ORIGDIR" && "$srcdir/configure" "$@"
 
 STATUS=$?
 
