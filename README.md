@@ -372,7 +372,7 @@ it's functions. To build console application check [Compile](#compile).
 To encode image from raw RGB image file to JPEG image file use following
 command:
 
-    ./gpujpeg --encode --size=WIDTHxHEIGHT --quality=QUALITY \
+    gpujpegtool --encode --size=WIDTHxHEIGHT --quality=QUALITY \
             INPUT_IMAGE.rgb OUTPUT_IMAGE.jpg
 
 You must specify input image size by `--size=WIDTHxHEIGHT` parameter.
@@ -380,16 +380,16 @@ Optionally you can specify desired output quality by parameter
 `--quality=QUALITY` which accepts values 0-100. Console application accepts
 a few more parameters and you can list them by folling command:
 
-    ./gpujpeg --help
+    gpujpegtool --help
 
 To decode image from JPEG image file to raw RGB image file use following
 command:
 
-    ./gpujpeg --decode OUTPUT_IMAGE.jpg INPUT_IMAGE.rgb
+    gpujpegtool --decode OUTPUT_IMAGE.jpg INPUT_IMAGE.rgb
 
 You can also encode and decode image to test the console application:
 
-    ./gpujpeg --encode --decode --size=WIDTHxHEIGHT --quality=QUALITY \
+    gpujpegtool --encode --decode --size=WIDTHxHEIGHT --quality=QUALITY \
             INPUT_IMAGE.rgb OUTPUT_IMAGE.jpg
 
 Decoder will create new decoded file `OUTPUT_IMAGE.jpg.decoded.rgb` and do
@@ -439,7 +439,7 @@ thread, which is very slow).
 The console application can encode/decode multiple images by following
 command:
 
-    ./gpujpeg ARGUMENTS INPUT_IMAGE_1.rgb OUTPUT_IMAGE_1.jpg \
+    gpujpegtool ARGUMENTS INPUT_IMAGE_1.rgb OUTPUT_IMAGE_1.jpg \
             INPUT_IMAGE_2.rgb OUTPUT_IMAGE_2.jpg ...
 
 Requirements

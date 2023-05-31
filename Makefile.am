@@ -16,15 +16,15 @@ library_includedir=$(includedir)/libgpujpeg/
 gpujpeg_libincludedir = $(libdir)/libgpujpeg
 
 EXTRA_DIST = AUTHORS CONTRIBUTING.md COPYING FAQ.md INSTALL NEWS.md README.md
-bin_PROGRAMS = gpujpeg
+bin_PROGRAMS = gpujpegtool
 pkgconfig_DATA = libgpujpeg.pc
 
 library_include_HEADERS = $(srcdir)/libgpujpeg/*.h libgpujpeg/gpujpeg_version.h
 nodist_gpujpeg_libinclude_HEADERS = config.h
 
-gpujpeg_SOURCES = src/main.c dummy.cc
-gpujpeg_CFLAGS = -std=c11 @COMMON_FLAGS@
-gpujpeg_LDFLAGS = @GPUJPEG_LDFLAGS@
+gpujpegtool_SOURCES = src/main.c dummy.cc
+gpujpegtool_CFLAGS = -std=c11 @COMMON_FLAGS@
+gpujpegtool_LDFLAGS = @GPUJPEG_LDFLAGS@
 
 dummy.cc:
 	echo 'static void dummy();' > $@
@@ -57,7 +57,7 @@ libgpujpeg_a_SOURCES = $(libgpujpeg_SRC)
 libgpujpeg_a_LIBADD = $(libgpujpeg_DEP)
 libgpujpeg_a_CFLAGS = $(libgpujpeg_CFLAGS)
 libgpujpeg_a_CXXFLAGS = $(libgpujpeg_CXXFLAGS)
-gpujpeg_LDADD = $(lib_LIBRARIES) @GPUJPEG_LIBS@
+gpujpegtool_LDADD = $(lib_LIBRARIES) @GPUJPEG_LIBS@
 else
 lib_LTLIBRARIES = libgpujpeg.la
 libgpujpeg_la_DEPENDENCIES = $(libgpujpeg_DEP)
@@ -66,7 +66,7 @@ libgpujpeg_la_LIBADD = $(libgpujpeg_LIB)
 libgpujpeg_la_LDFLAGS = $(libgpujpeg_LD)
 libgpujpeg_la_CFLAGS = $(libgpujpeg_CFLAGS)
 libgpujpeg_la_CXXFLAGS = $(libgpujpeg_CXXFLAGS)
-gpujpeg_LDADD = $(lib_LTLIBRARIES)
+gpujpegtool_LDADD = $(lib_LTLIBRARIES)
 endif
 
 check-TESTS: tests

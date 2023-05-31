@@ -35,7 +35,7 @@ DEBUG ?= 0
 CUDA_INSTALL_PATH ?= /usr/local/cuda
 
 # Target executable
-TARGET := gpujpeg
+TARGET := gpujpegtool
 # C files
 CFILES := main.c
 
