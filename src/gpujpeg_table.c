@@ -83,6 +83,8 @@ gpujpeg_table_quantization_set_default(uint8_t* table_raw, enum gpujpeg_componen
 void
 gpujpeg_table_quantization_apply_quality(uint8_t* table_raw, int quality)
 {
+    if (quality <= 0) quality = 1;
+    if (quality > 100) quality = 100;
     int s = (quality < 50) ? (5000 / quality) : (200 - (2 * quality));
     for ( int i = 0; i < 64; i++ ) {
         int value = (s * (int)table_raw[i] + 50) / 100;

@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2019, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -41,6 +41,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define GPUJPEG_CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
     
 // CUDA check error
 #define gpujpeg_cuda_check_error(msg, action) \

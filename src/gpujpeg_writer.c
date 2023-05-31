@@ -427,7 +427,7 @@ gpujpeg_writer_write_com_library(struct gpujpeg_encoder* encoder)
 {
     char creator[] = "CREATOR: GPUJPEG, quality = \0\0\0";
     snprintf(creator + strlen(creator), sizeof creator - strlen(creator), "%d",
-                    encoder->coder.param.quality);
+                    GPUJPEG_CLAMP(encoder->coder.param.quality, 1, 100));
     gpujpeg_writer_write_com(encoder, creator);
 }
 
