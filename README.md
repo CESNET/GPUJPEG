@@ -87,15 +87,18 @@ Encoding was done with default values with input in RGB (quality **75**,
 **non-interleaved**, rst 24-36, average from 99 measurements excluding first
 iteration) with following command:
 
-    gpujpegtool -e mediavision_frame.pnm output.jpg -n 100
+    gpujpegtool -v -e mediavision_frame_<res>.pnm mediavision_frame_<res>.jpg -n 100 [-q <Q>]
 
 ### Encoding
 
-|    GPU    | duration HD | duration 4K | duration 8K | duration 16K  |
-|-----------|-------------|-------------|-------------|---------------|
-| GTX 3080  |   0.54 ms   |   1.71 ms   |   6.20 ms   |   24.48 ms    |
-| GTX 1060M |   1.36 ms   |   4.55 ms   |  17.34 ms   |  _(low mem)_  |
-| GTX 580   |   2.38 ms   |   8.68 ms   | _(low mem)_ |  _(low mem)_  |
+| GPU \ resolution | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
+|------------------|-------------|-------------|--------------|----------------|
+|    GTX 3080      |   0.54 ms   |   1.71 ms   |    6.20 ms   |   24.48 ms     |
+|    GTX 1060M     |   1.36 ms   |   4.55 ms   |   17.34 ms   |  _(low mem)_   |
+|    GTX 580       |   2.38 ms   |   8.68 ms   |  _(low mem)_ |  _(low mem)_   |
+
+**Note:** First iteration took _233 ms_ for 8K on GTX 3080 and scales proportionally with
+respect to resolution.
 
 Further measurements were performed on _GTX 3080_ only:
 
@@ -108,15 +111,21 @@ Further measurements were performed on _GTX 3080_ only:
 
 <!-- Additional notes (applies also for decode):
  1. device needs to be set to maximum performance, otherwise powermanagement influences esp. PCIe transmits
- 2. stream formatter is starting to be a significant performance factor, eg. 0.82 ms for 8K Q=75 (contained in last line) -->
+ 2. stream formatter is starting to be a significant performance factor, eg. 0.82 ms for 8K Q=75 (contained in last line)
+ 3. measurements were done without -DCMAKE_BUILD_TYPE=Release, should be measured with -->
 
 ### Decoding
 
-|   GPU     | duration HD | duration 4K | duration 8K | duration 16K  |
-|-----------|-------------|-------------|-------------|---------------|
-| GTX 3080  |   0.75 ms   |   1.94 ms   |   6.76 ms   |   31.50 ms    |
-| GTX 1060M |   1.68 ms   |   4.81 ms   |  17.56 ms   |  _(low mem)_  |
-| GTX 580   |   2.61 ms   |   7.96 ms   | _(low mem)_ |  _(low mem)_  |
+Decoded images were those encoded in previous section, averaging has been done similarly by
+taking 99 samples excluding the first one. Command used:
+
+    gpujpegtool -v mediavision_frame_<res>.jpg output.pnm -n 100
+
+| GPU \ resolution | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
+|------------------|-------------|-------------|--------------|----------------|
+|    GTX 3080      |   0.75 ms   |   1.94 ms   |   6.76 ms    |   31.50 ms     |
+|    GTX 1060M     |   1.68 ms   |   4.81 ms   |  17.56 ms    |  _(low mem)_   |
+|    GTX 580       |   2.61 ms   |   7.96 ms   | _(low mem)_  |  _(low mem)_   |
 
 **Note**: _(low mem)_ above means that the card didn't have sufficient memory to
 encode or decode the picture.

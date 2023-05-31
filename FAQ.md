@@ -1,5 +1,6 @@
 # Frequently Asked Questions
 
+- [Encoding/decoding is slow in first iteration](#encodingdecoding-is-slow-in-first-iteration)
 - [What is an restart interval](#what-is-an-restart-interval)
 - [Decoding is too slow](#decoding-is-too-slow)
 - [Encoding different color spaces than full-range YCbCr BT.601](#encoding-different-color-spaces-than-full-range-ycbcr-bt601)
@@ -8,6 +9,14 @@
 - [Encoding/decoding alpha channel](#encodingdecoding-alpha-channel)
    - [Alpha support in command-line application](#alpha-support-in-command-line-application)
    - [API for alpha](#api-for-alpha)
+- [What are memory requirements for encoding/decoding](#what-are-memory-requirements-for-encodingdecoding)
+
+## Encoding/decoding is slow in first iteration
+
+Correct. GPUJPEG was intended to provide when running many times (ideally with
+a equal-sized pictures, like a video). But using for few or even single image
+will not pay off, because there is an initialization burden (let say 230 ms for
+a 33 Mpix image).
 
 ## What is an restart interval
 A **restart interval** and related option in UltraGrid is a way how to
@@ -127,3 +136,13 @@ as `gpujpeg_image_parameters::pixel_format` and `gpujpeg_image_parameters` to **
 
 #### Decode
 Select output pixel format either `GPUJPEG_444_U8_P012A` or `GPUJPEG_NONE` (autodetect).
+
+## What are memory requirements for encoding/decoding
+
+Currently you can compute something like 20 bytes for every pixel and component for both
+encode and decode, eg. for 33 Mpix 4:4:4 frame it is 7680x4320x3x20=1901 MiB. If the JPEG
+was 4:2:0 subsampled, the memory requirements would be halfway.
+
+The memory requirements may be excessive if dealing with really huge images - let us know
+if there is a problem with this.
+
