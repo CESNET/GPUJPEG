@@ -174,7 +174,7 @@ view_on_init(void* param)
     // Init JPEG encoder and decoder
     app->encoder = gpujpeg_encoder_create(&param_coder, &param_image);
     assert(app->encoder != NULL);
-    app->decoder = gpujpeg_decoder_create();
+    app->decoder = gpujpeg_decoder_create(NULL);
     assert(app->decoder != NULL);
     assert(gpujpeg_decoder_init(app->decoder, &param_coder, &param_image) == 0);
     
