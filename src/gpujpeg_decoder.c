@@ -203,7 +203,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
 
 /* Documented at declaration */
 int
-gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, struct gpujpeg_decoder_output* output)
+gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t image_size, struct gpujpeg_decoder_output* output)
 {
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
@@ -304,7 +304,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_memory_map, coder->param.perf_stats, decoder->stream, return -1);
 
         // Use OpenGL texture as decoding destination
-        int data_size = 0;
+        size_t data_size = 0;
         uint8_t* d_data = gpujpeg_opengl_texture_map(output->texture, &data_size);
         assert(data_size == coder->data_raw_size);
         coder->d_data_raw = d_data;
@@ -362,7 +362,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int imag
             GPUJPEG_CUSTOM_TIMER_START(coder->duration_memory_map, coder->param.perf_stats, decoder->stream, return -1);
 
             // Map OpenGL texture
-            int data_size = 0;
+            size_t data_size = 0;
             uint8_t* d_data = gpujpeg_opengl_texture_map(output->texture, &data_size);
             assert(data_size == coder->data_raw_size);
 
@@ -454,7 +454,7 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
 }
 
 int
-gpujpeg_decoder_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count) {
+gpujpeg_decoder_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count) {
     return gpujpeg_reader_get_image_info(image, image_size, param_image, param, segment_count);
 }
 

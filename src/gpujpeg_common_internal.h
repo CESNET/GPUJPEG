@@ -138,11 +138,11 @@ struct gpujpeg_segment
     int mcu_count;
 
     /// Data compressed index (output/input data from/to segment for encoder/decoder)
-    int data_compressed_index;
+    size_t data_compressed_index;
     /// Date temp index (temporary data of segment in CC 2.0 encoder)
     size_t data_temp_index;
     /// Data compressed size (output/input data from/to segment for encoder/decoder)
-    int data_compressed_size;
+    size_t data_compressed_size;
 
     /// Offset of first block index
     int block_index_list_begin;
@@ -171,7 +171,7 @@ struct gpujpeg_component
     /// Allocated data height for component (rounded to 8 for 8x8 blocks)
     int data_height;
     /// Allocated data size for component
-    int data_size;
+    size_t data_size;
 
     /// MCU size for component (minimun coded unit size)
     int mcu_size;
@@ -272,9 +272,9 @@ struct gpujpeg_coder
     /// Image data height
     int data_height;
     /// Number of raw image bytes
-    long data_raw_size;
+    size_t data_raw_size;
     /// Number of coefficient count for all components
-    int data_size;
+    size_t data_size;
     /// Number of compressed bytes
     size_t data_compressed_size;
 
@@ -297,7 +297,7 @@ struct gpujpeg_coder
     /// Memory allocated by gpujpeg
     uint8_t* d_data_raw_allocated;
     /// Allocated data size
-    long data_raw_allocated_size;
+    size_t data_raw_allocated_size;
 
     /// Preprocessor data in device memory (output/input for encoder/decoder)
     uint8_t* d_data;

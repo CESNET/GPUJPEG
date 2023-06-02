@@ -526,7 +526,7 @@ main(int argc, char *argv[])
                     gpujpeg_color_space_get_name(param_image.color_space));
 
             // Load image
-            int image_size = gpujpeg_image_calculate_size(&param_image);
+            size_t image_size = gpujpeg_image_calculate_size(&param_image);
             uint8_t* image = NULL;
             if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
@@ -547,7 +547,7 @@ main(int argc, char *argv[])
 
             // Encode image
             uint8_t* image_compressed = NULL;
-            int image_compressed_size = 0;
+            size_t image_compressed_size = 0;
             double duration_all_iterations = 0;
             double duration_first_iteration = 0;
             for ( int iteration = 0; iteration < iterate; iteration++ ) {
@@ -609,7 +609,7 @@ main(int argc, char *argv[])
 
             duration = gpujpeg_get_time() - duration;
             printf("Save Image:          %10.4f ms\n", duration * 1000.0);
-            printf("Compressed Size:     %10.d bytes [%s]\n", image_compressed_size, output);
+            printf("Compressed Size:     %10.zu bytes [%s]\n", image_compressed_size, output);
 
             // Destroy image
             gpujpeg_image_destroy(image);
@@ -700,7 +700,7 @@ main(int argc, char *argv[])
                     gpujpeg_color_space_get_name(param_image.color_space));
 
             // Load image
-            int image_size = 0;
+            size_t image_size = 0;
             uint8_t* image = NULL;
             if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
@@ -771,7 +771,7 @@ main(int argc, char *argv[])
             }
 
             uint8_t* data = NULL;
-            int data_size = 0;
+            size_t data_size = 0;
             if ( use_opengl ) {
                 data = malloc(decoder_output.data_size);
                 gpujpeg_opengl_texture_get_data(texture->texture_id, data, &data_size);
@@ -796,7 +796,7 @@ main(int argc, char *argv[])
 
             duration = gpujpeg_get_time() - duration;
             printf("Save Image:          %10.2f ms\n", duration * 1000.0);
-            printf("Decompressed Size:   %10.d bytes [%s]\n", decoder_output.data_size, output);
+            printf("Decompressed Size:   %10.zu bytes [%s]\n", decoder_output.data_size, output);
 
             if ( use_opengl ) {
                 free(data);

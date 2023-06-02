@@ -76,7 +76,7 @@ struct gpujpeg_reader
     int segment_count;
 
     /// Total readed size
-    int data_compressed_size;
+    size_t data_compressed_size;
 
     /// Segment info (every buffer is placed inside another header)
     uint8_t* segment_info[GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT];
@@ -931,7 +931,7 @@ static int
 gpujpeg_reader_read_scan_content_by_parsing(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_t* image_end,
         struct gpujpeg_reader_scan* scan, int scan_index)
 {
-    int data_compressed_offset = decoder->reader->data_compressed_size;
+    size_t data_compressed_offset = decoder->reader->data_compressed_size;
 
     // Get first segment in scan
     uint8_t * segment_data_start = *image;
@@ -1390,7 +1390,7 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
 
 /* Documented at declaration */
 int
-gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size)
+gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_t image_size)
 {
     // Setup reader and decoder
     decoder->reader->param = decoder->coder.param;
@@ -1520,7 +1520,7 @@ gcd(int a, int b)
 
 /* Documented at declaration */
 int
-gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count)
+gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count)
 {
     int segments = 0;
     int interleaved = 0;

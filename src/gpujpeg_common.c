@@ -623,7 +623,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
         // Compute allocated data size
         component->data_width = gpujpeg_div_and_round_up(component->width, component->mcu_size_x) * component->mcu_size_x;
         component->data_height = gpujpeg_div_and_round_up(component->height, component->mcu_size_y) * component->mcu_size_y;
-        component->data_size = component->data_width * component->data_height;
+        component->data_size = (size_t) component->data_width * component->data_height;
         // Increase total data size
         coder->data_size += component->data_size;
 
@@ -712,7 +712,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
 
     // Prepare segments
     // While preparing segments compute input size and compressed size
-    int data_index = 0;
+    size_t data_index = 0;
     size_t data_compressed_index = 0;
     // Prepare segments based on (non-)interleaved mode
     if ( coder->param.interleaved == 1 ) {
@@ -1066,23 +1066,23 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
 }
 
 /* Documented at declaration */
-long
+size_t
 gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
 {
     int bpp = gpujpeg_pixel_format_get_unit_size(param->pixel_format);
     if (bpp != 0) {
-        return (long) param->width * param->height * bpp;
+        return (size_t) param->width * param->height * bpp;
     }
     switch (param->pixel_format) {
     case GPUJPEG_444_U8_P0P1P2:
         assert(param->comp_count == 3);
-        return (long) param->width * param->height * param->comp_count;
+        return (size_t) param->width * param->height * param->comp_count;
     case GPUJPEG_422_U8_P0P1P2:
         assert(param->comp_count == 3);
-        return (long) param->width * param->height + 2 * ((param->width + 1) / 2) * param->height;
+        return (size_t) param->width * param->height + (size_t) 2 * ((param->width + 1) / 2) * param->height;
     case GPUJPEG_420_U8_P0P1P2:
         assert(param->comp_count == 3);
-        return (long) param->width * param->height + 2 * ((param->width + 1) / 2) * ((param->height + 1) / 2);
+        return (size_t) param->width * param->height + (size_t) 2 * ((param->width + 1) / 2) * ((param->height + 1) / 2);
     default:
         assert(0);
         return 0;
@@ -1097,7 +1097,7 @@ static void *gpujpeg_cuda_malloc_host(size_t size) {
 
 /* Documented at declaration */
 int
-gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size)
+gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* image_size)
 {
     enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
     image_load_delegate_t image_load_delegate = gpujpeg_get_image_load_delegate(format);
@@ -1121,8 +1121,8 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
     uint8_t* data = NULL;
     cudaMallocHost((void**)&data, *image_size * sizeof(uint8_t));
     gpujpeg_cuda_check_error("Initialize CUDA host buffer", return -1);
-    if ( *image_size != (int) fread(data, sizeof(uint8_t), *image_size, file) ) {
-        fprintf(stderr, "[GPUJPEG] [Error] Failed to load image data [%d bytes] from file %s!\n", *image_size, filename);
+    if ( *image_size != fread(data, sizeof(uint8_t), *image_size, file) ) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to load image data [%zd bytes] from file %s!\n", *image_size, filename);
         return -1;
     }
     fclose(file);
@@ -1134,7 +1134,7 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
 
 /* Documented at declaration */
 int
-gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size, const struct gpujpeg_image_parameters *param_image)
+gpujpeg_image_save_to_file(const char* filename, uint8_t* image, size_t image_size, const struct gpujpeg_image_parameters *param_image)
 {
     enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
     image_save_delegate_t image_save_delegate = gpujpeg_get_image_save_delegate(format);
@@ -1149,8 +1149,8 @@ gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size,
         return -1;
     }
 
-    if ( image_size != (int) fwrite(image, sizeof(uint8_t), image_size, file) ) {
-        fprintf(stderr, "[GPUJPEG] [Error] Failed to write image data [%d bytes] to file %s!\n", image_size, filename);
+    if ( image_size != fwrite(image, sizeof(uint8_t), image_size, file) ) {
+        fprintf(stderr, "[GPUJPEG] [Error] Failed to write image data [%zd bytes] to file %s!\n", image_size, filename);
         return -1;
     }
     fclose(file);
@@ -1216,7 +1216,7 @@ void
 gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujpeg_pixel_format pixel_format)
 {
     // Load image
-    int image_size = 0;
+    size_t image_size = 0;
     uint8_t* image = NULL;
     if ( gpujpeg_image_load_from_file(filename, &image, &image_size) != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to load image [%s]!\n", filename);
@@ -1530,7 +1530,7 @@ gpujpeg_opengl_texture_set_data(int texture_id, uint8_t* data)
 
 /* Documented at declaration */
 int
-gpujpeg_opengl_texture_get_data(int texture_id, uint8_t* data, int* data_size)
+gpujpeg_opengl_texture_get_data(int texture_id, uint8_t* data, size_t* data_size)
 {
 #ifdef GPUJPEG_USE_OPENGL
     glBindTexture(GL_TEXTURE_2D, texture_id);
@@ -1646,7 +1646,7 @@ gpujpeg_opengl_texture_unregister(struct gpujpeg_opengl_texture* texture)
 
 /* Documented at declaration */
 uint8_t*
-gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_size)
+gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, size_t* data_size)
 {
     assert(texture->texture_pbo_resource != NULL);
     assert((texture->texture_callback_attach_opengl == NULL && texture->texture_callback_detach_opengl == NULL) ||

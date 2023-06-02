@@ -66,7 +66,7 @@ gpujpeg_reader_destroy(struct gpujpeg_reader* reader);
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size);
+gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_t image_size);
 
 /**
  * Read image info from JPEG file
@@ -86,7 +86,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, int i
  * @todo refactorize common code with gpujpeg_reader_read_image()
  */
 int
-gpujpeg_reader_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count);
+gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count);
 
 #ifdef __cplusplus
 }

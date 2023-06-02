@@ -62,7 +62,7 @@ static void encode_gpu_mem_as_cpu() {
         gpujpeg_encoder_input_set_image(&encoder_input, image);
 
         uint8_t *image_compressed = NULL;
-        int image_compressed_size = 0;
+        size_t image_compressed_size = 0;
 
         if (gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size) != 0) {
                 abort();

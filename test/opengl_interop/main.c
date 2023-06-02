@@ -226,7 +226,7 @@ image_generate(struct application* app)
     
     // Encode image
     uint8_t* image_compressed = NULL;
-    int image_compressed_size = 0;
+    size_t image_compressed_size = 0;
     // Copy data to host memory
     cudaMemcpy(app->image->data, app->image->d_data, app->width * app->height * 3 * sizeof(uint8_t), cudaMemcpyDeviceToHost);
     struct gpujpeg_encoder_input input;

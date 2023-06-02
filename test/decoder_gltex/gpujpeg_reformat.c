@@ -164,7 +164,7 @@ gpujpeg_reformat_skip_marker_content(uint8_t** image)
 
 struct gpujpeg_reformat_scan {
     /// Offset of the SOS marker in JPEG stream.
-    int offset;
+    size_t offset;
 
     /// Computed number of segments in scan.
     int segment_count;
@@ -524,7 +524,7 @@ gpujpeg_reformat_read_sos(struct gpujpeg_rewriter * rewriter, uint8_t** image, u
 }
 
 int
-gpujpeg_reformat_parse_image(uint8_t * image, int image_size, struct gpujpeg_rewriter * rewriter)
+gpujpeg_reformat_parse_image(uint8_t * image, size_t image_size, struct gpujpeg_rewriter * rewriter)
 {
     uint8_t * image_begin = image;
     uint8_t * image_end = image + image_size;
@@ -584,7 +584,7 @@ gpujpeg_reformat_parse_image(uint8_t * image, int image_size, struct gpujpeg_rew
 }
 
 int
-gpujpeg_reformat(uint8_t * in_image, int in_image_size, uint8_t ** out_image, int * out_image_size)
+gpujpeg_reformat(uint8_t * in_image, size_t in_image_size, uint8_t ** out_image, size_t * out_image_size)
 {
     // Parse input image
     struct gpujpeg_rewriter rewriter;

@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     }
 
     // Load image from file
-    int image_size = 0;
+    size_t image_size = 0;
     uint8_t * image = NULL;
     if (0 != gpujpeg_image_load_from_file(input_filename, &image, &image_size)) {
         fprintf(stderr, "Failed to load image [%s]!\n", input_filename);
@@ -60,11 +60,11 @@ int main(int argc, char *argv[])
 
     // Add segment info headers into JPEG stream
     uint8_t * image_old = image;
-    int image_old_size = image_size;
+    size_t image_old_size = image_size;
     double duration = gpujpeg_get_time();
     gpujpeg_reformat(image, image_size, &image, &image_size);
     duration = gpujpeg_get_time() - duration;
-    printf("Rewritten JPEG stream in %0.2f ms (from %d bytes to %d bytes.\n", duration * 1000.0, image_old_size, image_size);
+    printf("Rewritten JPEG stream in %0.2f ms (from %zd bytes to %zd bytes.\n", duration * 1000.0, image_old_size, image_size);
     gpujpeg_image_destroy(image_old);
 
     // Get image size and check number of color components
@@ -121,14 +121,14 @@ int main(int argc, char *argv[])
 
     // Get data from OpenGL texture
     uint8_t* data = NULL;
-    int data_size = 0;
+    size_t data_size = 0;
     data = malloc(param_image.width * param_image.height * param_image.comp_count);
     gpujpeg_opengl_texture_get_data(texture->texture_id, data, &data_size);
 
     // Save image
     char output_filename[255];
     sprintf(output_filename, "%s.raw", input_filename);
-    printf("Saving Image %s (%u bytes)\n", output_filename, data_size);
+    printf("Saving Image %s (%zu bytes)\n", output_filename, data_size);
     if ( gpujpeg_image_save_to_file(output_filename, data, data_size, &param_image) != 0 ) {
         fprintf(stderr, "Failed to save image [%s]!\n", output_filename);
         return -1;

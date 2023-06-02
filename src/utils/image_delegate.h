@@ -44,7 +44,7 @@ typedef void *(*allocator_t)(size_t);
  * @param[in]  alloc      allocator to allocate image_data
  * @returns               0 if succeeded; non-zero otherwise
  */
-typedef int (*image_load_delegate_t)(const char *filename, int *image_size, void **image_data, allocator_t alloc);
+typedef int (*image_load_delegate_t)(const char *filename, size_t *image_size, void **image_data, allocator_t alloc);
 /**
  * Reads image metadata without actually reading the file contents.
  * @param[in]  filename    image filename

@@ -65,7 +65,7 @@ struct gpujpeg_decoder
     int segment_count;
     
     /// Current data compressed size for decoded image
-    int data_compressed_size;
+    size_t data_compressed_size;
 
     // Stream
     cudaStream_t stream;

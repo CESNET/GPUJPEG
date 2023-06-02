@@ -69,7 +69,7 @@ struct gpujpeg_decoder_output
     uint8_t* data;
 
     /// Decompressed data size
-    int data_size;
+    size_t data_size;
 
     /// Decoded color space
     enum gpujpeg_color_space color_space;
@@ -168,7 +168,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, int image_size, struct gpujpeg_decoder_output* output);
+gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t image_size, struct gpujpeg_decoder_output* output);
 
 /**
  * Returns duration statistics for last decoded image
@@ -205,7 +205,7 @@ gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
  * @copydoc gpujpeg_reader_get_image_info
  */
 GPUJPEG_API int
-gpujpeg_decoder_get_image_info(uint8_t *image, int image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count);
+gpujpeg_decoder_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count);
 
 #ifdef __cplusplus
 }

@@ -32,12 +32,12 @@
 #include "pam.h"
 #include "y4m.h"
 
-static int pam_load_delegate(const char *filename, int *image_size, void **image_data, allocator_t alloc) {
+static int pam_load_delegate(const char *filename, size_t *image_size, void **image_data, allocator_t alloc) {
     struct pam_metadata info;
     bool ret = pam_read(filename, &info, (unsigned char **) image_data, alloc);
     if (ret) {
         assert(info.maxval == 255);
-        *image_size = info.width * info.height * info.depth;
+        *image_size = (size_t) info.width * info.height * info.depth;
     }
     return ret ? 0 : 1;
 }
@@ -147,7 +147,7 @@ static int y4m_probe_delegate(const char *filename, struct gpujpeg_image_paramet
     return 0;
 }
 
-static int y4m_load_delegate(const char *filename, int *image_size, void **image_data, allocator_t alloc) {
+static int y4m_load_delegate(const char *filename, size_t *image_size, void **image_data, allocator_t alloc) {
     struct y4m_metadata info = { 0 };
     if ((*image_size = y4m_read(filename, &info, (unsigned char **) image_data, alloc)) == 0) {
         return 1;

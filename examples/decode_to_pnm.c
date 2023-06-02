@@ -38,7 +38,7 @@ static int decode(const char *input_filename, struct decode_data *d)
         gpujpeg_decoder_set_output_format(d->decoder, GPUJPEG_RGB, GPUJPEG_444_U8_P012);
 
         // load image
-        int input_image_size = 0;
+        size_t input_image_size = 0;
         if (gpujpeg_image_load_from_file(input_filename, &d->input_image, &input_image_size) != 0) {
                 return 1;
         }
@@ -49,7 +49,7 @@ static int decode(const char *input_filename, struct decode_data *d)
 
         // decompress the image
         uint8_t *image_decompressed = NULL;
-        int image_decompressed_size = 0;
+        size_t image_decompressed_size = 0;
         if (gpujpeg_decoder_decode(d->decoder, d->input_image, input_image_size, &decoder_output) != 0) {
                 return 1;
         }

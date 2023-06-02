@@ -33,7 +33,7 @@ static int worker(void *input_image) {
 
         for (int i = 0; i < iterations; ++i) {
                 uint8_t *image_compressed = NULL;
-                int image_compressed_size = 0;
+                size_t image_compressed_size = 0;
                 if (gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size) != 0) {
                         return 1;
                 }

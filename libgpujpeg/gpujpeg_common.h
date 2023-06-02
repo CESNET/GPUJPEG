@@ -346,7 +346,7 @@ GPUJPEG_API void gpujpeg_set_device(int index);
  * @param param  Image parameters
  * @return calculate size
  */
-GPUJPEG_API long
+GPUJPEG_API size_t
 gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param);
 
 /**
@@ -360,7 +360,7 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param);
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_size);
+gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* image_size);
 
 /**
  * Save RGB image to file
@@ -372,7 +372,7 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, int* image_s
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_image_save_to_file(const char* filename, uint8_t* image, int image_size, const struct gpujpeg_image_parameters *param_image);
+gpujpeg_image_save_to_file(const char* filename, uint8_t* image, size_t image_size, const struct gpujpeg_image_parameters *param_image);
 
 /**
  * Reads/obtains properties from uncompressed file (PNM etc.)
@@ -482,7 +482,7 @@ gpujpeg_opengl_texture_set_data(int texture_id, uint8_t* data);
  * @return 0 data if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_opengl_texture_get_data(int texture_id, uint8_t* data, int* data_size);
+gpujpeg_opengl_texture_get_data(int texture_id, uint8_t* data, size_t* data_size);
 
 /**
  * Destroy OpenGL texture
@@ -573,7 +573,7 @@ gpujpeg_opengl_texture_unregister(struct gpujpeg_opengl_texture* texture);
  *                           should be performed
  */
 GPUJPEG_API uint8_t*
-gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, int* data_size);
+gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, size_t* data_size);
 
 /**
  * Unmap registered OpenGL texture from CUDA and the device

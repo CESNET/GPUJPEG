@@ -1,7 +1,13 @@
 #ifndef GPUJPEG_REFORMAT_H
 #define GPUJPEG_REFORMAT_H
 
+#ifdef __cplusplus
+#include <cstddef>
+#include <cstdint>
+#else
+#include <stddef.h>
 #include <stdint.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,7 +23,7 @@ extern "C" {
  * @return 0 if succeeds, nonzero otherwise
  */
 int
-gpujpeg_reformat(uint8_t * in_image, int in_image_size, uint8_t ** out_image, int * out_image_size);
+gpujpeg_reformat(uint8_t * in_image, size_t in_image_size, uint8_t ** out_image, size_t * out_image_size);
 
 #ifdef __cplusplus
 }

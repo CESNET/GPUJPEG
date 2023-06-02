@@ -58,7 +58,7 @@ static int encode(const char *input_filename, struct encode_data *d)
         }
 
         // load image and set it as the encoder input buffer
-        int input_image_size = 0;
+        size_t input_image_size = 0;
         if (gpujpeg_image_load_from_file(input_filename, &d->input_image, &input_image_size) != 0) {
                 return 1;
         }
@@ -67,7 +67,7 @@ static int encode(const char *input_filename, struct encode_data *d)
 
         // compress the image
         uint8_t *image_compressed = NULL;
-        int image_compressed_size = 0;
+        size_t image_compressed_size = 0;
         if (gpujpeg_encoder_encode(d->encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size) != 0) {
                 return 1;
         }

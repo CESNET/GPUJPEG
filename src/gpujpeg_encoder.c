@@ -283,7 +283,7 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
 
 /* Documented at declaration */
 int
-gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, int* image_compressed_size)
+gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, size_t* image_compressed_size)
 {
     assert(param_image->comp_count == 1 || param_image->comp_count == 3 || param_image->comp_count == 4);
     assert(param_image->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
@@ -374,7 +374,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         coder->d_data_raw = coder->d_data_raw_allocated;
 
         // Map texture to CUDA
-        int data_size = 0;
+        size_t data_size = 0;
         uint8_t* d_data = gpujpeg_opengl_texture_map(input->texture, &data_size);
         assert(data_size == (coder->data_raw_size));
 

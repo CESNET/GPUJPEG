@@ -31,6 +31,12 @@
 #include "gpujpeg_huffman_cpu_decoder.h"
 #include "gpujpeg_util.h"
 
+#ifdef __cplusplus
+#include <cstddef>
+#else
+#include <stddef.h>
+#endif
+
 /** Huffman encoder structure */
 struct gpujpeg_huffman_cpu_decoder
 {
@@ -57,7 +63,7 @@ struct gpujpeg_huffman_cpu_decoder
     // Compressed data
     uint8_t* data;
     // Compressed data size
-    int data_size;
+    size_t data_size;
 };
 
 /**
