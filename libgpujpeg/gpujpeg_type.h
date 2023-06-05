@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -31,7 +31,11 @@
 #ifndef GPUJPEG_TYPE_H
 #define GPUJPEG_TYPE_H
 
+#ifdef __cplusplus
+#include <cstdint>
+#else
 #include <stdint.h>
+#endif
 
 #ifndef _MSC_VER
 #define ATTRIBUTE_UNUSED __attribute__((unused))

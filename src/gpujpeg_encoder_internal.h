@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -31,8 +31,8 @@
 #ifndef GPUJPEG_ENCODER_INTERNAL_H
 #define GPUJPEG_ENCODER_INTERNAL_H
 
-#include "libgpujpeg/gpujpeg_common.h"
-#include "libgpujpeg/gpujpeg_encoder.h"
+#include "../libgpujpeg/gpujpeg_common.h"
+#include "../libgpujpeg/gpujpeg_encoder.h"
 #include "gpujpeg_common_internal.h"
 #include "gpujpeg_table.h"
 #include "gpujpeg_writer.h"

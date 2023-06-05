@@ -40,7 +40,7 @@
 #include <stdint.h>
 #endif
 
-#include <libgpujpeg/gpujpeg_type.h>
+#include "gpujpeg_type.h"
 
 /**
  * @todo

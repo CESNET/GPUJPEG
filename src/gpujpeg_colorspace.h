@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -32,7 +32,7 @@
 #define GPUJPEG_COLORSPACE_H
 
 #include <assert.h>
-#include <libgpujpeg/gpujpeg_type.h>
+#include "../libgpujpeg/gpujpeg_type.h"
 
 /**
  * Color transform debug info

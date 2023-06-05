@@ -29,8 +29,6 @@
  */
 
 #include <assert.h>
-#include <libgpujpeg/gpujpeg.h>
-#include <libgpujpeg/gpujpeg_common.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -40,6 +38,8 @@
 #else
     #include <getopt.h>
 #endif
+#include "../libgpujpeg/gpujpeg.h"
+#include "../libgpujpeg/gpujpeg_common.h"
 
 #define USE_IF_NOT_NULL_ELSE(cond, alt_val) (cond) ? (cond) : (alt_val)
 

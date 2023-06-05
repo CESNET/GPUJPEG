@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -31,7 +31,7 @@
 #ifndef GPUJPEG_TABLE_H
 #define GPUJPEG_TABLE_H
 
-#include <libgpujpeg/gpujpeg_type.h>
+#include "../libgpujpeg/gpujpeg_type.h"
 
 #ifdef __cplusplus
 extern "C" {

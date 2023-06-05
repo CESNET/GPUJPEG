@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -31,9 +31,8 @@
 #ifndef GPUJPEG_DECODER_H
 #define GPUJPEG_DECODER_H
 
-#include <stdint.h>
-#include <libgpujpeg/gpujpeg_common.h>
-#include <libgpujpeg/gpujpeg_type.h>
+#include "gpujpeg_common.h"
+#include "gpujpeg_type.h"
 
 #ifdef __cplusplus
 extern "C" {

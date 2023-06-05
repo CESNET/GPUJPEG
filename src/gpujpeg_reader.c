@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2022, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -30,9 +30,9 @@
 
 #include <ctype.h>
 #include <inttypes.h>
-#include <libgpujpeg/gpujpeg_decoder.h>
 #include <string.h>
 
+#include "../libgpujpeg/gpujpeg_decoder.h"
 #include "gpujpeg_decoder_internal.h"
 #include "gpujpeg_marker.h"
 #include "gpujpeg_reader.h"

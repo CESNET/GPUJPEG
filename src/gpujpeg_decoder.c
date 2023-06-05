@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2019, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <libgpujpeg/gpujpeg_decoder.h>
+#include "../libgpujpeg/gpujpeg_decoder.h"
 #include "gpujpeg_dct_cpu.h"
 #include "gpujpeg_dct_gpu.h"
 #include "gpujpeg_decoder_internal.h"

@@ -39,9 +39,9 @@
 #include <math.h> // NAN
 #include <stdio.h>
 #include <stdlib.h>
+#include "../libgpujpeg/gpujpeg_common.h"
+#include "../libgpujpeg/gpujpeg_type.h"
 #include "gpujpeg_util.h"
-#include "libgpujpeg/gpujpeg_common.h"
-#include "libgpujpeg/gpujpeg_type.h"
 
 // VS 2015 compat
 #if defined _MSC_VER && _MSC_VER <= 1900

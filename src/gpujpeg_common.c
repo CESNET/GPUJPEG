@@ -33,12 +33,12 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <ctype.h>
-#include <libgpujpeg/gpujpeg_common.h>
+#include "../libgpujpeg/gpujpeg_common.h"
 #include "gpujpeg_postprocessor.h"
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_util.h"
 #ifdef HAVE_GPUJPEG_VERSION_H
-#include "libgpujpeg/gpujpeg_version.h"
+#include <libgpujpeg/gpujpeg_version.h>
 #endif // defined HAVE_GPUJPEG_VERSION_H
 #include "utils/image_delegate.h"
 #include <math.h>
