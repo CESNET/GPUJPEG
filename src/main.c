@@ -50,7 +50,7 @@ print_help(void)
            "   -h, --help             print help\n"
            "   -v, --verbose          verbose output (multiply to increase verbosity - max 3) \n"
            "   -D, --device           set cuda device id (default 0)\n"
-           "       --device-list      list cuda devices\n"
+           "   -L, --device-list      list cuda devices\n"
            "\n");
     printf("   -s, --size             set input image size in pixels, e.g. 1920x1080\n"
            "   -f, --pixel-format     set input/output image pixel format, one of the\n"
@@ -72,9 +72,9 @@ print_help(void)
            "\n");
     printf("   -e, --encode           perform JPEG encoding\n"
            "   -d, --decode           perform JPEG decoding\n"
-           "       --convert          convert input image to output image (change\n"
+           "   -C, --convert          convert input image to output image (change\n"
            "                          color space and/or sampling factor)\n"
-           "       --component-range  show samples range for each component in image\n"
+           "   -R, --component-range  show samples range for each component in image\n"
            "\n");
     printf("   -n  --iterate          perform encoding/decoding in specified number of\n"
            "                          iterations for each image\n"
@@ -258,15 +258,12 @@ main(int argc, char *argv[])
     param_image.pixel_format = GPUJPEG_PIXFMT_NONE;
 
     // Parse command line
-    #define OPTION_DEVICE_INFO     1
-    #define OPTION_CONVERT         3
-    #define OPTION_COMPONENT_RANGE 4
     struct option longopts[] = {
         {"alpha",                   no_argument,       0, 'a'},
         {"help",                    no_argument,       0, 'h'},
         {"verbose",                 optional_argument, 0, 'v'},
         {"device",                  required_argument, 0, 'D'},
-        {"device-list",             no_argument,       0,  OPTION_DEVICE_INFO },
+        {"device-list",             no_argument,       0, 'L' },
         {"size",                    required_argument, 0, 's'},
         {"pixel-format",         required_argument, 0, 'f'},
         {"colorspace",              required_argument, 0, 'c'},
@@ -277,8 +274,8 @@ main(int argc, char *argv[])
         {"interleaved",             optional_argument, 0, 'i'},
         {"encode",                  no_argument,       0, 'e'},
         {"decode",                  no_argument,       0, 'd'},
-        {"convert",                 no_argument,       0,  OPTION_CONVERT },
-        {"component-range",         no_argument,       0,  OPTION_COMPONENT_RANGE },
+        {"convert",                 no_argument,       0, 'C' },
+        {"component-range",         no_argument,       0,  'R' },
         {"iterate",                 required_argument, 0,  'n' },
         {"use-opengl",              no_argument,       0,  'o' },
         {"info",                    required_argument, 0,  'I' },
@@ -288,7 +285,7 @@ main(int argc, char *argv[])
     int ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "ahvD:s:C:f:c:q:r:g::i::edn:oI:NS::", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "CLRahvD:s:f:c:q:r:g::i::edn:oI:NS::", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'a':
             keep_alpha = 1;
@@ -366,7 +363,7 @@ main(int argc, char *argv[])
                 return 1;
             }
             break;
-        case OPTION_DEVICE_INFO:
+        case 'L':
             return gpujpeg_print_devices_info() < 0 ? 1 : 0;
         case 'i':
             if ( optarg == NULL || strcmp(optarg, "true") == 0 || atoi(optarg) )
@@ -383,11 +380,11 @@ main(int argc, char *argv[])
         case 'D':
             device_id = atoi(optarg);
             break;
-        case OPTION_CONVERT:
+        case 'C':
             convert = 1;
             memcpy(&param_image_original, &param_image, sizeof(struct gpujpeg_image_parameters));
             break;
-        case OPTION_COMPONENT_RANGE:
+        case 'R':
             component_range = 1;
             break;
         case 'n':
