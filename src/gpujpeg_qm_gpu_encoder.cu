@@ -588,12 +588,31 @@ gpujpeg_qm_encoder_encode_kernel(
         *d_gpujpeg_qm_output_byte_count = 0;
     }
 
-    // Initialize arithmetic coder
-    struct gpujpeg_arithmetic_gpu_coder coder;
+    // Initialize arithmetic coder in shared memory
+    __shared__ struct gpujpeg_arithmetic_gpu_coder coder[THREAD_BLOCK_SIZE];
     int32_t A = 0x10000;
     int32_t C = 0;
-    coder.fixed.mps = 0;
-    coder.fixed.index = 113;
+    coder[threadIdx.x].CT = 11;
+    coder[threadIdx.x].ST = 0;
+    coder[threadIdx.x].last_byte = -1; // no byte emitted yet
+
+    for (int i = 0; i < 3; i++) {
+	coder[threadIdx.x].previous_diff_index[i] = 0;
+       	coder[threadIdx.x].previous_DC[i] = 0;
+    }
+
+    for (int j = 0; j < 2; j++) {
+    	for (int i = 0; i < 49; i++) {
+       	    coder[threadIdx.x].DC_stats[j][i].mps = 0;
+       	    coder[threadIdx.x].DC_stats[j][i].index = 0;
+       	}
+	for (int i = 0; i < 245; i++) { 
+    	    coder[threadIdx.x].AC_stats[j][i].mps = 0;
+    	    coder[threadIdx.x].AC_stats[j][i].index = 0;
+	}
+    }
+    coder[threadIdx.x].fixed.mps = 0;
+    coder[threadIdx.x].fixed.index = 113;
 
     // Prepare data pointers
     uint8_t* data_compressed = &d_data_compressed[segment->data_temp_index];
@@ -608,19 +627,14 @@ gpujpeg_qm_encoder_encode_kernel(
             struct gpujpeg_component* component = &d_component[segment->scan_index];
 
 	    // Set component info in arithmetic coder
-	    coder.current_comp = 0;
-	    coder.c_type = GPUJPEG_COMPONENT_LUMINANCE;
+	    coder[threadIdx.x].current_comp = 0;
+	    coder[threadIdx.x].c_type = GPUJPEG_COMPONENT_LUMINANCE;
 
             // Get component data for MCU
             int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size];
-		
-	    // Copy block into shared memory			
-	    __shared__ int16_t sBlock[THREAD_BLOCK_SIZE][64];
-            for (int i = 0; i < 64; i++)
-		sBlock[threadIdx.x][i] = block[i];
-	
+			
             // Encode 8x8 block
-            gpujpeg_qm_cpu_encoder_encode_block(sBlock[threadIdx.x], &coder, data_compressed, &A, &C);
+            gpujpeg_qm_cpu_encoder_encode_block(block, &coder[threadIdx.x], data_compressed, &A, &C);
         }
     }
     // Interleaving mode
@@ -631,9 +645,9 @@ gpujpeg_qm_encoder_encode_kernel(
             for ( int comp = 0; comp < comp_count; comp++ ) {
                 struct gpujpeg_component* component = &d_component[comp];
 
-				// Set component info in arithmetic coder 
-				coder.current_comp = comp;
-				coder.c_type = component->type;
+		// Set component info in arithmetic coder 
+		coder[threadIdx.x].current_comp = comp;
+		coder[threadIdx.x].c_type = component->type;
 
                 // Prepare mcu indexes
                 int mcu_index_x = (segment_index * component->segment_mcu_count + mcu_index) % component->mcu_count_x;
@@ -653,13 +667,8 @@ gpujpeg_qm_encoder_encode_kernel(
                         // Get component data for MCU
                         int16_t* block = &component->d_data_quantized[data_index];
 
-			// Copy block into shared memory			
-			__shared__ int16_t sBlock[THREAD_BLOCK_SIZE][64];
-			for (int i = 0; i < 64; i++)
-				sBlock[threadIdx.x][i] = block[i];			
-
                         // Encode 8x8 block
-                        gpujpeg_qm_cpu_encoder_encode_block(sBlock[threadIdx.x], &coder, data_compressed, &A, &C);
+                        gpujpeg_qm_cpu_encoder_encode_block(block, &coder[threadIdx.x], data_compressed, &A, &C);
                     }
                 }
             }
@@ -667,7 +676,7 @@ gpujpeg_qm_encoder_encode_kernel(
     }
 
     // Flush arithmetic coder 
-    flush(&coder, data_compressed, &A, &C);
+    flush(&coder[threadIdx.x], data_compressed, &A, &C);
     // Output restart marker
     int restart_marker = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index % 8);
     gpujpeg_qm_gpu_encoder_marker(data_compressed, restart_marker);
