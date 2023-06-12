@@ -577,8 +577,8 @@ gpujpeg_qm_encoder_encode_kernel(
     unsigned int * d_gpujpeg_qm_output_byte_count
 )
 {
-    int segment_index = blockIdx.x;
-    if ( segment_index >= segment_count || threadIdx.x % 32 != 0)
+    int segment_index = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( segment_index >= segment_count)
         return;
 
     struct gpujpeg_segment* segment = &d_segment[segment_index];
@@ -831,8 +831,7 @@ gpujpeg_qm_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_qm
 
     // Run kernel
     dim3 thread(THREAD_BLOCK_SIZE);
-    // We need THREAD_BLOCK_SIZE times more blocks with only one work thread
-    dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, thread.x) *THREAD_BLOCK_SIZE);
+    dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, thread.x));
     gpujpeg_qm_encoder_encode_kernel<<<grid, thread, 0, *(encoder->stream)>>>(
         coder->d_component,
         coder->d_segment,
