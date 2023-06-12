@@ -251,6 +251,7 @@ static unsigned char gpujpeg_table_huffman_cbcr_ac_value[] = {
     0xf9, 0xfa 
 };
 
+
 /** 
  * Compute encoder huffman table from bits and values arrays (that are already set in table)
  * 

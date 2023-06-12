@@ -46,6 +46,9 @@ struct gpujpeg_writer
     uint8_t* buffer;
     // Output buffer current position
     uint8_t* buffer_current;
+	// Output buffer current position if we count zeros
+	uint8_t* z_buffer;
+	
     // Allocate size of output buffer.
     size_t buffer_allocated_size;
 

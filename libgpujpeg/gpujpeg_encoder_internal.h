@@ -39,7 +39,7 @@
 extern "C" {
 #endif
 
-struct gpujpeg_huffman_gpu_encoder;
+struct gpujpeg_qm_gpu_encoder;
 
 struct gpujpeg_encoder
 {
@@ -56,7 +56,7 @@ struct gpujpeg_encoder
     struct gpujpeg_table_huffman_encoder table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
 
     // Huffman GPU encoder
-    struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder;
+    struct gpujpeg_qm_gpu_encoder * qm_gpu_encoder;
 
     // Stream
     cudaStream_t * stream;

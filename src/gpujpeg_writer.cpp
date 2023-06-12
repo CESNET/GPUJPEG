@@ -31,6 +31,7 @@
 #include <libgpujpeg/gpujpeg_encoder.h>
 #include <libgpujpeg/gpujpeg_encoder_internal.h>
 #include <libgpujpeg/gpujpeg_util.h>
+#include <iostream>
 
 #if defined _MSC_VER && _MSC_VER < 1900 // VS 2015
 #define snprintf _snprintf
@@ -71,6 +72,7 @@ gpujpeg_writer_init(gpujpeg_writer * writer, gpujpeg_image_parameters * param_im
         writer->buffer_allocated_size = buffer_size;
     }
     writer->buffer_current = NULL;
+	writer->z_buffer = NULL;
     writer->segment_info_count = 0;
     writer->segment_info_index = 0;
     writer->segment_info_position = 0;
@@ -209,10 +211,10 @@ gpujpeg_writer_write_dqt(struct gpujpeg_encoder* encoder, enum gpujpeg_component
  * @return void
  */
 void
-gpujpeg_writer_write_sof0(struct gpujpeg_encoder* encoder)
+gpujpeg_writer_write_frame_header(struct gpujpeg_encoder* encoder)
 {
-    gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_SOF0);
-
+    gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_SOF9);
+	
     // Length
     gpujpeg_writer_emit_2byte(encoder->writer, 8 + 3 * encoder->coder.param_image.comp_count);
 
@@ -278,9 +280,7 @@ gpujpeg_writer_write_dht(struct gpujpeg_encoder* encoder, enum gpujpeg_component
             index = 1;
         }
     }
-
     gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_DHT);
-
     int length = 0;
     for ( int i = 1; i <= 16; i++ )
         length += table->bits[i];
@@ -339,6 +339,10 @@ void
 gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 {
     gpujpeg_writer_write_soi(encoder->writer);
+	
+	//std::cout << "here\n";
+	//gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_SOF9);
+
     if (encoder->coder.param.color_space_internal == GPUJPEG_RGB) {
         gpujpeg_writer_write_app14(encoder->writer);
     } else { // ordinal JFIF
@@ -349,19 +353,44 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
     if ( encoder->coder.param_image.comp_count > 1 ) {
         gpujpeg_writer_write_dqt(encoder, GPUJPEG_COMPONENT_CHROMINANCE);
     }
-
-    gpujpeg_writer_write_sof0(encoder);
-
-    gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_LUMINANCE, GPUJPEG_HUFFMAN_DC);   // DC table for Y component
-    gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_LUMINANCE, GPUJPEG_HUFFMAN_AC);   // AC table for Y component
-    if ( encoder->coder.param_image.comp_count > 1 ) {
-        gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_CHROMINANCE, GPUJPEG_HUFFMAN_DC); // DC table for Cb or Cr component
-        gpujpeg_writer_write_dht(encoder, GPUJPEG_COMPONENT_CHROMINANCE, GPUJPEG_HUFFMAN_AC); // AC table for Cb or Cr component
-    }
-
     gpujpeg_writer_write_dri(encoder);
-
     gpujpeg_writer_write_com(encoder);
+
+	//frame header
+	gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_SOF9);
+	
+	// Length
+	gpujpeg_writer_emit_2byte(encoder->writer, 8 + 3 * encoder->coder.param_image.comp_count);
+		
+	// Precision (bit depth)
+	gpujpeg_writer_emit_byte(encoder->writer, 8);
+	// Dimensions
+	gpujpeg_writer_emit_2byte(encoder->writer, encoder->coder.param_image.height);
+	gpujpeg_writer_emit_2byte(encoder->writer, encoder->coder.param_image.width);
+
+	// Number of components
+	gpujpeg_writer_emit_byte(encoder->writer, encoder->coder.param_image.comp_count);
+
+	// Components
+	for ( int comp_index = 0; comp_index < encoder->coder.param_image.comp_count; comp_index++ ) {
+    	// Get component
+    	struct gpujpeg_component* component = &encoder->coder.component[comp_index];
+
+    	// Component index
+    	gpujpeg_writer_emit_byte(encoder->writer, comp_index + 1);
+
+    	// Sampling factors (1 << 4) + 1 (sampling h: 1, v: 1)
+    	gpujpeg_writer_emit_byte(encoder->writer, (component->sampling_factor.horizontal << 4) + component->sampling_factor.vertical);
+
+    	// Quantization table index
+    	if ( component->type == GPUJPEG_COMPONENT_LUMINANCE ) {
+        	gpujpeg_writer_emit_byte(encoder->writer, 0);
+    	} else if ( component->type == GPUJPEG_COMPONENT_CHROMINANCE ) {
+        	gpujpeg_writer_emit_byte(encoder->writer, 1);
+    	} else {
+        	assert(0);
+    	}
+	}
 }
 
 /** Documented at declaration */
@@ -450,7 +479,7 @@ gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int scan_index
     gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_SOS);
 
     if ( encoder->coder.param.interleaved == 1 ) {
-        // Length
+        // Length:
         gpujpeg_writer_emit_2byte(encoder->writer, 6 + 2 * encoder->coder.param_image.comp_count);
 
         // Component count

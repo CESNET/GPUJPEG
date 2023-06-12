@@ -27,8 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUJPEG_HUFFMAN_GPU_ENCODER_H
-#define GPUJPEG_HUFFMAN_GPU_ENCODER_H
+#ifndef GPUJPEG_QM_GPU_ENCODER_H
+#define GPUJPEG_QM_GPU_ENCODER_H
 
 #include <libgpujpeg/gpujpeg_encoder_internal.h>
 
@@ -36,27 +36,27 @@
 extern "C" {
 #endif
 
-struct gpujpeg_huffman_gpu_encoder;
+struct gpujpeg_qm_gpu_encoder;
 
 /**
- * Destroy huffman GPU encoder.
+ * Create QM GPU encoder.
  *
- * @param table_huffman  pointer to initialized huffman tables in CPU memory
- * @return 0 if succeeds, otherwise nonzero
+ * @param encoder Encoder structure
+ * @return pointer to qm encoder structure
  */
-struct gpujpeg_huffman_gpu_encoder *
-gpujpeg_huffman_gpu_encoder_create(const struct gpujpeg_encoder * encoder);
+struct gpujpeg_qm_gpu_encoder *
+gpujpeg_qm_gpu_encoder_create(const struct gpujpeg_encoder * encoder);
 
 /**
- * Destroy huffman GPU encoder.
+ * Destroy QM GPU encoder.
  *
- * @param huffman_gpu_encoder
+ * @param qm_gpu_encoder
  */
 void
-gpujpeg_huffman_gpu_encoder_destroy(struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder);
+gpujpeg_qm_gpu_encoder_destroy(struct gpujpeg_qm_gpu_encoder * qm_gpu_encoder);
 
 /**
- * Perform huffman encoding
+ * Perform arithmetic encoding
  *
  * @param encoder              Encoder structure
  * @param encoder_gpu_encoder
@@ -64,10 +64,10 @@ gpujpeg_huffman_gpu_encoder_destroy(struct gpujpeg_huffman_gpu_encoder * huffman
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder, unsigned int * output_byte_count);
+gpujpeg_qm_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_qm_gpu_encoder * qm_gpu_encoder, unsigned int * output_byte_count);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // GPUJPEG_HUFFMAN_GPU_ENCODER_H
+#endif // GPUJPEG_QM_GPU_ENCODER_H
