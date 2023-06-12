@@ -67,7 +67,9 @@ struct gpujpeg_qm_gpu_encoder
     unsigned int * d_gpujpeg_qm_output_byte_count;
 };
 
-/** Arithmetic encoder structure. */
+/** Arithmetic encoder structure.
+ *  Doesnt contain A and C.
+ */
 struct gpujpeg_arithmetic_gpu_coder{
 	// Statistical areas for encoding DC and AC coefficients
 	// One array for luma, one for chroma
@@ -80,10 +82,6 @@ struct gpujpeg_arithmetic_gpu_coder{
 	// value of previous DC for each component
 	int previous_DC[4] = {0};
 	
-	// probability interval
-	uint32_t A;
-	// code register
-	uint32_t C;
 	// renormalization shift counter
 	int32_t CT = 11;
 	// stack counter
@@ -104,7 +102,6 @@ struct gpujpeg_arithmetic_gpu_coder{
  *
  * QM coder compact output allocation kernel - serially reserves
  * some space for compressed output of segments in output buffer.
- * (For CC 1.0 - a workaround for missing atomic operations.)
  *
  * Only single threadblock with 512 threads is launched.
  */
@@ -290,8 +287,8 @@ __device__ void output_stacked_zeros(struct gpujpeg_arithmetic_gpu_coder* coder,
 /** Removes byte of compressed data from C
  *  and sends it in the entropy-coded segment
  */
-__device__ void byte_out(struct gpujpeg_arithmetic_gpu_coder* coder, uint8_t* & data_compressed) {
-	int T = coder->C >> 19;
+__device__ void byte_out(struct gpujpeg_arithmetic_gpu_coder* coder, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
+	int T = *C >> 19;
 	if (T > 0xFF) {
 		coder->last_byte++;
 		stuff_0(coder, data_compressed);
@@ -305,43 +302,43 @@ __device__ void byte_out(struct gpujpeg_arithmetic_gpu_coder* coder, uint8_t* & 
 			emit_byte(coder, data_compressed, T);
 		}
 	}
-	coder->C &= 0x7FFFF;
+	*C &= 0x7FFFF;
 }
 
 /** Sets as many low order bits of the code register to zero as possible
  *  without pointing outside of the final interval
  */
-__device__ void clear_final_bits(struct gpujpeg_arithmetic_gpu_coder* coder) {
-	unsigned int T = coder->C + coder->A - 1;
+__device__ void clear_final_bits(struct gpujpeg_arithmetic_gpu_coder* coder, int32_t *A, int32_t *C) {
+	unsigned int T = *C + *A - 1;
 	T &= 0xFFFF0000;
-	if (T < coder->C)
+	if (T < *C)
 		T += 0x8000;
-	coder->C = T;
+	*C = T;
 }
 
 /** Terminates the arithmetic encoding procedures and prepares
  *  the entropy-coded segment for the addition of the X’FF’ 
  */
-__device__ void flush(struct gpujpeg_arithmetic_gpu_coder* coder, uint8_t* & data_compressed) {
-	clear_final_bits(coder);
-    	coder->C <<= coder->CT;
-	byte_out(coder, data_compressed);
-	coder->C <<= 8;
-	byte_out(coder, data_compressed);
+__device__ void flush(struct gpujpeg_arithmetic_gpu_coder* coder, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
+	clear_final_bits(coder, A, C);
+    *C <<= coder->CT;
+	byte_out(coder, data_compressed, A, C);
+	*C <<= 8;
+	byte_out(coder, data_compressed, A, C);
 	if (coder->last_byte != 0) gpujpeg_qm_gpu_encoder_emit_byte(data_compressed, coder->last_byte);
 }
 
 /** Performs encoder renormalization */
-__device__ void renorm_e(struct gpujpeg_arithmetic_gpu_coder* coder, uint8_t* & data_compressed) {
+__device__ void renorm_e(struct gpujpeg_arithmetic_gpu_coder* coder, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
 	do {
-		coder->A <<= 1;
-		coder->C <<= 1;
+		*A <<= 1;
+		*C <<= 1;
 		coder->CT--;
 		if (coder->CT == 0) {
-			byte_out(coder, data_compressed);
+			byte_out(coder, data_compressed, A, C);
 			coder->CT = 8;
 		}
-	} while (coder->A < 0x8000);
+	} while (*A < 0x8000);
 }
 
 /** Estimates new Stat after LPS coding.
@@ -363,57 +360,57 @@ __device__ void estimate_Qe_after_MPS(struct gpujpeg_arithmetic_gpu_coder* coder
 }
 
 /** Codes LPS. */
-__device__ void code_LPS(struct gpujpeg_arithmetic_gpu_coder* coder, Stat* S, uint8_t* & data_compressed) {
-	coder->A -= gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e;
-	if (coder->A >= gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e) {
-		coder->C += coder->A;
-		coder->A = gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e;
+__device__ void code_LPS(struct gpujpeg_arithmetic_gpu_coder* coder, Stat* S, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
+	*A -= gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e;
+	if (*A >= gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e) {
+		*C += *A;
+		*A = gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e;
 	}
 	estimate_Qe_after_LPS(coder, S);
-	renorm_e(coder, data_compressed);
+	renorm_e(coder, data_compressed, A, C);
 }
 
 /** Codes MPS. */
-__device__ void code_MPS(struct gpujpeg_arithmetic_gpu_coder* coder, Stat* S, uint8_t* & data_compressed) {
-	coder->A -= gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e;
-	if (coder->A < 0x8000) {
-		if (coder->A < gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e) {
-			coder->C += coder->A;
-			coder->A = gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e; 
+__device__ void code_MPS(struct gpujpeg_arithmetic_gpu_coder* coder, Stat* S, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
+	*A -= gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e;
+	if (*A < 0x8000) {
+		if (*A < gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e) {
+			*C += *A;
+			*A = gpujpeg_arithmetic_gpu_encoder_state_machine[S->index].Q_e; 
 		}
 		estimate_Qe_after_MPS(coder, S);
-		renorm_e(coder, data_compressed);
+		renorm_e(coder, data_compressed, A, C);
 	}
 }
 
 /** Codes bit 1. */
-__device__ void code_1(struct gpujpeg_arithmetic_gpu_coder* coder, Stat* S, uint8_t* & data_compressed) {
+__device__ void code_1(struct gpujpeg_arithmetic_gpu_coder* coder, Stat* S, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
 	if (S->mps == 1) {
-		code_MPS(coder, S, data_compressed);
+		code_MPS(coder, S, data_compressed, A, C);
 	}
 	else {
-		code_LPS(coder, S, data_compressed);
+		code_LPS(coder, S, data_compressed, A, C);
 	}
 }
 
 /** Codes bit 0. */
-__device__ void code_0(struct gpujpeg_arithmetic_gpu_coder* coder, Stat* S, uint8_t* & data_compressed) {
+__device__ void code_0(struct gpujpeg_arithmetic_gpu_coder* coder, Stat* S, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
 	if (S->mps == 0) {
-        code_MPS(coder, S, data_compressed);
+        code_MPS(coder, S, data_compressed, A, C);
 	}
     else {
-        code_LPS(coder, S, data_compressed);
+        code_LPS(coder, S, data_compressed, A, C);
 	}
 }
 
 /** Encodes sign of DC difference. */
-__device__ int encode_sign_of_V_DC(struct gpujpeg_arithmetic_gpu_coder* coder, int S_i, const int V, uint8_t* & data_compressed) {
+__device__ int encode_sign_of_V_DC(struct gpujpeg_arithmetic_gpu_coder* coder, int S_i, const int V, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
 	if (V < 0) {
-		code_1(coder, &coder->DC_stats[coder->c_type][S_i + 1], data_compressed); // code SS
+		code_1(coder, &coder->DC_stats[coder->c_type][S_i + 1], data_compressed, A, C); // code SS
 		S_i += 3; //S = SN
 		coder->previous_diff_index[coder->current_comp] = 8; //-small
 	} else {
-		code_0(coder, &coder->DC_stats[coder->c_type][S_i + 1], data_compressed);
+		code_0(coder, &coder->DC_stats[coder->c_type][S_i + 1], data_compressed, A, C);
 		S_i += 2; // S = SP
 		coder->previous_diff_index[coder->current_comp] = 4; //+small
 	}
@@ -423,110 +420,111 @@ __device__ int encode_sign_of_V_DC(struct gpujpeg_arithmetic_gpu_coder* coder, i
 }
 
 /** Encodes sign of AC coefficient. */
-__device__ int encode_sign_of_V_AC(struct gpujpeg_arithmetic_gpu_coder* coder, int S_i, const int V, uint8_t* & data_compressed) {
+__device__ int encode_sign_of_V_AC(struct gpujpeg_arithmetic_gpu_coder* coder, int S_i, const int V, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
     if (V < 0)
-        code_1(coder, &coder->fixed, data_compressed); // code SS
+        code_1(coder, &coder->fixed, data_compressed, A, C); // code SS
     else
-        code_0(coder, &coder->fixed, data_compressed); // code SS
+        code_0(coder, &coder->fixed, data_compressed, A, C); // code SS
     return S_i + 1; // S = SP/SN
 }
 
 /** Encodes magnitude category of DC difference.  */
-__device__ int encode_log2_Sz_DC(struct gpujpeg_arithmetic_gpu_coder* coder, int Sz, int S_i, int* M, uint8_t* & data_compressed) {
+__device__ int encode_log2_Sz_DC(struct gpujpeg_arithmetic_gpu_coder* coder, int Sz, int S_i, int* M, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
 	if (Sz >= *M) {
-		code_1(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed);
+		code_1(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed, A, C);
 		*M = 2;
 		S_i = 20; // S = X1
 		if (Sz >= *M) {
-			code_1(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed);
+			code_1(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed, A, C);
 			*M = 4;
 			S_i++; // S = X2
 			while (Sz >= *M) {
-				code_1(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed);
+				code_1(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed, A, C);
 				*M <<= 1;
 				S_i++;
 			}
 		}
 	}
-	code_0(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed);
+	code_0(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed, A, C);
 	*M >>= 1;
 	return S_i;
 }
 
 /** Encodes magnitude category of AC coefficient */
-__device__ int encode_log2_Sz_AC(struct gpujpeg_arithmetic_gpu_coder* coder, int Sz, int S_i, const int K, int* M, uint8_t* & data_compressed) {
+__device__ int encode_log2_Sz_AC(struct gpujpeg_arithmetic_gpu_coder* coder, int Sz, int S_i, const int K, int* M, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
 	if (Sz >= *M) {
-        code_1(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed);
+        code_1(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed, A, C);
         *M = 2;
         if (Sz >= *M) {
-            code_1(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed);
+            code_1(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed, A, C);
             *M = 4;
             S_i = K <= 5 ? 189 : 217; // S = X2
             while (Sz >= *M) {
-                code_1(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed);
+                code_1(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed, A, C);
                 *M <<= 1;
                 S_i++;
 
             }
         }
     }
-    code_0(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed);
+    code_0(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed, A, C);
     *M >>= 1;
     return S_i;
 }
 
+
 /** Encodes value of magnitude of DC difference or AC coefficient  */
-__device__ void encode_Sz_bits(struct gpujpeg_arithmetic_gpu_coder* coder, const int Sz, int S_i, int M, bool isDC, uint8_t* & data_compressed) {
+__device__ void encode_Sz_bits(struct gpujpeg_arithmetic_gpu_coder* coder, const int Sz, int S_i, int M, bool isDC, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
 	S_i += 14;
 	while (M >>= 1) {
 		int T = M & Sz;
 		if (T == 0)
 			if (isDC)
-				code_0(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed);
+				code_0(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed, A, C);
 			else
-				code_0(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed);
+				code_0(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed, A, C);
 		else
 			if (isDC)
-				code_1(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed);
+				code_1(coder, &coder->DC_stats[coder->c_type][S_i], data_compressed, A, C);
 			else
-				code_1(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed);
+				code_1(coder, &coder->AC_stats[coder->c_type][S_i], data_compressed, A, C);
 	}
 }
 
 /** Encodes DC difference if difference is not equal to 0 */
-__device__ void encode_V_DC(struct gpujpeg_arithmetic_gpu_coder* coder, int S_i, const int V, uint8_t* & data_compressed) {
-	int s_i = encode_sign_of_V_DC(coder, S_i, V, data_compressed);
+__device__ void encode_V_DC(struct gpujpeg_arithmetic_gpu_coder* coder, int S_i, const int V, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
+	int s_i = encode_sign_of_V_DC(coder, S_i, V, data_compressed, A, C);
 	int Sz = abs(V) - 1;
 	int M = 1;
-	s_i = encode_log2_Sz_DC(coder, Sz, s_i, &M, data_compressed);
-	encode_Sz_bits(coder, Sz, s_i, M, true, data_compressed);
+	s_i = encode_log2_Sz_DC(coder, Sz, s_i, &M, data_compressed, A, C);
+	encode_Sz_bits(coder, Sz, s_i, M, true, data_compressed, A, C);
 }
 
 /** Encodes AC coefficient */
-__device__ void encode_V_AC(struct gpujpeg_arithmetic_gpu_coder* coder, int S_i, const int V, int K, uint8_t* & data_compressed) {
-	int s_i = encode_sign_of_V_AC(coder, S_i, V, data_compressed);
+__device__ void encode_V_AC(struct gpujpeg_arithmetic_gpu_coder* coder, int S_i, const int V, int K, uint8_t* & data_compressed,	int32_t *A, int32_t *C) {
+	int s_i = encode_sign_of_V_AC(coder, S_i, V, data_compressed, A, C);
     int Sz = abs(V) - 1;
 	int M = 1;
-    s_i = encode_log2_Sz_AC(coder, Sz, s_i, K, &M, data_compressed);
-    encode_Sz_bits(coder, Sz, s_i, M, false, data_compressed);
+    s_i = encode_log2_Sz_AC(coder, Sz, s_i, K, &M, data_compressed, A, C);
+    encode_Sz_bits(coder, Sz, s_i, M, false, data_compressed, A, C);
 }
 
 /** Encodes DC difference (F.1.4.1) */
-__device__ void encode_DC_diff(struct gpujpeg_arithmetic_gpu_coder* coder, const int dc, uint8_t* & data_compressed) {
+__device__ void encode_DC_diff(struct gpujpeg_arithmetic_gpu_coder* coder, const int dc, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
 	int V = dc - coder->previous_DC[coder->current_comp];
 	coder->previous_DC[coder->current_comp] = dc;
 	int S0 = coder->previous_diff_index[coder->current_comp];
 	if (V == 0) {
-		code_0(coder, &coder->DC_stats[coder->c_type][S0], data_compressed);
+		code_0(coder, &coder->DC_stats[coder->c_type][S0], data_compressed, A, C);
 		coder->previous_diff_index[coder->current_comp] = 0; //zero diff
 	} else {
-		code_1(coder, &coder->DC_stats[coder->c_type][S0], data_compressed);
-		encode_V_DC(coder, S0, V, data_compressed);
+		code_1(coder, &coder->DC_stats[coder->c_type][S0], data_compressed, A, C);
+		encode_V_DC(coder, S0, V, data_compressed, A, C);
 	}
 }
 
 /** Encodes all AC coefficients (F.1.4.2) */
-__device__ void encode_AC_coefficients(struct gpujpeg_arithmetic_gpu_coder* coder, int16_t* block, uint8_t* & data_compressed) {
+__device__ void encode_AC_coefficients(struct gpujpeg_arithmetic_gpu_coder* coder, int16_t* block, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
 	int K = 1;
 	int SE = 3 * (K - 1);
 
@@ -538,19 +536,19 @@ __device__ void encode_AC_coefficients(struct gpujpeg_arithmetic_gpu_coder* code
 
 	while(true) {
 		if (K == EOB) {
-			code_1(coder, &coder->AC_stats[coder->c_type][SE], data_compressed);
+			code_1(coder, &coder->AC_stats[coder->c_type][SE], data_compressed, A, C);
 			return;
 		} else {
-			code_0(coder, &coder->AC_stats[coder->c_type][SE], data_compressed);
+			code_0(coder, &coder->AC_stats[coder->c_type][SE], data_compressed, A, C);
 			int V = block[gpujpeg_qm_gpu_encoder_order_natural[K]];
 			while (V == 0) {
-				code_0(coder, &coder->AC_stats[coder->c_type][SE + 1], data_compressed);
+				code_0(coder, &coder->AC_stats[coder->c_type][SE + 1], data_compressed, A, C);
 				K++;
 				SE += 3;
 				V = block[gpujpeg_qm_gpu_encoder_order_natural[K]];
 			}
-			code_1(coder, &coder->AC_stats[coder->c_type][SE + 1], data_compressed);
-			encode_V_AC(coder, SE + 1, V, K, data_compressed);
+			code_1(coder, &coder->AC_stats[coder->c_type][SE + 1], data_compressed, A, C);
+			encode_V_AC(coder, SE + 1, V, K, data_compressed, A, C);
 			if (K == 63) return; // K == Se
 			K++;
 			SE = 3 * (K - 1);
@@ -558,11 +556,10 @@ __device__ void encode_AC_coefficients(struct gpujpeg_arithmetic_gpu_coder* code
 	}
 }
 
-/** Encodes 8x8 block of DCT coefficients */
-__device__ void gpujpeg_qm_cpu_encoder_encode_block(int16_t *block, struct gpujpeg_arithmetic_gpu_coder* coder,
-			uint8_t* & data_compressed) {
-	encode_DC_diff(coder, block[gpujpeg_qm_gpu_encoder_order_natural[0]], data_compressed);
-	encode_AC_coefficients(coder, block, data_compressed);
+/** Encodes 8x8  block of DCT coefficients */
+__device__ void gpujpeg_qm_cpu_encoder_encode_block(int16_t *block, struct gpujpeg_arithmetic_gpu_coder* coder, uint8_t* & data_compressed, int32_t *A, int32_t *C) {
+	encode_DC_diff(coder, block[gpujpeg_qm_gpu_encoder_order_natural[0]], data_compressed, A, C);
+	encode_AC_coefficients(coder, block, data_compressed, A, C);
 }
 
 /**
@@ -593,8 +590,8 @@ gpujpeg_qm_encoder_encode_kernel(
 
     // Initialize arithmetic coder
     struct gpujpeg_arithmetic_gpu_coder coder;
-    coder.A = 0x10000;
-    coder.C = 0;
+    int32_t A = 0x10000;
+    int32_t C = 0;
     coder.fixed.mps = 0;
     coder.fixed.index = 113;
 
@@ -616,9 +613,14 @@ gpujpeg_qm_encoder_encode_kernel(
 
             // Get component data for MCU
             int16_t* block = &component->d_data_quantized[(segment_index * component->segment_mcu_count + mcu_index) * component->mcu_size];
-			
+		
+	    // Copy block into shared memory			
+	    __shared__ int16_t sBlock[THREAD_BLOCK_SIZE][64];
+            for (int i = 0; i < 64; i++)
+		sBlock[threadIdx.x][i] = block[i];
+	
             // Encode 8x8 block
-            gpujpeg_qm_cpu_encoder_encode_block(block, &coder, data_compressed);
+            gpujpeg_qm_cpu_encoder_encode_block(sBlock[threadIdx.x], &coder, data_compressed, &A, &C);
         }
     }
     // Interleaving mode
@@ -651,8 +653,13 @@ gpujpeg_qm_encoder_encode_kernel(
                         // Get component data for MCU
                         int16_t* block = &component->d_data_quantized[data_index];
 
+			// Copy block into shared memory			
+			__shared__ int16_t sBlock[THREAD_BLOCK_SIZE][64];
+			for (int i = 0; i < 64; i++)
+				sBlock[threadIdx.x][i] = block[i];			
+
                         // Encode 8x8 block
-                        gpujpeg_qm_cpu_encoder_encode_block(block, &coder, data_compressed);
+                        gpujpeg_qm_cpu_encoder_encode_block(sBlock[threadIdx.x], &coder, data_compressed, &A, &C);
                     }
                 }
             }
@@ -660,7 +667,7 @@ gpujpeg_qm_encoder_encode_kernel(
     }
 
     // Flush arithmetic coder 
-    flush(&coder, data_compressed);
+    flush(&coder, data_compressed, &A, &C);
     // Output restart marker
     int restart_marker = GPUJPEG_MARKER_RST0 + (segment->scan_segment_index % 8);
     gpujpeg_qm_gpu_encoder_marker(data_compressed, restart_marker);
