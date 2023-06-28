@@ -218,13 +218,12 @@ parameters, and the second is structure with parameters of input image:
     gpujpeg_image_set_default_parameters(&param_image);
     param_image.width = 1920;
     param_image.height = 1080;
-    param_image.comp_count = 3;
-    // (for now, it must be 3)
-    param_image.color_space = GPUJPEG_RGB;
-    // or GPUJPEG_BT709 or GPUJPEG_YCBCR_JPEG
-    // (default value is GPUJPEG_RGB)
+    param_image.comp_count = 3; // output JPEG channel count (3 default)
+    param_image.color_space = GPUJPEG_RGB; // input colorspace (GPUJPEG_RGB
+                                           // default), can be also
+                                           // eg. GPUJPEG_YCBCR_JPEG
     param_image.pixel_format = GPUJPEG_444_U8_P012;
-    // or eg. GPUJPEG_422_U8_P1020
+    // or eg. GPUJPEG_U8 for grayscale
     // (default value is GPUJPEG_444_U8_P012)
 
 If you want to use subsampling in JPEG format call following function,
