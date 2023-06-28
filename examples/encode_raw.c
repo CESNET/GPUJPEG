@@ -1,3 +1,8 @@
+/**
+ * @file encode_raw.c
+ *
+ * Example showing GPUJPEG encode either raw RGB or raw grayscale image.
+ */
 #include <libgpujpeg/gpujpeg_encoder.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -10,15 +15,17 @@
 
 static void usage(const char *progname) {
         printf("Usage:\n");
-        printf("\t%s <width> <height> file.rgb\n", progname);
+        printf("\t%s <width> <height> file.rgb|file.r\n", progname);
 }
 
-static bool check_params(int argc, char *argv[]) {
+static enum gpujpeg_image_file_format get_filetype(int argc, char *argv[]) {
         if (argc != 4 || strrchr(argv[3], '.') == NULL) {
-                return false;
+          return GPUJPEG_IMAGE_FILE_UNKNOWN;
         }
         const char *ext = strrchr(argv[3], '.') + 1;
-        return strcasecmp(ext, "rgb") == 0;
+        return strcasecmp(ext, "rgb") == 0 ? GPUJPEG_IMAGE_FILE_RGB
+               : strcasecmp(ext, "r") == 0 ? GPUJPEG_IMAGE_FILE_GRAY
+                                           : GPUJPEG_IMAGE_FILE_UNKNOWN;
 }
 
 // to simplify deletion of allocated items on all paths
@@ -28,7 +35,7 @@ struct encode_data {
         uint8_t *input_image;
 };
 
-static int encode(int width, int height, const char *input_filename, struct encode_data *d)
+static int encode(int width, int height, int ch_count, const char *input_filename, struct encode_data *d)
 {
         // set default encode parametrs, after calling, parameters can be tuned (eg. quality)
         struct gpujpeg_parameters param;
@@ -39,8 +46,11 @@ static int encode(int width, int height, const char *input_filename, struct enco
         gpujpeg_image_set_default_parameters(&param_image);
         param_image.width = width;
         param_image.height = height;
-        param_image.comp_count = 3;
-        param_image.color_space = GPUJPEG_RGB;
+        param_image.comp_count = ch_count;
+        param_image.color_space =
+            ch_count == 1 ? GPUJPEG_YCBCR_JPEG : GPUJPEG_RGB;
+        param_image.pixel_format =
+            ch_count == 1 ? GPUJPEG_U8 : GPUJPEG_444_U8_P012;
 
         // create encoder
         if ((d->encoder = gpujpeg_encoder_create(0)) == NULL) {
@@ -74,13 +84,25 @@ static int encode(int width, int height, const char *input_filename, struct enco
 }
 
 int main(int argc, char *argv[]) {
-        if (!check_params(argc, argv)) {
+        enum gpujpeg_image_file_format ftype = get_filetype(argc, argv);
+        int ch_count = 0;
+        switch (ftype) {
+        case GPUJPEG_IMAGE_FILE_RGB:
+                ch_count = 3;
+                break;
+        case GPUJPEG_IMAGE_FILE_GRAY:
+                ch_count = 1;
+                break;
+        default:
                 usage(argv[0]);
                 return 1;
         }
 
         struct encode_data d = { 0 };
-        int rc = encode(atoi(argv[1]), atoi(argv[2]), argv[3], &d);
+        int rc = encode(atoi(argv[1]), atoi(argv[2]), ch_count, argv[3], &d);
+        if (rc == 0) {
+                printf("Written: %s\n", d.out_filename);
+        }
 
         free(d.out_filename);
         gpujpeg_image_destroy(d.input_image);
@@ -92,5 +114,3 @@ int main(int argc, char *argv[]) {
 
         return rc;
 }
-
-/* vim: set expandtab sw=4: */
