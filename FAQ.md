@@ -1,7 +1,7 @@
 # Frequently Asked Questions
 
 - [Encoding/decoding is slow in first iteration](#encodingdecoding-is-slow-in-first-iteration)
-- [What is an restart interval](#what-is-an-restart-interval)
+- [What is a restart interval](#what-is-a-restart-interval)
 - [Decoding is too slow](#decoding-is-too-slow)
 - [Encoding different color spaces than full-range YCbCr BT.601](#encoding-different-color-spaces-than-full-range-ycbcr-bt601)
 - [Optimizing encoding/decoding performance](#optimizing-encodingdecoding-performance)
@@ -18,19 +18,22 @@ a equal-sized pictures, like a video). But using for few or even single image
 will not pay off, because there is an initialization burden (let say 230 ms for
 a 33 Mpix image).
 
-## What is an restart interval
-A **restart interval** and related option in UltraGrid is a way how to
-increase paralelism to allow efficient Huffman encoding and decoding on GPU.
-It is given by the number of MCU (minmum coded units, approximately same as
-macroblocks) that can be encoded or decoded independently.
+## What is a restart interval
 
-For the _encoder_ the restart interval is given as a option (enabled by default
-with a runtime-determined value). Higher value result in smaller JPEG images
-but slower encoding. Good values are around 10 – 8 or 16 are usually a good
-bet. Disabling restart intervals (setting value to 0) causes that the Huffman
-encoding/decoding is done on CPU (while the rest is still performed by GPU). On
-larger images, the restart interval can be a bit larger because ther is more
-MCUs.
+A **restart interval** and related option in console application is a way
+to increase paralelism to allow efficient Huffman encoding and decoding on
+GPU. It is given by the number of MCU (minmum coded units, approximately
+same as macroblocks) that can be encoded or decoded independently.
+
+For the _encoder_, the restart interval is given as a member variable
+`restart_interval` of `struct gpujpeg_parameters`. Higher value result
+in smaller JPEG images but slower encoding. Good values are between 8
+(default set by gpujpeg_set_default_parameters()) or 16. Disabling restart
+intervals (setting value to 0) causes that the Huffman encoding/decoding
+is done on CPU (while the rest is still performed by GPU). On larger
+images, the restart interval can be a bit larger because there are more
+MCUs. _gpujpegtool_ provides _-r_ option (if not set, a eligible
+runtime-determined value is used).
 
 For the _decoder_ the value cannot be changed by the decoder because it is an
 attribute of the encoded JPEG.
