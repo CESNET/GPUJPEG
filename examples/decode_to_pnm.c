@@ -48,8 +48,6 @@ static int decode(const char *input_filename, struct decode_data *d)
         gpujpeg_decoder_output_set_default(&decoder_output);
 
         // decompress the image
-        uint8_t *image_decompressed = NULL;
-        size_t image_decompressed_size = 0;
         if (gpujpeg_decoder_decode(d->decoder, d->input_image, input_image_size, &decoder_output) != 0) {
                 return 1;
         }
