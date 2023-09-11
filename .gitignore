@@ -1,4 +1,5 @@
 gpujpeg
+.cache
 .libs
 src/*.o
 src/*.lo

@@ -1,0 +1,3 @@
+# https://github.com/cheshirekow/cmake_format#configuration
+format:
+  tab_size: 4
