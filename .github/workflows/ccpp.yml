@@ -24,7 +24,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, we do not need to create own token.
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@main
       if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
       with:
         persist-credentials: true
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@main
     - name: Install
       run: |
         sudo apt update
@@ -55,7 +55,7 @@ jobs:
 
     - name: Upload Archive
       if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@main
       with:
         name: GPUJPEG CI Linux build
         path: GPUJPEG
@@ -73,7 +73,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@main
     - name: install CUDA
       run: |
         choco install cuda -y --no-progress
@@ -109,14 +109,14 @@ jobs:
 
     - name: Upload Archive
       if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@main
       with:
         name: GPUJPEG CI Windows build
         path: GPUJPEG
 
     - name: Upload Installer
       if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@main
       with:
         name: GPUJPEG CI Windows installer
         path: gpujpeg-*-win64.exe
