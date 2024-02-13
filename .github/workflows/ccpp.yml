@@ -74,14 +74,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@main
-    - name: install CUDA
-      run: |
-        choco install cuda -y --no-progress
-        #$url="https://developer.download.nvidia.com/compute/cuda/12.1.0/network_installers/cuda_12.1.0_windows_network.exe"
-        #$url -match 'cuda/(?<version>[0-9]+.[0-9]+)'
-        #$version=$Matches.version
-        #Invoke-WebRequest $url -OutFile cuda_inst.exe
-        #Start-Process -FilePath "cuda_inst.exe" -ArgumentList "-s cudart_$version nvcc_$version visual_studio_integration_$version" -Wait -NoNewWindow
+    - uses: Jimver/cuda-toolkit@v0.2.14
+      id: cuda-toolkit
     - name: install NSIS
       run: choco install nsis -y --no-progress
     - name: install GLFW
