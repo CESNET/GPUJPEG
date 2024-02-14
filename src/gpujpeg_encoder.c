@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2024, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -28,6 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <assert.h>
 #include <math.h>
 #include <string.h>
 #include "../libgpujpeg/gpujpeg_encoder.h"
@@ -512,6 +513,10 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
 
                     gpujpeg_writer_write_segment_info(encoder);
 
+                    assert(encoder->writer->buffer_current +
+                               segment->data_compressed_size <=
+                           encoder->writer->buffer +
+                               encoder->writer->buffer_allocated_size);
                     // Copy compressed data to writer
                     memcpy(
                         encoder->writer->buffer_current,
