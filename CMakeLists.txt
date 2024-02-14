@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
 project(gpujpeg VERSION 0.21.0 LANGUAGES C CUDA)
 
 # options
-set(BUILD_OPENGL AUTO CACHE STRING "Build with OpenGL support, options are: AUTO ON OFF")
+set(BUILD_OPENGL OFF CACHE STRING "Build with OpenGL support, options are: AUTO ON OFF")
 set_property(CACHE BUILD_OPENGL PROPERTY STRINGS AUTO ON OFF)
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 option(CMAKE_CUDA_ARCHITECTURES "CUDA architectures to build for (needs CMake 3.18)" OFF)
