@@ -602,8 +602,14 @@ gpujpeg_idct_gpu_kernel(int16_t* source, uint8_t* result, int output_stride, uin
 		//cast float to uint8_t with saturation (.sat) which cuts values higher than 
 		//255 to 255 and smaller than 0 to 0; cuda can't use a reg smaller than 32b 
 		//(though it can convert to 8b for the saturation purposes and save to 32b reg)
-		uint32_t save;
-		asm("cvt.rni.u8.f32.sat	%0, %1;" : "=r"(save) : "f"(x[i] + ((float) 128.0)));
+		// uint32_t save;
+		// asm("cvt.rni.u8.f32.sat	%0, %1;" : "=r"(save) : "f"(x[i] + ((float) 128.0)));
+
+		// Following wokaround enables GPUJPEG with ZLUDA (see GH-90). May be slower
+		// but not measurable because perhaps the computation time is masked by global
+		// memory transfers.
+		int save = rintf(x[i] + 128.0F);
+		save = save < 0 ? 0 : save > 255 ? 255 : save;
 		((uint8_t*) tempResultP)[i] = save;
 	}
 
