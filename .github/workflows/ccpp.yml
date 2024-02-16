@@ -70,7 +70,7 @@ jobs:
   Windows:
     name: run Windows
     needs: retag-continuous
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
     - uses: actions/checkout@main
