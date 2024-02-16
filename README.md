@@ -1,7 +1,9 @@
 GPUJPEG
 =======
 **JPEG** encoder and decoder library and console application for **NVIDIA GPUs**
-for high-performance image encoding and decoding.
+for high-performance image encoding and decoding. The software runs also on
+**AMD GPUs** using [ZLUDA](https://github.com/vosen/ZLUDA) (see
+[ZLUDA.md](ZLUDA.md)).
 
 This documents provides an introduction to the library and how to use it. You
 can also look to [FAQ.md](FAQ.md) for additional information. To see _latest changes_
@@ -90,11 +92,12 @@ iteration) with following command:
 
 ### Encoding
 
-| GPU \ resolution | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
-|------------------|-------------|-------------|--------------|----------------|
-|    GTX 3080      |   0.54 ms   |   1.71 ms   |    6.20 ms   |   24.48 ms     |
-|    GTX 1060M     |   1.36 ms   |   4.55 ms   |   17.34 ms   |  _(low mem)_   |
-|    GTX 580       |   2.38 ms   |   8.68 ms   |  _(low mem)_ |  _(low mem)_   |
+|      GPU \ resolution      | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
+|----------------------------|-------------|-------------|--------------|----------------|
+|          GTX 3080          |   0.54 ms   |   1.71 ms   |    6.20 ms   |    24.48 ms    |
+|          GTX 1060M         |   1.36 ms   |   4.55 ms   |   17.34 ms   |  _(low mem)_   |
+|          GTX 580           |   2.38 ms   |   8.68 ms   |  _(low mem)_ |  _(low mem)_   |
+| AMD Radeon RX 7600 [ZLUDA] |   0.88 ms   |   3.16 ms   |   13.09 ms   |    50.52 ms    |
 
 **Note:** First iteration took _233 ms_ for 8K on GTX 3080 and scales proportionally with
 respect to resolution.
@@ -120,11 +123,12 @@ taking 99 samples excluding the first one. Command used:
 
     gpujpegtool -v mediavision_frame_<res>.jpg output.pnm -n 100
 
-| GPU \ resolution | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
-|------------------|-------------|-------------|--------------|----------------|
-|    GTX 3080      |   0.75 ms   |   1.94 ms   |   6.76 ms    |   31.50 ms     |
-|    GTX 1060M     |   1.68 ms   |   4.81 ms   |  17.56 ms    |  _(low mem)_   |
-|    GTX 580       |   2.61 ms   |   7.96 ms   | _(low mem)_  |  _(low mem)_   |
+|       GPU \ resolution     | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
+|----------------------------|-------------|-------------|--------------|----------------|
+|          GTX 3080          |   0.75 ms   |   1.94 ms   |    6.76 ms   |    31.50 ms    |
+|          GTX 1060M         |   1.68 ms   |   4.81 ms   |   17.56 ms   |  _(low mem)_   |
+|          GTX 580           |   2.61 ms   |   7.96 ms   | _(low mem)_  |  _(low mem)_   |
+| AMD Radeon RX 7600 [ZLUDA] |   1.00 ms   |   3.02 ms   |   11.25 ms   |    45.06 ms    |
 
 **Note**: _(low mem)_ above means that the card didn't have sufficient memory to
 encode or decode the picture.
@@ -447,9 +451,10 @@ application** you need:
 
 1. NVIDIA **CUDA Toolkit**
 2. **C/C++ compiler** + **CMake**
-3. NVIDIA **drivers**
-4. CUDA enabled **NVIDIA GPU** (cc >= 2.0; older may or may not work)
-5. _optional_ **OpenGL** support:
+3. CUDA enabled **NVIDIA GPU** (cc >= 2.0; older may or may not work) with
+   NVIDIA drivers _or_ AMD with [ZLUDA](https://github.com/vosen/ZLUDA)
+   (see [ZLUDA.md](ZLUDA.md))
+4. _optional_ **OpenGL** support:
    - _GLEW_, _OpenGL_ (usually present in Windows, may need headers installation in Linux)
    - _GLFW_ or _GLX_ (Linux only) for context creation
    - _GLUT_ for OpenGL tests
