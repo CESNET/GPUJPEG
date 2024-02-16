@@ -5,8 +5,9 @@ ZLUDA support
 [ZLUDA](https://github.com/vosen/ZLUDA), which includes GPUJPEG.
 
 To enable the **CUDA** support on AMD devices, follow the instructions
-described on the linked page. It is sufficient to download the binary
-build (at least as for the version 3) and use as described.
+described on the linked page. It is sufficient to download the
+[binary build](https://github.com/vosen/ZLUDA/releases)
+(at least as for the version 3) and use as described.
 
 Below follow the platform specific notes.
 
@@ -26,3 +27,9 @@ Windows
 
 1. current AMD drivers
 2. ZLUDA build
+3. run the executable (eg. _gpujpegtool_) [with
+   zluda.exe](https://github.com/vosen/ZLUDA?tab=readme-ov-file#windows)
+
+**Note:** Windows antivirus sometimes tends to remove the zluda.exe
+executable when extracted the downloaded ZIP. This can be easilly spotted
+when there are just the DLLs extracted.
