@@ -88,13 +88,14 @@ Encoding was done with default values with input in RGB (quality **75**,
 **non-interleaved**, rst 24-36, average from 99 measurements excluding first
 iteration) with following command:
 
-    gpujpegtool -v -e mediavision_frame_<res>.pnm mediavision_frame_<res>.jpg -n 100 [-q <Q>]
+    gpujpegtool -v -e mediadivision_frame_<res>.pnm mediadivision_frame_<res>.jpg -n 100 [-q <Q>]
 
 ### Encoding
 
 |      GPU \ resolution      | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
 |----------------------------|-------------|-------------|--------------|----------------|
 |          GTX 3080          |   0.54 ms   |   1.71 ms   |    6.20 ms   |    24.48 ms    |
+|          GTX 2080 Ti       |   0.82 ms   |   2.89 ms   |   11.15 ms   |    46.23 ms    |
 |          GTX 1060M         |   1.36 ms   |   4.55 ms   |   17.34 ms   |  _(low mem)_   |
 |          GTX 580           |   2.38 ms   |   8.68 ms   |  _(low mem)_ |  _(low mem)_   |
 | AMD Radeon RX 7600 [ZLUDA] |   0.88 ms   |   3.16 ms   |   13.09 ms   |    50.52 ms    |
@@ -126,6 +127,7 @@ taking 99 samples excluding the first one. Command used:
 |       GPU \ resolution     | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
 |----------------------------|-------------|-------------|--------------|----------------|
 |          GTX 3080          |   0.75 ms   |   1.94 ms   |    6.76 ms   |    31.50 ms    |
+|          GTX 2080 Ti       |   1.02 ms   |   1.07 ms   |   11.29 ms   |    44.42 ms    |
 |          GTX 1060M         |   1.68 ms   |   4.81 ms   |   17.56 ms   |  _(low mem)_   |
 |          GTX 580           |   2.61 ms   |   7.96 ms   | _(low mem)_  |  _(low mem)_   |
 | AMD Radeon RX 7600 [ZLUDA] |   1.00 ms   |   3.02 ms   |   11.25 ms   |    45.06 ms    |
