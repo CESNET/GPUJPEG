@@ -25,13 +25,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "../gpujpeg_common_internal.h" // GPUJPEG_ASSERT
 #include "image_delegate.h"
 #include "pam.h"
 #include "y4m.h"
+
+enum {
+  DEPTH_8B = 8,
+  MAXVAL_8B = 255,
+};
 
 static int pam_load_delegate(const char *filename, size_t *image_size, void **image_data, allocator_t alloc) {
     struct pam_metadata info;
@@ -49,6 +54,14 @@ static int pam_probe_delegate(const char *filename, struct gpujpeg_image_paramet
     }
     struct pam_metadata info;
     if (!pam_read(filename, &info, NULL, NULL)) {
+        return GPUJPEG_ERROR;
+    }
+    if (info.maxval != MAXVAL_8B) {
+        fprintf(
+            stderr,
+            "[GPUJPEG] [Error] PAM image %s reports %d levels but only 255 are "
+            "currently supported!\n",
+            filename, info.maxval);
         return GPUJPEG_ERROR;
     }
     param_image->width = info.width;
@@ -121,7 +134,13 @@ static int y4m_probe_delegate(const char *filename, struct gpujpeg_image_paramet
     }
     param_image->width = info.width;
     param_image->height = info.height;
-    GPUJPEG_ASSERT(info.bitdepth == 8);
+    if (info.bitdepth != DEPTH_8B) {
+        fprintf(stderr,
+                "[GPUJPEG] [Error] Currently only 8-bit Y4M pictures are "
+                "supported but %s has %d bits!\n",
+                filename, info.bitdepth);
+        return GPUJPEG_ERROR;
+    }
     switch (info.subsampling) {
         case Y4M_SUBS_MONO:
             param_image->pixel_format = GPUJPEG_U8;
@@ -139,7 +158,8 @@ static int y4m_probe_delegate(const char *filename, struct gpujpeg_image_paramet
             fprintf(stderr, "Planar YCbCr with alpha is not currently supported!\n");
             return -1;
         default:
-            GPUJPEG_ASSERT(0 && "Wrong subsamplig in Y4M!");
+            fprintf(stderr, "[GPUJPEG] [Error] Unknown subsamplig in Y4M!\n");
+            return GPUJPEG_ERROR;
     }
     param_image->color_space = info.limited ? GPUJPEG_YCBCR_BT601 : GPUJPEG_YCBCR_BT601_256LVLS;
     return 0;
