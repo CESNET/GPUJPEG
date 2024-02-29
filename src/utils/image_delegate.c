@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023, CESNET z.s.p.o
+ * Copyright (c) 2020-2024, CESNET z.s.p.o
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,6 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
 #include <string.h>
 
 #include "../gpujpeg_common_internal.h" // GPUJPEG_ASSERT
@@ -47,28 +48,25 @@ static int pam_probe_delegate(const char *filename, struct gpujpeg_image_paramet
         return 0;
     }
     struct pam_metadata info;
-    if (pam_read(filename, &info, NULL, NULL)) {
-        param_image->width = info.width;
-        param_image->height = info.height;
-        switch (info.depth) {
-        case 4:
-            param_image->pixel_format = GPUJPEG_444_U8_P012A;
-            break;
-        case 3:
-            param_image->pixel_format = GPUJPEG_444_U8_P012;
-            break;
-        case 1:
-            param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
-            param_image->pixel_format = GPUJPEG_U8;
-            break;
-        default:
-            fprintf(stderr, "Wrong pam component count %d!\n", info.depth);
-            return GPUJPEG_ERROR;
-        }
-    } else {
-        param_image->width = 0;
-        param_image->height = 0;
-        param_image->pixel_format = GPUJPEG_PIXFMT_NONE;
+    if (!pam_read(filename, &info, NULL, NULL)) {
+        return GPUJPEG_ERROR;
+    }
+    param_image->width = info.width;
+    param_image->height = info.height;
+    switch (info.depth) {
+    case 4:
+        param_image->pixel_format = GPUJPEG_444_U8_P012A;
+        break;
+    case 3:
+        param_image->pixel_format = GPUJPEG_444_U8_P012;
+        break;
+    case 1:
+        param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+        param_image->pixel_format = GPUJPEG_U8;
+        break;
+    default:
+        fprintf(stderr, "Wrong pam component count %d!\n", info.depth);
+        return GPUJPEG_ERROR;
     }
     return 0;
 }
