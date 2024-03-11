@@ -1,0 +1,7 @@
+AlwaysBreakAfterReturnType: All
+BreakBeforeBraces: Stroustrup
+IndentWidth: 4
+PointerAlignment: Left
+SpacesInParens: Custom
+SpacesInParensOptions:
+  InConditionalStatements: true
