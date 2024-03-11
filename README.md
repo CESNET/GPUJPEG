@@ -236,7 +236,7 @@ If you want to use subsampling in JPEG format call following function,
 that will set default sampling factors (2x2 for Y, 1x1 for Cb and Cr):
 
     // Use default sampling factors
-    gpujpeg_parameters_chroma_subsampling(&param);
+    gpujpeg_parameters_chroma_subsampling(&param, GPUJPEG_SUBSAMPLING_420);
 
 Or define sampling factors by hand:
 
