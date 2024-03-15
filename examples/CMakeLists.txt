@@ -6,6 +6,9 @@ find_package(GPUJPEG REQUIRED)
 add_executable(encode encode.c)
 target_link_libraries(encode gpujpeg)
 
+add_executable(encode_minimal encode_minimal.c)
+target_link_libraries(encode_minimal gpujpeg)
+
 add_executable(encode_raw encode_raw.c)
 target_link_libraries(encode_raw gpujpeg)
 
