@@ -267,7 +267,7 @@ already allocated and encoder will used them for every image. Now we need
 raw image data that we can encode by encoder, for example we can load it
 from file:
 
-    int image_size = 0;
+    size_t image_size = 0;
     uint8_t* input_image = NULL;
     if ( gpujpeg_image_load_from_file("input_image.rgb", &input_image,
              &image_size) != 0 )
@@ -337,7 +337,7 @@ even the first image:
 
 If you want to specify output image color space and/or subsampling factor,
 you can use following two parameters. You can specify them though the
-param structure befor passing it to `gpujpeg_decoder_init`. But if you
+param structure before passing it to `gpujpeg_decoder_init`. But if you
 postpone this initialization process to the first image, you have no
 other option than specify them in this way:
 
@@ -348,7 +348,7 @@ other option than specify them in this way:
 Next we have to load JPEG image data from file and decoded it to raw
 image data:
 
-    int image_size = 0;
+    size_t image_size = 0;
     uint8_t* image = NULL;
     if ( gpujpeg_image_load_from_file("input_image.jpg", &image,
              &image_size) != 0 )
