@@ -492,7 +492,7 @@ main(int argc, char *argv[])
         for ( int index = 0; index < argc; index += 2 ) {
             // Get and check input and output image
             const char* input = argv[index];
-            const char* output = argv[index + 1];
+            char* output = argv[index + 1];
             enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
             enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
             if ( (input_format >= GPUJPEG_IMAGE_FILE_RAW) == 0 ) {
@@ -652,7 +652,7 @@ main(int argc, char *argv[])
         for ( int index = 0; index < argc; index += 2 ) {
             // Get and check input and output image
             const char* input = argv[index];
-            const char* output = argv[index + 1];
+            char* output = argv[index + 1];
             if ( encode == 1 ) {
                 static char buffer_output[255];
                 if ( param_image.color_space != GPUJPEG_RGB ) {

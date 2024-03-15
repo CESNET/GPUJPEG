@@ -363,7 +363,13 @@ GPUJPEG_API int
 gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* image_size);
 
 /**
- * Save RGB image to file
+ * Save image to a file
+ *
+ * File format is deduced from the filename extension (if any).
+ *
+ * Use the extension "XXX" (eg. "image.XXX") to automatically select the
+ * extension according to param_image. PNM is used for grayscale or RGB, Y4M
+ * ottherwise. "XXX" placeholder in filename is replaced with used extension.
  *
  * @param filaname  Image filename
  * @param image  Image data buffer
@@ -372,7 +378,7 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* imag
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_image_save_to_file(const char* filename, uint8_t* image, size_t image_size, const struct gpujpeg_image_parameters *param_image);
+gpujpeg_image_save_to_file(char* filename, uint8_t* image, size_t image_size, const struct gpujpeg_image_parameters *param_image);
 
 /**
  * Reads/obtains properties from uncompressed file (PNM etc.)

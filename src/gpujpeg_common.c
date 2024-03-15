@@ -1134,8 +1134,19 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* imag
 
 /* Documented at declaration */
 int
-gpujpeg_image_save_to_file(const char* filename, uint8_t* image, size_t image_size, const struct gpujpeg_image_parameters *param_image)
+gpujpeg_image_save_to_file(char *filename, uint8_t *image, size_t image_size,
+                           const struct gpujpeg_image_parameters *param_image)
 {
+    // replace .XXX with eligible extension
+    if (strrchr(filename, '.') != NULL &&
+        strcmp(strrchr(filename, '.'), ".XXX") == 0) {
+        strcpy(strrchr(filename, '.') + 1,
+               param_image->pixel_format == GPUJPEG_U8 ||
+                       param_image->color_space == GPUJPEG_RGB
+                   ? "pnm"
+                   : "y4m");
+    }
+
     enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
     image_save_delegate_t image_save_delegate = gpujpeg_get_image_save_delegate(format);
     if (param_image && image_save_delegate) {
