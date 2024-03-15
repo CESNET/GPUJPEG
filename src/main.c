@@ -781,12 +781,7 @@ main(int argc, char *argv[])
             duration = gpujpeg_get_time();
 
             // Save image
-            struct gpujpeg_image_parameters decoded_param_image = { 0 };
-            struct gpujpeg_parameters decoded_param = { .verbose = param.verbose };
-            gpujpeg_decoder_get_image_info(image, image_size, &decoded_param_image, &decoded_param, NULL);
-            decoded_param_image.color_space = decoder_output.color_space;
-            decoded_param_image.pixel_format = decoder_output.pixel_format;
-            if ( gpujpeg_image_save_to_file(output, data, data_size, &decoded_param_image) != 0 ) {
+            if ( gpujpeg_image_save_to_file(output, data, data_size, &decoder_output.param_image) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", output);
                 ret = EXIT_FAILURE; continue;
             }

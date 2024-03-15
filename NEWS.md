@@ -1,3 +1,9 @@
+2024-03-15 - 0.22.0
+----------
+- support for ZLUDA
+- updated API - provide more information about the decompressed image in
+  gpujpeg_decoder_output, namely the image size
+
 2023-06-02 - 0.21.0
 ----------
 - support for larger images - until now, only pictures up to approx. 85 MP were

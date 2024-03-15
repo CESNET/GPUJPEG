@@ -331,8 +331,10 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
 
     // Set decompressed image size
     output->data_size = coder->data_raw_size * sizeof(uint8_t);
-    output->color_space = decoder->coder.param_image.color_space != GPUJPEG_NONE ? decoder->coder.param_image.color_space : decoder->coder.param.color_space_internal;
-    output->pixel_format = decoder->coder.param_image.pixel_format;
+    output->param_image = decoder->coder.param_image;
+    if (output->param_image.color_space == GPUJPEG_NONE) {
+        output->param_image.color_space = decoder->coder.param.color_space_internal;
+    }
 
     // Set decompressed image
     if (output->type == GPUJPEG_DECODER_OUTPUT_INTERNAL_BUFFER) {
