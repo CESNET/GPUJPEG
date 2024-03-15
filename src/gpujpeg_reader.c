@@ -1453,7 +1453,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
                        decoder->comp_id, &image, image_end) != 0 ) {
                 return -1;
             }
-            if ( decoder->reader->param_image.pixel_format <= GPUJPEG_PIXFMT_NONE ) {
+            if ( decoder->reader->param_image.pixel_format <= GPUJPEG_PIXFMT_AUTODETECT ) {
                 decoder->reader->param_image.pixel_format = adjust_pixel_format(&decoder->reader->param, &decoder->reader->param_image);
             }
             break;

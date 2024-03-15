@@ -110,6 +110,7 @@ gpujpeg_decoder_create(cudaStream_t stream)
     coder->param_image.comp_count = 0;
     coder->param_image.width = 0;
     coder->param_image.height = 0;
+    coder->param_image.pixel_format = GPUJPEG_PIXFMT_AUTODETECT;
     coder->param.restart_interval = 0;
 
     int result = 1;
