@@ -335,15 +335,15 @@ even the first image:
     // Pre initialize decoder before decoding
     gpujpeg_decoder_init(decoder, &param, &param_image);
 
-If you want to specify output image color space and/or subsampling factor,
-you can use following two parameters. You can specify them though the
-param structure before passing it to `gpujpeg_decoder_init`. But if you
-postpone this initialization process to the first image, you have no
-other option than specify them in this way:
+If you didn't initialize the decoder by `gpujpeg_decoder_init` but want
+to specify output image color space and subsampling factor, you can use
+following code:
 
     gpujpeg_decoder_set_output_format(decoder, GPUJPEG_RGB,
                     GPUJPEG_444_U8_P012);
     // or eg. GPUJPEG_YCBCR_JPEG and GPUJPEG_422_U8_P1020
+
+If not called, RGB or grayscale is output depending on JPEG channel count.
 
 Next we have to load JPEG image data from file and decoded it to raw
 image data:
