@@ -103,7 +103,10 @@ int pampnm_save_delegate(const char *filename, const struct gpujpeg_image_parame
         depth = 4;
         break;
     default:
-        fprintf(stderr, "Wrong pixel format %s for PAM! Only planar formats are supported.\n", gpujpeg_pixel_format_get_name(param_image->pixel_format));
+        fprintf(stderr,
+                "Wrong pixel format %s for PAM/PNM! Only packed formats "
+                "without subsampling are supported.\n",
+                gpujpeg_pixel_format_get_name(param_image->pixel_format));
         return -1;
     }
 
