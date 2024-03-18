@@ -309,7 +309,7 @@ gpujpeg_huffman_cpu_encoder_encode(struct gpujpeg_encoder* encoder)
     
     // Set mcu component count
     if ( encoder->coder.param.interleaved == 1 )
-        coder.comp_count = encoder->coder.param_image.comp_count;
+        coder.comp_count = encoder->coder.param.comp_count;
     else
         coder.comp_count = 1;
     assert(coder.comp_count >= 1 && coder.comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);

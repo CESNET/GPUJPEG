@@ -123,6 +123,10 @@ static const struct {
     { GPUJPEG_444_U8_P012A,  0,               4, 4, "444-u8-p012a", { 1, 1, 1, 1, 1, 1, 1, 1 } },
 };
 
+enum {
+    GPUJPEG_3_COMPONENTS = 3,
+};
+
 /* Documented at declaration */
 struct gpujpeg_devices_info
 gpujpeg_get_devices_info(void)
@@ -269,6 +273,7 @@ gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
     param->restart_interval = 8;
     param->interleaved = 0;
     param->segment_info = 0;
+    param->comp_count = GPUJPEG_3_COMPONENTS;
     for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ ) {
         param->sampling_factor[comp].horizontal = 1;
         param->sampling_factor[comp].vertical = 1;
@@ -279,7 +284,8 @@ gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
 static void
 do_gpujpeg_parameters_chroma_subsampling_444(struct gpujpeg_parameters* param)
 {
-    for (int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++) {
+    param->comp_count = GPUJPEG_3_COMPONENTS;
+    for ( int comp = 0; comp < param->comp_count; comp++ ) {
         param->sampling_factor[comp].horizontal = 1;
         param->sampling_factor[comp].vertical = 1;
     }
@@ -288,8 +294,9 @@ do_gpujpeg_parameters_chroma_subsampling_444(struct gpujpeg_parameters* param)
 static void
 do_gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param)
 {
-    for (int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++) {
-        if (comp == 0 || comp == 3) {
+    param->comp_count = GPUJPEG_3_COMPONENTS;
+    for ( int comp = 0; comp < param->comp_count; comp++ ) {
+        if ( comp == 0 ) {
             param->sampling_factor[comp].horizontal = 2;
         }
         else {
@@ -302,8 +309,9 @@ do_gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param)
 static void
 do_gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param)
 {
-    for (int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++) {
-        if (comp == 0 || comp == 3) {
+    param->comp_count = GPUJPEG_3_COMPONENTS;
+    for ( int comp = 0; comp < param->comp_count; comp++ ) {
+        if (comp == 0) {
             param->sampling_factor[comp].horizontal = 2;
             param->sampling_factor[comp].vertical = 2;
         }
@@ -349,7 +357,8 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, int subs
 int
 gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpujpeg_parameters *p2)
 {
-    if (p1->quality != p2->quality ||
+    if ( p1->comp_count != p2->comp_count ||
+            p1->quality != p2->quality ||
             p1->restart_interval != p2->restart_interval ||
             p1->interleaved != p2->interleaved ||
             p1->segment_info != p2->segment_info ||
@@ -357,7 +366,7 @@ gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpu
         return 0;
     }
 
-    for (int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++) {
+    for ( int comp = 0; comp < p1->comp_count; comp++ ) {
         if (p1->sampling_factor[comp].horizontal != p2->sampling_factor[comp].horizontal ||
                 p1->sampling_factor[comp].vertical != p2->sampling_factor[comp].vertical) {
             return 0;
@@ -373,7 +382,6 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
 {
     param->width = 0;
     param->height = 0;
-    param->comp_count = 3;
     param->color_space = GPUJPEG_RGB;
     param->pixel_format = GPUJPEG_444_U8_P012;
 }
@@ -383,7 +391,6 @@ gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , cons
 {
     return p1->width == p2->width &&
         p1->height == p2->height &&
-        p1->comp_count == p2->comp_count &&
         p1->color_space == p2->color_space &&
         p1->pixel_format == p2->pixel_format;
 }
@@ -546,7 +553,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     coder->param = *param;
 
     // Allocate color components
-    if (param_image->comp_count > coder->component_allocated_size) {
+    if ( param->comp_count > coder->component_allocated_size ) {
         coder->component_allocated_size = 0;
 
         // (Re)allocate color components in host memory
@@ -554,7 +561,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
             cudaFreeHost(coder->component);
             coder->component = NULL;
         }
-        cudaMallocHost((void**)&coder->component, param_image->comp_count * sizeof(struct gpujpeg_component));
+        cudaMallocHost((void**)&coder->component, param->comp_count * sizeof(struct gpujpeg_component));
         gpujpeg_cuda_check_error("Coder color component host allocation", return 0);
 
         // (Re)allocate color components in device memory
@@ -562,10 +569,10 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
             cudaFree(coder->d_component);
             coder->d_component = NULL;
         }
-        cudaMalloc((void**)&coder->d_component, param_image->comp_count * sizeof(struct gpujpeg_component));
+        cudaMalloc((void**)&coder->d_component, param->comp_count * sizeof(struct gpujpeg_component));
         gpujpeg_cuda_check_error("Coder color component device allocation", return 0);
 
-        coder->component_allocated_size = param_image->comp_count;
+        coder->component_allocated_size = param->comp_count;
     }
     allocated_gpu_memory_size += coder->component_allocated_size * sizeof(struct gpujpeg_component);
 
@@ -576,7 +583,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     coder->data_size = 0;
     coder->sampling_factor.horizontal = 0;
     coder->sampling_factor.vertical = 0;
-    for (int comp = 0; comp < coder->param_image.comp_count; comp++) {
+    for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
         // Get component
         struct gpujpeg_component* component = &coder->component[comp];
 
@@ -660,11 +667,11 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     coder->segment_count = 0;
     coder->data_compressed_size = 0;
     if ( coder->param.interleaved == 1 ) {
-        assert(coder->param_image.comp_count > 0);
+        assert(coder->param.comp_count > 0);
         coder->mcu_count = coder->component[0].mcu_count;
         coder->segment_count = coder->component[0].segment_count;
         coder->segment_mcu_count = coder->component[0].segment_mcu_count;
-        for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
+        for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
             struct gpujpeg_component* component = &coder->component[comp];
             assert(coder->mcu_count == component->mcu_count);
             assert(coder->segment_mcu_count == component->segment_mcu_count);
@@ -672,11 +679,11 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
             coder->mcu_compressed_size += component->mcu_compressed_size;
         }
     } else {
-        assert(coder->param_image.comp_count > 0);
+        assert(coder->param.comp_count > 0);
         coder->mcu_size = coder->component[0].mcu_size;
         coder->mcu_compressed_size = coder->component[0].mcu_compressed_size;
         coder->segment_mcu_count = 0;
-        for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
+        for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
             struct gpujpeg_component* component = &coder->component[comp];
             assert(coder->mcu_size == component->mcu_size);
             assert(coder->mcu_compressed_size == component->mcu_compressed_size);
@@ -739,7 +746,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     else {
         // Prepare segments for encoding (one scan for each color component)
         int index = 0;
-        for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
+        for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
             // Get component
             struct gpujpeg_component* component = &coder->component[comp];
             // Prepare component segments
@@ -775,7 +782,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     if ( coder->param.verbose >= 1 ) {
         int structures_size = 0;
         structures_size += coder->segment_count * sizeof(struct gpujpeg_segment);
-        structures_size += coder->param_image.comp_count * sizeof(struct gpujpeg_component);
+        structures_size += coder->param.comp_count * sizeof(struct gpujpeg_component);
         size_t total_size = 0;
         total_size += structures_size;
         total_size += coder->data_raw_size;
@@ -851,7 +858,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     int16_t* d_comp_data_quantized = coder->d_data_quantized;
     int16_t* comp_data_quantized = coder->data_quantized;
     unsigned int data_quantized_index = 0;
-    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
+    for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
         struct gpujpeg_component* component = &coder->component[comp];
         component->d_data = d_comp_data;
         component->d_data_quantized = d_comp_data_quantized;
@@ -901,7 +908,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
 
     // Allocate block lists in host memory
     coder->block_count = 0;
-    for (int comp = 0; comp < coder->param_image.comp_count; comp++) {
+    for (int comp = 0; comp < coder->param.comp_count; comp++) {
         coder->block_count += (coder->component[comp].data_width * coder->component[comp].data_height) / (8 * 8);
     }
     if (coder->block_count > coder->block_allocated_size) {
@@ -931,7 +938,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     int block_idx = 0;
     int comp_count = 1;
     if ( coder->param.interleaved == 1 ) {
-        comp_count = coder->param_image.comp_count;
+        comp_count = coder->param.comp_count;
     }
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     for (int segment_idx = 0; segment_idx < coder->segment_count; segment_idx++) {
@@ -987,7 +994,8 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     assert(block_idx == coder->block_count);
 
     // Copy components to device memory
-    cudaMemcpyAsync(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(coder->d_component, coder->component, coder->param.comp_count * sizeof(struct gpujpeg_component),
+                    cudaMemcpyHostToDevice, stream);
     gpujpeg_cuda_check_error("Coder component copy", return 0);
 
     // Copy block lists to device memory
@@ -1073,15 +1081,16 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
     if (bpp != 0) {
         return (size_t) param->width * param->height * bpp;
     }
-    switch (param->pixel_format) {
+    const int comp_count = gpujpeg_pixel_format_get_comp_count(param->pixel_format);
+    switch ( param->pixel_format ) {
     case GPUJPEG_444_U8_P0P1P2:
-        assert(param->comp_count == 3);
-        return (size_t) param->width * param->height * param->comp_count;
+        assert(comp_count == 3);
+        return (size_t) param->width * param->height * comp_count;
     case GPUJPEG_422_U8_P0P1P2:
-        assert(param->comp_count == 3);
+        assert(comp_count == 3);
         return (size_t) param->width * param->height + (size_t) 2 * ((param->width + 1) / 2) * param->height;
     case GPUJPEG_420_U8_P0P1P2:
-        assert(param->comp_count == 3);
+        assert(comp_count == 3);
         return (size_t) param->width * param->height + (size_t) 2 * ((param->width + 1) / 2) * ((param->height + 1) / 2);
     default:
         assert(0);

@@ -1,3 +1,9 @@
+2024-03-18 - 0.23.0
+----------
+- moved comp_count from gpujpeg_image_parameters to gpujpeg_parameters. Being
+  in image parameter was from historic reasons but has been replaced by pixel
+  format. The comp_count now represents rather count of components inside JPEG.
+
 2024-03-15 - 0.22.0
 ----------
 - support for ZLUDA

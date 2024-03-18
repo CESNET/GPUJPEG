@@ -765,7 +765,7 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
     int precision = (int)gpujpeg_reader_read_byte(*image);
     param_image->height = (int)gpujpeg_reader_read_2byte(*image);
     param_image->width = (int)gpujpeg_reader_read_2byte(*image);
-    param_image->comp_count = (int)gpujpeg_reader_read_byte(*image);
+    param->comp_count = (int)gpujpeg_reader_read_byte(*image);
     length -= 6;
 
     if ( precision != 8 ) {
@@ -773,7 +773,7 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
         return -1;
     }
 
-    for ( int comp = 0; comp < param_image->comp_count; comp++ ) {
+    for ( int comp = 0; comp < param->comp_count; comp++ ) {
         int id = (int)gpujpeg_reader_read_byte(*image);
         comp_id[comp] = id;
 
@@ -791,7 +791,7 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
     }
 
     // Deduce color space if not known from headers
-    enum gpujpeg_color_space detected_color_space = gpujpeg_reader_process_cid(param_image->comp_count, comp_id, header_color_space);
+    enum gpujpeg_color_space detected_color_space = gpujpeg_reader_process_cid(param->comp_count, comp_id, header_color_space);
     if (header_color_space == GPUJPEG_NONE && detected_color_space != GPUJPEG_NONE) {
         VERBOSE_MSG(param->verbose, "Deduced color space %s.\n", gpujpeg_color_space_get_name(detected_color_space));
         param->color_space_internal = detected_color_space;
@@ -1152,7 +1152,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
         decoder->reader->param.interleaved = 0;
     }
     // Interleaved mode
-    else if ( comp_count == decoder->reader->param_image.comp_count ) {
+    else if ( comp_count == decoder->reader->param.comp_count ) {
         if ( decoder->reader->comp_count != 0 ) {
             fprintf(stderr, "[GPUJPEG] [Error] SOS marker component count %d is not supported for multiple scans!\n", comp_count);
             return -1;
@@ -1175,9 +1175,9 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
 
     // Check maximum component count
     decoder->reader->comp_count += comp_count;
-    if ( decoder->reader->comp_count > decoder->reader->param_image.comp_count ) {
+    if ( decoder->reader->comp_count > decoder->reader->param.comp_count ) {
         fprintf(stderr, "[GPUJPEG] [Error] SOS marker component count for all scans %d exceeds maximum component count %d!\n",
-            decoder->reader->comp_count, decoder->reader->param_image.comp_count);
+            decoder->reader->comp_count, decoder->reader->param.comp_count);
     }
 
     // Collect the component-spec parameters
@@ -1194,7 +1194,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, uint8_t** image, uint8_
         int table_ac = table & 15;
 
         int component_index = -1;
-        for ( int i = 0; i < decoder->reader->param_image.comp_count; ++i ) {
+        for ( int i = 0; i < decoder->reader->param.comp_count; ++i ) {
             if (decoder->comp_id[i] == comp_id) {
                 component_index = i;
                 break;
@@ -1360,15 +1360,15 @@ static _Bool sampling_factor_compare(int count, struct gpujpeg_component_samplin
 
 static enum gpujpeg_pixel_format
 adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image) {
-    if (param_image->comp_count == 1) {
+    if ( param->comp_count == 1 ) {
         return GPUJPEG_U8;
     }
 
     if (param_image->pixel_format == GPUJPEG_PIXFMT_PLANAR_STD) {
-        if (param_image->comp_count == 4) {
-            param_image->comp_count = 3;
+        if ( param->comp_count == 4 ) {
+            param->comp_count = 3;
         }
-        GPUJPEG_ASSERT(param_image->comp_count == 3);
+        GPUJPEG_ASSERT(param->comp_count == 3);
         struct gpujpeg_parameters tmp;
         gpujpeg_parameters_chroma_subsampling(&tmp, GPUJPEG_SUBSAMPLING_420);
         if (sampling_factor_compare(3, param->sampling_factor, tmp.sampling_factor)) {
@@ -1381,7 +1381,7 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
         return GPUJPEG_444_U8_P0P1P2;
     }
 
-    switch (param_image->comp_count) {
+    switch (param->comp_count) {
         case 3: return GPUJPEG_444_U8_P012;
         case 4: return param_image->pixel_format == GPUJPEG_PIXFMT_NO_ALPHA ? GPUJPEG_444_U8_P012 : GPUJPEG_444_U8_P012A;
         default: GPUJPEG_ASSERT(0 && "Unhandled JPEG internal component count detected!");
@@ -1642,10 +1642,10 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
 
     param_image->pixel_format = GPUJPEG_PIXFMT_NONE;
 
-    if (param_image->comp_count == 1) {
+    if ( param->comp_count == 1 ) {
         param_image->pixel_format = GPUJPEG_U8;
     }
-    if (param_image->comp_count == 3) {
+    if ( param->comp_count == 3 ) {
         // reduce [2, 2; 1, 2; 1, 2] (FFmpeg) to [2, 1; 1, 1; 1, 1]
         int horizontal_gcd = param->sampling_factor[0].horizontal;
         int vertical_gcd = param->sampling_factor[0].vertical;
@@ -1673,7 +1673,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
         }
     }
 
-    if (param_image->comp_count == 4) {
+    if ( param->comp_count == 4 ) {
         _Bool subsampling_is4444 = 1;
         for (int i = 1; i < 4; ++i) {
             if (param->sampling_factor[i].horizontal != param->sampling_factor[0].horizontal

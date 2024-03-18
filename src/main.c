@@ -100,9 +100,6 @@ static void print_gpujpeg_image_parameters(struct gpujpeg_image_parameters param
         if (params_image.height) {
             printf("height: %d\n", params_image.height);
         }
-        if (params_image.comp_count) {
-            printf("component count: %d\n", params_image.comp_count);
-        }
         if (params_image.color_space) {
             printf("color space: %s\n", gpujpeg_color_space_get_name(params_image.color_space));
         }
@@ -135,7 +132,7 @@ static int print_image_info_jpeg(const char *filename, int verbose) {
     struct gpujpeg_parameters params = { .verbose = verbose };
     int segment_count = 0;
     if (gpujpeg_decoder_get_image_info(jpeg, len, &params_image, &params, &segment_count) == 0) {
-        print_gpujpeg_image_parameters(params_image, gpujpeg_subsampling_get_name(params_image.comp_count, params.sampling_factor));
+        print_gpujpeg_image_parameters(params_image, gpujpeg_subsampling_get_name(params.comp_count, params.sampling_factor));
         if (segment_count) {
             printf("segment count: %d (DRI = %d)\n", segment_count, params.restart_interval);
         }
@@ -166,7 +163,7 @@ static int print_image_info(const char *filename, int verbose) {
 static bool adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image_parameters *param_image,
         const char *in, const char *out, _Bool encode, int subsampling, _Bool restart_interval_default, _Bool keep_alpha) {
     // if possible, read properties from file
-    struct gpujpeg_image_parameters file_param_image = { 0, 0, 0, GPUJPEG_NONE, GPUJPEG_PIXFMT_NONE };
+    struct gpujpeg_image_parameters file_param_image = { 0, 0, GPUJPEG_NONE, GPUJPEG_PIXFMT_NONE };
     const char *raw_file = encode ? in : out;
     gpujpeg_image_get_properties(raw_file, &file_param_image, encode);
     param_image->width = USE_IF_NOT_NULL_ELSE(param_image->width, file_param_image.width);
@@ -175,13 +172,14 @@ static bool adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
     if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && file_param_image.pixel_format != GPUJPEG_PIXFMT_NONE ) {
         param_image->pixel_format = file_param_image.pixel_format;
     }
-    if (param_image->comp_count == 0) {
-        param_image->comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);
-        if (keep_alpha && (param_image->comp_count != 0 && param_image->comp_count != 4)) {
-                fprintf(stderr, "Keep-alpha option is pointless here, RAW image pixel format has only %d channels.\n", param_image->comp_count);
+    if ( param->comp_count == 0 ) {
+        param->comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);
+        if ( keep_alpha && (param->comp_count != 0 && param->comp_count != 4) ) {
+            fprintf(stderr, "Keep-alpha option is pointless here, RAW image pixel format has only %d channels.\n",
+                    param->comp_count);
         }
-        if (!keep_alpha && param_image->comp_count == 4) {
-            param_image->comp_count = 3;
+        if ( !keep_alpha && param->comp_count == 4 ) {
+            param->comp_count = 3;
         }
     }
 
@@ -275,7 +273,7 @@ main(int argc, char *argv[])
     int rc;
 
     param_image.color_space = GPUJPEG_NONE;
-    param_image.comp_count = 0;
+    param.comp_count = 0;
     param_image.pixel_format = GPUJPEG_PIXFMT_NONE;
 
     // Parse command line
@@ -679,7 +677,7 @@ main(int argc, char *argv[])
                     sprintf(buffer_output, "%s.decoded.yuv", output);
                 }
                 else {
-                    if ( param_image.comp_count == 1 ) {
+                    if ( param.comp_count == 1 ) {
                         sprintf(buffer_output, "%s.decoded.r", output);
                     } else {
                         sprintf(buffer_output, "%s.decoded.rgb", output);

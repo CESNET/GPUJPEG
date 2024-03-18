@@ -382,14 +382,14 @@ gpujpeg_huffman_cpu_decoder_decode(struct gpujpeg_decoder* decoder)
         coder.table_ac[comp] = &decoder->table_huffman[comp][GPUJPEG_HUFFMAN_AC];
     }
     
-    for (int comp = 0; comp < decoder->coder.param_image.comp_count; comp++) {
+    for (int comp = 0; comp < decoder->coder.param.comp_count; comp++) {
         coder.component[comp].dc_huff_idx = decoder->comp_table_huffman_map[comp][GPUJPEG_HUFFMAN_DC];
         coder.component[comp].ac_huff_idx = decoder->comp_table_huffman_map[comp][GPUJPEG_HUFFMAN_AC];
     }
 
     // Set mcu component count
     if ( decoder->coder.param.interleaved == 1 )
-        coder.comp_count = decoder->coder.param_image.comp_count;
+        coder.comp_count = decoder->coder.param.comp_count;
     else
         coder.comp_count = 1;
     assert(coder.comp_count >= 1 && coder.comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);

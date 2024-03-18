@@ -55,11 +55,11 @@ gpujpeg_writer_create(void)
 
 /* Documented at declaration */
 int
-gpujpeg_writer_init(struct gpujpeg_writer * writer, struct gpujpeg_image_parameters * param_image)
+gpujpeg_writer_init(struct gpujpeg_writer* writer, int comp_count, struct gpujpeg_image_parameters* param_image)
 {
     // Allocate output buffer
     size_t buffer_size = 1000;
-    buffer_size += (size_t) param_image->width * param_image->height * param_image->comp_count * 2;
+    buffer_size += (size_t) param_image->width * param_image->height * comp_count * 2;
 
     if (buffer_size > writer->buffer_allocated_size) {
         writer->buffer_allocated_size = 0;
@@ -174,7 +174,7 @@ static void gpujpeg_writer_write_spiff_header(struct gpujpeg_encoder* encoder)
         gpujpeg_writer_emit_byte(writer, spiff[i]);
     }
     int color_space;
-    if (encoder->coder.param_image.comp_count == 1) {
+    if ( encoder->coder.param.comp_count == 1 ) {
         color_space = 8;
     }  else {
         switch (encoder->coder.param.color_space_internal) {
@@ -197,7 +197,7 @@ static void gpujpeg_writer_write_spiff_header(struct gpujpeg_encoder* encoder)
     int profile = color_space == 3 || color_space == 8 ? 1 : 0; // 0 = No profile
     gpujpeg_writer_emit_2byte(writer, SPIFF_VERSION);
     gpujpeg_writer_emit_byte(writer, profile);   // ProfileID
-    gpujpeg_writer_emit_byte(writer, encoder->coder.param_image.comp_count);   // number of components
+    gpujpeg_writer_emit_byte(writer, encoder->coder.param.comp_count);   // number of components
     gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.height);
     gpujpeg_writer_emit_4byte(writer, encoder->coder.param_image.width);
     gpujpeg_writer_emit_byte(writer, color_space);
@@ -306,7 +306,7 @@ gpujpeg_writer_write_sof0(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_emit_marker(encoder->writer, GPUJPEG_MARKER_SOF0);
 
     // Length
-    gpujpeg_writer_emit_2byte(encoder->writer, 8 + 3 * encoder->coder.param_image.comp_count);
+    gpujpeg_writer_emit_2byte(encoder->writer, 8 + 3 * encoder->coder.param.comp_count);
 
     // Precision (bit depth)
     gpujpeg_writer_emit_byte(encoder->writer, 8);
@@ -315,10 +315,10 @@ gpujpeg_writer_write_sof0(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_emit_2byte(encoder->writer, encoder->coder.param_image.width);
 
     // Number of components
-    gpujpeg_writer_emit_byte(encoder->writer, encoder->coder.param_image.comp_count);
+    gpujpeg_writer_emit_byte(encoder->writer, encoder->coder.param.comp_count);
 
     // Components
-    for ( int comp_index = 0; comp_index < encoder->coder.param_image.comp_count; comp_index++ ) {
+    for ( int comp_index = 0; comp_index < encoder->coder.param.comp_count; comp_index++ ) {
         // Get component
         struct gpujpeg_component* component = &encoder->coder.component[comp_index];
 
@@ -439,7 +439,7 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 
     switch (encoder->header_type) {
     case GPUJPEG_HEADER_DEFAULT:
-        if (encoder->coder.param_image.comp_count == 4) {
+        if ( encoder->coder.param.comp_count == 4 ) {
             gpujpeg_writer_write_spiff(encoder);
         } else {
             switch (encoder->coder.param.color_space_internal) {
@@ -468,7 +468,7 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
     }
 
     unsigned dqt_type_emitted = 0U;
-    for (int i = 0; i < encoder->coder.param_image.comp_count; ++i) {
+    for ( int i = 0; i < encoder->coder.param.comp_count; ++i ) {
         if ((dqt_type_emitted & (1U << encoder->coder.component[i].type)) == 0) {
             gpujpeg_writer_write_dqt(encoder, encoder->coder.component[i].type);
             dqt_type_emitted |= 1U << encoder->coder.component[i].type;
@@ -478,7 +478,7 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_write_sof0(encoder);
 
     unsigned dht_type_emitted = 0U;
-    for (int i = 0; i < encoder->coder.param_image.comp_count; ++i) {
+    for ( int i = 0; i < encoder->coder.param.comp_count; ++i ) {
         if ((dht_type_emitted & (1U << encoder->coder.component[i].type)) == 0) {
             gpujpeg_writer_write_dht(encoder, encoder->coder.component[i].type, GPUJPEG_HUFFMAN_DC);   // DC table
             gpujpeg_writer_write_dht(encoder, encoder->coder.component[i].type, GPUJPEG_HUFFMAN_AC);   // AC table
@@ -582,13 +582,13 @@ gpujpeg_writer_write_scan_header(struct gpujpeg_encoder* encoder, int scan_index
 
     if ( encoder->coder.param.interleaved == 1 ) {
         // Length
-        gpujpeg_writer_emit_2byte(encoder->writer, 6 + 2 * encoder->coder.param_image.comp_count);
+        gpujpeg_writer_emit_2byte(encoder->writer, 6 + 2 * encoder->coder.param.comp_count);
 
         // Component count
-        gpujpeg_writer_emit_byte(encoder->writer, encoder->coder.param_image.comp_count);
+        gpujpeg_writer_emit_byte(encoder->writer, encoder->coder.param.comp_count);
 
         // Components
-        for ( int comp_index = 0; comp_index < encoder->coder.param_image.comp_count; comp_index++ ) {
+        for ( int comp_index = 0; comp_index < encoder->coder.param.comp_count; comp_index++ ) {
             // Get component
             struct gpujpeg_component* component = &encoder->coder.component[comp_index];
 

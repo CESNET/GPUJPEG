@@ -257,8 +257,9 @@ int
 gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* param_image, int subsampling, bool interleaved, int verbose)
 {
     int restart_interval;
+    const int comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);
     // Adjust according to Mpix count
-    double coefficient = ((double)param_image->width * param_image->height * param_image->comp_count) / (1000000.0 * 3.0);
+    double coefficient = ((double)param_image->width * param_image->height * comp_count) / (1000000.0 * 3.0);
     if ( coefficient < 1.0 ) {
         restart_interval = 4;
     } else if ( coefficient < 3.0 ) {
@@ -274,7 +275,7 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
     }
     // when not interleaved, restart interval applies to each segment so actual number is higher
     if ( !interleaved ) {
-        restart_interval *= param_image->comp_count;
+        restart_interval *= comp_count;
     }
     if ( verbose >= 1 ) {
         printf("\nAuto-adjusting restart interval to %d for better performance.\n", restart_interval);
@@ -286,8 +287,8 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
 int
 gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, size_t* image_compressed_size)
 {
-    assert(param_image->comp_count == 1 || param_image->comp_count == 3 || param_image->comp_count == 4);
-    assert(param_image->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
+    assert(param->comp_count == 1 || param->comp_count == 3 || param->comp_count == 4);
+    assert(param->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     assert(param->quality >= 0 && param->quality <= 100);
     assert(param->restart_interval >= 0);
     assert(param->interleaved == 0 || param->interleaved == 1);
@@ -312,7 +313,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
     }
 
     // (Re)initialize writer
-    if (gpujpeg_writer_init(encoder->writer, &encoder->coder.param_image) != 0) {
+    if ( gpujpeg_writer_init(encoder->writer, coder->param.comp_count, &encoder->coder.param_image) != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to init writer!\n");
         return -1;
     }
@@ -504,7 +505,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameter
         else {
             // Write huffman coder results as one scan for each color component
             int segment_index = 0;
-            for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
+            for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
                 // Write scan header
                 gpujpeg_writer_write_scan_header(encoder, comp);
                 // Write scan data

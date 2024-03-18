@@ -107,10 +107,10 @@ gpujpeg_decoder_create(cudaStream_t stream)
     // Set parameters
     gpujpeg_set_default_parameters(&coder->param);
     gpujpeg_image_set_default_parameters(&coder->param_image);
-    coder->param_image.comp_count = 0;
     coder->param_image.width = 0;
     coder->param_image.height = 0;
     coder->param_image.pixel_format = GPUJPEG_PIXFMT_AUTODETECT;
+    coder->param.comp_count = 0;
     coder->param.restart_interval = 0;
 
     int result = 1;
@@ -164,7 +164,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
 
     coder->param.verbose = param->verbose;
     coder->param.perf_stats = param->perf_stats;
-    if (param_image->width * param_image->height * param_image->comp_count == 0) {
+    if (param_image->width * param_image->height * param->comp_count == 0) {
         return 0;
     }
 
@@ -172,11 +172,11 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
     int change = 0;
     change |= coder->param_image.width != param_image->width;
     change |= coder->param_image.height != param_image->height;
-    change |= coder->param_image.comp_count != param_image->comp_count;
+    change |= coder->param.comp_count != param->comp_count;
     change |= coder->param.restart_interval != param->restart_interval;
     change |= coder->param.interleaved != param->interleaved;
     change |= coder->param.color_space_internal != param->color_space_internal;
-    for ( int comp = 0; comp < param_image->comp_count; comp++ ) {
+    for ( int comp = 0; comp < param->comp_count; comp++ ) {
         change |= coder->param.sampling_factor[comp].horizontal != param->sampling_factor[comp].horizontal;
         change |= coder->param.sampling_factor[comp].vertical != param->sampling_factor[comp].vertical;
     }
@@ -184,7 +184,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
         return 0;
 
     // For now we can't reinitialize decoder, we can only do first initialization
-    if ( coder->param_image.width != 0 || coder->param_image.height != 0 || coder->param_image.comp_count != 0 ) {
+    if ( coder->param_image.width != 0 || coder->param_image.height != 0 || coder->param.comp_count != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Info] Reinitializing decoder.\n");
     }
 
@@ -222,7 +222,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
     GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_stream, coder->param.perf_stats, decoder->stream, return -1);
 
     // check if params is ok for GPU decoder
-    for (int i = 0; i < decoder->coder.param_image.comp_count; ++i) {
+    for ( int i = 0; i < decoder->coder.param.comp_count; ++i ) {
         // packed_block_info_ptr holds only component type
         if ( decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_DC] != decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_AC] ) {
             fprintf(stderr, "[GPUJPEG] [Warning] Using different table DC/AC indices (%d and %d) for component %d (ID %d)! Using Huffman CPU decoder. Please report to GPUJPEG developers.\n", decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_AC], decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_DC], i, decoder->comp_id[i]);

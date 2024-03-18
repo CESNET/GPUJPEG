@@ -78,7 +78,7 @@ gpujpeg_writer_create(void);
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_writer_init(struct gpujpeg_writer* writer, struct gpujpeg_image_parameters* param_image);
+gpujpeg_writer_init(struct gpujpeg_writer* writer, int comp_count, struct gpujpeg_image_parameters* param_image);
 
 /**
  * Destroy JPEG writer

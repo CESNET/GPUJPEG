@@ -677,7 +677,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     
     int comp_count = 1;
     if (coder->param.interleaved == 1) {
-        comp_count = coder->param_image.comp_count;
+        comp_count = coder->param.comp_count;
     }
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     
@@ -712,12 +712,12 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     gpujpeg_cuda_check_error("Huffman decoder table copy failed", return -1);
 #endif
 
-    for (int comp = 0; comp < coder->param_image.comp_count; comp++) {
+    for (int comp = 0; comp < coder->param.comp_count; comp++) {
         coder->component[comp].dc_huff_idx = decoder->comp_table_huffman_map[comp][GPUJPEG_HUFFMAN_DC];
         coder->component[comp].ac_huff_idx = decoder->comp_table_huffman_map[comp][GPUJPEG_HUFFMAN_AC];
     }
     // Copy updated components to device memory
-    cudaMemcpyAsync(coder->d_component, coder->component, coder->param_image.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice, decoder->stream);
+    cudaMemcpyAsync(coder->d_component, coder->component, coder->param.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice, decoder->stream);
     gpujpeg_cuda_check_error("Coder component copy", return 0);
 
     // Clear output buffer

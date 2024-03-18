@@ -208,7 +208,7 @@ gpujpeg_idct_cpu(struct gpujpeg_decoder* decoder)
     struct gpujpeg_coder* coder = &decoder->coder;
 
     // Perform IDCT and dequantization
-    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
+    for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
         // Get component
         struct gpujpeg_component* component = &coder->component[comp];
 

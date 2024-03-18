@@ -187,6 +187,8 @@ struct gpujpeg_parameters
     /// the best result is achieved when it is used in combination with "interleaved = 1" settings.
     int segment_info;
 
+    /// JPEG image component count; count of valid sampling_factor elements
+    int comp_count;
     /// Sampling factors for each color component inside JPEG stream.
     struct gpujpeg_component_sampling_factor sampling_factor[GPUJPEG_MAX_COMPONENT_COUNT];
 
@@ -252,8 +254,6 @@ struct gpujpeg_image_parameters {
     int width;
     /// Image data height
     int height;
-    /// Image data component count
-    int comp_count;
     /// Image data color space
     enum gpujpeg_color_space color_space;
     /// Image data sampling factor

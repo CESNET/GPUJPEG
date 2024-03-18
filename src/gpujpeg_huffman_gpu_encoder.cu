@@ -1078,7 +1078,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujp
     // Select encoder kernel which either expects continuos segments of blocks or uses block lists
     int comp_count = 1;
     if ( coder->param.interleaved == 1 )
-        comp_count = coder->param_image.comp_count;
+        comp_count = coder->param.comp_count;
     assert(comp_count >= 1 && comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
 
     // Select encoder kernel based on compute capability

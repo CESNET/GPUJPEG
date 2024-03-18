@@ -625,7 +625,7 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
     struct gpujpeg_coder* coder = &encoder->coder;
 
     // Encode each component
-    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
+    for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
         // Get component
         struct gpujpeg_component* component = &coder->component[comp];
 
@@ -685,7 +685,7 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
     struct gpujpeg_coder* coder = &decoder->coder;
 
     // Encode each component
-    for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
+    for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
         // Get component
         struct gpujpeg_component* component = &coder->component[comp];
 
