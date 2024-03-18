@@ -368,8 +368,9 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* imag
  * File format is deduced from the filename extension (if any).
  *
  * Use the extension "XXX" (eg. "image.XXX") to automatically select the
- * extension according to param_image. PNM is used for grayscale or RGB, Y4M
- * ottherwise. "XXX" placeholder in filename is replaced with used extension.
+ * extension according to param_image. PNM is used for grayscale or RGB, PAM for
+ * RGBA, Y4M ottherwise. "XXX" placeholder in filename is replaced with used
+ * extension.
  *
  * @param filaname  Image filename
  * @param image  Image data buffer
