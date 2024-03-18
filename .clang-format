@@ -1,5 +1,7 @@
+AlignArrayOfStructures: Left
 AlwaysBreakAfterReturnType: All
 BreakBeforeBraces: Stroustrup
+ColumnLimit: 120
 IndentWidth: 4
 PointerAlignment: Left
 SpacesInParens: Custom
