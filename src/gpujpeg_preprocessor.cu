@@ -308,24 +308,25 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
     return NULL;
 }
 
-static int gpujpeg_preprocessor_encode_no_transform(struct gpujpeg_coder * coder)
+static bool
+gpujpeg_preprocessor_encode_no_transform(struct gpujpeg_coder *coder)
 {
     if (gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format)) {
-        return 0;
+        return false;
     }
 
     if (coder->param_image.comp_count == 3 && coder->param_image.color_space != coder->param.color_space_internal) {
-        return 0;
+        return false;
     }
 
     const int *sampling_factors = gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
     for (int i = 0; i < coder->param_image.comp_count; ++i) {
         if (coder->component[i].sampling_factor.horizontal != sampling_factors[i * 2]
                 || coder->component[i].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
-            return 0;
+            return false;
         }
     }
-    return 1;
+    return true;
 }
 
 /* Documented at declaration */
