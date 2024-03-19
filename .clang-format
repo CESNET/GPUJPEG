@@ -1,9 +1,15 @@
 AlignArrayOfStructures: Left
+AlwaysBreakTemplateDeclarations: true
 AlwaysBreakAfterReturnType: All
-BreakBeforeBraces: Stroustrup
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterStruct: true
+  BeforeElse: true
 ColumnLimit: 120
 IndentWidth: 4
 PointerAlignment: Left
+ReflowComments: true
 SpacesInParens: Custom
 SpacesInParensOptions:
   InConditionalStatements: true
