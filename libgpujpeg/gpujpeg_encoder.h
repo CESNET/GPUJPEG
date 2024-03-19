@@ -158,7 +158,9 @@ gpujpeg_encoder_allocate(struct gpujpeg_encoder* encoder, const struct gpujpeg_p
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, size_t* image_compressed_size);
+gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_parameters* param,
+                       const struct gpujpeg_image_parameters* param_image, const struct gpujpeg_encoder_input* input,
+                       uint8_t** image_compressed, size_t* image_compressed_size);
 
 /**
  * Returns duration statistics for last encoded image

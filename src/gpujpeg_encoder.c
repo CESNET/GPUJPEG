@@ -285,7 +285,9 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
 
 /* Documented at declaration */
 int
-gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, struct gpujpeg_encoder_input* input, uint8_t** image_compressed, size_t* image_compressed_size)
+gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_parameters* param,
+                       const struct gpujpeg_image_parameters* param_image, const struct gpujpeg_encoder_input* input,
+                       uint8_t** image_compressed, size_t* image_compressed_size)
 {
     assert(param->comp_count == 1 || param->comp_count == 3 || param->comp_count == 4);
     assert(param->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
