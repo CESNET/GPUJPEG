@@ -28,6 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "gpujpeg_common_internal.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -172,15 +173,8 @@ static bool adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
     if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && file_param_image.pixel_format != GPUJPEG_PIXFMT_NONE ) {
         param_image->pixel_format = file_param_image.pixel_format;
     }
-    if ( param->comp_count == 0 ) {
-        param->comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);
-        if ( keep_alpha && (param->comp_count != 0 && param->comp_count != 4) ) {
-            fprintf(stderr, "Keep-alpha option is pointless here, RAW image pixel format has only %d channels.\n",
-                    param->comp_count);
-        }
-        if ( !keep_alpha && param->comp_count == 4 ) {
-            param->comp_count = 3;
-        }
+    if ( keep_alpha && param->comp_count == 0 && param_image->pixel_format == GPUJPEG_444_U8_P012A ) {
+        gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);
     }
 
     // Detect color space

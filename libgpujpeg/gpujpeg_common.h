@@ -206,9 +206,10 @@ struct gpujpeg_parameters
 GPUJPEG_API void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param);
 
-#define GPUJPEG_SUBSAMPLING_444 444
-#define GPUJPEG_SUBSAMPLING_422 422
-#define GPUJPEG_SUBSAMPLING_420 420
+#define GPUJPEG_SUBSAMPLING_4444 4444
+#define GPUJPEG_SUBSAMPLING_444 4440
+#define GPUJPEG_SUBSAMPLING_422 4220
+#define GPUJPEG_SUBSAMPLING_420 4200
 /**
  * Set parameters for using specified chroma subsampling
  * @param param       parameters for coder

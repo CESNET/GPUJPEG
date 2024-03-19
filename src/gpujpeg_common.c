@@ -319,6 +319,12 @@ do_gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param)
     }
 }
 
+static void set_alpha(struct gpujpeg_parameters* param) {
+    param->comp_count = GPUJPEG_4_COMPONENTS;
+    param->sampling_factor[3].horizontal = param->sampling_factor[0].horizontal;
+    param->sampling_factor[3].vertical = param->sampling_factor[0].vertical;
+}
+
 /* Documented at declaration */
 void
 gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param)
@@ -336,7 +342,7 @@ gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param)
 void
 gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, int subsampling)
 {
-    switch (subsampling) {
+    switch (subsampling / 10 * 10) {
         case GPUJPEG_SUBSAMPLING_444:
             do_gpujpeg_parameters_chroma_subsampling_444(param);
             break;
@@ -348,6 +354,13 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, int subs
             break;
         default:
             GPUJPEG_ASSERT(0 && "Unsupported subsampling!");
+    }
+    subsampling %= 10;
+    if ( subsampling == 4 ) {
+        set_alpha(param);
+    }
+    else if ( subsampling != 0 ) {
+        GPUJPEG_ASSERT(0 && "Unsupported subsampling!");
     }
 }
 
