@@ -1899,21 +1899,6 @@ int gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format)
     return -1;
 }
 
-int gpujpeg_pixel_format_get_subsampling(enum gpujpeg_pixel_format pixel_format)
-{
-    for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
-        if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
-            const struct gpujpeg_component_sampling_factor* subs =
-                gpujpeg_pixel_format_get_sampling_factor(pixel_format);
-            if ( subs[0].horizontal == 2 ) {
-                return subs[0].vertical == 2 ? GPUJPEG_SUBSAMPLING_420 : GPUJPEG_SUBSAMPLING_422;
-            }
-            return GPUJPEG_SUBSAMPLING_444;
-        }
-    }
-    return -1;
-}
-
 float gpujpeg_custom_timer_get_duration(cudaEvent_t start, cudaEvent_t stop) {
     float elapsedTime = NAN;
     cudaError_t err = cudaEventSynchronize(stop);

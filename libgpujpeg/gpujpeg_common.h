@@ -617,10 +617,6 @@ gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format);
 GPUJPEG_API int
 gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format);
 
-/** Returns 444, 422 or 420 */
-GPUJPEG_API int
-gpujpeg_pixel_format_get_subsampling(enum gpujpeg_pixel_format pixel_format);
-
 #ifdef __cplusplus
 }
 #endif
