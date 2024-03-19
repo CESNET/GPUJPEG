@@ -300,7 +300,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
 
     struct gpujpeg_parameters param_adjusted = *param;
     if (param->comp_count == 0) {
-        param_adjusted.comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);
+        param_adjusted.comp_count =
+            MIN(gpujpeg_pixel_format_get_comp_count(param_image->pixel_format), GPUJPEG_3_COMPONENTS);
         memcpy(param_adjusted.sampling_factor, gpujpeg_pixel_format_get_sampling_factor(param_image->pixel_format),
                sizeof param_adjusted.sampling_factor);
     }

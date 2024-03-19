@@ -124,10 +124,6 @@ static const struct {
     {GPUJPEG_444_U8_P012A,      0,      4, 4, "444-u8-p012a",    {{1, 1}, {1, 1}, {1, 1}, {1, 1}}},
 };
 
-enum {
-    GPUJPEG_3_COMPONENTS = 3,
-};
-
 /* Documented at declaration */
 struct gpujpeg_devices_info
 gpujpeg_get_devices_info(void)

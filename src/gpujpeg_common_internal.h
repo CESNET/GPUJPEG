@@ -57,6 +57,10 @@
 /** Maximum JPEG header size (MUST be divisible by 4!!!) */
 #define GPUJPEG_MAX_HEADER_SIZE                 (65536 - 100)
 
+enum {
+    GPUJPEG_3_COMPONENTS = 3,
+};
+
 #define GPUJPEG_ASSERT(cond) do { if (!(cond)) { fprintf(stderr, "%s:%d: %s: Assertion `" #cond "' failed.\n", __FILE__, __LINE__, __func__); abort(); } } while(0)
 
 #define ERROR_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__); } while(0)
@@ -66,6 +70,10 @@
 #define DEBUG2_MSG(log_level, ...) do { if (log_level >= 3) fprintf(stderr, "[GPUJPEG] [Debug2] " __VA_ARGS__); } while(0)
 #else
 #define DEBUG2_MSG(log_level, ...)
+#endif
+
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
 struct gpujpeg_timer {
