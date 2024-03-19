@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2024, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -108,19 +108,20 @@ static const struct {
     int comp_count;
     int bpp; ///< bytes per pixel, not relevant for planar formats
     const char *name;
-    int sampling_factor[8]; ///< native sampling factor for the pixfmt
+    /// native sampling factor for the pixfmt
+    struct gpujpeg_component_sampling_factor sampling_factor[GPUJPEG_MAX_COMPONENT_COUNT];
 } gpujpeg_pixel_format_desc[] = {
-    { GPUJPEG_PIXFMT_PLANAR_STD, 0,           0, 0, "(planar)", { 0 } },
-    { GPUJPEG_PIXFMT_NO_ALPHA, 0,             0, 0, "(without alpha)", { 0 } },
-    { GPUJPEG_PIXFMT_NONE,   0,               0, 0, "(unknown)", { 0 } },
-    { GPUJPEG_U8,            0,               1, 1, "u8", { 1, 1 } },
-    { GPUJPEG_444_U8_P012,   0,               3, 3, "444-u8-p012", { 1, 1, 1, 1, 1, 1 } },
-    { GPUJPEG_444_U8_P0P1P2, PLANAR,          3, 0, "444-u8-p0p1p2", { 1, 1, 1, 1, 1, 1 } },
-    { GPUJPEG_422_U8_P1020,  0,               3, 2, "422-u8-p1020", { 2, 1, 1, 1, 1, 1 } },
-    { GPUJPEG_422_U8_P0P1P2, PLANAR,          3, 0, "422-u8-p0p1p2", { 2, 1, 1, 1, 1, 1 } },
-    { GPUJPEG_420_U8_P0P1P2, PLANAR,          3, 0, "420-u8-p0p1p2", { 2, 2, 1, 1, 1, 1 } },
-    { GPUJPEG_444_U8_P012Z,  0,               3, 4, "444-u8-p012z", { 1, 1, 1, 1, 1, 1 } },
-    { GPUJPEG_444_U8_P012A,  0,               4, 4, "444-u8-p012a", { 1, 1, 1, 1, 1, 1, 1, 1 } },
+    {GPUJPEG_PIXFMT_PLANAR_STD, 0,      0, 0, "(planar)",        {{0}}                           },
+    {GPUJPEG_PIXFMT_NO_ALPHA,   0,      0, 0, "(without alpha)", {{0}}                           },
+    {GPUJPEG_PIXFMT_NONE,       0,      0, 0, "(unknown)",       {{0}}                           },
+    {GPUJPEG_U8,                0,      1, 1, "u8",              {{1, 1}}                        },
+    {GPUJPEG_444_U8_P012,       0,      3, 3, "444-u8-p012",     {{1, 1}, {1, 1}, {1, 1}}        },
+    {GPUJPEG_444_U8_P0P1P2,     PLANAR, 3, 0, "444-u8-p0p1p2",   {{1, 1}, {1, 1}, {1, 1}}        },
+    {GPUJPEG_422_U8_P1020,      0,      3, 2, "422-u8-p1020",    {{2, 1}, {1, 1}, {1, 1}}        },
+    {GPUJPEG_422_U8_P0P1P2,     PLANAR, 3, 0, "422-u8-p0p1p2",   {{2, 1}, {1, 1}, {1, 1}}        },
+    {GPUJPEG_420_U8_P0P1P2,     PLANAR, 3, 0, "420-u8-p0p1p2",   {{2, 2}, {1, 1}, {1, 1}}        },
+    {GPUJPEG_444_U8_P012Z,      0,      3, 4, "444-u8-p012z",    {{1, 1}, {1, 1}, {1, 1}}        },
+    {GPUJPEG_444_U8_P012A,      0,      4, 4, "444-u8-p012a",    {{1, 1}, {1, 1}, {1, 1}, {1, 1}}},
 };
 
 enum {
@@ -273,7 +274,7 @@ gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
     param->restart_interval = 8;
     param->interleaved = 0;
     param->segment_info = 0;
-    param->comp_count = GPUJPEG_3_COMPONENTS;
+    param->comp_count = 0;
     for ( int comp = 0; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ ) {
         param->sampling_factor[comp].horizontal = 1;
         param->sampling_factor[comp].vertical = 1;
@@ -1806,17 +1807,6 @@ gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component_samp
     return buf;
 }
 
-const struct gpujpeg_component_sampling_factor *
-gpujpeg_get_subsampling(enum gpujpeg_pixel_format pixel_format) {
-    thread_local static struct gpujpeg_component_sampling_factor ret[4] = { 0 };
-    const int *samp = gpujpeg_pixel_format_get_sampling_factor(pixel_format);
-    for (int i = 0; i < gpujpeg_pixel_format_get_comp_count(pixel_format); ++i) {
-        ret[i].horizontal = samp[i * 2];
-        ret[i].vertical = samp[i * 2 + 1];
-    }
-    return ret;
-}
-
 const char*
 gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
 {
@@ -1871,7 +1861,7 @@ gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format)
     return NULL;
 }
 
-const int *
+const struct gpujpeg_component_sampling_factor*
 gpujpeg_pixel_format_get_sampling_factor(enum gpujpeg_pixel_format pixel_format)
 {
     for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
@@ -1913,9 +1903,10 @@ int gpujpeg_pixel_format_get_subsampling(enum gpujpeg_pixel_format pixel_format)
 {
     for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
         if (gpujpeg_pixel_format_desc[i].pixel_format == pixel_format) {
-            const int *subs = gpujpeg_pixel_format_get_sampling_factor(pixel_format);
-            if (subs[0] == 2) {
-                return subs[1] == 2 ? GPUJPEG_SUBSAMPLING_420 : GPUJPEG_SUBSAMPLING_422;
+            const struct gpujpeg_component_sampling_factor* subs =
+                gpujpeg_pixel_format_get_sampling_factor(pixel_format);
+            if ( subs[0].horizontal == 2 ) {
+                return subs[0].vertical == 2 ? GPUJPEG_SUBSAMPLING_420 : GPUJPEG_SUBSAMPLING_422;
             }
             return GPUJPEG_SUBSAMPLING_444;
         }

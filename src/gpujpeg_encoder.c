@@ -289,7 +289,6 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
                        const struct gpujpeg_image_parameters* param_image, const struct gpujpeg_encoder_input* input,
                        uint8_t** image_compressed, size_t* image_compressed_size)
 {
-    assert(param->comp_count == 1 || param->comp_count == 3 || param->comp_count == 4);
     assert(param->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     assert(param->quality >= 0 && param->quality <= 100);
     assert(param->restart_interval >= 0);
@@ -298,6 +297,13 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
     // Get coder
     struct gpujpeg_coder* coder = &encoder->coder;
     int rc;
+
+    struct gpujpeg_parameters param_adjusted = *param;
+    if (param->comp_count == 0) {
+        param_adjusted.comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);
+        memcpy(param_adjusted.sampling_factor, gpujpeg_pixel_format_get_sampling_factor(param_image->pixel_format),
+               sizeof param_adjusted.sampling_factor);
+    }
 
     // (Re)initialize encoder
     if (coder->param.quality != param->quality) {
@@ -309,7 +315,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
         }
         gpujpeg_cuda_check_error("Quantization init", return -1);
     }
-    if (0 == gpujpeg_coder_init_image(coder, param, param_image, encoder->stream)) {
+    if (0 == gpujpeg_coder_init_image(coder, &param_adjusted, param_image, encoder->stream)) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to init image encoding!\n");
         return -1;
     }

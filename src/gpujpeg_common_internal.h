@@ -375,13 +375,6 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder);
 struct gpujpeg_component;
 
 /**
- * Returns gpujpeg_component_sampling_factor[] which has sampling factors set
- * native to given pixel_format
- */
-const struct gpujpeg_component_sampling_factor *
-gpujpeg_get_subsampling(enum gpujpeg_pixel_format pixel_format);
-
-/**
  * Returns subsampling configuration of a planar pixel format in array of 8
  * ints - [W0 H0 W1 H1 ...] where each number represent given component
  * horizontal/vertical sampling factor as defined for JPEG, eg. (2 1 1 1 1 1)
@@ -390,7 +383,7 @@ gpujpeg_get_subsampling(enum gpujpeg_pixel_format pixel_format);
  *
  * @returns array of 8 components representing the sampling factor of the pixel format
  */
-const int *
+const struct gpujpeg_component_sampling_factor *
 gpujpeg_pixel_format_get_sampling_factor(enum gpujpeg_pixel_format pixel_format);
 
 /** Returns number of bytes per pixel */
@@ -423,6 +416,10 @@ gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , cons
 float
 gpujpeg_custom_timer_get_duration(cudaEvent_t start, cudaEvent_t stop);
 
+/// sets comp_count and sampling_factor from given pixel_format
+void
+gpujpeg_set_subsampling_from_pixel_format(enum gpujpeg_pixel_format pixel_format, int* comp_count,
+                                          struct gpujpeg_component_sampling_factor* sampling_factor);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -356,11 +356,12 @@ static int gpujpeg_preprocessor_decode_no_transform(struct gpujpeg_coder * coder
             return 0;
     }
 
-    const int *sampling_factors = gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
+    const struct gpujpeg_component_sampling_factor* sampling_factors =
+        gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
     for ( int i = 0; i < coder->param.comp_count; ++i ) {
-        if (coder->component[i].sampling_factor.horizontal != sampling_factors[i * 2]
-                || coder->component[i].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
-            //const char *name = gpujpeg_pixel_format_get_name(coder->param_image.pixel_format);
+        if ( coder->component[i].sampling_factor.horizontal != sampling_factors[i].horizontal ||
+             coder->component[i].sampling_factor.vertical != sampling_factors[i].vertical ) {
+            // const char *name = gpujpeg_pixel_format_get_name(coder->param_image.pixel_format);
             /*fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s to %s).\n",
                     gpujpeg_subsampling_get_name(coder->param.comp_count, coder->component),
                     gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));*/

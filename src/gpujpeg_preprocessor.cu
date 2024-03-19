@@ -319,10 +319,11 @@ gpujpeg_preprocessor_encode_no_transform(struct gpujpeg_coder *coder)
         return false;
     }
 
-    const int *sampling_factors = gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
+    const struct gpujpeg_component_sampling_factor* sampling_factors =
+        gpujpeg_pixel_format_get_sampling_factor(coder->param_image.pixel_format);
     for ( int i = 0; i < coder->param.comp_count; ++i ) {
-        if (coder->component[i].sampling_factor.horizontal != sampling_factors[i * 2]
-                || coder->component[i].sampling_factor.vertical != sampling_factors[i * 2 + 1]) {
+        if ( coder->component[i].sampling_factor.horizontal != sampling_factors[i].horizontal ||
+             coder->component[i].sampling_factor.vertical != sampling_factors[i].vertical ) {
             return false;
         }
     }
