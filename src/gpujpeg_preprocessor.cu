@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2024, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -34,7 +34,7 @@
  */
 
 #include "gpujpeg_colorspace.h"
-#include "gpujpeg_preprocessor_common.h"
+#include "gpujpeg_preprocessor_common.cuh"
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_util.h"
 

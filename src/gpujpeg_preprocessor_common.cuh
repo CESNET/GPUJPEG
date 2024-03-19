@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2024, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
