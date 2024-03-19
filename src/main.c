@@ -87,7 +87,7 @@ print_help(void)
            "                          iterations for each image\n"
            "   -o  --use-opengl       use an OpenGL texture as input/output\n"
            "   -I  --info             print JPEG file info\n"
-           "   -a  --alpha            encode alpha channel (otherwise stripped)\n"
+           "   -a  --alpha            encode/decode alpha channel (otherwise stripped)\n"
            "   -N  --native           create native JPEG (Adobe RGB for RGB, SPIFF for Y709;\n"
            "                                              may be incompatible with some decoders;\n"
            "                                              works also for decoding)\n"
@@ -173,8 +173,11 @@ static bool adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
     if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && file_param_image.pixel_format != GPUJPEG_PIXFMT_NONE ) {
         param_image->pixel_format = file_param_image.pixel_format;
     }
-    if ( keep_alpha && param->comp_count == 0 && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
+    if ( keep_alpha && encode && param->comp_count == 0 && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
         gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);
+    }
+    if ( !keep_alpha && !encode && param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
+        param_image->pixel_format = GPUJPEG_PIXFMT_NO_ALPHA;
     }
 
     // Detect color space
