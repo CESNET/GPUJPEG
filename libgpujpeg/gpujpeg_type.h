@@ -103,13 +103,9 @@ enum gpujpeg_pixel_format {
     /// 8bit unsigned samples, planar, 3 components, 4:2:0, planar
     GPUJPEG_420_U8_P0P1P2 = 5,
 
-    /// 8bit unsigned samples, 3 components, each pixel padded to 32bits
-    /// with zero byte, 4:4:4 sampling, interleaved
-    GPUJPEG_444_U8_P012Z =  6,
-
     /// 8bit unsigned samples, 3 or 4 components, each pixel padded to 32bits
-    /// with optional alpha (if comp_count=4) or filled with 0xFF, 4:4:4(:4) sampling, interleaved
-    GPUJPEG_444_U8_P012A = 7,
+    /// with optional alpha or unused, 4:4:4(:4) sampling, interleaved
+    GPUJPEG_4444_U8_P0123 =  6,
 };
 // following format placeholders are special values that may be passed
 // to the decoeer in order to detect the format with optional constraints

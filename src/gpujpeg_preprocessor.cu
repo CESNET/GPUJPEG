@@ -80,7 +80,7 @@ template<
     uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
     uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v
 >
-struct gpujpeg_preprocessor_raw_to_comp_store<GPUJPEG_444_U8_P012A, s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v> {
+struct gpujpeg_preprocessor_raw_to_comp_store<GPUJPEG_4444_U8_P0123, s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v> {
     static __device__ void perform (uchar4 value, unsigned int position_x, unsigned int position_y, struct gpujpeg_preprocessor_data & data) {
         gpujpeg_preprocessor_raw_to_comp_store_comp<s_comp1_samp_factor_h, s_comp1_samp_factor_v>(value.x, position_x, position_y, data.comp[0]);
         gpujpeg_preprocessor_raw_to_comp_store_comp<s_comp2_samp_factor_h, s_comp2_samp_factor_v>(value.y, position_x, position_y, data.comp[1]);
@@ -134,22 +134,13 @@ inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012>(const uint8_t* d_da
 }
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012A>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
+inline __device__ void raw_to_comp_load<GPUJPEG_4444_U8_P0123>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
 {
     const unsigned int offset = image_position * 4;
     r.x = d_data_raw[offset];
     r.y = d_data_raw[offset + 1];
     r.z = d_data_raw[offset + 2];
     r.w = d_data_raw[offset + 3];
-}
-
-template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012Z>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
-{
-    const unsigned int offset = image_position * 4;
-    r.x = d_data_raw[offset];
-    r.y = d_data_raw[offset + 1];
-    r.z = d_data_raw[offset + 2];
 }
 
 template<>
@@ -239,8 +230,7 @@ gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
 #define RETURN_KERNEL_SWITCH(PIXEL_FORMAT, COLOR, P1, P2, P3, P4, P5, P6) \
         switch ( PIXEL_FORMAT ) { \
             case GPUJPEG_444_U8_P012: return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012, P1, P2, P3, P4, P5, P6>; \
-            case GPUJPEG_444_U8_P012A: return coder->param.comp_count == 4 ? &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012A, P1, P2, P3, P4, P5, P6> : &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012Z, P1, P2, P3, P4, P5, P6>; \
-            case GPUJPEG_444_U8_P012Z: return  &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012Z, P1, P2, P3, P4, P5, P6>; \
+            case GPUJPEG_4444_U8_P0123: return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_4444_U8_P0123, P1, P2, P3, P4, P5, P6>; \
             case GPUJPEG_422_U8_P1020: return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P1020, P1, P2, P3, P4, P5, P6>; \
             case GPUJPEG_444_U8_P0P1P2: return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P0P1P2, P1, P2, P3, P4, P5, P6>; \
             case GPUJPEG_422_U8_P0P1P2: return &gpujpeg_preprocessor_raw_to_comp_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P0P1P2, P1, P2, P3, P4, P5, P6>; \

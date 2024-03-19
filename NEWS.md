@@ -1,3 +1,7 @@
+2024-03-19 - 0.24.0
+----------
+- replaced GPUJPEG_444_U8_P012{A,Z} with GPUJPEG_4444_U8_P0123
+
 2024-03-18 - 0.23.0
 ----------
 - moved comp_count from gpujpeg_image_parameters to gpujpeg_parameters. Being

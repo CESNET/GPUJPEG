@@ -47,10 +47,10 @@
 static void
 print_pixel_formats(void)
 {
-    printf("                          u8 (grayscale)        444-u8-p0p1p2 (planar 4:4:4)\n"
-           "                          444-u8-p012 (eg. RGB) 422-u8-p1020  (eg. UYVY)\n"
-           "                          444-u8-p012a          422-u8-p0p1p2 (planar 4:2:2)\n"
-           "                          444-u8-p012z          420-u8-p0p1p2 (planar 4:2:0)\n");
+    printf("                          u8 (grayscale)          420-u8-p0p1p2 (planar 4:2:0)\n"
+           "                          422-u8-p1020 (eg. UYVY) 422-u8-p0p1p2 (planar 4:2:2)\n"
+           "                          444-u8-p012 (eg. RGB)   444-u8-p0p1p2 (planar 4:4:4)\n"
+           "                          4444-u8-p0123 (RGBA)\n");
 }
 
 static void
@@ -173,7 +173,7 @@ static bool adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image
     if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && file_param_image.pixel_format != GPUJPEG_PIXFMT_NONE ) {
         param_image->pixel_format = file_param_image.pixel_format;
     }
-    if ( keep_alpha && param->comp_count == 0 && param_image->pixel_format == GPUJPEG_444_U8_P012A ) {
+    if ( keep_alpha && param->comp_count == 0 && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
         gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);
     }
 

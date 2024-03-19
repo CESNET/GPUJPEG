@@ -68,7 +68,7 @@ static int pam_probe_delegate(const char *filename, struct gpujpeg_image_paramet
     param_image->height = info.height;
     switch (info.depth) {
     case 4:
-        param_image->pixel_format = GPUJPEG_444_U8_P012A;
+        param_image->pixel_format = GPUJPEG_4444_U8_P0123;
         break;
     case 3:
         param_image->pixel_format = GPUJPEG_444_U8_P012;
@@ -98,8 +98,7 @@ int pampnm_save_delegate(const char *filename, const struct gpujpeg_image_parame
     case GPUJPEG_444_U8_P012:
         depth = 3;
         break;
-    case GPUJPEG_444_U8_P012A:
-    case GPUJPEG_444_U8_P012Z:
+    case GPUJPEG_4444_U8_P0123:
         depth = 4;
         break;
     default:

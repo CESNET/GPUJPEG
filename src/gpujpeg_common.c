@@ -120,8 +120,7 @@ static const struct {
     {GPUJPEG_422_U8_P1020,      0,      3, 2, "422-u8-p1020",    {{2, 1}, {1, 1}, {1, 1}}        },
     {GPUJPEG_422_U8_P0P1P2,     PLANAR, 3, 0, "422-u8-p0p1p2",   {{2, 1}, {1, 1}, {1, 1}}        },
     {GPUJPEG_420_U8_P0P1P2,     PLANAR, 3, 0, "420-u8-p0p1p2",   {{2, 2}, {1, 1}, {1, 1}}        },
-    {GPUJPEG_444_U8_P012Z,      0,      3, 4, "444-u8-p012z",    {{1, 1}, {1, 1}, {1, 1}}        },
-    {GPUJPEG_444_U8_P012A,      0,      4, 4, "444-u8-p012a",    {{1, 1}, {1, 1}, {1, 1}, {1, 1}}},
+    {GPUJPEG_4444_U8_P0123,     0,      4, 4, "4444-u8-p0123",   {{1, 1}, {1, 1}, {1, 1}, {1, 1}}},
 };
 
 /* Documented at declaration */
@@ -416,7 +415,6 @@ gpujpeg_image_get_file_format(const char* filename)
         { "raw",  GPUJPEG_IMAGE_FILE_RAW },
         { "rgb",  GPUJPEG_IMAGE_FILE_RGB},
         { "rgba", GPUJPEG_IMAGE_FILE_RGBA},
-        { "rgbz", GPUJPEG_IMAGE_FILE_RGBZ},
         { "yuv",  GPUJPEG_IMAGE_FILE_YUV},
         { "yuva", GPUJPEG_IMAGE_FILE_YUVA},
         { "i420", GPUJPEG_IMAGE_FILE_I420},
@@ -1160,10 +1158,11 @@ set_file_extension(char *filename,
     if ( param_image->pixel_format != GPUJPEG_U8 &&
          param_image->color_space != GPUJPEG_RGB ) {
         ext = "y4m";
-    } else if ( param_image->pixel_format == GPUJPEG_444_U8_P012A ||
-                param_image->pixel_format == GPUJPEG_444_U8_P012Z ) {
+    }
+    else if ( param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
         ext = "pam";
-    } else {
+    }
+    else {
         ext = "pnm";
     }
     strcpy(strrchr(filename, '.') + 1, ext);
@@ -1216,10 +1215,7 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
             break;
         case GPUJPEG_IMAGE_FILE_RGBA:
         case GPUJPEG_IMAGE_FILE_YUVA:
-            param_image->pixel_format = GPUJPEG_444_U8_P012A;
-            break;
-        case GPUJPEG_IMAGE_FILE_RGBZ:
-            param_image->pixel_format = GPUJPEG_444_U8_P012Z;
+            param_image->pixel_format = GPUJPEG_4444_U8_P0123;
             break;
         case GPUJPEG_IMAGE_FILE_I420:
             param_image->pixel_format = GPUJPEG_420_U8_P0P1P2;

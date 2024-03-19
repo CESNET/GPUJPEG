@@ -1383,7 +1383,8 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
 
     switch (param->comp_count) {
         case 3: return GPUJPEG_444_U8_P012;
-        case 4: return param_image->pixel_format == GPUJPEG_PIXFMT_NO_ALPHA ? GPUJPEG_444_U8_P012 : GPUJPEG_444_U8_P012A;
+        case 4:
+            return param_image->pixel_format == GPUJPEG_PIXFMT_NO_ALPHA ? GPUJPEG_444_U8_P012 : GPUJPEG_4444_U8_P0123;
         default: GPUJPEG_ASSERT(0 && "Unhandled JPEG internal component count detected!");
     }
 }
@@ -1683,7 +1684,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
             }
         }
         if (subsampling_is4444) {
-            param_image->pixel_format = GPUJPEG_444_U8_P012A;
+            param_image->pixel_format = GPUJPEG_4444_U8_P0123;
         }
     }
 
