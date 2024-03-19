@@ -22,11 +22,11 @@ static void subsampling_name_test() {
                 { GPUJPEG_420_U8_P0P1P2, "4:2:0" },
                 { GPUJPEG_422_U8_P1020, "4:2:2" },
                 { GPUJPEG_444_U8_P0P1P2, "4:4:4" },
-                { GPUJPEG_444_U8_P012A, "4:4:4:4" },
+                { GPUJPEG_4444_U8_P0123, "4:4:4:4" },
         };
         for (size_t i = 0; i < sizeof test_pairs / sizeof test_pairs[0]; ++i) {
                 const char *name =
-                        gpujpeg_subsampling_get_name(gpujpeg_pixel_format_get_comp_count(test_pairs[i].fmt), gpujpeg_get_subsampling(test_pairs[i].fmt));
+                        gpujpeg_subsampling_get_name(gpujpeg_pixel_format_get_comp_count(test_pairs[i].fmt), gpujpeg_pixel_format_get_sampling_factor(test_pairs[i].fmt));
                 ASSERT_STR_EQ(test_pairs[i].exp_subs_name, name);
         }
 }
@@ -47,7 +47,6 @@ static void encode_gpu_mem_as_cpu() {
         gpujpeg_image_set_default_parameters(&param_image);
         param_image.width = TEST_IMAGE_WIDTH;
         param_image.height = TEST_IMAGE_HEIGHT;
-        param_image.comp_count = 3;
         param_image.color_space = GPUJPEG_YCBCR_BT709;
         param_image.pixel_format = GPUJPEG_420_U8_P0P1P2;
 

@@ -36,7 +36,7 @@ i=$(($i+1))
 
 TESTS[$i,NAME]="image_rgb0_444_interleaved_subsampled"
 TESTS[$i,EXTENSION]="rgba"
-TESTS[$i,MODE]="-i -S -f 444-u8-p012a"
+TESTS[$i,MODE]="-i -S -f 4444-u8-p0123"
 TESTS[$i,FF_FORMAT]="rgba"
 i=$(($i+1))
 
@@ -52,6 +52,7 @@ for n in `seq $(($i-1))`; do
         `dirname $0`/test_common.sh "$@"
         RC=$?
         if [ $RC -ne 0 ]; then
+                echo "Test $NAME failed!!!"
                 RET=$RC
         fi
 done
