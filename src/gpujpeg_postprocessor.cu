@@ -82,29 +82,12 @@ struct gpujpeg_preprocessor_comp_to_raw_load_comp<1, 1>
     }
 };
 
-template<int comp_count,
-    uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
-    uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
-    uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v,
-    uint8_t s_comp4_samp_factor_h, uint8_t s_comp4_samp_factor_v
->
-struct gpujpeg_preprocessor_comp_to_raw_load {
-};
-
-template<
-    uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
-    uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
-    uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v,
-    uint8_t s_comp4_samp_factor_h, uint8_t s_comp4_samp_factor_v
->
-struct gpujpeg_preprocessor_comp_to_raw_load <3, s_comp1_samp_factor_h, s_comp1_samp_factor_v,
-    s_comp2_samp_factor_h, s_comp2_samp_factor_v,
-    s_comp3_samp_factor_h, s_comp3_samp_factor_v,
-    s_comp4_samp_factor_h, s_comp4_samp_factor_v> {
-    static __device__ void perform(uchar4 & value, int position_x, int position_y, struct gpujpeg_preprocessor_data & data) {
-        gpujpeg_preprocessor_comp_to_raw_load_comp<s_comp1_samp_factor_h, s_comp1_samp_factor_v>::perform(value.x, position_x, position_y, data.comp[0]);
-        gpujpeg_preprocessor_comp_to_raw_load_comp<s_comp2_samp_factor_h, s_comp2_samp_factor_v>::perform(value.y, position_x, position_y, data.comp[1]);
-        gpujpeg_preprocessor_comp_to_raw_load_comp<s_comp3_samp_factor_h, s_comp3_samp_factor_v>::perform(value.z, position_x, position_y, data.comp[2]);
+template <>
+struct gpujpeg_preprocessor_comp_to_raw_load_comp<0, 0>
+{
+    static __device__ void
+    perform(uint8_t& value, int position_x, int position_y, struct gpujpeg_preprocessor_data_component& comp)
+    {
     }
 };
 
@@ -114,10 +97,8 @@ template<
     uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v,
     uint8_t s_comp4_samp_factor_h, uint8_t s_comp4_samp_factor_v
 >
-struct gpujpeg_preprocessor_comp_to_raw_load <4, s_comp1_samp_factor_h, s_comp1_samp_factor_v,
-    s_comp2_samp_factor_h, s_comp2_samp_factor_v,
-    s_comp3_samp_factor_h, s_comp3_samp_factor_v,
-    s_comp4_samp_factor_h, s_comp4_samp_factor_v> {
+struct gpujpeg_preprocessor_comp_to_raw_load
+{
     static __device__ void perform(uchar4 & value, int position_x, int position_y, struct gpujpeg_preprocessor_data & data) {
         gpujpeg_preprocessor_comp_to_raw_load_comp<s_comp1_samp_factor_h, s_comp1_samp_factor_v>::perform(value.x, position_x, position_y, data.comp[0]);
         gpujpeg_preprocessor_comp_to_raw_load_comp<s_comp2_samp_factor_h, s_comp2_samp_factor_v>::perform(value.y, position_x, position_y, data.comp[1]);
@@ -228,7 +209,7 @@ gpujpeg_preprocessor_comp_to_raw_kernel(struct gpujpeg_preprocessor_data data, u
 
     // Load
     uchar4 r;
-    gpujpeg_preprocessor_comp_to_raw_load<comp_count, s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v, s_comp4_samp_factor_h, s_comp4_samp_factor_v>::perform(r, image_position_x, image_position_y, data);
+    gpujpeg_preprocessor_comp_to_raw_load<s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v, s_comp4_samp_factor_h, s_comp4_samp_factor_v>::perform(r, image_position_x, image_position_y, data);
 
     // Color transform
     gpujpeg_color_transform<color_space_internal, color_space>::perform(r);
@@ -250,16 +231,12 @@ template<enum gpujpeg_color_space color_space_internal>
 gpujpeg_preprocessor_decode_kernel
 gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 {
-    gpujpeg_preprocessor_sampling_factor_t sampling_factor = gpujpeg_preprocessor_make_sampling_factor(
-        coder->sampling_factor.horizontal / coder->component[0].sampling_factor.horizontal,
-        coder->sampling_factor.vertical / coder->component[0].sampling_factor.vertical,
-        coder->sampling_factor.horizontal / coder->component[1].sampling_factor.horizontal,
-        coder->sampling_factor.vertical / coder->component[1].sampling_factor.vertical,
-        coder->sampling_factor.horizontal / coder->component[2].sampling_factor.horizontal,
-        coder->sampling_factor.vertical / coder->component[2].sampling_factor.vertical,
-        coder->param.comp_count == 4 ? coder->sampling_factor.horizontal / coder->component[3].sampling_factor.horizontal : 1,
-        coder->param.comp_count == 4 ? coder->sampling_factor.vertical / coder->component[3].sampling_factor.vertical : 1
-    );
+    gpujpeg_preprocessor_sampling_factor_t sampling_factor = gpujpeg_preprocessor_make_sampling_factor_i(
+        coder->param.comp_count, coder->sampling_factor.horizontal, coder->sampling_factor.vertical,
+        coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical,
+        coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical,
+        coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical,
+        coder->component[3].sampling_factor.horizontal, coder->component[3].sampling_factor.vertical);
 
 #define RETURN_KERNEL_SWITCH(PIXEL_FORMAT, COLOR, P1, P2, P3, P4, P5, P6, P7, P8) \
         switch ( PIXEL_FORMAT ) { \
@@ -273,8 +250,8 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
             case GPUJPEG_PIXFMT_NONE: GPUJPEG_ASSERT(0 && "Postprocess to GPUJPEG_PIXFMT_NONE not allowed"); \
         } \
 
-#define RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, P1, P2, P3, P4, P5, P6, P7, P8) \
-    if ( sampling_factor == gpujpeg_preprocessor_make_sampling_factor(P1, P2, P3, P4, P5, P6, P7, P8) ) { \
+#define RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) \
+    if ( sampling_factor == gpujpeg_preprocessor_make_sampling_factor(COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) ) { \
         int max_h = max(P1, max(P3, P5)); \
         int max_v = max(P2, max(P4, P6)); \
         if ( coder->param.verbose >= 1 ) { \
@@ -284,13 +261,17 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     }
 
 #define RETURN_KERNEL(PIXEL_FORMAT, COLOR) \
-    RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 1, 1, 1, 1, 1, 1) /* 4:4:4 */ \
-    else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 2, 2, 2, 2, 1, 1) /* 4:2:0 */ \
-    else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 1, 2, 1, 2, 1, 1) /* 4:4:0 */ \
-    else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 1, 1, 2, 1, 2, 1, 1, 1) /* 4:2:2 */ \
+    RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 3, 1, 1, 1, 1, 1, 1, 0, 0) /* 4:4:4 */ \
+    else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 3, 1, 1, 2, 2, 2, 2, 0, 0) /* 4:2:0 */ \
+    else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 3, 1, 1, 1, 2, 1, 2, 0, 0) /* 4:4:0 */ \
+    else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 3, 1, 1, 2, 1, 2, 1, 0, 0) /* 4:2:2 */ \
     else { \
         if ( coder->param.verbose >= 0 ) { \
-            printf("Using slower kernel for postprocessor (dynamic %dx%d, %dx%d, %dx%d).\n", coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical, coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical, coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical); \
+            printf("Using slower kernel for postprocessor (dynamic %dx%d, %dx%d, %dx%d, %dx%d).\n",                    \
+                   coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical,       \
+                   coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical,       \
+                   coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical,       \
+                   coder->component[3].sampling_factor.horizontal, coder->component[3].sampling_factor.vertical);      \
         } \
         RETURN_KERNEL_SWITCH(PIXEL_FORMAT, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC) \
     } \
