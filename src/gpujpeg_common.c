@@ -32,10 +32,8 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <ctype.h>
 #include "../libgpujpeg/gpujpeg_common.h"
-#include "gpujpeg_postprocessor.h"
-#include "gpujpeg_preprocessor.h"
+#include "gpujpeg_common_internal.h"
 #include "gpujpeg_util.h"
 #ifdef HAVE_GPUJPEG_VERSION_H
 #include <libgpujpeg/gpujpeg_version.h>

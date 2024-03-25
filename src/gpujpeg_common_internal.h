@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -53,6 +53,10 @@
 #define GPUJPEG_BLOCK_SIZE                      8
 #define GPUJPEG_BLOCK_SQUARED_SIZE              64
 #define GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE       (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE * 8)
+
+#define GPUJPEG_IDCT_BLOCK_X	8
+#define GPUJPEG_IDCT_BLOCK_Y 	8
+#define GPUJPEG_IDCT_BLOCK_Z 	2
 
 /** Maximum JPEG header size (MUST be divisible by 4!!!) */
 #define GPUJPEG_MAX_HEADER_SIZE                 (65536 - 100)

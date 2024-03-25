@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2024, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  */
 /*
@@ -103,6 +103,9 @@ enum gpujpeg_marker_code {
 
     GPUJPEG_MARKER_ERROR = 0x100
 };
+
+/** Marker used as segment info */
+#define GPUJPEG_MARKER_SEGMENT_INFO GPUJPEG_MARKER_APP13
 
 #define APP14_ADOBE_MARKER_LEN 14
 #define SPIFF_VERSION 0x100 // Version 1.00

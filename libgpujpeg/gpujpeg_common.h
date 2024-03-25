@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2024, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -87,15 +87,8 @@ GPUJPEG_API const char *gpujpeg_version_to_string(int version);
 GPUJPEG_API double
 gpujpeg_get_time(void);
 
-/** Marker used as segment info */
-#define GPUJPEG_MARKER_SEGMENT_INFO GPUJPEG_MARKER_APP13
-
 /** Maximum number of devices for get device info */
 #define GPUJPEG_MAX_DEVICE_COUNT 10
-
-#define GPUJPEG_IDCT_BLOCK_X	8
-#define GPUJPEG_IDCT_BLOCK_Y 	8
-#define GPUJPEG_IDCT_BLOCK_Z 	2
 
 /** Device info for one device */
 struct gpujpeg_device_info
