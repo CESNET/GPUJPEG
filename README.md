@@ -18,8 +18,6 @@ Table of contents
   * [Encoding](#encoding)
   * [Decoding](#decoding)
 - [Quality](#quality)
-  * [Encoding 4K (4096x2160) and HD (1920x1080)](#encoding-4k-4096x2160-and-hd-1920x1080)
-  * [Decoding 4K (4096x2160) and HD (1920x1080)](#decoding-4k-4096x2160-and-hd-1920x1080)
 - [Compile](#compile)
 - [Usage](#usage)
   * [libgpujpeg library](#libgpujpeg-library)
@@ -146,14 +144,12 @@ Following measurements were performed on _GTX 3080_ only:
 
 Quality
 -----------
-Following tables summarizes encoding/decoding quality using NVIDIA
+Following tables summarizes encoding quality and file size using NVIDIA
 GTX 580 for non-interleaved and non-subsampled stream with different quality
 settings (PSNR and encoded size values are averages of encoding several
 images, each of them multiple times):
 
-### Encoding 4K (4096x2160) and HD (1920x1080)
-
-| quality |  PSNR 4K |   size 4K  |  PSNR HD |  size HD   |
+| quality |  PSNR 4K¹|   size 4K  |  PSNR HD²|  size HD   |
 |---------|----------|------------|----------|------------|
 |   10    | 29.33 dB |  539.30 kB | 27.41 dB |  145.90 kB |
 |   20    | 32.70 dB |  697.20 kB | 30.32 dB |  198.30 kB |
@@ -166,20 +162,7 @@ images, each of them multiple times):
 |   90    | 42.83 dB | 2441.40 kB | 39.84 dB |  768.40 kB |
 |  100    | 47.09 dB | 7798.70 kB | 47.21 dB | 2499.60 kB |
 
-### Decoding 4K (4096x2160) and HD (1920x1080)
-
-| quality |  PSNR 4K |   size 4K  |  PSNR 4K |  size 4K   |
-|---------|----------|------------|----------|------------|
-|   10    | 29.33 dB |  539.30 kB | 27.41 dB |  145.90 kB |
-|   20    | 32.70 dB |  697.20 kB | 30.32 dB |  198.30 kB |
-|   30    | 34.63 dB |  850.60 kB | 31.92 dB |  243.60 kB |
-|   40    | 35.97 dB |  958.90 kB | 32.99 dB |  282.20 kB |
-|   50    | 36.94 dB | 1073.30 kB | 33.82 dB |  319.10 kB |
-|   60    | 37.96 dB | 1217.10 kB | 34.65 dB |  360.00 kB |
-|   70    | 39.22 dB | 1399.20 kB | 35.71 dB |  422.10 kB |
-|   80    | 40.67 dB | 1710.00 kB | 37.15 dB |  526.70 kB |
-|   90    | 42.83 dB | 2441.40 kB | 39.84 dB |  768.40 kB |
-|  100    | 47.09 dB | 7798.70 kB | 47.21 dB | 2499.60 kB |
+<b><sup>1,2</sup></b> sizes 4096x2160 and 1920x1080
 
 Compile
 -------
