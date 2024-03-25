@@ -47,7 +47,8 @@ jobs:
         sudo apt install cmake jq nvidia-cuda-toolkit
     - name: Build
       run: |
-        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_RPATH='$ORIGIN/../lib' -Bbuild .
+        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_RPATH='$ORIGIN/../lib' \
+          -DCMAKE_CUDA_ARCHITECTURES=35 -Bbuild .
         cmake --build build --parallel
         ctest -R unittests
         cmake --install build --prefix GPUJPEG
@@ -70,13 +71,13 @@ jobs:
   Windows:
     name: run Windows
     needs: retag-continuous
-    runs-on: windows-2019
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@main
     - name: install CUDA
       run: |
-        choco install cuda -y --no-progress
+        choco install cuda -y --no-progress --version=11.8.0.52206
         #$url="https://developer.download.nvidia.com/compute/cuda/12.1.0/network_installers/cuda_12.1.0_windows_network.exe"
         #$url -match 'cuda/(?<version>[0-9]+.[0-9]+)'
         #$version=$Matches.version
@@ -101,7 +102,10 @@ jobs:
         Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
         refreshenv
         # TODO: figure out if setting CMAKE_SYSTEM_VERSION is needed/best solution
-        cmake.exe -DCMAKE_SYSTEM_VERSION=10.0.18362 -DCMAKE_BUILD_TYPE=Release -DBUILD_OPENGL=ON -DGLFW_ROOT_DIR='C:\glfw' -DGLFW_USE_STATIC_LIBS=ON -DGLEW_ROOT='C:\glew' -DGLEW_USE_STATIC_LIBS=ON -Bbuild .
+        cmake.exe -DCMAKE_SYSTEM_VERSION=10.0.18362 -DCMAKE_BUILD_TYPE=Release `
+          -DBUILD_OPENGL=ON -DGLFW_ROOT_DIR='C:\glfw' -DGLFW_USE_STATIC_LIBS=ON `
+          -DGLEW_ROOT='C:\glew' -DGLEW_USE_STATIC_LIBS=ON `
+          -DCMAKE_CUDA_ARCHITECTURES=35 -Bbuild .
         cmake.exe --build build --config Release --parallel (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
         cmake.exe --install build --prefix GPUJPEG
         cpack.exe --config build/CPackConfig.cmake -GNSIS64
