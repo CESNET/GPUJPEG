@@ -207,7 +207,6 @@ parameters, and the second is structure with parameters of input image:
     gpujpeg_image_set_default_parameters(&param_image);
     param_image.width = 1920;
     param_image.height = 1080;
-    param_image.comp_count = 3; // output JPEG channel count (3 default)
     param_image.color_space = GPUJPEG_RGB; // input colorspace (GPUJPEG_RGB
                                            // default), can be also
                                            // eg. GPUJPEG_YCBCR_JPEG
@@ -218,20 +217,16 @@ parameters, and the second is structure with parameters of input image:
 If you want to use subsampling in JPEG format call following function,
 that will set default sampling factors (2x2 for Y, 1x1 for Cb and Cr):
 
-    // Use default sampling factors
+    // Use 4:2:0 subsampling
     gpujpeg_parameters_chroma_subsampling(&param, GPUJPEG_SUBSAMPLING_420);
 
 Or define sampling factors by hand:
 
     // User custom sampling factors
-    param.sampling_factor[0].horizontal = 4;
-    param.sampling_factor[0].vertical = 4;
-    param.sampling_factor[1].horizontal = 1;
-    param.sampling_factor[1].vertical = 2;
-    param.sampling_factor[2].horizontal = 2;
-    param.sampling_factor[2].vertical = 1;
+    gpujpeg_parameters_chroma_subsampling(&param, MK_SUBSAMPLING(4, 4, 1, 2, 2, 1, 0, 0));
 
-Next you have to initialize CUDA device by calling:
+Next you can initialize CUDA device by calling (if not called, default CUDA
+device will be used):
 
     if ( gpujpeg_init_device(device_id, 0) )
         return -1;
