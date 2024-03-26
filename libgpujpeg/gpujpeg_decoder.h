@@ -195,7 +195,7 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder);
 GPUJPEG_API void
 gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
                 enum gpujpeg_color_space color_space,
-                enum gpujpeg_pixel_format sampling_factor);
+                enum gpujpeg_pixel_format pixel_format);
 
 /**
  * @copydoc gpujpeg_reader_get_image_info

@@ -109,9 +109,9 @@ gpujpeg_decoder_create(cudaStream_t stream)
     gpujpeg_image_set_default_parameters(&coder->param_image);
     coder->param_image.width = 0;
     coder->param_image.height = 0;
-    coder->param_image.pixel_format = GPUJPEG_PIXFMT_AUTODETECT;
     coder->param.comp_count = 0;
     coder->param.restart_interval = 0;
+    decoder->req_pixel_format = GPUJPEG_PIXFMT_AUTODETECT;
 
     int result = 1;
 
@@ -409,12 +409,11 @@ gpujpeg_decoder_get_stats(struct gpujpeg_decoder *decoder, struct gpujpeg_durati
 }
 
 void
-gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
-                enum gpujpeg_color_space color_space,
-                enum gpujpeg_pixel_format sampling_factor)
+gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder, enum gpujpeg_color_space color_space,
+                                  enum gpujpeg_pixel_format pixel_format)
 {
-        decoder->coder.param_image.color_space = color_space;
-        decoder->coder.param_image.pixel_format = sampling_factor;
+    decoder->coder.param_image.color_space = color_space;
+    decoder->req_pixel_format = pixel_format;
 }
 
 /* Documented at declaration */

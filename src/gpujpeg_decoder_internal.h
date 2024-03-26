@@ -69,6 +69,8 @@ struct gpujpeg_decoder
 
     // Stream
     cudaStream_t stream;
+
+    enum gpujpeg_pixel_format req_pixel_format;
 };
 
 #endif // GPUJPEG_DECODER_INTERNAL_H

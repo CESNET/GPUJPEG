@@ -1397,6 +1397,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
     decoder->reader->param = decoder->coder.param;
     decoder->reader->param.restart_interval = 0;
     decoder->reader->param_image = decoder->coder.param_image;
+    decoder->reader->param_image.pixel_format = decoder->req_pixel_format;
     decoder->reader->comp_count = 0;
     decoder->reader->scan_count = 0;
     decoder->reader->segment_count = 0;
