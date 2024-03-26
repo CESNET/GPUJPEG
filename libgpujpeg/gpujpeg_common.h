@@ -181,6 +181,7 @@ struct gpujpeg_parameters
     int segment_info;
 
     /// JPEG image component count; count of valid sampling_factor elements
+    /// use gpujpeg_parameters_chroma_subsampling() to set comp_count and sampling_factor
     int comp_count;
     /// Sampling factors for each color component inside JPEG stream.
     struct gpujpeg_component_sampling_factor sampling_factor[GPUJPEG_MAX_COMPONENT_COUNT];
@@ -199,17 +200,22 @@ struct gpujpeg_parameters
 GPUJPEG_API void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param);
 
-#define GPUJPEG_SUBSAMPLING_4444 4444
-#define GPUJPEG_SUBSAMPLING_444 4440
-#define GPUJPEG_SUBSAMPLING_422 4220
-#define GPUJPEG_SUBSAMPLING_420 4200
+#define MK_SUBSAMPLING(comp1_factor_h, comp1_factor_v, comp2_factor_h, comp2_factor_v, comp3_factor_h, comp3_factor_v, \
+                       comp4_factor_h, comp4_factor_v)                                                                 \
+    ((comp1_factor_h) << 28U | (comp1_factor_v) << 24U | (comp2_factor_h) << 20U | (comp2_factor_v) << 16U |           \
+     (comp3_factor_h) << 12U | (comp3_factor_v) << 8U | (comp4_factor_h) << 4U | (comp4_factor_v) << 0U)
+
+#define GPUJPEG_SUBSAMPLING_4444 MK_SUBSAMPLING(1, 1, 1, 1, 1, 1, 1, 1)
+#define GPUJPEG_SUBSAMPLING_444 MK_SUBSAMPLING(1, 1, 1, 1, 1, 1, 0, 0)
+#define GPUJPEG_SUBSAMPLING_422 MK_SUBSAMPLING(2, 1, 1, 1, 1, 1, 0, 0)
+#define GPUJPEG_SUBSAMPLING_420 MK_SUBSAMPLING(2, 2, 1, 1, 1, 1, 0, 0)
 /**
  * Set parameters for using specified chroma subsampling
  * @param param       parameters for coder
  * @param subsampling one of GPUJPEG_SUBSAMPLING_{444,422,420}
  */
 GPUJPEG_API void
-gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, int subsampling);
+gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, uint32_t subsampling);
 
 /**
  * Set parameters for using 4:2:2 chroma subsampling
