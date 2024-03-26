@@ -27,6 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "../libgpujpeg/gpujpeg_common.h"
 #include "../libgpujpeg/gpujpeg_type.h"
 
 #include <cassert>
@@ -117,12 +118,10 @@ inline gpujpeg_preprocessor_sampling_factor_t
 gpujpeg_preprocessor_make_sampling_factor(int comp_count, int comp1_h, int comp1_v, int comp2_h, int comp2_v, int comp3_h, int comp3_v, int comp4_h, int comp4_v)
 {
     assert(comp_count >= 3);
-    gpujpeg_preprocessor_sampling_factor_t sampling_factor = 0;
-    sampling_factor |= ((comp1_h << 4U) | comp1_v) << 24U;
-    sampling_factor |= ((comp2_h << 4U) | comp2_v) << 16U;
-    sampling_factor |= ((comp3_h << 4U) | comp3_v) << 8U;
-    if (comp_count == 4) {
-        sampling_factor |= ((comp4_h << 4U) | comp4_v) << 0U;
+    gpujpeg_preprocessor_sampling_factor_t sampling_factor =
+        MK_SUBSAMPLING(comp1_h, comp1_v, comp2_h, comp2_v, comp3_h, comp3_v, comp4_h, comp4_v);
+    if (comp_count == 3) {
+        sampling_factor &= 0xFFFFFF00U;
     }
 
     return sampling_factor;
