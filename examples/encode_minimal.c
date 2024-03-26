@@ -18,7 +18,6 @@ main()
     param_image.width = 640;
     param_image.height = 480;
     param_image.color_space = GPUJPEG_YCBCR_JPEG;
-    param_image.comp_count = 1;
     param_image.pixel_format = GPUJPEG_U8;
     struct gpujpeg_encoder_input encoder_input;
     uint8_t *blank_buffer =

@@ -46,7 +46,6 @@ static int encode(int width, int height, int ch_count, const char *input_filenam
         gpujpeg_image_set_default_parameters(&param_image);
         param_image.width = width;
         param_image.height = height;
-        param_image.comp_count = ch_count;
         param_image.color_space =
             ch_count == 1 ? GPUJPEG_YCBCR_JPEG : GPUJPEG_RGB;
         param_image.pixel_format =
