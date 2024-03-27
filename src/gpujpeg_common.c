@@ -111,6 +111,7 @@ static const struct {
 } gpujpeg_pixel_format_desc[] = {
     {GPUJPEG_PIXFMT_PLANAR_STD, 0,      0, 0, "(planar)",        {{0}}                           },
     {GPUJPEG_PIXFMT_NO_ALPHA,   0,      0, 0, "(without alpha)", {{0}}                           },
+    {GPUJPEG_PIXFMT_AUTODETECT, 0,      0, 0, "(autodetect)",    {{0}}                           },
     {GPUJPEG_PIXFMT_NONE,       0,      0, 0, "(unknown)",       {{0}}                           },
     {GPUJPEG_U8,                0,      1, 1, "u8",              {{1, 1}}                        },
     {GPUJPEG_444_U8_P012,       0,      3, 3, "444-u8-p012",     {{1, 1}, {1, 1}, {1, 1}}        },

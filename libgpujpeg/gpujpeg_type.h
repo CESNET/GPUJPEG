@@ -110,11 +110,11 @@ enum gpujpeg_pixel_format {
 // following format placeholders are special values that may be passed
 // to the decoeer in order to detect the format with optional constraints
 // defined outsid the enum gpujpeg_pixel_format to avoid -Wswitch warns
-#define GPUJPEG_PIXFMT_AUTODETECT GPUJPEG_PIXFMT_NONE
+#define GPUJPEG_PIXFMT_AUTODETECT ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NONE - 1))
 //< any pixel format without alpha channel
-#define GPUJPEG_PIXFMT_NO_ALPHA (GPUJPEG_PIXFMT_NONE - 1)
+#define GPUJPEG_PIXFMT_NO_ALPHA ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_AUTODETECT - 1))
 //< a planar pixel format that is either 444, 422 or 420
-#define GPUJPEG_PIXFMT_PLANAR_STD (GPUJPEG_PIXFMT_NONE - 2)
+#define GPUJPEG_PIXFMT_PLANAR_STD ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NO_ALPHA - 1))
 
 /**
  * Sampling factor for color component in JPEG format
