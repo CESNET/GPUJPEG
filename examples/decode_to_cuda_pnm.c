@@ -55,7 +55,6 @@ static int decode(const char *input_filename, struct decode_data *d)
         if ((d->decoder = gpujpeg_decoder_create(0)) == NULL) {
                 return 1;
         }
-        gpujpeg_decoder_set_output_format(d->decoder, GPUJPEG_RGB, GPUJPEG_444_U8_P012);
 
         // load image
         size_t input_image_size = 0;
@@ -77,21 +76,15 @@ static int decode(const char *input_filename, struct decode_data *d)
         strcpy(d->out_filename, input_filename);
         strcpy(strrchr(d->out_filename, '.') + 1, "pnm");
 
-        // obtain parameters for PNM header
-        struct gpujpeg_image_parameters param_image;
-        struct gpujpeg_parameters params = { .verbose = 0 };
-        gpujpeg_decoder_get_image_info(d->input_image, input_image_size, &param_image, &params, NULL);
-        param_image.color_space = GPUJPEG_RGB;
-        param_image.pixel_format = GPUJPEG_444_U8_P012;
-
         if (cudaMemcpy(d->output_image, d->d_output_image, decoder_output.data_size, cudaMemcpyDeviceToHost) != cudaSuccess) {
             fprintf(stderr, "Cannot copy from device to host: %s\n", cudaGetErrorString(cudaGetLastError()));
             return 1;
         }
 
         // write the decoded image
-        if (gpujpeg_image_save_to_file(d->out_filename, d->output_image, decoder_output.data_size, &param_image) != 0) {
-                return 1;
+        if ( gpujpeg_image_save_to_file(d->out_filename, d->output_image, decoder_output.data_size,
+                                        &decoder_output.param_image) != 0 ) {
+            return 1;
         }
 
         return 0;
