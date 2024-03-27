@@ -11,15 +11,23 @@
 
 static void usage(const char *progname) {
         printf("Usage:\n");
-        printf("\t%s file.jpg\n", progname);
+        printf("\t%s file.jpg [file2.jpg...]\n", progname);
 }
 
 static bool check_params(int argc, char *argv[]) {
-        if (argc != 2 || strrchr(argv[1], '.') == NULL) {
+        if (argc < 2) {
                 return false;
         }
-        const char *ext = strrchr(argv[1], '.') + 1;
-        return strcasecmp(ext, "jpg") == 0;
+        while ( *++argv != NULL ) {
+            if ( strrchr(*argv, '.') == NULL ) {
+                return false;
+            }
+            const char* ext = strrchr(*argv, '.') + 1;
+            if ( strcasecmp(ext, "jpg") != 0 ) {
+                return false;
+            }
+        }
+        return true;
 }
 
 // to simplify deletion of allocated items on all paths
@@ -32,8 +40,11 @@ struct decode_data {
 static int decode(const char *input_filename, struct decode_data *d)
 {
         // create decoder
-        if ((d->decoder = gpujpeg_decoder_create(0)) == NULL) {
+        if ( d->decoder == NULL ) {
+            d->decoder = gpujpeg_decoder_create(0);
+            if ( d->decoder == NULL ) {
                 return 1;
+            }
         }
 
         // load image
@@ -50,9 +61,11 @@ static int decode(const char *input_filename, struct decode_data *d)
         if (gpujpeg_decoder_decode(d->decoder, d->input_image, input_image_size, &decoder_output) != 0) {
                 return 1;
         }
+        gpujpeg_image_destroy(d->input_image);
+        d->input_image = NULL;
 
         // create output file name
-        d->out_filename = malloc(strlen(input_filename) + 1);
+        d->out_filename = realloc(d->out_filename, strlen(input_filename) + 1);
         strcpy(d->out_filename, input_filename);
         strcpy(strrchr(d->out_filename, '.') + 1, "pnm");
 
@@ -71,18 +84,23 @@ int main(int argc, char *argv[]) {
                 return 1;
         }
 
-        struct decode_data d = { 0 };
-        int rc = decode(argv[1], &d);
+        int ret = EXIT_SUCCESS;
+
+        struct decode_data d = {0};
+        while ( *++argv != NULL ) {
+            printf("decoding %s...\n", *argv);
+            int rc = decode(*argv, &d);
+            puts(rc == 0 ? "Success" : "FAILURE");
+            ret += rc;
+        }
 
         free(d.out_filename);
         gpujpeg_image_destroy(d.input_image);
-        if (d.decoder != NULL) {
+        if ( d.decoder != NULL ) {
             gpujpeg_decoder_destroy(d.decoder);
         }
 
-        puts(rc == 0 ? "Success\n" : "FAILURE\n");
-
-        return rc;
+        return ret;
 }
 
 /* vim: set expandtab sw=4: */
