@@ -98,22 +98,24 @@ static void
 print_gpujpeg_image_parameters(struct gpujpeg_image_parameters params_image, bool oneline,
                                const char* subsampling_details)
 {
-    const char *sep_str = oneline ? ", " : "\n";
+    const char *sep_str = oneline ? " " : "\n";
     const char *separator = ""; // first time empty
     if ( params_image.width ) {
-        printf("width: %d%s", params_image.width, (separator = sep_str));
+        printf("%s%d", oneline ? "" : "width: ", params_image.width);
     }
     if ( params_image.height ) {
-        printf("height: %d%s", params_image.height, (separator = sep_str));
-    }
-    if ( params_image.color_space ) {
-        printf("color space: %s%s", gpujpeg_color_space_get_name(params_image.color_space), (separator = sep_str));
+        printf("%s%d%s", oneline ? "x" : "\nheight: ", params_image.height, (separator = sep_str));
     }
     if ( params_image.pixel_format != GPUJPEG_PIXFMT_NONE ) {
-        printf("internal representation: %s", gpujpeg_pixel_format_get_name(params_image.pixel_format));
+        printf("%s%s",
+               oneline ? "" : "internal representation: ", gpujpeg_pixel_format_get_name(params_image.pixel_format));
         if ( !oneline && subsampling_details != NULL ) {
             printf(" (%s)", subsampling_details);
         }
+        printf("%s", (separator = sep_str));
+    }
+    if ( params_image.color_space ) {
+        printf("%s%s", oneline ? "" : "color space: ", gpujpeg_color_space_get_name(params_image.color_space));
     }
     printf("\n");
 }
@@ -532,9 +534,8 @@ main(int argc, char *argv[])
 
             // Encode image
             double duration = gpujpeg_get_time();
-            printf("\nEncoding Image [%s]: %dx%d %s %s\n", input, param_image.width, param_image.height,
-                    gpujpeg_pixel_format_get_name(param_image.pixel_format),
-                    gpujpeg_color_space_get_name(param_image.color_space));
+            printf("\nEncoding Image [%s]: ", input);
+            print_gpujpeg_image_parameters(param_image, true, NULL);
 
             // Load image
             size_t image_size = gpujpeg_image_calculate_size(&param_image);
