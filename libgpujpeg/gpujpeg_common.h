@@ -200,6 +200,8 @@ struct gpujpeg_parameters
 GPUJPEG_API void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param);
 
+/** Sampling factor for all components */
+typedef uint32_t gpujpeg_sampling_factor_t;
 #define MK_SUBSAMPLING(comp1_factor_h, comp1_factor_v, comp2_factor_h, comp2_factor_v, comp3_factor_h, comp3_factor_v, \
                        comp4_factor_h, comp4_factor_v)                                                                 \
     ((comp1_factor_h) << 28U | (comp1_factor_v) << 24U | (comp2_factor_h) << 20U | (comp2_factor_v) << 16U |           \
@@ -207,15 +209,23 @@ gpujpeg_set_default_parameters(struct gpujpeg_parameters* param);
 
 #define GPUJPEG_SUBSAMPLING_4444 MK_SUBSAMPLING(1, 1, 1, 1, 1, 1, 1, 1)
 #define GPUJPEG_SUBSAMPLING_444 MK_SUBSAMPLING(1, 1, 1, 1, 1, 1, 0, 0)
+#define GPUJPEG_SUBSAMPLING_440 MK_SUBSAMPLING(1, 2, 1, 1, 1, 1, 0, 0)
 #define GPUJPEG_SUBSAMPLING_422 MK_SUBSAMPLING(2, 1, 1, 1, 1, 1, 0, 0)
 #define GPUJPEG_SUBSAMPLING_420 MK_SUBSAMPLING(2, 2, 1, 1, 1, 1, 0, 0)
+#define GPUJPEG_SUBSAMPLING_411 MK_SUBSAMPLING(4, 1, 1, 1, 1, 1, 0, 0)
+#define GPUJPEG_SUBSAMPLING_410 MK_SUBSAMPLING(4, 2, 1, 1, 1, 1, 0, 0)
+// non-standard sampling rates (in Y:Cb:Cr notation as described in
+// <https://en.wikipedia.org/wiki/Chroma_subsampling#Different_Cb_and_Cr_rates>
+#define GPUJPEG_SUBSAMPLING_442 MK_SUBSAMPLING(1, 2, 1, 2, 1, 1, 0, 0)
+#define GPUJPEG_SUBSAMPLING_421 MK_SUBSAMPLING(2, 2, 2, 1, 1, 1, 0, 0)
 /**
  * Set parameters for using specified chroma subsampling
  * @param param       parameters for coder
  * @param subsampling one of GPUJPEG_SUBSAMPLING_{444,422,420}
  */
 GPUJPEG_API void
-gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, uint32_t subsampling);
+gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
+                                      gpujpeg_sampling_factor_t subsampling);
 
 /**
  * Set parameters for using 4:2:2 chroma subsampling

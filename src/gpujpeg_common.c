@@ -292,7 +292,8 @@ gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param)
 }
 
 void
-gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param, uint32_t subsampling)
+gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
+                                      gpujpeg_sampling_factor_t subsampling)
 {
     enum {
         HI_4_BIT_OFF = 28,

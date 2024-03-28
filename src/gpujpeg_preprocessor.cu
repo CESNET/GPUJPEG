@@ -210,7 +210,7 @@ template<enum gpujpeg_color_space color_space_internal>
 gpujpeg_preprocessor_encode_kernel
 gpujpeg_preprocessor_select_encode_kernel(struct gpujpeg_coder* coder)
 {
-    gpujpeg_preprocessor_sampling_factor_t sampling_factor = gpujpeg_preprocessor_make_sampling_factor_i(
+    gpujpeg_sampling_factor_t sampling_factor = gpujpeg_preprocessor_make_sampling_factor_i(
         coder->param.comp_count, coder->sampling_factor.horizontal, coder->sampling_factor.vertical,
         coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical,
         coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical,

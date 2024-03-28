@@ -56,9 +56,6 @@ struct gpujpeg_preprocessor_data
 /** Value that means that sampling factor has dynamic value */
 #define GPUJPEG_DYNAMIC 16
 
-/** Sampling factor for all components */
-typedef uint32_t gpujpeg_preprocessor_sampling_factor_t;
-
 /**
  * Prepares fixed divisor for dividing unsigned integers up to 2^31
  * with unsigned integers up to 2^31.
@@ -114,16 +111,16 @@ gpujpeg_const_div_divide(const uint32_t numerator, const uint32_t pre_div_mul, c
  *
  * @return integer that contains all sampling factors
  */
-inline gpujpeg_preprocessor_sampling_factor_t
+inline gpujpeg_sampling_factor_t
 gpujpeg_preprocessor_make_sampling_factor(int comp_count, int comp1_h, int comp1_v, int comp2_h, int comp2_v, int comp3_h, int comp3_v, int comp4_h, int comp4_v)
 {
-    gpujpeg_preprocessor_sampling_factor_t sampling_factor =
+    gpujpeg_sampling_factor_t sampling_factor =
         MK_SUBSAMPLING(comp1_h, comp1_v, comp2_h, comp2_v, comp3_h, comp3_v, comp4_h, comp4_v);
     const uint32_t mask = 0xFFFFFFFFU << (32U - comp_count * 8U);
     return sampling_factor & mask;
 }
 
-inline gpujpeg_preprocessor_sampling_factor_t
+inline gpujpeg_sampling_factor_t
 gpujpeg_preprocessor_make_sampling_factor_i(int comp_count, int numerator_h, int numerator_v, int comp1_h, int comp1_v, int comp2_h, int comp2_v,
                                             int comp3_h, int comp3_v, int comp4_h, int comp4_v) {
     return gpujpeg_preprocessor_make_sampling_factor(
