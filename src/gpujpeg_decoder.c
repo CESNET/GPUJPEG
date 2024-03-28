@@ -284,16 +284,21 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
 
     GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_dct_quantization, coder->param.perf_stats, decoder->stream, return -1);
 
-    // Create buffers if not already created
-    if (coder->data_raw == NULL) {
-        if (cudaSuccess != cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t))) {
-            return -1;
-        }
-    }
-    if (coder->d_data_raw_allocated == NULL) {
-        if (cudaSuccess != cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t))) {
-            return -1;
-        }
+    // Reallocate buffers if not enough size
+    if ( coder->data_raw_size > coder->data_raw_allocated_size ) {
+        coder->data_raw_allocated_size = 0;
+
+        // (Re)allocate raw data in host memory
+        cudaFreeHost(coder->data_raw);
+        coder->data_raw = NULL;
+        cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t));
+        // (Re)allocate raw data in device memory
+        cudaFree(coder->d_data_raw_allocated);
+        coder->d_data_raw_allocated = NULL;
+        cudaMalloc((void**)&coder->d_data_raw_allocated, coder->data_raw_size * sizeof(uint8_t));
+
+        gpujpeg_cuda_check_error("Decoder raw data allocation", return -1);
+        coder->data_raw_allocated_size = coder->data_raw_size;
     }
 
     // Select CUDA output buffer
