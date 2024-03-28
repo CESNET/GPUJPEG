@@ -1756,6 +1756,15 @@ gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component_samp
         return buf;
     }
 
+    if ( gpujpeg_make_sampling_factor2(comp_count, sampling_factor) == GPUJPEG_SUBSAMPLING_442 ) {
+        snprintf(buf, sizeof buf, "4:4:2");
+        return buf;
+    }
+    if ( gpujpeg_make_sampling_factor2(comp_count, sampling_factor) == GPUJPEG_SUBSAMPLING_421 ) {
+        snprintf(buf, sizeof buf, "4:2:1");
+        return buf;
+    }
+
     // other cases - simply write the subsampling factors in format v0-h0:v1-h1[:...]
     buf[0] = '\0';
     for (int i = 0; i < comp_count; ++i) {

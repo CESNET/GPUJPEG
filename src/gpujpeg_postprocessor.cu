@@ -251,7 +251,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         } \
 
 #define RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) \
-    if ( sampling_factor == gpujpeg_preprocessor_make_sampling_factor(COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) ) { \
+    if ( sampling_factor == gpujpeg_make_sampling_factor(COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) ) { \
         int max_h = max(P1, max(P3, P5)); \
         int max_v = max(P2, max(P4, P6)); \
         if ( coder->param.verbose >= 1 ) { \

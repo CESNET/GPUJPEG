@@ -435,6 +435,26 @@ void
 gpujpeg_set_subsampling_from_pixel_format(enum gpujpeg_pixel_format pixel_format, int* comp_count,
                                           struct gpujpeg_component_sampling_factor* sampling_factor);
 
+/**
+ * @sa MK_SUBSAMPLING
+ * This is mostly the same except but it zeroes unused coefficient (if comp_count < 4).
+ */
+inline gpujpeg_sampling_factor_t
+gpujpeg_make_sampling_factor(int comp_count, int comp1_h, int comp1_v, int comp2_h, int comp2_v, int comp3_h,
+                             int comp3_v, int comp4_h, int comp4_v)
+{
+    gpujpeg_sampling_factor_t sampling_factor =
+        MK_SUBSAMPLING(comp1_h, comp1_v, comp2_h, comp2_v, comp3_h, comp3_v, comp4_h, comp4_v);
+    const uint32_t mask = 0xFFFFFFFFU << (32U - comp_count * 8U);
+    return sampling_factor & mask;
+}
+
+#define gpujpeg_make_sampling_factor2(comp_count, sampling_factor)                                                     \
+    gpujpeg_make_sampling_factor(comp_count, (sampling_factor)[0].horizontal, (sampling_factor)[0].vertical,           \
+                                 (sampling_factor)[1].horizontal, (sampling_factor)[1].vertical,                       \
+                                 (sampling_factor)[2].horizontal, (sampling_factor)[2].vertical,                       \
+                                 (sampling_factor)[3].horizontal, (sampling_factor)[3].vertical)
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus
