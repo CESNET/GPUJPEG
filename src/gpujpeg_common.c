@@ -1778,6 +1778,11 @@ gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component_samp
 GPUJPEG_API gpujpeg_sampling_factor_t
 gpujpeg_subsampling_from_name(const char* subsampling) {
     enum { UNKNOWN = 0 };
+    if ( strcmp(subsampling, "help") == 0 ) {
+        printf("Set subsampling in usual J:a:b[:alpha] format, eg. 4:2:2. Colons are optional.\n");
+        printf("Non-standard subsamplings 4:4:2 and 4:2:1 are allowed.\n");
+        return UNKNOWN;
+    }
     int J = 0;
     int a = 0;
     int b = 0;
