@@ -1775,6 +1775,56 @@ gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component_samp
     return buf;
 }
 
+GPUJPEG_API gpujpeg_sampling_factor_t
+gpujpeg_subsampling_from_name(const char* subsampling) {
+    enum { UNKNOWN = 0 };
+    int J = 0;
+    int a = 0;
+    int b = 0;
+    int alpha = 0;
+    int comp_count = sscanf(subsampling, "%d:%d:%d:%d", &J, &a, &b, &alpha);
+    if (comp_count == 1 && J / (1000 == 4 || J / 100 == 4)) { // format without ':' delim
+        if ( J / 1000 == 4 ) {
+            comp_count = 4;
+            alpha = J % 10;
+            J /= 10;
+        }
+        else {
+            comp_count = 3;
+        }
+        J -= 400;
+        a = J / 10;
+        b = J % 10;
+        J = 4;
+    }
+    if (comp_count < 3 || J != 4 || (alpha != 4 && alpha != 0)) {
+        return UNKNOWN;
+    }
+    if (a != b && b != 0) { // not in J:a:b format
+        if ( a == 4 && b == 2 && alpha == 0 ) {
+            return GPUJPEG_SUBSAMPLING_442;
+        }
+        if ( a == 2 && b == 1 && alpha == 0 ) {
+            return GPUJPEG_SUBSAMPLING_421;
+        }
+        return UNKNOWN;
+    }
+    if (a == 0 && b == 0 && alpha == 0) {
+        return MK_SUBSAMPLING(1, 1, 0, 0, 0, 0, 0, 0);
+    }
+    struct gpujpeg_component_sampling_factor factor[GPUJPEG_MAX_COMPONENT_COUNT] = {0};
+    factor[0].horizontal = 4 / a;
+    factor[0].vertical = a == b ? 1 : 2;
+    factor[1].horizontal = factor[2].horizontal = 1;
+    factor[1].vertical = factor[2].vertical = 1;
+    if (alpha == 0) {
+        return  gpujpeg_make_sampling_factor2(GPUJPEG_3_COMPONENTS, factor);
+    }
+    factor[3].horizontal = factor[0].horizontal;
+    factor[3].vertical = factor[0].vertical;
+    return gpujpeg_make_sampling_factor2(GPUJPEG_4_COMPONENTS, factor);
+}
+
 const char*
 gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
 {

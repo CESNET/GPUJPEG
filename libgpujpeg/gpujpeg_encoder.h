@@ -194,7 +194,8 @@ gpujpeg_encoder_set_jpeg_header(struct gpujpeg_encoder *encoder, enum gpujpeg_he
  * @param subsampling 444 422 or 420
  */
 GPUJPEG_API int
-gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* param_image, int subsampling, bool interleaved, int verbose);
+gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* param_image,
+                                         gpujpeg_sampling_factor_t subsampling, bool interleaved, int verbose);
 
 /**
  * Destory JPEG encoder

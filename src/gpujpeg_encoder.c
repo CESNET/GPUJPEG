@@ -254,7 +254,8 @@ int gpujpeg_encoder_allocate(struct gpujpeg_encoder * encoder, const struct gpuj
 }
 
 int
-gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* param_image, int subsampling, bool interleaved, int verbose)
+gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* param_image,
+                                         gpujpeg_sampling_factor_t subsampling, bool interleaved, int verbose)
 {
     int restart_interval;
     const int comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);

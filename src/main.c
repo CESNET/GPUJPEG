@@ -72,7 +72,7 @@ print_help(void)
            "\n");
     printf("   -q, --quality          set JPEG encoder quality level 0-100 (default 75)\n"
            "   -r, --restart          set JPEG encoder restart interval (default 8)\n"
-           "   -S, --subsampled[=<s>] set JPEG encoder chroma subsampling (444, 422 or 420; default 420)\n"
+           "   -S, --subsampled[=<s>] set JPEG encoder chroma subsampling in J:a:b[:A] format (default 4:2:0)\n"
            "   -i  --interleaved      set JPEG encoder to use interleaved stream\n"
            "   -g  --segment-info     set JPEG encoder to use segment info in stream\n"
            "                          for fast decoding\n"
@@ -169,8 +169,11 @@ static int print_image_info(const char *filename, int verbose) {
     return 0;
 }
 
-static bool adjust_params(struct gpujpeg_parameters *param, struct gpujpeg_image_parameters *param_image,
-        const char *in, const char *out, _Bool encode, int subsampling, _Bool restart_interval_default, _Bool keep_alpha) {
+static bool
+adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, const char* in,
+              const char* out, _Bool encode, gpujpeg_sampling_factor_t subsampling, _Bool restart_interval_default,
+              _Bool keep_alpha)
+{
     // if possible, read properties from file
     struct gpujpeg_image_parameters file_param_image = { 0, 0, GPUJPEG_NONE, GPUJPEG_PIXFMT_NONE };
     const char *raw_file = encode ? in : out;
@@ -264,7 +267,7 @@ main(int argc, char *argv[])
 
     // Flags
     _Bool restart_interval_default = 1;
-    int subsampling = 0; // 0 - default, 420, 422 or 444
+    gpujpeg_sampling_factor_t subsampling = 0; // 0 - default
     _Bool native_file_format = 0;
     _Bool keep_alpha = 0;
 
@@ -369,12 +372,11 @@ main(int argc, char *argv[])
             break;
         case 'S':
             if (optarg == NULL) {
-                subsampling = 420;
+                subsampling = GPUJPEG_SUBSAMPLING_420;
                 break;
             }
-            subsampling = atoi(optarg);
-            if (subsampling != 0 && subsampling != GPUJPEG_SUBSAMPLING_444
-                    && subsampling != GPUJPEG_SUBSAMPLING_422 && subsampling != GPUJPEG_SUBSAMPLING_420) {
+            subsampling = gpujpeg_subsampling_from_name(optarg);
+            if ( subsampling == GPUJPEG_SUBSAMPLING_UNKNOWN ) {
                 fprintf(stderr, "Unknown subsampling '%s'!\n", optarg);
                 return 1;
             }
@@ -424,6 +426,10 @@ main(int argc, char *argv[])
     }
     argc -= optind;
     argv += optind;
+
+    if ( subsampling != 0 ) {
+        gpujpeg_parameters_chroma_subsampling(&param, subsampling);
+    }
 
     // Show info about image samples range
     if ( component_range == 1 ) {

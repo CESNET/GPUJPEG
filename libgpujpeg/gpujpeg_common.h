@@ -207,6 +207,7 @@ typedef uint32_t gpujpeg_sampling_factor_t;
     ((comp1_factor_h) << 28U | (comp1_factor_v) << 24U | (comp2_factor_h) << 20U | (comp2_factor_v) << 16U |           \
      (comp3_factor_h) << 12U | (comp3_factor_v) << 8U | (comp4_factor_h) << 4U | (comp4_factor_v) << 0U)
 
+#define GPUJPEG_SUBSAMPLING_UNKNOWN 0U
 #define GPUJPEG_SUBSAMPLING_4444 MK_SUBSAMPLING(1, 1, 1, 1, 1, 1, 1, 1)
 #define GPUJPEG_SUBSAMPLING_444 MK_SUBSAMPLING(1, 1, 1, 1, 1, 1, 0, 0)
 #define GPUJPEG_SUBSAMPLING_440 MK_SUBSAMPLING(1, 2, 1, 1, 1, 1, 0, 0)
@@ -253,6 +254,14 @@ gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param);
  */
 GPUJPEG_API const char*
 gpujpeg_subsampling_get_name(int comp_count, const struct gpujpeg_component_sampling_factor *sampling_factor);
+
+/**
+ * returns gpujpeg_sampling_factor_t from textual representation of subsampling
+ *
+ * @retval subsampling, GPUJPEG_SUBSAMPLING_UNKNOWN if not recognized
+ */
+GPUJPEG_API gpujpeg_sampling_factor_t
+gpujpeg_subsampling_from_name(const char* subsampling);
 
 /**
  * Image parameters. This structure should not be initialized only be hand,
