@@ -1294,8 +1294,8 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
 
     // Initialize coder and preprocessor
     coder->param_image = param_image_from;
-    assert(gpujpeg_coder_init(coder) == 0);
-    assert(gpujpeg_preprocessor_encoder_init(coder) == 0);
+    GPUJPEG_ASSERT(gpujpeg_coder_init(coder) == 0);
+    GPUJPEG_ASSERT(gpujpeg_preprocessor_encoder_init(coder) == 0);
 
     // Create buffers if not already created
     if (coder->data_raw == NULL) {
@@ -1312,25 +1312,25 @@ gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_imag
     coder->d_data_raw = coder->d_data_raw_allocated;
 
     // Perform preprocessor
-    assert(cudaMemcpy(coder->d_data_raw, image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
-    assert(gpujpeg_preprocessor_encode(encoder) == 0);
+    GPUJPEG_ASSERT(cudaMemcpy(coder->d_data_raw, image, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
+    GPUJPEG_ASSERT(gpujpeg_preprocessor_encode(encoder) == 0);
     // Save preprocessor result
     uint8_t* buffer = NULL;
-    assert(cudaMallocHost((void**)&buffer, coder->data_size * sizeof(uint8_t)) == cudaSuccess);
-    assert(buffer != NULL);
-    assert(cudaMemcpy(buffer, coder->d_data, coder->data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
+    GPUJPEG_ASSERT(cudaMallocHost((void**)&buffer, coder->data_size * sizeof(uint8_t)) == cudaSuccess);
+    GPUJPEG_ASSERT(buffer != NULL);
+    GPUJPEG_ASSERT(cudaMemcpy(buffer, coder->d_data, coder->data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
     // Deinitialize decoder
     gpujpeg_coder_deinit(coder);
 
     // Initialize coder and postprocessor
     coder->param_image = param_image_to;
-    assert(gpujpeg_coder_init(coder) == 0);
-    assert(gpujpeg_preprocessor_decoder_init(coder) == 0);
+    GPUJPEG_ASSERT(gpujpeg_coder_init(coder) == 0);
+    GPUJPEG_ASSERT(gpujpeg_preprocessor_decoder_init(coder) == 0);
     // Perform postprocessor
-    assert(cudaMemcpy(coder->d_data, buffer, coder->data_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
-    assert(gpujpeg_preprocessor_decode(coder, NULL) == 0);
+    GPUJPEG_ASSERT(cudaMemcpy(coder->d_data, buffer, coder->data_size * sizeof(uint8_t), cudaMemcpyHostToDevice) == cudaSuccess);
+    GPUJPEG_ASSERT(gpujpeg_preprocessor_decode(coder, NULL) == 0);
     // Save preprocessor result
-    assert(cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
+    GPUJPEG_ASSERT(cudaMemcpy(coder->data_raw, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost) == cudaSuccess);
     if ( gpujpeg_image_save_to_file(output, coder->data_raw, coder->data_raw_size, &param_image_to ) != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to save image [%s]!\n", output);
         return -1;

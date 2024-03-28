@@ -230,7 +230,7 @@ gpujpeg_idct_cpu(struct gpujpeg_decoder* decoder)
 
         // Copy results to device
         uint8_t* data = NULL;
-        assert(cudaMallocHost((void**)&data, component->data_size * sizeof(uint8_t)) == cudaSuccess);
+        GPUJPEG_ASSERT(cudaMallocHost((void**)&data, component->data_size * sizeof(uint8_t)) == cudaSuccess);
         for ( int y = 0; y < height; y++ ) {
             for ( int x = 0; x < width; x++ ) {
                 for ( int c = 0; c < (GPUJPEG_BLOCK_SIZE * GPUJPEG_BLOCK_SIZE); c++ ) {
