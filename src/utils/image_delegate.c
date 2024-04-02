@@ -75,6 +75,7 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
     assert(format >= GPUJPEG_IMAGE_FILE_PAM_PNM_FIRST && format <= GPUJPEG_IMAGE_FILE_PAM_PNM_LAST);
     if ( !file_exists ) {
         param_image->pixel_format = pampnm_from_filetype(format);
+        param_image->color_space = format == GPUJPEG_IMAGE_FILE_PGM ? GPUJPEG_YCBCR_JPEG : GPUJPEG_RGB;
         return true;
     }
     struct pam_metadata info;
@@ -91,6 +92,7 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
     }
     param_image->width = info.width;
     param_image->height = info.height;
+    param_image->color_space = GPUJPEG_RGB;
     switch (info.depth) {
     case 4:
         param_image->pixel_format = GPUJPEG_4444_U8_P0123;

@@ -180,22 +180,14 @@ adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters*
     gpujpeg_image_get_properties(raw_file, &file_param_image, encode);
     param_image->width = USE_IF_NOT_NULL_ELSE(param_image->width, file_param_image.width);
     param_image->height = USE_IF_NOT_NULL_ELSE(param_image->height, file_param_image.height);
-    param_image->color_space = USE_IF_NOT_NULL_ELSE(param_image->color_space, file_param_image.color_space);
+    if ( param_image->color_space == GPUJPEG_NONE ) {
+        param_image->color_space = USE_IF_NOT_NULL_ELSE(file_param_image.color_space, GPUJPEG_RGB);
+    }
     if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
         param_image->pixel_format = !encode && !keep_alpha ? GPUJPEG_PIXFMT_NO_ALPHA : file_param_image.pixel_format;
     }
     if ( keep_alpha && encode && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
         gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);
-    }
-
-    // Detect color space
-    if ( param_image->color_space == GPUJPEG_NONE ) {
-        enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(raw_file);
-        if ( format >= GPUJPEG_IMAGE_FILE_YUV || format == GPUJPEG_IMAGE_FILE_GRAY ) {
-            param_image->color_space = GPUJPEG_YCBCR_JPEG;
-        } else {
-            param_image->color_space = GPUJPEG_RGB;
-        }
     }
 
     // Adjust restart interval

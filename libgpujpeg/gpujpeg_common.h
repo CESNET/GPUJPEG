@@ -290,6 +290,8 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param);
 
 /**
  * Image file formats
+ *
+ * @note if modifying the enum, check the macros below
  */
 enum gpujpeg_image_file_format {
     /// Unknown image file format

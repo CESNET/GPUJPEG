@@ -1164,6 +1164,13 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
         return image_probe_delegate(filename, format, param_image, file_exists);
     }
 
+    if (IMAGE_FILE_IS_RGB(format)) {
+        param_image->color_space = GPUJPEG_RGB;
+    }
+    if (IMAGE_FILE_IS_YCBCR(format)) {
+        param_image->color_space = GPUJPEG_YCBCR_JPEG;
+    }
+
     switch (format) {
         case GPUJPEG_IMAGE_FILE_GRAY:
             param_image->pixel_format = GPUJPEG_U8;
