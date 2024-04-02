@@ -181,14 +181,11 @@ adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters*
     param_image->width = USE_IF_NOT_NULL_ELSE(param_image->width, file_param_image.width);
     param_image->height = USE_IF_NOT_NULL_ELSE(param_image->height, file_param_image.height);
     param_image->color_space = USE_IF_NOT_NULL_ELSE(param_image->color_space, file_param_image.color_space);
-    if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && file_param_image.pixel_format != GPUJPEG_PIXFMT_NONE ) {
-        param_image->pixel_format = file_param_image.pixel_format;
+    if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
+        param_image->pixel_format = !encode && !keep_alpha ? GPUJPEG_PIXFMT_NO_ALPHA : file_param_image.pixel_format;
     }
     if ( keep_alpha && encode && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
         gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);
-    }
-    if ( !keep_alpha && !encode && param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
-        param_image->pixel_format = GPUJPEG_PIXFMT_NO_ALPHA;
     }
 
     // Detect color space
