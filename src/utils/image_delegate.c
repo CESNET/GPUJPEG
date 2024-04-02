@@ -26,6 +26,7 @@
  */
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -48,10 +49,9 @@ static int pam_load_delegate(const char *filename, size_t *image_size, void **im
     return ret ? 0 : 1;
 }
 
-static int pam_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists) {
-    if (!file_exists) {
-        return 0;
-    }
+static int
+pampnm_probe_delegate(const char* filename, struct gpujpeg_image_parameters* param_image)
+{
     struct pam_metadata info;
     if (!pam_read(filename, &info, NULL, NULL)) {
         return GPUJPEG_ERROR;
@@ -82,6 +82,26 @@ static int pam_probe_delegate(const char *filename, struct gpujpeg_image_paramet
         return GPUJPEG_ERROR;
     }
     return 0;
+}
+
+static int
+pam_probe_delegate(const char* filename, struct gpujpeg_image_parameters* param_image, int file_exists)
+{
+    if (!file_exists) {
+        param_image->pixel_format = GPUJPEG_PIXFMT_AUTODETECT;
+        return true;
+    }
+    return pampnm_probe_delegate(filename, param_image);
+}
+
+static int
+pnm_probe_delegate(const char* filename, struct gpujpeg_image_parameters* param_image, int file_exists)
+{
+    if (!file_exists) {
+        param_image->pixel_format = GPUJPEG_PIXFMT_NO_ALPHA;
+        return true;
+    }
+    return pampnm_probe_delegate(filename, param_image);
 }
 
 int pampnm_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data, bool pnm)
@@ -222,8 +242,9 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
 {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_PAM:
-    case GPUJPEG_IMAGE_FILE_PNM:
         return pam_probe_delegate;
+    case GPUJPEG_IMAGE_FILE_PNM:
+        return pnm_probe_delegate;
     case GPUJPEG_IMAGE_FILE_Y4M:
         return y4m_probe_delegate;
     default:
