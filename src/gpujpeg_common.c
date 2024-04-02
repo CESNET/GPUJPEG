@@ -1157,12 +1157,13 @@ gpujpeg_image_save_to_file(char *filename, uint8_t *image, size_t image_size,
 int
 gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists)
 {
-    image_probe_delegate_t image_probe_delegate = gpujpeg_get_image_probe_delegate(gpujpeg_image_get_file_format(filename));
+    const enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
+    image_probe_delegate_t image_probe_delegate =
+        gpujpeg_get_image_probe_delegate(gpujpeg_image_get_file_format(filename));
     if (image_probe_delegate) {
-        return image_probe_delegate(filename, param_image, file_exists);
+        return image_probe_delegate(filename, format, param_image, file_exists);
     }
 
-    enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
     switch (format) {
         case GPUJPEG_IMAGE_FILE_GRAY:
             param_image->pixel_format = GPUJPEG_U8;

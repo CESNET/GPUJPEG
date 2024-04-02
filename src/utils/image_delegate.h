@@ -29,6 +29,8 @@
 #ifndef GPUJPEG_IMAGE_DELEGATE_H_0EE4DE91_F6E7_4C02_A4A6_0FFF8C402AE8
 #define GPUJPEG_IMAGE_DELEGATE_H_0EE4DE91_F6E7_4C02_A4A6_0FFF8C402AE8
 
+#include <stdbool.h>
+
 #include "libgpujpeg/gpujpeg_common.h"
 
 #ifdef __cplusplus
@@ -53,7 +55,8 @@ typedef int (*image_load_delegate_t)(const char *filename, size_t *image_size, v
  *                         obtaining at least a piece of information, namely channel count from pnm-family ext.
  * @returns                0 if succeeded; non-zero otherwise
  */
-typedef int (*image_probe_delegate_t)(const char *filename, struct gpujpeg_image_parameters *params, int file_exists);
+typedef int (*image_probe_delegate_t)(const char* filename, enum gpujpeg_image_file_format format,
+                                      struct gpujpeg_image_parameters* params, bool file_exists);
 /**
  * Writes image data with appropriate filetype header.
  * @param[in]  filename    output image filename

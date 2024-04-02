@@ -50,8 +50,15 @@ static int pam_load_delegate(const char *filename, size_t *image_size, void **im
 }
 
 static int
-pampnm_probe_delegate(const char* filename, struct gpujpeg_image_parameters* param_image)
+pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
+                      struct gpujpeg_image_parameters* param_image, bool file_exists)
 {
+    assert(format >= GPUJPEG_IMAGE_FILE_PAM_PNM_FIRST && format <= GPUJPEG_IMAGE_FILE_PAM_PNM_LAST);
+    if ( !file_exists ) {
+        param_image->pixel_format =
+            format == GPUJPEG_IMAGE_FILE_PAM ? GPUJPEG_PIXFMT_AUTODETECT : GPUJPEG_PIXFMT_NO_ALPHA;
+        return true;
+    }
     struct pam_metadata info;
     if (!pam_read(filename, &info, NULL, NULL)) {
         return GPUJPEG_ERROR;
@@ -82,26 +89,6 @@ pampnm_probe_delegate(const char* filename, struct gpujpeg_image_parameters* par
         return GPUJPEG_ERROR;
     }
     return 0;
-}
-
-static int
-pam_probe_delegate(const char* filename, struct gpujpeg_image_parameters* param_image, int file_exists)
-{
-    if (!file_exists) {
-        param_image->pixel_format = GPUJPEG_PIXFMT_AUTODETECT;
-        return true;
-    }
-    return pampnm_probe_delegate(filename, param_image);
-}
-
-static int
-pnm_probe_delegate(const char* filename, struct gpujpeg_image_parameters* param_image, int file_exists)
-{
-    if (!file_exists) {
-        param_image->pixel_format = GPUJPEG_PIXFMT_NO_ALPHA;
-        return true;
-    }
-    return pampnm_probe_delegate(filename, param_image);
 }
 
 int pampnm_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data, bool pnm)
@@ -143,7 +130,11 @@ int pnm_save_delegate(const char *filename, const struct gpujpeg_image_parameter
     return pampnm_save_delegate(filename, param_image, data, true);
 }
 
-static int y4m_probe_delegate(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists) {
+static int
+y4m_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
+                   struct gpujpeg_image_parameters* param_image, bool file_exists)
+{
+    assert(format == GPUJPEG_IMAGE_FILE_Y4M);
     if (!file_exists) {
         param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
         param_image->pixel_format = (enum gpujpeg_pixel_format) GPUJPEG_PIXFMT_PLANAR_STD;
@@ -242,9 +233,8 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
 {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_PAM:
-        return pam_probe_delegate;
     case GPUJPEG_IMAGE_FILE_PNM:
-        return pnm_probe_delegate;
+        return pampnm_probe_delegate;
     case GPUJPEG_IMAGE_FILE_Y4M:
         return y4m_probe_delegate;
     default:

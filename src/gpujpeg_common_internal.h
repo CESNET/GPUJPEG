@@ -455,6 +455,9 @@ gpujpeg_make_sampling_factor(int comp_count, int comp1_h, int comp1_v, int comp2
                                  (sampling_factor)[2].horizontal, (sampling_factor)[2].vertical,                       \
                                  (sampling_factor)[3].horizontal, (sampling_factor)[3].vertical)
 
+#define GPUJPEG_IMAGE_FILE_PAM_PNM_FIRST GPUJPEG_IMAGE_FILE_PGM
+#define GPUJPEG_IMAGE_FILE_PAM_PNM_LAST GPUJPEG_IMAGE_FILE_PAM
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus
