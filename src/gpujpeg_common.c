@@ -1175,17 +1175,13 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
         case GPUJPEG_IMAGE_FILE_I420:
             param_image->pixel_format = GPUJPEG_420_U8_P0P1P2;
             break;
-        // note P?M formats should have already been already handled by delegates
-        case GPUJPEG_IMAGE_FILE_PGM:
-            param_image->pixel_format = GPUJPEG_U8;
-            break;
-        case GPUJPEG_IMAGE_FILE_PPM:
-            param_image->pixel_format = GPUJPEG_444_U8_P012;
-            break;
         case GPUJPEG_IMAGE_FILE_PAM:
+        case GPUJPEG_IMAGE_FILE_PGM:
         case GPUJPEG_IMAGE_FILE_PNM:
+        case GPUJPEG_IMAGE_FILE_PPM:
         case GPUJPEG_IMAGE_FILE_Y4M:
-            abort(); // image delegate should handle this file type
+            GPUJPEG_ASSERT(0 && "image delegate should handle this file type!");
+            break;
         default:
             param_image->pixel_format = GPUJPEG_444_U8_P012;
             break;

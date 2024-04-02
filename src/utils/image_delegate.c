@@ -28,8 +28,10 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include "../gpujpeg_common_internal.h"
 #include "image_delegate.h"
 #include "pam.h"
 #include "y4m.h"
@@ -49,14 +51,30 @@ static int pam_load_delegate(const char *filename, size_t *image_size, void **im
     return ret ? 0 : 1;
 }
 
+static enum gpujpeg_pixel_format
+pampnm_from_filetype(enum gpujpeg_image_file_format format)
+{
+    switch (format) {
+    case GPUJPEG_IMAGE_FILE_PGM:
+        return GPUJPEG_U8;
+    case GPUJPEG_IMAGE_FILE_PPM:
+        return GPUJPEG_444_U8_P012;
+    case GPUJPEG_IMAGE_FILE_PNM:
+        return GPUJPEG_PIXFMT_NO_ALPHA;
+    case GPUJPEG_IMAGE_FILE_PAM:
+        return GPUJPEG_PIXFMT_AUTODETECT;
+    default:
+        GPUJPEG_ASSERT(0 && "Unsupported file format passed to PAM/PNM handler!");
+    }
+}
+
 static int
 pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
                       struct gpujpeg_image_parameters* param_image, bool file_exists)
 {
     assert(format >= GPUJPEG_IMAGE_FILE_PAM_PNM_FIRST && format <= GPUJPEG_IMAGE_FILE_PAM_PNM_LAST);
     if ( !file_exists ) {
-        param_image->pixel_format =
-            format == GPUJPEG_IMAGE_FILE_PAM ? GPUJPEG_PIXFMT_AUTODETECT : GPUJPEG_PIXFMT_NO_ALPHA;
+        param_image->pixel_format = pampnm_from_filetype(format);
         return true;
     }
     struct pam_metadata info;
@@ -232,8 +250,10 @@ image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_fo
 image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_format format)
 {
     switch (format) {
-    case GPUJPEG_IMAGE_FILE_PAM:
+    case GPUJPEG_IMAGE_FILE_PGM:
+    case GPUJPEG_IMAGE_FILE_PPM:
     case GPUJPEG_IMAGE_FILE_PNM:
+    case GPUJPEG_IMAGE_FILE_PAM:
         return pampnm_probe_delegate;
     case GPUJPEG_IMAGE_FILE_Y4M:
         return y4m_probe_delegate;
