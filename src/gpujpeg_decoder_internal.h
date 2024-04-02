@@ -33,7 +33,6 @@
 
 #include "../libgpujpeg/gpujpeg_common.h"
 #include "gpujpeg_common_internal.h"
-#include "gpujpeg_reader.h"
 #include "gpujpeg_table.h"
 
 /**
@@ -44,9 +43,6 @@ struct gpujpeg_decoder
     /// JPEG coder structure
     struct gpujpeg_coder coder;
     
-    /// JPEG reader structure
-    struct gpujpeg_reader* reader;
-
     struct gpujpeg_huffman_gpu_decoder *huffman_gpu_decoder;
 
     uint8_t comp_id[GPUJPEG_MAX_COMPONENT_COUNT]; /// component IDs defined by SOF

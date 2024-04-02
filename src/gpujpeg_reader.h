@@ -39,24 +39,6 @@ extern "C" {
 
 /** JPEG decoder structure predeclaration */
 struct gpujpeg_decoder;
-struct gpujpeg_reader;
-
-/**
- * Create JPEG reader
- *
- * @return reader structure if succeeds, otherwise NULL
- */
-struct gpujpeg_reader*
-gpujpeg_reader_create(void);
-
-/**
- * Destroy JPEG reader
- *
- * @param reader  Reader structure
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-gpujpeg_reader_destroy(struct gpujpeg_reader* reader);
 
 /**
  * Read JPEG image from data buffer

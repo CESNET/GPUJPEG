@@ -35,6 +35,7 @@
 #include "gpujpeg_huffman_cpu_decoder.h"
 #include "gpujpeg_huffman_gpu_decoder.h"
 #include "gpujpeg_postprocessor.h"
+#include "gpujpeg_reader.h"
 #include "gpujpeg_util.h"
 
 /* Documented at declaration */
@@ -114,11 +115,6 @@ gpujpeg_decoder_create(cudaStream_t stream)
     decoder->req_pixel_format = GPUJPEG_PIXFMT_AUTODETECT;
 
     int result = 1;
-
-    // Create reader
-    decoder->reader = gpujpeg_reader_create();
-    if ( decoder->reader == NULL )
-        result = 0;
 
     // Allocate quantization tables in device memory
     for ( int comp_type = 0; comp_type < GPUJPEG_MAX_COMPONENT_COUNT; comp_type++ ) {
@@ -441,10 +437,6 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
         for ( int huff_type = 0; huff_type < GPUJPEG_HUFFMAN_TYPE_COUNT; huff_type++ ) {
             cudaFree(decoder->d_table_huffman[comp_type][huff_type]);
         }
-    }
-
-    if (decoder->reader != NULL) {
-        gpujpeg_reader_destroy(decoder->reader);
     }
 
     if (decoder->huffman_gpu_decoder != NULL) {
