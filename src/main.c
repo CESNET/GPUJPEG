@@ -523,8 +523,11 @@ main(int argc, char *argv[])
                 }
             }
             if ( output_format != GPUJPEG_IMAGE_FILE_JPEG ) {
-                fprintf(stderr, "Encoder output file [%s] should be JPEG image (*.jpg)!\n", output);
-                ret = EXIT_FAILURE; continue;
+                fprintf(stderr, "[%s] Encoder output file [%s] should be JPEG image (*.jpg)!\n",
+                        output_format == GPUJPEG_IMAGE_FILE_UNKNOWN ? "Warning" : "Error", output);
+                if ( output_format != GPUJPEG_IMAGE_FILE_UNKNOWN ) {
+                    ret = EXIT_FAILURE; continue;
+                }
             }
 
             param = param_saved;
