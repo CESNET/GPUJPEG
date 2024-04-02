@@ -184,7 +184,7 @@ adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters*
     if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE && file_param_image.pixel_format != GPUJPEG_PIXFMT_NONE ) {
         param_image->pixel_format = file_param_image.pixel_format;
     }
-    if ( keep_alpha && encode && param->comp_count == 0 && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
+    if ( keep_alpha && encode && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
         gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);
     }
     if ( !keep_alpha && !encode && param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
@@ -274,7 +274,6 @@ main(int argc, char *argv[])
     int rc;
 
     param_image.color_space = GPUJPEG_NONE;
-    param.comp_count = 0;
     param_image.pixel_format = GPUJPEG_PIXFMT_NONE;
 
     // Parse command line
