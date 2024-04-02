@@ -1182,7 +1182,7 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
             param_image->pixel_format = GPUJPEG_444_U8_P012;
             break;
         case GPUJPEG_IMAGE_FILE_PAM:
-            param_image->pixel_format = GPUJPEG_PIXFMT_NONE; // set by gpujpeg_reader
+            param_image->pixel_format = GPUJPEG_PIXFMT_AUTODETECT; // set by gpujpeg_reader
             break;
         case GPUJPEG_IMAGE_FILE_PNM:
             param_image->pixel_format = GPUJPEG_PIXFMT_NO_ALPHA; // set by gpujpeg_reader
