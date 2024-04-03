@@ -239,8 +239,10 @@ int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameter
 
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format) {
     switch (format) {
-    case GPUJPEG_IMAGE_FILE_PAM:
+    case GPUJPEG_IMAGE_FILE_PGM:
+    case GPUJPEG_IMAGE_FILE_PPM:
     case GPUJPEG_IMAGE_FILE_PNM:
+    case GPUJPEG_IMAGE_FILE_PAM:
         return pam_load_delegate;
     case GPUJPEG_IMAGE_FILE_Y4M:
         return y4m_load_delegate;
@@ -269,6 +271,8 @@ image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_fo
     switch (format) {
     case GPUJPEG_IMAGE_FILE_PAM:
         return pam_save_delegate;
+    case GPUJPEG_IMAGE_FILE_PGM:
+    case GPUJPEG_IMAGE_FILE_PPM:
     case GPUJPEG_IMAGE_FILE_PNM:
         return pnm_save_delegate;
     case GPUJPEG_IMAGE_FILE_Y4M:
