@@ -327,7 +327,7 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
 
     if ( gpujpeg_preprocessor_encode_no_transform(coder) ) {
         if ( coder->param.verbose >= 2 ) {
-            printf("Matching format detected - not using preprocessor, using memcpy instead.");
+            printf("Matching format detected - not using preprocessor, using memcpy instead.\n");
         }
         return 0;
     }

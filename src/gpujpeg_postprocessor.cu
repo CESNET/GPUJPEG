@@ -359,7 +359,7 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
             gpujpeg_preprocessor_decode_no_transform(coder) &&
             gpujpeg_preprocessor_decode_aligned(coder)) {
         if ( coder->param.verbose >= 2 ) {
-            printf("Matching format detected - not using postprocessor, using memcpy instead.");
+            printf("Matching format detected - not using postprocessor, using memcpy instead.\n");
         }
         return 0;
     }
