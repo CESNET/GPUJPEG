@@ -28,10 +28,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "gpujpeg_common_internal.h"
 #include <assert.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #if defined(_MSC_VER)
@@ -169,10 +168,17 @@ static int print_image_info(const char *filename, int verbose) {
     return 0;
 }
 
+struct options
+{
+    bool restart_interval_default;
+    gpujpeg_sampling_factor_t subsampling;
+    bool native_file_format;
+    bool keep_alpha;
+};
+
 static bool
 adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image, const char* in,
-              const char* out, _Bool encode, gpujpeg_sampling_factor_t subsampling, _Bool restart_interval_default,
-              _Bool keep_alpha)
+              const char* out, bool encode, const struct options* opts)
 {
     // if possible, read properties from file
     struct gpujpeg_image_parameters file_param_image = { 0, 0, GPUJPEG_NONE, GPUJPEG_PIXFMT_NONE };
@@ -184,15 +190,17 @@ adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters*
         param_image->color_space = USE_IF_NOT_NULL_ELSE(file_param_image.color_space, GPUJPEG_RGB);
     }
     if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
-        param_image->pixel_format = !encode && !keep_alpha ? GPUJPEG_PIXFMT_NO_ALPHA : file_param_image.pixel_format;
+        param_image->pixel_format =
+            !encode && !opts->keep_alpha ? GPUJPEG_PIXFMT_NO_ALPHA : file_param_image.pixel_format;
     }
-    if ( keep_alpha && encode && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
+    if ( opts->keep_alpha && encode && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
         gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);
     }
 
     // Adjust restart interval
-    if ( restart_interval_default && encode ) {
-        param->restart_interval = gpujpeg_encoder_suggest_restart_interval(param_image, subsampling, param->interleaved, param->verbose);
+    if ( opts->restart_interval_default && encode ) {
+        param->restart_interval = gpujpeg_encoder_suggest_restart_interval(param_image, opts->subsampling,
+                                                                           param->interleaved, param->verbose);
     }
 
     if (encode && (param_image->width <= 0 || param_image->height <= 0)) {
@@ -255,10 +263,10 @@ main(int argc, char *argv[])
     _Bool use_opengl = 0;
 
     // Flags
-    _Bool restart_interval_default = 1;
-    gpujpeg_sampling_factor_t subsampling = 0; // 0 - default
-    _Bool native_file_format = 0;
-    _Bool keep_alpha = 0;
+    struct options opts = {.restart_interval_default = true,
+                           .subsampling = GPUJPEG_SUBSAMPLING_UNKNOWN,
+                           .native_file_format = false,
+                           .keep_alpha = false};
 
     int rc;
 
@@ -296,7 +304,7 @@ main(int argc, char *argv[])
     while ( (ch = getopt_long(argc, argv, "CLRahvD:s:f:c:q:r:g::i::edn:oI:NS::", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'a':
-            keep_alpha = 1;
+            opts.keep_alpha = true;
             break;
         case 'h':
             print_help();
@@ -350,7 +358,7 @@ main(int argc, char *argv[])
             param.restart_interval = atoi(optarg);
             if ( param.restart_interval < 0 )
                 param.restart_interval = 0;
-            restart_interval_default = 0;
+            opts.restart_interval_default = false;
             break;
         case 'g':
             if ( optarg == NULL || strcmp(optarg, "true") == 0 || atoi(optarg) )
@@ -360,11 +368,11 @@ main(int argc, char *argv[])
             break;
         case 'S':
             if (optarg == NULL) {
-                subsampling = GPUJPEG_SUBSAMPLING_420;
+                opts.subsampling = GPUJPEG_SUBSAMPLING_420;
                 break;
             }
-            subsampling = gpujpeg_subsampling_from_name(optarg);
-            if ( subsampling == GPUJPEG_SUBSAMPLING_UNKNOWN ) {
+            opts.subsampling = gpujpeg_subsampling_from_name(optarg);
+            if ( opts.subsampling == GPUJPEG_SUBSAMPLING_UNKNOWN ) {
                 fprintf(stderr, "Unknown subsampling '%s'!\n", optarg);
                 return 1;
             }
@@ -402,7 +410,7 @@ main(int argc, char *argv[])
         case 'I':
             return print_image_info(optarg, param.verbose);
         case 'N':
-            native_file_format = 1;
+            opts.native_file_format = true;
             break;
         case '?':
             return -1;
@@ -415,8 +423,8 @@ main(int argc, char *argv[])
     argc -= optind;
     argv += optind;
 
-    if ( subsampling != 0 ) {
-        gpujpeg_parameters_chroma_subsampling(&param, subsampling);
+    if ( opts.subsampling != GPUJPEG_SUBSAMPLING_UNKNOWN ) {
+        gpujpeg_parameters_chroma_subsampling(&param, opts.subsampling);
     }
 
     // Show info about image samples range
@@ -521,11 +529,11 @@ main(int argc, char *argv[])
 
             param = param_saved;
             param_image = param_image_saved;
-            if (!adjust_params(&param, &param_image, input, output, encode, subsampling, restart_interval_default, keep_alpha)) {
+            if ( !adjust_params(&param, &param_image, input, output, encode, &opts) ) {
                 ret = EXIT_FAILURE; continue;
             }
 
-            if (native_file_format) {
+            if ( opts.native_file_format ) {
                 param.color_space_internal = param_image.color_space;
             }
 
@@ -695,8 +703,8 @@ main(int argc, char *argv[])
 
             param = param_saved;
             param_image = param_image_saved;
-            adjust_params(&param, &param_image, input, output, encode, subsampling, restart_interval_default, keep_alpha);
-            if (native_file_format) {
+            adjust_params(&param, &param_image, input, output, encode, &opts);
+            if ( opts.native_file_format ) {
                 param_image.color_space = GPUJPEG_NONE;
             }
 
