@@ -190,8 +190,10 @@ adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters*
         param_image->color_space = USE_IF_NOT_NULL_ELSE(file_param_image.color_space, GPUJPEG_RGB);
     }
     if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
-        param_image->pixel_format =
-            !encode && !opts->keep_alpha ? GPUJPEG_PIXFMT_NO_ALPHA : file_param_image.pixel_format;
+        param_image->pixel_format = file_param_image.pixel_format;
+        if (!encode && !opts->keep_alpha && file_param_image.pixel_format == GPUJPEG_PIXFMT_AUTODETECT) {
+            param_image->pixel_format = GPUJPEG_PIXFMT_NO_ALPHA; // keep alpha only if requested
+        }
     }
     if ( opts->keep_alpha && encode && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
         gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);
