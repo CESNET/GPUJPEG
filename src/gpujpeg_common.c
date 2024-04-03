@@ -767,7 +767,6 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     }
 
     // Allocate data buffers for all color components
-    coder->data_raw = NULL;
     coder->d_data_raw = NULL;
 
     if (coder->component[0].data_width <= 0) {
