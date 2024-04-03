@@ -109,7 +109,7 @@ static const struct {
     /// native sampling factor for the pixfmt
     struct gpujpeg_component_sampling_factor sampling_factor[GPUJPEG_MAX_COMPONENT_COUNT];
 } gpujpeg_pixel_format_desc[] = {
-    {GPUJPEG_PIXFMT_PLANAR_STD, 0,      0, 0, "(planar)",        {{0}}                           },
+    {GPUJPEG_PIXFMT_STD,        0,      0, 0, "(file standard)", {{0}}                           },
     {GPUJPEG_PIXFMT_NO_ALPHA,   0,      0, 0, "(without alpha)", {{0}}                           },
     {GPUJPEG_PIXFMT_AUTODETECT, 0,      0, 0, "(autodetect)",    {{0}}                           },
     {GPUJPEG_PIXFMT_NONE,       0,      0, 0, "(unknown)",       {{0}}                           },
@@ -1171,6 +1171,9 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
     }
 
     switch (format) {
+        case GPUJPEG_IMAGE_FILE_UNKNOWN:
+            param_image->pixel_format = GPUJPEG_PIXFMT_STD;
+            break;
         case GPUJPEG_IMAGE_FILE_GRAY:
             param_image->pixel_format = GPUJPEG_U8;
             break;

@@ -1336,7 +1336,7 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
         return GPUJPEG_U8;
     }
 
-    if (param_image->pixel_format == GPUJPEG_PIXFMT_PLANAR_STD) {
+    if (param_image->pixel_format == GPUJPEG_PIXFMT_STD && param_image->color_space != GPUJPEG_RGB) {
         if ( param->comp_count == 4 ) {
             param->comp_count = 3;
         }
@@ -1353,6 +1353,7 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
         return GPUJPEG_444_U8_P0P1P2;
     }
 
+
     switch (param->comp_count) {
         case 3: return GPUJPEG_444_U8_P012;
         case 4:
@@ -1365,11 +1366,17 @@ static void
 adjust_format(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image)
 {
     _Static_assert(GPUJPEG_PIXFMT_AUTODETECT < 0, "enum gpujpeg_pixel_format type should be signed");
+    if ( param_image->color_space == GPUJPEG_CS_DEFAULT ) {
+        if ( param_image->pixel_format == GPUJPEG_U8 ||
+             (param_image->pixel_format <= GPUJPEG_PIXFMT_AUTODETECT && param->comp_count == 1) ) {
+            param_image->color_space = GPUJPEG_YCBCR_JPEG;
+        }
+        else {
+            param_image->color_space = GPUJPEG_RGB;
+        }
+    }
     if ( param_image->pixel_format <= GPUJPEG_PIXFMT_AUTODETECT ) {
         param_image->pixel_format = adjust_pixel_format(param, param_image);
-    }
-    if ( param_image->color_space == GPUJPEG_CS_DEFAULT ) {
-        param_image->color_space = param_image->pixel_format == GPUJPEG_U8 ? GPUJPEG_YCBCR_JPEG : GPUJPEG_RGB;
     }
 }
 

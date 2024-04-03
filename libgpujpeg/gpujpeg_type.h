@@ -113,11 +113,13 @@ enum gpujpeg_pixel_format {
 // following format placeholders are special values that may be passed
 // to the decoeer in order to detect the format with optional constraints
 // defined outsid the enum gpujpeg_pixel_format to avoid -Wswitch warns
+//< decoder default pixfmt - U8 for grayscale, P012 otherwise
 #define GPUJPEG_PIXFMT_AUTODETECT ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NONE - 1))
 //< any pixel format without alpha channel
 #define GPUJPEG_PIXFMT_NO_ALPHA ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_AUTODETECT - 1))
-//< a planar pixel format that is either 444, 422 or 420
-#define GPUJPEG_PIXFMT_PLANAR_STD ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NO_ALPHA - 1))
+//< pixel format that may be stored in a PAM or Y4M file - a planar pixel
+//< format that is either 444, 422 or 420 for YUV, P012(3) otherwise
+#define GPUJPEG_PIXFMT_STD ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NO_ALPHA - 1))
 
 /**
  * Sampling factor for color component in JPEG format

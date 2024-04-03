@@ -157,7 +157,7 @@ y4m_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
     assert(format == GPUJPEG_IMAGE_FILE_Y4M);
     if (!file_exists) {
         param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
-        param_image->pixel_format = (enum gpujpeg_pixel_format) GPUJPEG_PIXFMT_PLANAR_STD;
+        param_image->pixel_format = (enum gpujpeg_pixel_format) GPUJPEG_PIXFMT_STD;
         return 0;
     }
 
