@@ -113,6 +113,7 @@ gpujpeg_decoder_create(cudaStream_t stream)
     coder->param.comp_count = 0;
     coder->param.restart_interval = 0;
     decoder->req_pixel_format = GPUJPEG_PIXFMT_AUTODETECT;
+    decoder->req_color_space = GPUJPEG_CS_DEFAULT;
 
     int result = 1;
 
@@ -413,7 +414,7 @@ void
 gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder, enum gpujpeg_color_space color_space,
                                   enum gpujpeg_pixel_format pixel_format)
 {
-    decoder->coder.param_image.color_space = color_space;
+    decoder->req_color_space = color_space;
     decoder->req_pixel_format = pixel_format;
 }
 

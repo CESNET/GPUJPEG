@@ -1361,6 +1361,18 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
     }
 }
 
+static void
+adjust_format(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image)
+{
+    _Static_assert(GPUJPEG_PIXFMT_AUTODETECT < 0, "enum gpujpeg_pixel_format type should be signed");
+    if ( param_image->pixel_format <= GPUJPEG_PIXFMT_AUTODETECT ) {
+        param_image->pixel_format = adjust_pixel_format(param, param_image);
+    }
+    if ( param_image->color_space == GPUJPEG_CS_DEFAULT ) {
+        param_image->color_space = param_image->pixel_format == GPUJPEG_U8 ? GPUJPEG_YCBCR_JPEG : GPUJPEG_RGB;
+    }
+}
+
 /* Documented at declaration */
 int
 gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_t image_size)
@@ -1371,6 +1383,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
     reader.param.restart_interval = 0;
     reader.param_image = decoder->coder.param_image;
     reader.param_image.pixel_format = decoder->req_pixel_format;
+    reader.param_image.color_space = decoder->req_color_space;
     reader.comp_count = 0;
     reader.scan_count = 0;
     reader.segment_count = 0;
@@ -1428,9 +1441,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
                        decoder->comp_id, &image, image_end) != 0 ) {
                 return -1;
             }
-            if ( reader.param_image.pixel_format <= GPUJPEG_PIXFMT_AUTODETECT ) {
-                reader.param_image.pixel_format = adjust_pixel_format(&reader.param, &reader.param_image);
-            }
+            adjust_format(&reader.param, &reader.param_image);
             break;
 
         case GPUJPEG_MARKER_DHT:

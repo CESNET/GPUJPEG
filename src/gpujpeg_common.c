@@ -1848,9 +1848,11 @@ gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
         return "YCbCr BT.601 256 Levels (YCbCr JPEG)";
     case GPUJPEG_YCBCR_BT709:
         return "YCbCr BT.709";
-    default:
-        return "Unknown";
     }
+    if ( color_space == GPUJPEG_CS_DEFAULT ) {
+        return "(default CS)";
+    }
+    return "Unknown";
 }
 
 enum gpujpeg_pixel_format

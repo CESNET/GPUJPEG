@@ -76,6 +76,9 @@ enum gpujpeg_color_space {
     GPUJPEG_YCBCR = GPUJPEG_YCBCR_BT709,
     GPUJPEG_YUV = 5                  ///< @deprecated will be removed soon (is this ever needed?), define ENABLE_YUV to enable pre/post processors
 };
+/// RGB for 3 or 4 channels, GPUJPEG_YCBCR for grayscale
+/// decoder only, valid only if passed to gpujpeg_decoder_set_output_format()
+#define GPUJPEG_CS_DEFAULT ((enum gpujpeg_color_space)(GPUJPEG_NONE - 1))
 
 /**
  * Pixel format for input/output image data.
