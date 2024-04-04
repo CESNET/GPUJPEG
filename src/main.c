@@ -624,7 +624,7 @@ main(int argc, char *argv[])
             if ( image_compressed == NULL ||
                  gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size, &param_image) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
-                ret = EXIT_FAILURE; continue;
+                ret = EXIT_FAILURE;
             }
 
             duration = gpujpeg_get_time() - duration;
@@ -806,7 +806,7 @@ main(int argc, char *argv[])
             if ( data == NULL ||
                  gpujpeg_image_save_to_file(output, data, data_size, &decoder_output.param_image) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", output);
-                ret = EXIT_FAILURE; continue;
+                ret = EXIT_FAILURE;
             }
 
             duration = gpujpeg_get_time() - duration;
