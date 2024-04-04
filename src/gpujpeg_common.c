@@ -29,6 +29,7 @@
  */
 
 #include "../libgpujpeg/gpujpeg_common.h"
+#include "../libgpujpeg/gpujpeg_decoder.h" // decoder placeholders
 #include "gpujpeg_common_internal.h"
 #include "gpujpeg_util.h"
 #ifdef HAVE_GPUJPEG_VERSION_H

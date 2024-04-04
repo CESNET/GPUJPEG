@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2024, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -71,14 +71,11 @@ enum gpujpeg_color_space {
     GPUJPEG_RGB = 1,
     GPUJPEG_YCBCR_BT601 = 2,         ///< limited-range YCbCr BT.601
     GPUJPEG_YCBCR_BT601_256LVLS = 3, ///< full-range YCbCr BT.601
-    GPUJPEG_YCBCR_JPEG = GPUJPEG_YCBCR_BT601_256LVLS,
+    GPUJPEG_YCBCR_JPEG = GPUJPEG_YCBCR_BT601_256LVLS, ///< @ref GPUJPEG_YCBCR_BT601_256LVLS
     GPUJPEG_YCBCR_BT709 = 4,         ///< limited-range YCbCr BT.709
-    GPUJPEG_YCBCR = GPUJPEG_YCBCR_BT709,
+    GPUJPEG_YCBCR = GPUJPEG_YCBCR_BT709, ///< @ref GPUJPEG_YCBCR_BT709
     GPUJPEG_YUV = 5                  ///< @deprecated will be removed soon (is this ever needed?), define ENABLE_YUV to enable pre/post processors
 };
-/// RGB for 3 or 4 channels, GPUJPEG_YCBCR for grayscale
-/// decoder only, valid only if passed to gpujpeg_decoder_set_output_format()
-#define GPUJPEG_CS_DEFAULT ((enum gpujpeg_color_space)(GPUJPEG_NONE - 1))
 
 /**
  * Pixel format for input/output image data.
@@ -110,16 +107,6 @@ enum gpujpeg_pixel_format {
     /// with optional alpha or unused, 4:4:4(:4) sampling, interleaved
     GPUJPEG_4444_U8_P0123 =  6,
 };
-// following format placeholders are special values that may be passed
-// to the decoeer in order to detect the format with optional constraints
-// defined outsid the enum gpujpeg_pixel_format to avoid -Wswitch warns
-//< decoder default pixfmt - U8 for grayscale, P012 otherwise
-#define GPUJPEG_PIXFMT_AUTODETECT ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NONE - 1))
-//< any pixel format without alpha channel
-#define GPUJPEG_PIXFMT_NO_ALPHA ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_AUTODETECT - 1))
-//< pixel format that may be stored in a PAM or Y4M file - a planar pixel
-//< format that is either 444, 422 or 420 for YUV, P012(3) otherwise
-#define GPUJPEG_PIXFMT_STD ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NO_ALPHA - 1))
 
 /**
  * Sampling factor for color component in JPEG format

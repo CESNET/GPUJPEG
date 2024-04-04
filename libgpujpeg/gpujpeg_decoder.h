@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2024, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -186,11 +186,39 @@ GPUJPEG_API int
 gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder);
 
 /**
+ * @defgroup decoder_pixfmt_placeholders
+ * @{
+ * following format placeholders are special values that may be passed
+ * to the decoeer in order to detect the format with optional constraints.
+ * Defined outside the enums to avoid -Wswitch warns.
+ */
+/// decoder default pixfmt - usually @ref GPUJPEG_444_U8_P012;
+/// @ref GPUJPEG_U8 for grayscale and @ref GPUJPEG_444_U8_P0123 if alpha present
+///
+#define GPUJPEG_PIXFMT_AUTODETECT ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NONE - 1))
+/// as @ref GPUJPEG_PIXFMT_AUTODETECT, but alpha stripped if present
+#define GPUJPEG_PIXFMT_NO_ALPHA ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_AUTODETECT - 1))
+/// pixel format that may be stored in a PAM or Y4M file - a planar pixel
+/// format that is either 444, 422 or 420 for YUV, P012(3) otherwise
+#define GPUJPEG_PIXFMT_STD ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NO_ALPHA - 1))
+/// @}
+/// Decode RGB for 3 or 4 channels, GPUJPEG_YCBCR for grayscale.
+/// decoder only, valid only if passed to gpujpeg_decoder_set_output_format()
+#define GPUJPEG_CS_DEFAULT ((enum gpujpeg_color_space)(GPUJPEG_NONE - 1))
+
+/**
  * Sets output format
  *
+ * If not called, @ref GPUJPEG_CS_DEFAULT and @ref GPUJPEG_PIXFMT_AUTODETECT
+ * are used.
+ *
  * @param decoder         Decoder structure
- * @param color_space     Requested output color space
- * @param sampling_factor Requestd color sampling factor
+ * @param color_space     Requested output color space,
+ *                        use @ref GPUJPEG_NONE to keep JPEG internal color space;
+ *                        special value @ref GPUJPEG_CS_DEFAULT to decode RGB
+ *                        (or luma for grayscale)
+ * @param sampling_factor Requestd color sampling factor; special values
+ *                        @ref decoder_pixfmt_placeholders can be used
  */
 GPUJPEG_API void
 gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,

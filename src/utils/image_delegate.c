@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "../gpujpeg_common_internal.h"
+#include "../../libgpujpeg/gpujpeg_decoder.h" // ddecoder placeholders
 #include "image_delegate.h"
 #include "pam.h"
 #include "y4m.h"

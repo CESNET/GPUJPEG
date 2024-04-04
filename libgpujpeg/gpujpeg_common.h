@@ -187,7 +187,11 @@ struct gpujpeg_parameters
     struct gpujpeg_component_sampling_factor sampling_factor[GPUJPEG_MAX_COMPONENT_COUNT];
 
     /// Color space that is used inside JPEG stream = that is carried in JPEG format = to
-    /// which are input data converted (default value is JPEG YCbCr)
+    /// which are input data converted. Default value is @ref GPUJPEG_YCBCR_JPEG, changing it
+    /// will change the JPEG format from @ref GPUJPEG_HEADER_JFIF "JFIF" (see also @ref
+    /// gpujpeg_encoder_set_jpeg_header).
+    /// - encoding: Set by user
+    /// - decoding: Set by gpujpeg
     enum gpujpeg_color_space color_space_internal;
 };
 

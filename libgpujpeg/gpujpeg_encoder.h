@@ -173,7 +173,8 @@ GPUJPEG_API int
 gpujpeg_encoder_get_stats(struct gpujpeg_encoder *encoder, struct gpujpeg_duration_stats *stats);
 
 enum gpujpeg_header_type {
-        GPUJPEG_HEADER_DEFAULT = 0,
+        GPUJPEG_HEADER_DEFAULT = 0, ///< for 1 or 3 channel @ref GPUJPEG_YCBCR_JPEG @ref GPUJPEG_HEADER_JFIF, for @ref
+                                    ///< GPUJPEG_RGB @ref GPUJPEG_HEADER_ADOBE, @ref GPUJPEG_HEADER_SPIFF otherwise
         GPUJPEG_HEADER_JFIF    = 1<<0,
         GPUJPEG_HEADER_SPIFF   = 1<<1,
         GPUJPEG_HEADER_ADOBE   = 1<<2, ///< Adobe APP8 header
