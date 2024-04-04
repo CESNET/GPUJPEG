@@ -28,10 +28,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include "../libgpujpeg/gpujpeg_common.h"
 #include "gpujpeg_common_internal.h"
 #include "gpujpeg_util.h"

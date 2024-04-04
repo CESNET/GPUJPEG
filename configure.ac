@@ -6,7 +6,7 @@ AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE([foreign])
 
-AC_CONFIG_HEADERS([config.h libgpujpeg/gpujpeg_version.h])
+AC_CONFIG_HEADERS([libgpujpeg/gpujpeg_version.h])
 COMMON_FLAGS="${COMMON_FLAGS:+$COMMON_FLAGS }-DHAVE_GPUJPEG_VERSION_H"
 
 AC_DEFINE([GPUJPEG_VERSION_MAJOR], regexp(AC_PACKAGE_VERSION, [\([^.]*\)], [\1]), [GPUJPEG major version])
@@ -55,7 +55,7 @@ fi
 # huffmann
 AC_ARG_ENABLE(huffman-gpu-const-tables, AS_HELP_STRING([--enable-huffman-gpu-const-tables],[enable Huffman GPU decoder tables in constant memory]) )
 if test x$enable_huffman_gpu_const_tables = xyes ; then
-	AC_DEFINE([HUFFMAN_GPU_CONST_TABLES], [1], [Build with huffmann coder tables in constant memory])
+	COMMON_FLAGS="$COMMON_FLAGS -DHUFFMAN_GPU_CONST_TABLES"
 else
         enable_huffman_gpu_const_tables=no
 fi
@@ -87,17 +87,17 @@ if test $enable_opengl != no ; then
 	if test "$FOUND_GLEW_L" != yes -o "$FOUND_GLEW_H" != yes -o "$FOUND_GL_L" != yes; then
 		opengl=no
 	elif test "$FOUND_X11_L" = yes -a "$FOUND_GLX_H" = yes; then
-		AC_DEFINE([GPUJPEG_USE_GLX], [1], [Use GLX for OpenGL context creation])
+		COMMON_FLAGS="$COMMON_FLAGS -DGPUJPEG_USE_GLX"
 		GPUJPEG_LIBS="${GPUJPEG_LIBS:+$GPUJPEG_LIBS }-lX11"
 		opengl_context=glx
 	elif test "$FOUND_GLFW_L" = yes -a "$FOUND_GLFW_H" = yes; then
-		AC_DEFINE([GPUJPEG_USE_GLFW], [1], [Use GLFW for OpenGL context creation])
+		COMMON_FLAGS="$COMMON_FLAGS -DGPUJPEG_USE_GLFW"
 		GPUJPEG_LIBS="${GPUJPEG_LIBS:+$GPUJPEG_LIBS }-lGLFW"
 		opengl_context=glfw
 	fi
 
 	if test $opengl = yes; then
-		AC_DEFINE([GPUJPEG_USE_OPENGL], [1], [Build with OpenGL support])
+		COMMON_FLAGS="$COMMON_FLAGS -DGPUJPEG_USE_OPENGL"
 		GPUJPEG_LIBS="${GPUJPEG_LIBS:+$GPUJPEG_LIBS }-lGLEW -lGL"
 	fi
 

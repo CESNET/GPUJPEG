@@ -13,7 +13,6 @@ else
     LIBTOOLIZE=libtoolize
 fi
 
-autoheader && \
 $LIBTOOLIZE --copy && \
 ( [ -d m4 ] || mkdir m4 ) && \
 aclocal -I m4 && \
