@@ -233,26 +233,6 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
                                       gpujpeg_sampling_factor_t subsampling);
 
 /**
- * Set parameters for using 4:2:2 chroma subsampling
- *
- * @param param  Parameters for coder
- * @return void
- * @deprecated use gpujpeg_parameters_chroma_subsampling()
- */
-GPUJPEG_DEPRECATED GPUJPEG_API void
-gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param);
-
-/**
- * Set parameters for using 4:2:0 chroma subsampling
- *
- * @param param  Parameters for coder
- * @return void
- * @deprecated use gpujpeg_parameters_chroma_subsampling()
- */
-GPUJPEG_DEPRECATED GPUJPEG_API void
-gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param);
-
-/**
  * Returns convenient name for subsampling (4:2:0 etc.). If it cannot be constructed
  * returns the format W1xH1:W2xH2:W3xH3.
  */

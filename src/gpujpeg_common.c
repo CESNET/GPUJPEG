@@ -273,21 +273,6 @@ gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
     param->color_space_internal = GPUJPEG_YCBCR_BT601_256LVLS;
 }
 
-
-/* Documented at declaration */
-void
-gpujpeg_parameters_chroma_subsampling_422(struct gpujpeg_parameters* param)
-{
-    gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_422);
-}
-
-/* Documented at declaration */
-void
-gpujpeg_parameters_chroma_subsampling_420(struct gpujpeg_parameters* param)
-{
-    gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_420);
-}
-
 void
 gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
                                       gpujpeg_sampling_factor_t subsampling)

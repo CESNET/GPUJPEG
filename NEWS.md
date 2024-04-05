@@ -1,3 +1,7 @@
+2024-04-05 - 0.25.0
+----------
+- removed deprecated gpujpeg_parameters_chroma_subsampling_42{0,2}
+
 2024-03-19 - 0.24.0
 ----------
 - replaced GPUJPEG_444_U8_P012{A,Z} with GPUJPEG_4444_U8_P0123
