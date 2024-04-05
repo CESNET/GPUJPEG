@@ -33,6 +33,33 @@ test_commit_b620be2() {
         rm in.rgb in.r out.rgb out.r out.jpg
 }
 
+# commits e52abeab (increasing size) 791a9e6b (shrinking) crashes
+test_different_sizes() {
+        param_enc=
+        param_dec=
+        files=
+        for dim in 32 1024 64 2048; do
+                s=${dim}x$dim
+                printf "P6\n%d %d\n255\n" $dim $dim > $s.pnm
+                dd if=/dev/zero of="$s".pnm bs=$((dim*dim*3)) count=1 oflag=append conv=notrunc
+                param_enc="$param_enc $s.pnm $s.jpg"
+                param_dec="$param_dec $s.jpg $s.pam"
+                files="$files $s.pam $s.jpg $s.pnm"
+        done
+
+        # shellcheck disable=SC2086 # intentional
+        $GPUJPEG $param_enc
+        # shellcheck disable=SC2086 # intentional
+        $GPUJPEG $param_dec
+        # shellcheck disable=SC2086 # intentional
+        rm $files
+}
+
+# sanity test (gpujpeg should fail)
+test_nonexistent() {
+        ! $GPUJPEG -e nonexistent.pam fail.jpg
+}
+
 # currently just a simple read/write tests without validating file contents
 test_pam_pnm_y4m() {
         readonly w=256
@@ -50,5 +77,7 @@ test_pam_pnm_y4m() {
 }
 
 test_commit_b620be2
+test_different_sizes
+test_nonexistent
 test_pam_pnm_y4m
 
