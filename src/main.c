@@ -578,9 +578,6 @@ main(int argc, char *argv[])
 
                 rc = gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size);
                 if ( rc != GPUJPEG_NOERR ) {
-                    if ( rc == GPUJPEG_ERR_WRONG_SUBSAMPLING ) {
-                        fprintf(stderr, "Consider using '--subsampling' option!\n");
-                    }
                     fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
                     ret = EXIT_FAILURE; continue;
                 }
