@@ -455,11 +455,6 @@ gpujpeg_make_sampling_factor(int comp_count, int comp1_h, int comp1_v, int comp2
                                  (sampling_factor)[2].horizontal, (sampling_factor)[2].vertical,                       \
                                  (sampling_factor)[3].horizontal, (sampling_factor)[3].vertical)
 
-/// @todo rework using filetype properties (less error-prone)
-#define GPUJPEG_IMAGE_FILE_PAM_PNM_FIRST GPUJPEG_IMAGE_FILE_PGM
-#define GPUJPEG_IMAGE_FILE_PAM_PNM_LAST GPUJPEG_IMAGE_FILE_PAM
-#define IMAGE_FILE_IS_RGB(filetype) ((filetype) >= GPUJPEG_IMAGE_FILE_RGB && (filetype) <= GPUJPEG_IMAGE_FILE_PAM)
-#define IMAGE_FILE_IS_YCBCR(filetype) ((filetype) == GPUJPEG_IMAGE_FILE_GRAY || (filetype) >= GPUJPEG_IMAGE_FILE_Y4M)
 
 #ifdef __cplusplus
 } // extern "C"

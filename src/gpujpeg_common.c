@@ -393,6 +393,30 @@ gpujpeg_image_get_file_format(const char* filename)
     return GPUJPEG_IMAGE_FILE_UNKNOWN;
 }
 
+static enum { FF_CS_NONE, FF_CS_RGB, FF_CS_YCBCR } get_file_type_cs(enum gpujpeg_image_file_format format)
+{
+    switch ( format ) {
+    case GPUJPEG_IMAGE_FILE_UNKNOWN:
+    case GPUJPEG_IMAGE_FILE_JPEG:
+    case GPUJPEG_IMAGE_FILE_RAW:
+        return FF_CS_NONE;
+    case GPUJPEG_IMAGE_FILE_GRAY:
+    case GPUJPEG_IMAGE_FILE_Y4M:
+    case GPUJPEG_IMAGE_FILE_YUV:
+    case GPUJPEG_IMAGE_FILE_YUVA:
+    case GPUJPEG_IMAGE_FILE_I420:
+        return FF_CS_YCBCR;
+    case GPUJPEG_IMAGE_FILE_RGB:
+    case GPUJPEG_IMAGE_FILE_RGBA:
+    case GPUJPEG_IMAGE_FILE_PGM:
+    case GPUJPEG_IMAGE_FILE_PPM:
+    case GPUJPEG_IMAGE_FILE_PNM:
+    case GPUJPEG_IMAGE_FILE_PAM:
+        return FF_CS_RGB;
+    }
+    GPUJPEG_ASSERT(0 && "Unhandled file type!");
+}
+
 void gpujpeg_set_device(int index)
 {
     cudaSetDevice(index);
@@ -1160,10 +1184,10 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
         return image_probe_delegate(filename, format, param_image, file_exists);
     }
 
-    if (IMAGE_FILE_IS_RGB(format)) {
+    if ( get_file_type_cs(format) & FF_CS_RGB ) {
         param_image->color_space = GPUJPEG_RGB;
     }
-    if (IMAGE_FILE_IS_YCBCR(format)) {
+    if ( get_file_type_cs(format) & FF_CS_YCBCR ) {
         param_image->color_space = GPUJPEG_YCBCR_JPEG;
     }
 

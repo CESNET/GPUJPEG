@@ -73,7 +73,6 @@ static int
 pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
                       struct gpujpeg_image_parameters* param_image, bool file_exists)
 {
-    assert(format >= GPUJPEG_IMAGE_FILE_PAM_PNM_FIRST && format <= GPUJPEG_IMAGE_FILE_PAM_PNM_LAST);
     if ( !file_exists ) {
         param_image->pixel_format = pampnm_from_filetype(format);
         param_image->color_space = format == GPUJPEG_IMAGE_FILE_PGM ? GPUJPEG_YCBCR_JPEG : GPUJPEG_CS_DEFAULT;
