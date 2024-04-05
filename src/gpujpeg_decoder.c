@@ -196,6 +196,8 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
         return -1;
     }
 
+    gpujpeg_decoder_set_output_format(decoder, param_image->color_space, param_image->pixel_format);
+
     return 0;
 }
 

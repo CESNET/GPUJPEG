@@ -1138,8 +1138,13 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, struct gpujpeg_reader* 
 
     // We must init decoder before data is loaded into it
     if ( reader->comp_count == 0 ) {
+        // Save requested pixfmt + color_space
+        const enum gpujpeg_color_space saved_color_space = decoder->req_color_space;
+        const enum gpujpeg_pixel_format saved_pixel_format = decoder->req_pixel_format;
         // Init decoder
-        if ( gpujpeg_decoder_init(decoder, &reader->param, &reader->param_image) != 0 ) {
+        const int rc = gpujpeg_decoder_init(decoder, &reader->param, &reader->param_image);
+        gpujpeg_decoder_set_output_format(decoder, saved_color_space, saved_pixel_format);
+        if ( rc != GPUJPEG_NOERR ) {
             return -1;
         }
     }
