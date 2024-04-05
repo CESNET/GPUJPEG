@@ -47,20 +47,32 @@
 extern "C" {
 #endif
 
-/** Contants */
+/**
+ * @addtogroup Contants
+ * @{
+ */
 #define GPUJPEG_MAX_COMPONENT_COUNT             4
+/// @}
 
-/** Flags */
+/**
+ * @addtogroup Flags
+ * @{
+ */
 #define GPUJPEG_VERBOSE                         1
 #define GPUJPEG_OPENGL_INTEROPERABILITY         2
+/// @}
 
 /** Maximum number of segment info header in stream */
 #define GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT   100
 
-/** Errors */
+/**
+ * @addtogroup Errors
+ * @{
+ */
 #define GPUJPEG_NOERR                           0
 #define GPUJPEG_ERROR                           (-1)
 #define GPUJPEG_ERR_RESTART_CHANGE              (-2)
+/// @}
 
 /**
  * Color spaces for JPEG codec

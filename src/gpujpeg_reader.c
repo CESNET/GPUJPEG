@@ -855,8 +855,7 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image, const 
  *
  * @param[in,out] out_restart_interval output value (checked if changed)
  * @param image
- * @retval  0 if succeeds
- * @retval -3 on restart interval redefinition
+ * @retval @ref Errors
  */
 static int
 gpujpeg_reader_read_dri(int *out_restart_interval, uint8_t** image, const uint8_t* image_end)
@@ -1227,8 +1226,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, struct gpujpeg_reader* 
  * Common handling for gpujpeg_reader_read_image() and gpujpeg_reader_get_image_info()
  *
  * @retval -1 error
- * @retval 0  success
- * @retval 1  marker was not processed
+ * @retval @ref Errors
  */
 static int
 gpujpeg_reader_read_common_markers(uint8_t **image, const uint8_t* image_end, int marker, int log_level, enum gpujpeg_color_space *color_space, int *restart_interval, _Bool *in_spiff)

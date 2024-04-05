@@ -45,7 +45,7 @@ struct gpujpeg_decoder;
  *
  * @param image  Image data
  * @param image_size  Image data size
- * @return 0 if succeeds, otherwise nonzero
+ * @return @ref Errors
  */
 int
 gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_t image_size);

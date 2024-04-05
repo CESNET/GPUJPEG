@@ -161,7 +161,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
  * @param image_size  Source image data size
  * @param image_decompressed  Pointer to variable where decompressed image data buffer will be placed
  * @param image_decompressed_size  Pointer to variable where decompressed image size will be placed
- * @return 0 if succeeds, otherwise nonzero
+ * @return @ref Errors
  */
 GPUJPEG_API int
 gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t image_size, struct gpujpeg_decoder_output* output);

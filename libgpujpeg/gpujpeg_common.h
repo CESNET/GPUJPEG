@@ -143,8 +143,8 @@ gpujpeg_print_devices_info(void);
  * Init CUDA device
  *
  * @param device_id  CUDA device id (starting at 0)
- * @param flags  Flags, e.g. if device info should be printed out (GPUJPEG_VERBOSE) or
- *               enable OpenGL interoperability (GPUJPEG_OPENGL_INTEROPERABILITY)
+ * @param flags  @ref Flags, e.g. if device info should be printed out (@ref GPUJPEG_VERBOSE) or
+ *               enable OpenGL interoperability (@ref GPUJPEG_OPENGL_INTEROPERABILITY)
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
