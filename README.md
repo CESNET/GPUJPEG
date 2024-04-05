@@ -307,8 +307,8 @@ even the first image:
     gpujpeg_image_set_default_parameters(&param_image);
     param_image.width = 1920;
     param_image.height = 1080;
+    param_image.color_space = GPUJPEG_RGB;
     param_image.pixel_format = GPUJPEG_444_U8_P012;
-    param_image.comp_count = 3;
     
     // Pre initialize decoder before decoding
     gpujpeg_decoder_init(decoder, &param, &param_image);
@@ -340,8 +340,8 @@ image data:
 
 Now we can save decoded raw image data to file and perform cleanup:
 
-    if ( gpujpeg_image_save_to_file("output_image.rgb", decoder_output.data,
-             decoder_output.data_size, NULL) != 0 )
+    if ( gpujpeg_image_save_to_file("output_image.pnm", decoder_output.data,
+             decoder_output.data_size, &decoder_output.param_image) != 0 )
         return -1;
     
     gpujpeg_image_destroy(image);
