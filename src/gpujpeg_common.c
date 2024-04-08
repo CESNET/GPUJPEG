@@ -273,6 +273,14 @@ gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
     param->color_space_internal = GPUJPEG_YCBCR_BT601_256LVLS;
 }
 
+struct gpujpeg_parameters
+gpujpeg_default_parameters()
+{
+    struct gpujpeg_parameters ret;
+    gpujpeg_set_default_parameters(&ret);
+    return ret;
+}
+
 void
 gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
                                       gpujpeg_sampling_factor_t subsampling)
@@ -329,6 +337,14 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
     param->height = 0;
     param->color_space = GPUJPEG_RGB;
     param->pixel_format = GPUJPEG_444_U8_P012;
+}
+
+struct gpujpeg_image_parameters
+gpujpeg_default_image_parameters()
+{
+    struct gpujpeg_image_parameters ret;
+    gpujpeg_image_set_default_parameters(&ret);
+    return ret;
 }
 
 int

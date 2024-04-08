@@ -204,6 +204,13 @@ struct gpujpeg_parameters
 GPUJPEG_API void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param);
 
+/**
+ * alternative to @ref gpujpeg_set_default_parameters allowing simultaneous
+ * declaration and intialization for convenience.
+ */
+GPUJPEG_API struct gpujpeg_parameters
+gpujpeg_default_parameters(void);
+
 /** Sampling factor for all components */
 typedef uint32_t gpujpeg_sampling_factor_t;
 #define MK_SUBSAMPLING(comp1_factor_h, comp1_factor_v, comp2_factor_h, comp2_factor_v, comp3_factor_h, comp3_factor_v, \
@@ -271,6 +278,13 @@ struct gpujpeg_image_parameters {
  */
 GPUJPEG_API void
 gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param);
+
+/**
+ * alternative to @ref gpujpeg_set_default_image_parameters allowing
+ simultaneous * declaration and intialization for convenience.
+ */
+GPUJPEG_API struct gpujpeg_image_parameters
+gpujpeg_default_image_parameters(void);
 
 /**
  * Image file formats

@@ -1,3 +1,9 @@
+2024-04-05 - 0.25.1
+----------
+- added gpujpeg_default[_image]_parameters() functions returning the
+  structure instead of setting it through a pointer. This is better
+  for conveninece to intitialize defined structs vars immediately.
+
 2024-04-05 - 0.25.0
 ----------
 - removed deprecated gpujpeg_parameters_chroma_subsampling_42{0,2}
