@@ -252,10 +252,9 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 
 #define RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) \
     if ( sampling_factor == gpujpeg_make_sampling_factor(COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) ) { \
-        int max_h = max(P1, max(P3, P5)); \
-        int max_v = max(P2, max(P4, P6)); \
         if ( coder->param.verbose >= 1 ) { \
-            printf("Using faster kernel for postprocessor (precompiled %dx%d, %dx%d, %dx%d).\n", max_h / P1, max_v / P2, max_h / P3, max_v / P4, max_h / P5, max_v / P6); \
+            print_kernel_configuration(                                                                                \
+                "Using faster kernel for postprocessor (precompiled %dx%d, %dx%d, %dx%d, %dx%d).\n");                  \
         } \
         RETURN_KERNEL_SWITCH(PIXEL_FORMAT, COLOR, P1, P2, P3, P4, P5, P6, P7, P8) \
     }
@@ -267,11 +266,8 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 3, 1, 1, 2, 1, 2, 1, 0, 0) /* 4:2:2 */ \
     else { \
         if ( coder->param.verbose >= 0 ) { \
-            printf("Using slower kernel for postprocessor (dynamic %dx%d, %dx%d, %dx%d, %dx%d).\n",                    \
-                   coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical,       \
-                   coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical,       \
-                   coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical,       \
-                   coder->component[3].sampling_factor.horizontal, coder->component[3].sampling_factor.vertical);      \
+            print_kernel_configuration(                                                                                \
+                "Using slower kernel for postprocessor (dynamic %dx%d, %dx%d, %dx%d, %dx%d).\n");                      \
         } \
         RETURN_KERNEL_SWITCH(PIXEL_FORMAT, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC) \
     } \
