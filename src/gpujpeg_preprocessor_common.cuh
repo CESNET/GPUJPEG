@@ -111,16 +111,10 @@ inline gpujpeg_sampling_factor_t
 gpujpeg_preprocessor_make_sampling_factor_i(int comp_count, int numerator_h, int numerator_v, int comp1_h, int comp1_v, int comp2_h, int comp2_v,
                                             int comp3_h, int comp3_v, int comp4_h, int comp4_v) {
     return gpujpeg_make_sampling_factor(
-        comp_count,
-        numerator_h / comp1_h,
-        numerator_v / comp1_v,
-        numerator_h / comp2_h,
-        numerator_v / comp2_v,
-        numerator_h / comp3_h,
-        numerator_v / comp3_v,
-        comp4_h != 0 ? numerator_h / comp4_h : 0,
-        comp4_v != 0 ?numerator_v / comp4_v : 0
-    );
+        comp_count, numerator_h / comp1_h, numerator_v / comp1_v,
+        comp2_h != 0 ? numerator_h / comp2_h : 0, comp2_v != 0 ? numerator_v / comp2_v : 0,
+        comp3_h != 0 ? numerator_h / comp3_h : 0, comp3_v != 0 ? numerator_v / comp3_v : 0,
+        comp4_h != 0 ? numerator_h / comp4_h : 0, comp4_v != 0 ? numerator_v / comp4_v : 0);
 }
 
 /* vi: set expandtab sw=4: */

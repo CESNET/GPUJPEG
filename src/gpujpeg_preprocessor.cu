@@ -321,18 +321,12 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
 {
     coder->preprocessor = NULL;
 
-    if ( coder->param.comp_count == 1 ) {
-        return 0;
-    }
-
     if ( gpujpeg_preprocessor_encode_no_transform(coder) ) {
         if ( coder->param.verbose >= 2 ) {
             printf("Matching format detected - not using preprocessor, using memcpy instead.\n");
         }
         return 0;
     }
-
-    assert(coder->param.comp_count == 3 || coder->param.comp_count == 4);
 
     if (coder->param.color_space_internal == GPUJPEG_NONE) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_NONE>(coder);

@@ -226,6 +226,7 @@ typedef uint32_t gpujpeg_sampling_factor_t;
 #define GPUJPEG_SUBSAMPLING_420 MK_SUBSAMPLING(2, 2, 1, 1, 1, 1, 0, 0)
 #define GPUJPEG_SUBSAMPLING_411 MK_SUBSAMPLING(4, 1, 1, 1, 1, 1, 0, 0)
 #define GPUJPEG_SUBSAMPLING_410 MK_SUBSAMPLING(4, 2, 1, 1, 1, 1, 0, 0)
+#define GPUJPEG_SUBSAMPLING_400 MK_SUBSAMPLING(1, 1, 0, 0, 0 ,0, 0, 0)
 // non-standard sampling rates (in Y:Cb:Cr notation as described in
 // <https://en.wikipedia.org/wiki/Chroma_subsampling#Different_Cb_and_Cr_rates>
 #define GPUJPEG_SUBSAMPLING_442 MK_SUBSAMPLING(1, 2, 1, 2, 1, 1, 0, 0)

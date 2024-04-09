@@ -1841,7 +1841,7 @@ gpujpeg_subsampling_from_name(const char* subsampling) {
         return UNKNOWN;
     }
     if (a == 0 && b == 0 && alpha == 0) {
-        return MK_SUBSAMPLING(1, 1, 0, 0, 0, 0, 0, 0);
+        return GPUJPEG_SUBSAMPLING_400;
     }
     struct gpujpeg_component_sampling_factor factor[GPUJPEG_MAX_COMPONENT_COUNT] = {0};
     factor[0].horizontal = 4 / a;
