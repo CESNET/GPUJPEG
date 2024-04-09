@@ -300,7 +300,7 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
         }
         param->comp_count += 1;
     }
-    GPUJPEG_ASSERT(param->comp_count >= 1 && "Invalid subsampling!");
+    GPUJPEG_ASSERT((subsampling == GPUJPEG_SUBSAMPLING_UNKNOWN || param->comp_count >= 1) && "Invalid subsampling!");
     for ( ; comp < GPUJPEG_MAX_COMPONENT_COUNT; ++comp ) {
         param->sampling_factor[comp].horizontal = 0;
         param->sampling_factor[comp].vertical = 0;

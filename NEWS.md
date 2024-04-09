@@ -1,3 +1,10 @@
+2024-04-09 - 0.25.2
+----------
+- allowed setting subsampling 4:0:0 for color input image
+- allowed passing GPUJPEG_SUBSAMPLING_UNKNOWN to
+  gpujpeg_parameters_chroma_subsampling() to disable explicitly set
+  subsampling and return to implicit (automatic) one on the encoder
+
 2024-04-05 - 0.25.1
 ----------
 - added gpujpeg_default[_image]_parameters() functions returning the
