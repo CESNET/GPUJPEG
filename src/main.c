@@ -147,8 +147,10 @@ static int print_image_info_jpeg(const char *filename, int verbose) {
         fprintf(stderr, "Cannot read image contents.\n");
         return 1;
     }
-    struct gpujpeg_image_parameters params_image = { .pixel_format = GPUJPEG_PIXFMT_NONE };
-    struct gpujpeg_parameters params = { .verbose = verbose };
+    struct gpujpeg_image_parameters params_image = gpujpeg_default_image_parameters();
+    params_image.pixel_format = GPUJPEG_PIXFMT_NONE;
+    struct gpujpeg_parameters params =  gpujpeg_default_parameters();
+    params.verbose = verbose;
     int segment_count = 0;
     if (gpujpeg_decoder_get_image_info(jpeg, len, &params_image, &params, &segment_count) == 0) {
         print_gpujpeg_image_parameters(params_image, false,
