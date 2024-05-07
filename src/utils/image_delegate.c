@@ -83,11 +83,10 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
         return GPUJPEG_ERROR;
     }
     if (info.maxval != MAXVAL_8B) {
-        fprintf(
-            stderr,
-            "[GPUJPEG] [Error] PAM image %s reports %d levels but only 255 are "
-            "currently supported!\n",
-            filename, info.maxval);
+        fprintf(stderr,
+                "[GPUJPEG] [Error] PAM/PNM image %s reports %d levels but only 255 are "
+                "currently supported!\n",
+                filename, info.maxval);
         return GPUJPEG_ERROR;
     }
     param_image->width = info.width;
@@ -105,7 +104,7 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
         param_image->pixel_format = GPUJPEG_U8;
         break;
     default:
-        fprintf(stderr, "Wrong pam component count %d!\n", info.depth);
+        fprintf(stderr, "Unsupported PAM/PNM component count %d!\n", info.depth);
         return GPUJPEG_ERROR;
     }
     return 0;
