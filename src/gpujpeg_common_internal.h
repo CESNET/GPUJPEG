@@ -409,20 +409,6 @@ int
 gpujpeg_pixel_format_is_interleaved(enum gpujpeg_pixel_format pixel_format);
 
 /**
- * @retval 0 parameters are different
- * @retval 1 parameters are the same
- */
-int
-gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpujpeg_parameters *p2);
-
-/**
- * @retval 0 parameters are different
- * @retval 1 parameters are the same
- */
-int
-gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , const struct gpujpeg_image_parameters *p2);
-
-/**
  * returns difference between specified CUDA events
  *
  * @returns duration in ms, 0.0F in case of error

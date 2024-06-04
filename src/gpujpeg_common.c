@@ -37,6 +37,7 @@
 #endif // defined HAVE_GPUJPEG_VERSION_H
 #include "utils/image_delegate.h"
 #include <math.h>
+#include <stdbool.h>
 #if defined(_MSC_VER)
   #include <windows.h>
   #define strcasecmp _stricmp
@@ -307,7 +308,10 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
     }
 }
 
-int
+/**
+ * @returns true  if parameters are the same
+ */
+static bool
 gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpujpeg_parameters *p2)
 {
     if ( p1->comp_count != p2->comp_count ||
@@ -316,17 +320,17 @@ gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpu
             p1->interleaved != p2->interleaved ||
             p1->segment_info != p2->segment_info ||
             p1->color_space_internal != p2->color_space_internal) {
-        return 0;
+        return false;
     }
 
     for ( int comp = 0; comp < p1->comp_count; comp++ ) {
         if (p1->sampling_factor[comp].horizontal != p2->sampling_factor[comp].horizontal ||
                 p1->sampling_factor[comp].vertical != p2->sampling_factor[comp].vertical) {
-            return 0;
+            return false;
         }
     }
 
-    return 1;
+    return true;
 }
 
 /* Documented at declaration */
@@ -347,7 +351,10 @@ gpujpeg_default_image_parameters()
     return ret;
 }
 
-int
+/**
+ * @returns true  if parameters are the same
+ */
+static bool
 gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , const struct gpujpeg_image_parameters *p2)
 {
     return p1->width == p2->width &&
