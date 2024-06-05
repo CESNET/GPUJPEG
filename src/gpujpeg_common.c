@@ -1894,7 +1894,19 @@ gpujpeg_pixel_format_by_name(const char *name)
             return gpujpeg_pixel_format_desc[i].pixel_format;
         }
     }
+    if (strcmp(name, "help") == 0) {
+        gpujpeg_print_pixel_formats();
+    }
     return GPUJPEG_PIXFMT_NONE;
+}
+
+void
+gpujpeg_print_pixel_formats(void)
+{
+    printf("                          u8 (grayscale)          420-u8-p0p1p2 (planar 4:2:0)\n"
+           "                          422-u8-p1020 (eg. UYVY) 422-u8-p0p1p2 (planar 4:2:2)\n"
+           "                          444-u8-p012 (eg. RGB)   444-u8-p0p1p2 (planar 4:4:4)\n"
+           "                          4444-u8-p0123 (RGBA)\n");
 }
 
 enum gpujpeg_color_space

@@ -629,6 +629,9 @@ gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space);
 GPUJPEG_API enum gpujpeg_pixel_format
 gpujpeg_pixel_format_by_name(const char *name);
 
+GPUJPEG_API void
+gpujpeg_print_pixel_formats();
+
 /** Returns color space by string name */
 GPUJPEG_API enum gpujpeg_color_space
 gpujpeg_color_space_by_name(const char *name);

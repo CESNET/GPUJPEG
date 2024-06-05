@@ -44,15 +44,6 @@
 #define USE_IF_NOT_NULL_ELSE(cond, alt_val) (cond) ? (cond) : (alt_val)
 
 static void
-print_pixel_formats(void)
-{
-    printf("                          u8 (grayscale)          420-u8-p0p1p2 (planar 4:2:0)\n"
-           "                          422-u8-p1020 (eg. UYVY) 422-u8-p0p1p2 (planar 4:2:2)\n"
-           "                          444-u8-p012 (eg. RGB)   444-u8-p0p1p2 (planar 4:4:4)\n"
-           "                          4444-u8-p0123 (RGBA)\n");
-}
-
-static void
 print_help(void)
 {
     printf("gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
@@ -64,7 +55,7 @@ print_help(void)
     printf("   -s, --size             set input image size in pixels, e.g. 1920x1080\n"
            "   -f, --pixel-format     set input/output image pixel format, one of the\n"
            "                          following (example in parenthesis):\n");
-    print_pixel_formats();
+    gpujpeg_print_pixel_formats();
     printf("\n"
            "   -c, --colorspace       set input/output image colorspace, e.g. rgb, ycbcr-jpeg (full\n"
            "                          range BT.601), ycbcr-bt601 (limited 601), ycbcr-bt709 (limited)\n"
@@ -217,7 +208,7 @@ parse_pixel_format(const char *arg)
 {
     if (strcmp(arg, "help") == 0) {
         printf("Available pixel formats:\n");
-        print_pixel_formats();
+        gpujpeg_print_pixel_formats();
         return GPUJPEG_PIXFMT_NONE;
     }
     const enum gpujpeg_pixel_format ret = gpujpeg_pixel_format_by_name(arg);

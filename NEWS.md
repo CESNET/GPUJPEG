@@ -1,6 +1,7 @@
-2024-06- - 0.25.3
+2024-06-05 - 0.25.3
 ----------
 - added gpujpeg_color_space_by_name
+- addeg gpujpeg_print_pixel_format
 
 2024-04-09 - 0.25.2
 ----------
