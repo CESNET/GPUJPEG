@@ -326,6 +326,8 @@ enum gpujpeg_image_file_format {
     GPUJPEG_IMAGE_FILE_YUVA,
     /// i420 file format
     GPUJPEG_IMAGE_FILE_I420,
+    /// testing (empty) image, that is SW generated
+    GPUJPEG_IMAGE_FILE_TST,
 };
 
 /**

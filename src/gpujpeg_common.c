@@ -387,6 +387,7 @@ gpujpeg_image_get_file_format(const char* filename)
         { "ppm",  GPUJPEG_IMAGE_FILE_PPM},
         { "pam",  GPUJPEG_IMAGE_FILE_PAM},
         { "y4m",  GPUJPEG_IMAGE_FILE_Y4M},
+        { "tst",  GPUJPEG_IMAGE_FILE_TST},
     };
 
     const char * ext = strrchr(filename, '.');
@@ -407,6 +408,7 @@ static enum { FF_CS_NONE, FF_CS_RGB, FF_CS_YCBCR } get_file_type_cs(enum gpujpeg
     case GPUJPEG_IMAGE_FILE_UNKNOWN:
     case GPUJPEG_IMAGE_FILE_JPEG:
     case GPUJPEG_IMAGE_FILE_RAW:
+    case GPUJPEG_IMAGE_FILE_TST:
         return FF_CS_NONE;
     case GPUJPEG_IMAGE_FILE_GRAY:
     case GPUJPEG_IMAGE_FILE_Y4M:
@@ -1186,9 +1188,8 @@ int
 gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists)
 {
     const enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
-    image_probe_delegate_t image_probe_delegate =
-        gpujpeg_get_image_probe_delegate(gpujpeg_image_get_file_format(filename));
-    if (image_probe_delegate) {
+    image_probe_delegate_t image_probe_delegate = gpujpeg_get_image_probe_delegate(format);
+    if ( image_probe_delegate ) {
         return image_probe_delegate(filename, format, param_image, file_exists);
     }
 

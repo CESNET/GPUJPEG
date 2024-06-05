@@ -236,6 +236,57 @@ int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameter
     return y4m_write(filename, &info, (const unsigned char *) data) ? 0 : -1;
 }
 
+static int
+tst_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
+                   struct gpujpeg_image_parameters* param_image, bool file_exists)
+{
+    (void) format;
+    (void) file_exists;
+
+    char color_space[21];
+    char pixel_format[21];
+    const int nelem = sscanf(filename, "%dx%d_%20[^_.]_%20[^_.]s", &param_image->width, &param_image->height,
+                             color_space, pixel_format);
+    if ( nelem < 2 ) {
+        printf("Usage:\n\t<W>x<H>[_<CS>[_<PF>]]\n");
+        return -1;
+    }
+    if ( nelem >= 3 ) {
+        param_image->color_space = gpujpeg_color_space_by_name(color_space);
+        if ( param_image->color_space == GPUJPEG_NONE ) {
+            fprintf(stderr, "Unknown color space: %s\n", color_space);
+            return -1;
+        }
+    }
+    else {
+        param_image->color_space = GPUJPEG_RGB;
+    }
+    if ( nelem >= 4 ) {
+        param_image->pixel_format = gpujpeg_pixel_format_by_name(pixel_format);
+        if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
+            fprintf(stderr, "Unknown pixel format: %s\n", pixel_format);
+            return -1;
+        }
+    }
+    else {
+        param_image->pixel_format = GPUJPEG_444_U8_P012;
+    }
+    return 0;
+}
+
+static int
+tst_image_load_delegate(const char* filename, size_t* image_size, void** image_data, allocator_t alloc)
+{
+    struct gpujpeg_image_parameters param_image;
+    if (tst_image_probe_delegate(filename, GPUJPEG_IMAGE_FILE_TST, &param_image, false) != 0) {
+        return -1;
+    }
+    *image_size = gpujpeg_image_calculate_size(&param_image);
+    *image_data = alloc(*image_size);
+    memset(*image_data, 0, *image_size);
+    return 0;
+}
+
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format) {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_PGM:
@@ -245,6 +296,8 @@ image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_fo
         return pam_load_delegate;
     case GPUJPEG_IMAGE_FILE_Y4M:
         return y4m_load_delegate;
+    case GPUJPEG_IMAGE_FILE_TST:
+        return tst_image_load_delegate;
     default:
         return NULL;
     }
@@ -260,6 +313,8 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
         return pampnm_probe_delegate;
     case GPUJPEG_IMAGE_FILE_Y4M:
         return y4m_probe_delegate;
+    case GPUJPEG_IMAGE_FILE_TST:
+        return tst_image_probe_delegate;
     default:
         return NULL;
     }
