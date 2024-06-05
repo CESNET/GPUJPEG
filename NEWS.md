@@ -1,3 +1,7 @@
+2024-06- - 0.25.3
+----------
+- added gpujpeg_color_space_by_name
+
 2024-04-09 - 0.25.2
 ----------
 - allowed setting subsampling 4:0:0 for color input image

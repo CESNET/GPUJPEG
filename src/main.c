@@ -53,18 +53,6 @@ print_pixel_formats(void)
 }
 
 static void
-print_color_spaces(void)
-{
-    printf("Available color spaces:\n"
-           "- rgb\n"
-           "- yuv (deprecated)\n"
-           "- ycbcr       - same as ycbcr-bt709\n"
-           "- ycbcr-jpeg  - BT.601 full range\n"
-           "- ycbcr-bt601 - limitted range\n"
-           "- ycbcr-bt709 - limitted range\n");
-}
-
-static void
 print_help(void)
 {
     printf("gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
@@ -335,23 +323,11 @@ main(int argc, char *argv[])
             param_image.height = atoi(pos + 1);
             break;
         case 'c':
-            if ( strcmp(optarg, "rgb") == 0 )
-                param_image.color_space = GPUJPEG_RGB;
-            else if ( strcmp(optarg, "yuv") == 0 )
-                param_image.color_space = GPUJPEG_YUV;
-            else if ( strcmp(optarg, "ycbcr") == 0 )
-                param_image.color_space = GPUJPEG_YCBCR;
-            else if ( strcmp(optarg, "ycbcr-jpeg") == 0 )
-                param_image.color_space = GPUJPEG_YCBCR_BT601_256LVLS;
-            else if ( strcmp(optarg, "ycbcr-bt601") == 0 )
-                param_image.color_space = GPUJPEG_YCBCR_BT601;
-            else if ( strcmp(optarg, "ycbcr-bt709") == 0 )
-                param_image.color_space = GPUJPEG_YCBCR_BT709;
-            else if ( strcmp(optarg, "help") == 0 ) {
-                print_color_spaces();
-                return EXIT_SUCCESS;
-            }
-            else {
+            param_image.color_space = gpujpeg_color_space_by_name(optarg);
+            if ( param_image.color_space == GPUJPEG_NONE ) {
+                if ( strcmp(optarg, "help") == 0 ) {
+                    return EXIT_SUCCESS;
+                }
                 fprintf(stderr, "Colorspace '%s' is not available!\n", optarg);
                 return EXIT_FAILURE;
             }

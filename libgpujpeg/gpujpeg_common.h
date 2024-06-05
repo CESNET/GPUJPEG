@@ -629,6 +629,10 @@ gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space);
 GPUJPEG_API enum gpujpeg_pixel_format
 gpujpeg_pixel_format_by_name(const char *name);
 
+/** Returns color space by string name */
+GPUJPEG_API enum gpujpeg_color_space
+gpujpeg_color_space_by_name(const char *name);
+
 /** Returns number of color components in pixel format */
 GPUJPEG_API int
 gpujpeg_pixel_format_get_comp_count(enum gpujpeg_pixel_format pixel_format);

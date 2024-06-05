@@ -1897,6 +1897,39 @@ gpujpeg_pixel_format_by_name(const char *name)
     return GPUJPEG_PIXFMT_NONE;
 }
 
+enum gpujpeg_color_space
+gpujpeg_color_space_by_name(const char* name)
+{
+    if ( strcmp(name, "rgb") == 0 )  {
+        return GPUJPEG_RGB;
+    }
+    if ( strcmp(name, "yuv") == 0 ) {
+        return GPUJPEG_YUV;
+    }
+    if ( strcmp(name, "ycbcr") == 0 ) {
+        return GPUJPEG_YCBCR;
+    }
+    if ( strcmp(name, "ycbcr-jpeg") == 0 ) {
+        return GPUJPEG_YCBCR_BT601_256LVLS;
+    }
+    if ( strcmp(name, "ycbcr-bt601") == 0 ) {
+        return GPUJPEG_YCBCR_BT601;
+    }
+    if ( strcmp(name, "ycbcr-bt709") == 0 ) {
+        return GPUJPEG_YCBCR_BT709;
+    }
+    if ( strcmp(name, "help") == 0 ) {
+        printf("Available color spaces:\n"
+               "- rgb\n"
+               "- yuv (deprecated)\n"
+               "- ycbcr       - same as ycbcr-bt709\n"
+               "- ycbcr-jpeg  - BT.601 full range\n"
+               "- ycbcr-bt601 - limitted range\n"
+               "- ycbcr-bt709 - limitted range\n");
+    }
+    return GPUJPEG_NONE;
+}
+
 int
 gpujpeg_pixel_format_get_comp_count(enum gpujpeg_pixel_format pixel_format)
 {
