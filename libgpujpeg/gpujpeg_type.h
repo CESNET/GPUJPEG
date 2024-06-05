@@ -128,24 +128,6 @@ struct gpujpeg_component_sampling_factor
     uint8_t vertical;
 };
 
-/**
- * JPEG component type
- */
-enum gpujpeg_component_type {
-    GPUJPEG_COMPONENT_LUMINANCE = 0,
-    GPUJPEG_COMPONENT_CHROMINANCE = 1,
-    GPUJPEG_COMPONENT_TYPE_COUNT = 2
-};
-
-/**
- * JPEG huffman type
- */
-enum gpujpeg_huffman_type {
-    GPUJPEG_HUFFMAN_DC = 0,
-    GPUJPEG_HUFFMAN_AC = 1,
-    GPUJPEG_HUFFMAN_TYPE_COUNT = 2
-};
-
 #ifdef __cplusplus
 }
 #endif
