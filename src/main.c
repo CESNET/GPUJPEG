@@ -184,7 +184,6 @@ static int print_image_info(const char *filename, int verbose) {
 
 struct options
 {
-    bool restart_interval_default;
     gpujpeg_sampling_factor_t subsampling;
     bool native_file_format;
     bool keep_alpha;
@@ -211,12 +210,6 @@ adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters*
     }
     if ( opts->keep_alpha && encode && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
         gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);
-    }
-
-    // Adjust restart interval
-    if ( opts->restart_interval_default && encode ) {
-        param->restart_interval = gpujpeg_encoder_suggest_restart_interval(param_image, opts->subsampling,
-                                                                           param->interleaved, param->verbose);
     }
 
     if (encode && (param_image->width <= 0 || param_image->height <= 0)) {
@@ -279,8 +272,7 @@ main(int argc, char *argv[])
     _Bool use_opengl = 0;
 
     // Flags
-    struct options opts = {.restart_interval_default = true,
-                           .subsampling = GPUJPEG_SUBSAMPLING_UNKNOWN,
+    struct options opts = {.subsampling = GPUJPEG_SUBSAMPLING_UNKNOWN,
                            .native_file_format = false,
                            .keep_alpha = false};
 
@@ -288,6 +280,7 @@ main(int argc, char *argv[])
 
     param_image.color_space = GPUJPEG_NONE;
     param_image.pixel_format = GPUJPEG_PIXFMT_NONE;
+    param.restart_interval = RESTART_AUTO;
 
     // Parse command line
     struct option longopts[] = {
@@ -378,9 +371,10 @@ main(int argc, char *argv[])
             break;
         case 'r':
             param.restart_interval = atoi(optarg);
-            if ( param.restart_interval < 0 )
-                param.restart_interval = 0;
-            opts.restart_interval_default = false;
+            if ( param.restart_interval < RESTART_AUTO ) {
+                fprintf(stderr, "Wrong restart interval '%s'!\n", optarg);
+                return 1;
+            }
             break;
         case 'g':
             if ( optarg == NULL || strcmp(optarg, "true") == 0 || atoi(optarg) )

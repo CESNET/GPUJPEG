@@ -31,6 +31,7 @@
 #include <assert.h>
 #include <math.h>
 #include <string.h>
+#include "../libgpujpeg/gpujpeg_common.h"
 #include "../libgpujpeg/gpujpeg_encoder.h"
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_dct_cpu.h"
@@ -292,7 +293,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
 {
     assert(param->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
     assert(param->quality >= 0 && param->quality <= 100);
-    assert(param->restart_interval >= 0);
+    assert(param->restart_interval >= RESTART_AUTO);
     assert(param->interleaved == 0 || param->interleaved == 1);
 
     // Get coder
@@ -305,6 +306,11 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
             MIN(gpujpeg_pixel_format_get_comp_count(param_image->pixel_format), GPUJPEG_3_COMPONENTS);
         memcpy(param_adjusted.sampling_factor, gpujpeg_pixel_format_get_sampling_factor(param_image->pixel_format),
                sizeof param_adjusted.sampling_factor);
+    }
+    if (param->restart_interval == RESTART_AUTO) {
+        param_adjusted.restart_interval = gpujpeg_encoder_suggest_restart_interval(
+            param_image, gpujpeg_make_sampling_factor2(param_adjusted.comp_count, param_adjusted.sampling_factor),
+            param_adjusted.interleaved, param_adjusted.verbose);
     }
 
     // (Re)initialize encoder

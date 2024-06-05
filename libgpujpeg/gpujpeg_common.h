@@ -150,6 +150,11 @@ gpujpeg_print_devices_info(void);
 GPUJPEG_API int
 gpujpeg_init_device(int device_id, int flags);
 
+enum restart_int {
+    RESTART_AUTO = -1, ///< auto-select the best restart interval
+    RESTART_NONE = 0,  ///< disabled; CPU Huffman encoder will be used
+};
+
 /**
  * JPEG parameters. This structure should not be initialized only be hand,
  * but at first gpujpeg_set_default_parameters should be call and then
@@ -166,6 +171,7 @@ struct gpujpeg_parameters
     int quality;
 
     /// Restart interval (0 means that restart interval is disabled and CPU huffman coder is used)
+    /// @sa @rf restart_int for special values
     int restart_interval;
 
     /// Flag which determines if interleaved format of JPEG stream should be used, "1" = only
