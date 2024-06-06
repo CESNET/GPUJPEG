@@ -536,8 +536,9 @@ size_t
 gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_parameters * param, const struct gpujpeg_image_parameters * param_image, cudaStream_t stream)
 {
     if (gpujpeg_parameters_equals(&coder->param, param) && gpujpeg_image_parameters_equals(&coder->param_image, param_image)) {
-        coder->param.verbose = param->verbose;
-        coder->param.perf_stats = param->perf_stats;
+        // gpujpeg_parameters::{verbose,perf_stats,quality} may change without reconf but store them
+        coder->param_image = *param_image;
+        coder->param = *param;
         return coder->allocated_gpu_memory_size;
     }
     DEBUG_MSG(param->verbose, "coder image reconfiguration\n");
