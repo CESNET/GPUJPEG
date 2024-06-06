@@ -300,17 +300,30 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
     struct gpujpeg_coder* coder = &encoder->coder;
     int rc;
 
+    const bool img_changed = !gpujpeg_image_parameters_equals(&coder->param_image, param_image);
     struct gpujpeg_parameters param_adjusted = *param;
-    if (param->comp_count == 0) {
-        param_adjusted.comp_count =
-            MIN(gpujpeg_pixel_format_get_comp_count(param_image->pixel_format), GPUJPEG_3_COMPONENTS);
-        memcpy(param_adjusted.sampling_factor, gpujpeg_pixel_format_get_sampling_factor(param_image->pixel_format),
-               sizeof param_adjusted.sampling_factor);
+    if ( param->comp_count == 0 ) {
+        if ( img_changed ) {
+
+            param_adjusted.comp_count =
+                MIN(gpujpeg_pixel_format_get_comp_count(param_image->pixel_format), GPUJPEG_3_COMPONENTS);
+            memcpy(param_adjusted.sampling_factor, gpujpeg_pixel_format_get_sampling_factor(param_image->pixel_format),
+                   sizeof param_adjusted.sampling_factor);
+        }
+        else {
+            param_adjusted.comp_count = coder->param.comp_count;
+            memcpy(param_adjusted.sampling_factor, coder->param.sampling_factor, sizeof param_adjusted.sampling_factor);
+        }
     }
-    if (param->restart_interval == RESTART_AUTO) {
-        param_adjusted.restart_interval = gpujpeg_encoder_suggest_restart_interval(
-            param_image, gpujpeg_make_sampling_factor2(param_adjusted.comp_count, param_adjusted.sampling_factor),
-            param_adjusted.interleaved, param_adjusted.verbose);
+    if ( param->restart_interval == RESTART_AUTO ) {
+        if ( img_changed || param_adjusted.interleaved != coder->param.interleaved ) {
+            param_adjusted.restart_interval = gpujpeg_encoder_suggest_restart_interval(
+                param_image, gpujpeg_make_sampling_factor2(param_adjusted.comp_count, param_adjusted.sampling_factor),
+                param_adjusted.interleaved, param_adjusted.verbose);
+        }
+        else {
+            param_adjusted.restart_interval = coder->param.restart_interval;
+        }
     }
 
     // (Re)initialize encoder

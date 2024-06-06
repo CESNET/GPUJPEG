@@ -356,7 +356,7 @@ gpujpeg_default_image_parameters()
 /**
  * @returns true  if parameters are the same
  */
-static bool
+bool
 gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , const struct gpujpeg_image_parameters *p2)
 {
     return p1->width == p2->width &&
