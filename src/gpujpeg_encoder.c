@@ -285,23 +285,12 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
     return restart_interval;
 }
 
-/* Documented at declaration */
-int
-gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_parameters* param,
-                       const struct gpujpeg_image_parameters* param_image, const struct gpujpeg_encoder_input* input,
-                       uint8_t** image_compressed, size_t* image_compressed_size)
+static struct gpujpeg_parameters
+adjust_params(struct gpujpeg_coder* coder, const struct gpujpeg_parameters* param,
+              const struct gpujpeg_image_parameters* param_image)
 {
-    assert(param->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
-    assert(param->quality >= 0 && param->quality <= 100);
-    assert(param->restart_interval >= RESTART_AUTO);
-    assert(param->interleaved == 0 || param->interleaved == 1);
-
-    // Get coder
-    struct gpujpeg_coder* coder = &encoder->coder;
-    int rc;
-
-    const bool img_changed = !gpujpeg_image_parameters_equals(&coder->param_image, param_image);
     struct gpujpeg_parameters param_adjusted = *param;
+    const bool img_changed = !gpujpeg_image_parameters_equals(&coder->param_image, param_image);
     if ( param->comp_count == 0 ) {
         if ( img_changed ) {
 
@@ -325,6 +314,25 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
             param_adjusted.restart_interval = coder->param.restart_interval;
         }
     }
+    return param_adjusted;
+}
+
+/* Documented at declaration */
+int
+gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_parameters* param,
+                       const struct gpujpeg_image_parameters* param_image, const struct gpujpeg_encoder_input* input,
+                       uint8_t** image_compressed, size_t* image_compressed_size)
+{
+    assert(param->comp_count <= GPUJPEG_MAX_COMPONENT_COUNT);
+    assert(param->quality >= 0 && param->quality <= 100);
+    assert(param->restart_interval >= RESTART_AUTO);
+    assert(param->interleaved == 0 || param->interleaved == 1);
+
+    // Get coder
+    struct gpujpeg_coder* coder = &encoder->coder;
+    int rc;
+
+    struct gpujpeg_parameters param_adjusted = adjust_params(coder, param, param_image);
 
     // (Re)initialize encoder
     if (coder->param.quality != param->quality) {
