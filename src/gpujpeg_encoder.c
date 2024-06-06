@@ -287,10 +287,9 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
 
 static struct gpujpeg_parameters
 adjust_params(struct gpujpeg_coder* coder, const struct gpujpeg_parameters* param,
-              const struct gpujpeg_image_parameters* param_image)
+              const struct gpujpeg_image_parameters* param_image, bool img_changed)
 {
     struct gpujpeg_parameters param_adjusted = *param;
-    const bool img_changed = !gpujpeg_image_parameters_equals(&coder->param_image, param_image);
     if ( param->comp_count == 0 ) {
         if ( img_changed ) {
 
@@ -332,7 +331,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
     struct gpujpeg_coder* coder = &encoder->coder;
     int rc;
 
-    struct gpujpeg_parameters param_adjusted = adjust_params(coder, param, param_image);
+    const bool img_changed = !gpujpeg_image_parameters_equals(&coder->param_image, param_image);
+    struct gpujpeg_parameters param_adjusted = adjust_params(coder, param, param_image, img_changed);
 
     // (Re)initialize encoder
     if (coder->param.quality != param->quality) {
@@ -355,10 +355,12 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
         return -1;
     }
 
-    // (Re)initialize preprocessor
-    if (gpujpeg_preprocessor_encoder_init(&encoder->coder) != 0) {
-        fprintf(stderr, "[GPUJPEG] [Error] Failed to init preprocessor!\n");
-        return -1;
+    if ( img_changed ) {
+        // (Re)initialize preprocessor
+        if ( gpujpeg_preprocessor_encoder_init(&encoder->coder) != 0 ) {
+            fprintf(stderr, "[GPUJPEG] [Error] Failed to init preprocessor!\n");
+            return -1;
+        }
     }
 
     // Load input image
