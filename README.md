@@ -194,17 +194,11 @@ For encoding by libgpujpeg library you have to declare two structures
 and set proper values to them. The first is definition of encoding/decoding
 parameters, and the second is structure with parameters of input image:
 
-    struct gpujpeg_parameters param;
-    gpujpeg_set_default_parameters(&param);
-    param.quality = 80;
-    // (default value is 75)
-    param.restart_interval = 16;
-    // (default value is 8)
-    param.interleaved = 1;
-    // (default value is 0)
-    
-    struct gpujpeg_image_parameters param_image;
-    gpujpeg_image_set_default_parameters(&param_image);
+    struct gpujpeg_parameters param = gpujpeg_default_parameters();
+    // you can adjust parameters:
+    param.quality = 80; // (default value is 75)
+
+    struct gpujpeg_image_parameters param_image = gpujpeg_default_image_parameter();
     param_image.width = 1920;
     param_image.height = 1080;
     param_image.color_space = GPUJPEG_RGB; // input colorspace (GPUJPEG_RGB
