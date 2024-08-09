@@ -1525,6 +1525,8 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
     enum gpujpeg_color_space header_color_space = GPUJPEG_NONE;
     uint8_t *image_end = image + image_size;
 
+    param->restart_interval = 0;
+
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image, image_end);
     if (marker_soi != GPUJPEG_MARKER_SOI) {
