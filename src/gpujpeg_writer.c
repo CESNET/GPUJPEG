@@ -477,7 +477,8 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 
     gpujpeg_writer_write_sof0(encoder);
 
-    unsigned dht_type_emitted = 0U;
+    // emit GPUJPEG_COMPONENT_CHROMINANCE only if needed (not used for RGB or grayscale)
+    unsigned dht_type_emitted = 0U; ///< bitfield of already output component types (CHROMINANCE/LUMINANCE)
     for ( int i = 0; i < encoder->coder.param.comp_count; ++i ) {
         if ((dht_type_emitted & (1U << encoder->coder.component[i].type)) == 0) {
             gpujpeg_writer_write_dht(encoder, encoder->coder.component[i].type, GPUJPEG_HUFFMAN_DC);   // DC table
