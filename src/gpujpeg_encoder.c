@@ -626,10 +626,6 @@ gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)
 
     free(encoder);
 
-#ifdef DEBUG
-    cudaDeviceReset(); // to allow "cuda-memcheck --leak-check full"
-#endif // defined DEBUG
-
     return 0;
 }
 /* vim: set expandtab sw=4: */

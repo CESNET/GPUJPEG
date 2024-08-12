@@ -815,6 +815,10 @@ main(int argc, char *argv[])
         gpujpeg_opengl_destroy(gl_context);
     }
 
+#ifdef DEBUG
+    cudaDeviceReset(); // to allow "cuda-memcheck --leak-check full"
+#endif // defined DEBUG
+
     return ret;
 }
 
