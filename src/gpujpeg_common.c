@@ -2029,4 +2029,10 @@ float gpujpeg_custom_timer_get_duration(cudaEvent_t start, cudaEvent_t stop) {
     return elapsedTime;
 }
 
+void
+gpujpeg_device_reset(void)
+{
+    cudaDeviceReset();
+}
+
 /* vi: set expandtab sw=4 : */

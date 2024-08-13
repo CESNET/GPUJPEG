@@ -650,6 +650,10 @@ gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format);
 GPUJPEG_API int
 gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format);
 
+/** Calls cudaDeviceReset() */
+GPUJPEG_API void
+gpujpeg_device_reset(void);
+
 #ifdef __cplusplus
 }
 #endif

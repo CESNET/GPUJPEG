@@ -816,7 +816,7 @@ main(int argc, char *argv[])
     }
 
 #ifdef DEBUG
-    cudaDeviceReset(); // to allow "cuda-memcheck --leak-check full"
+    gpujpeg_device_reset(); // to allow "cuda-memcheck --leak-check full"
 #endif // defined DEBUG
 
     return ret;
