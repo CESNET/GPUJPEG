@@ -1481,6 +1481,11 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
         }
     }
 
+    if ( reader.segment_count != decoder->coder.segment_count ) {
+        fprintf(stderr, "[GPUJPEG] [Warning] %d segments read, expected %d. Broken JPEG?\n",
+                reader.segment_count, decoder->coder.segment_count);
+    }
+
     // Check EOI marker
     if ( eoi_presented == 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] JPEG data should end with EOI marker!\n");
