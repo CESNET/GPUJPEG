@@ -283,7 +283,15 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
     }
     *image_size = gpujpeg_image_calculate_size(&param_image);
     *image_data = alloc(*image_size);
-    memset(*image_data, 0, *image_size);
+
+    // fill some data
+    struct gpujpeg_image_parameters param_oneline = param_image;
+    param_oneline.height = 1;
+    const size_t linesize = gpujpeg_image_calculate_size(&param_oneline);
+    for (int i = 0; i < param_image.height; ++i) {
+        memset((char*)*image_data + i * linesize, i * 255 / param_image.height, linesize);
+    }
+
     return 0;
 }
 
