@@ -80,8 +80,8 @@ print_help(void)
            "   -a  --alpha            encode/decode alpha channel (otherwise stripped)\n"
            "   -N  --native           create native JPEG (Adobe RGB for RGB, SPIFF for Y709;\n"
            "                                              may be incompatible with some decoders;\n"
-           "                                              works also for decoding)\n"
-           "\n");
+           "                                              works also for decoding)\n");
+    printf("recognized raw input/output file extensions: rgb, yuv, pnm... (use`gpujpegtool exts` for the full list)\n");
 }
 
 static void
@@ -416,6 +416,11 @@ main(int argc, char *argv[])
         for ( int index = 0; index < argc; index++ ) {
             gpujpeg_image_range_info(argv[index], param_image.width, param_image.height, param_image.pixel_format);
         }
+        return 0;
+    }
+
+    if ( argv[0] != NULL && strcmp(argv[0], "exts") == 0 ) {
+        gpujpeg_image_get_file_format(".help");
         return 0;
     }
 

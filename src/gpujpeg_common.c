@@ -396,7 +396,13 @@ gpujpeg_image_get_file_format(const char* filename)
     if ( ext == NULL )
         return GPUJPEG_IMAGE_FILE_UNKNOWN;
     ext++;
+    if ( strcmp(ext, "help") == 0 ) {
+        printf("Recognized extensions:\n");
+    }
     for ( unsigned i = 0; i < sizeof extensions / sizeof extensions[0]; i++ ) {
+        if ( strcmp(ext, "help") == 0 ) {
+            printf("\t- %s\n", extensions[i].ext);
+        }
         if ( strcasecmp(ext, extensions[i].ext) == 0 ) {
             return extensions[i].format;
         }
