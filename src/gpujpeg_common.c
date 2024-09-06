@@ -1118,7 +1118,7 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* imag
     FILE* file;
     file = fopen(filename, "rb");
     if ( !file ) {
-        fprintf(stderr, "[GPUJPEG] [Error] Failed open %s for reading!\n", filename);
+        fprintf(stderr, "[GPUJPEG] [Error] Failed open %s for reading: %s\n", filename, strerror(errno));
         return -1;
     }
 
@@ -1180,7 +1180,7 @@ gpujpeg_image_save_to_file(char *filename, uint8_t *image, size_t image_size,
     FILE* file;
     file = fopen(filename, "wb");
     if ( !file ) {
-        fprintf(stderr, "[GPUJPEG] [Error] Failed open %s for writing!\n", filename);
+        fprintf(stderr, "[GPUJPEG] [Error] Failed open %s for writing: %s\n", filename, strerror(errno));
         return -1;
     }
 
