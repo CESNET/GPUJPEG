@@ -36,8 +36,10 @@
 #include <libgpujpeg/gpujpeg_version.h>
 #endif // defined HAVE_GPUJPEG_VERSION_H
 #include "utils/image_delegate.h"
+#include <errno.h>                          // for errno
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>                         // for strcmp, strerror, strlen, strrchr
 #if defined(_MSC_VER)
   #include <windows.h>
   #define strcasecmp _stricmp
