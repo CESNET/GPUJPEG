@@ -85,6 +85,9 @@ struct gpujpeg_preprocessor_raw_to_comp_store {
 template<enum gpujpeg_pixel_format>
 inline __device__ void raw_to_comp_load(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r);
 
+template<enum gpujpeg_pixel_format>
+constexpr int __device__ unit_size() { return 1; }
+
 template<>
 inline __device__ void raw_to_comp_load<GPUJPEG_U8>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
 {
@@ -118,18 +121,22 @@ inline __device__ void raw_to_comp_load<GPUJPEG_420_U8_P0P1P2>(const uint8_t* d_
 }
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
+constexpr int __device__ unit_size<GPUJPEG_444_U8_P012>() { return 3; }
+
+template<>
+inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &offset, int &x, int &y, uchar4 &r)
 {
-    const unsigned int offset = image_position * 3;
     r.x = d_data_raw[offset];
     r.y = d_data_raw[offset + 1];
     r.z = d_data_raw[offset + 2];
 }
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_4444_U8_P0123>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
+constexpr int __device__ unit_size<GPUJPEG_4444_U8_P0123>() { return 4; }
+
+template<>
+inline __device__ void raw_to_comp_load<GPUJPEG_4444_U8_P0123>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &offset, int &x, int &y, uchar4 &r)
 {
-    const unsigned int offset = image_position * 4;
     r.x = d_data_raw[offset];
     r.y = d_data_raw[offset + 1];
     r.z = d_data_raw[offset + 2];
@@ -137,11 +144,13 @@ inline __device__ void raw_to_comp_load<GPUJPEG_4444_U8_P0123>(const uint8_t* d_
 }
 
 template<>
-inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P1020>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
+constexpr int __device__ unit_size<GPUJPEG_422_U8_P1020>() { return 2; }
+
+template<>
+inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P1020>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &offset, int &x, int &y, uchar4 &r)
 {
-    const unsigned int offset = image_position * 2;
     r.x = d_data_raw[offset + 1];
-    if ( image_position % 2 == 0 ) {
+    if ( offset % 4 == 0 ) {
         r.y = d_data_raw[offset];
         r.z = d_data_raw[offset + 2];
     } else {
@@ -153,7 +162,7 @@ inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P1020>(const uint8_t* d_d
 /**
  * Kernel - Copy raw image source data into three separated component buffers
  */
-typedef void (*gpujpeg_preprocessor_encode_kernel)(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height, uint32_t width_div_mul, uint32_t width_div_shift);
+typedef void (*gpujpeg_preprocessor_encode_kernel)(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width_padding, int image_width, int image_height, uint32_t width_div_mul, uint32_t width_div_shift);
 
 /**
  * @note
@@ -171,7 +180,7 @@ template<
     uint8_t s_comp4_samp_factor_h, uint8_t s_comp4_samp_factor_v
 >
 __global__ void
-gpujpeg_preprocessor_raw_to_comp_kernel(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, const uint8_t* d_data_raw_end, int image_width, int image_height, uint32_t width_div_mul, uint32_t width_div_shift)
+gpujpeg_preprocessor_raw_to_comp_kernel(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width_padding, int image_width, int image_height, uint32_t width_div_mul, uint32_t width_div_shift)
 {
     int x  = threadIdx.x;
     int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
@@ -187,7 +196,8 @@ gpujpeg_preprocessor_raw_to_comp_kernel(struct gpujpeg_preprocessor_data data, c
 
     // Load
     uchar4 r;
-    raw_to_comp_load<pixel_format>(d_data_raw, image_width, image_height, image_position, image_position_x, image_position_y, r);
+    int offset = image_position * unit_size<pixel_format>() + image_width_padding * image_position_y;
+    raw_to_comp_load<pixel_format>(d_data_raw, image_width, image_height, offset, image_position_x, image_position_y, r);
 
     // Color transform
     gpujpeg_color_transform<color_space, color_space_internal>::perform(r);
@@ -399,7 +409,7 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
     kernel<<<grid, threads, 0, encoder->stream>>>(
         data,
         coder->d_data_raw,
-        coder->d_data_raw + coder->data_raw_size,
+        coder->param_image.width_padding,
         image_width,
         image_height,
         width_div_mul,
@@ -456,6 +466,8 @@ int
 gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder * coder = &encoder->coder;
+    /// @todo support padding for other formats
+    assert(!coder->param_image.width_padding || (coder->param_image.pixel_format == GPUJPEG_444_U8_P012 && coder->preprocessor));
     if (coder->preprocessor) {
             return gpujpeg_preprocessor_encode_interlaced(encoder);
     } else {
