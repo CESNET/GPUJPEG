@@ -345,6 +345,7 @@ gpujpeg_image_set_default_parameters(struct gpujpeg_image_parameters* param)
     param->height = 0;
     param->color_space = GPUJPEG_RGB;
     param->pixel_format = GPUJPEG_444_U8_P012;
+    param->width_padding = 0;
 }
 
 struct gpujpeg_image_parameters
@@ -364,7 +365,8 @@ gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , cons
     return p1->width == p2->width &&
         p1->height == p2->height &&
         p1->color_space == p2->color_space &&
-        p1->pixel_format == p2->pixel_format;
+        p1->pixel_format == p2->pixel_format &&
+        p1->width_padding == p2->width_padding;
 }
 
 /* Documented at declaration */

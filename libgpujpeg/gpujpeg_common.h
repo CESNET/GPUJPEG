@@ -275,6 +275,8 @@ struct gpujpeg_image_parameters {
     enum gpujpeg_color_space color_space;
     /// Image data sampling factor
     enum gpujpeg_pixel_format pixel_format;
+    /// Number of bytes padded to each row
+    int width_padding;
 };
 
 /**
