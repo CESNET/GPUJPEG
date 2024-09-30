@@ -593,11 +593,9 @@ gpujpeg_reader_read_com(uint8_t** image, const uint8_t* image_end, enum gpujpeg_
     }
 
     const char cs_itu601[] = "CS=ITU601";
-    char buf[sizeof cs_itu601];
-    size_t str_len = MIN(sizeof buf - 1, (size_t) length - 2);
-    memcpy(buf, *image, str_len);
-    buf[str_len] = '\0'; // terminate if needed
-    if (strcmp(buf, cs_itu601) == 0) {
+    const size_t com_length = length - 2; // check both with '\0' and without:
+    if ( (com_length == sizeof cs_itu601 || com_length == sizeof cs_itu601 - 1) &&
+         strncmp((char*)*image, cs_itu601, com_length) == 0 ) {
         *color_space = GPUJPEG_YCBCR_BT601;
     }
 
