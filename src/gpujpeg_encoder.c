@@ -392,6 +392,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
     }
     else if (input->type == GPUJPEG_ENCODER_INPUT_GPU_IMAGE) {
         coder->d_data_raw = input->image;
+        coder->duration_memory_to.started = 0;
     }
     else if ( input->type == GPUJPEG_ENCODER_INPUT_OPENGL_TEXTURE ) {
         assert(input->texture != NULL);
