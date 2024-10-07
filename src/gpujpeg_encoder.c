@@ -33,6 +33,7 @@
 #include <string.h>
 #include "../libgpujpeg/gpujpeg_common.h"
 #include "../libgpujpeg/gpujpeg_encoder.h"
+#include "gpujpeg_common_internal.h"
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_dct_cpu.h"
 #include "gpujpeg_dct_gpu.h"
@@ -331,6 +332,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
     struct gpujpeg_coder* coder = &encoder->coder;
     int rc;
 
+    coder->start_time = param->perf_stats ? gpujpeg_get_time() : 0;
+
     const bool img_changed = !gpujpeg_image_parameters_equals(&coder->param_image, param_image);
     struct gpujpeg_parameters param_adjusted = adjust_params(coder, param, param_image, img_changed);
 
@@ -585,6 +588,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
 
     coder->d_data_raw = NULL;
 
+    coder_process_stats(coder);
+
     return 0;
 }
 
@@ -606,6 +611,8 @@ int
 gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)
 {
     assert(encoder != NULL);
+
+    coder_process_stats_overall(&encoder->coder);
 
     if (encoder->huffman_gpu_encoder != NULL) {
         gpujpeg_huffman_gpu_encoder_destroy(encoder->huffman_gpu_encoder);

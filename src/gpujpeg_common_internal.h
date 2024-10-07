@@ -353,6 +353,7 @@ struct gpujpeg_coder
     int cuda_cc_minor; ///< CUDA Compute capability (minor version)
 
     // Operation durations
+    double start_time, stop_time;
     struct gpujpeg_timer duration_memory_to;
     struct gpujpeg_timer duration_memory_from;
     struct gpujpeg_timer duration_memory_map;
@@ -362,6 +363,10 @@ struct gpujpeg_coder
     struct gpujpeg_timer duration_huffman_coder;
     struct gpujpeg_timer duration_stream;
     struct gpujpeg_timer duration_in_gpu;
+    // aggregate statistics
+    double first_frame_duration;
+    double aggregate_duration;
+    long frames;
 
     size_t allocated_gpu_memory_size; ///< for gpujpeg_encoder_max_pixels() only (remove?)
 
@@ -403,6 +408,11 @@ gpujpeg_coder_get_stats(struct gpujpeg_coder *coder, struct gpujpeg_duration_sta
  */
 int
 gpujpeg_coder_deinit(struct gpujpeg_coder* coder);
+
+void
+coder_process_stats(struct gpujpeg_coder* coder);
+void
+coder_process_stats_overall(struct gpujpeg_coder* coder);
 
 struct gpujpeg_component;
 

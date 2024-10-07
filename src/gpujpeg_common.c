@@ -2046,4 +2046,85 @@ gpujpeg_device_reset(void)
     cudaDeviceReset();
 }
 
+/**
+ * If gpujpeg_coder.param.perf_stat is on, finishes statistics counting - mainly CPU time and its store for aggregate
+ * printout in coder_process_stats_overall() - and prints per-image statistics.
+ */
+void
+coder_process_stats(struct gpujpeg_coder* coder)
+{
+    if ( !coder->param.perf_stats ) {
+        return;
+    }
+    coder->stop_time = gpujpeg_get_time();
+    const double duration_ms = (coder->stop_time - coder->start_time) * 1000.0;
+
+    if ( coder->frames == 0 ) {
+        coder->first_frame_duration = duration_ms;
+    }
+    coder->aggregate_duration += duration_ms;
+    coder->frames += 1;
+
+    struct gpujpeg_duration_stats stats;
+    gpujpeg_coder_get_stats(coder, &stats);
+
+    if ( coder->encoder ) {
+        if ( coder->param.verbose >= 1 ) {
+            printf(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
+            if ( stats.duration_memory_map != 0.0 && stats.duration_memory_unmap != 0.0 ) {
+                printf(" -OpenGL Memory Map: %10.4f ms\n", stats.duration_memory_map);
+                printf(" -OpenGL Memory Unmap:%9.4f ms\n", stats.duration_memory_unmap);
+            }
+            printf(" -Preprocessing:     %10.4f ms\n", stats.duration_preprocessor);
+            printf(" -DCT & Quantization:%10.4f ms\n", stats.duration_dct_quantization);
+            printf(" -Huffman Encoder:   %10.4f ms\n", stats.duration_huffman_coder);
+            printf(" -Copy From Device:  %10.4f ms\n", stats.duration_memory_from);
+            printf(" -Stream Formatter:  %10.4f ms\n", stats.duration_stream);
+        }
+        printf("Encode Image GPU:    %10.4f ms (only in-GPU processing)\n", stats.duration_in_gpu);
+        printf("Encode Image Bare:   %10.4f ms (without copy to/from GPU memory)\n",
+               duration_ms - stats.duration_memory_to - stats.duration_memory_from);
+        printf("Encode Image:        %10.4f ms\n", duration_ms);
+    }
+    else {
+        if ( coder->param.verbose >= 1 ) {
+            printf(" -Stream Reader:     %10.4f ms\n", stats.duration_stream);
+            printf(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
+            printf(" -Huffman Decoder:   %10.4f ms\n", stats.duration_huffman_coder);
+            printf(" -DCT & Quantization:%10.4f ms\n", stats.duration_dct_quantization);
+            printf(" -Postprocessing:    %10.4f ms\n", stats.duration_preprocessor);
+            printf(" -Copy From Device:  %10.4f ms\n", stats.duration_memory_from);
+            if ( stats.duration_memory_map != 0.0 && stats.duration_memory_unmap != 0.0 ) {
+                printf(" -OpenGL Memory Map: %10.4f ms\n", stats.duration_memory_map);
+                printf(" -OpenGL Memory Unmap:%9.4f ms\n", stats.duration_memory_unmap);
+            }
+        }
+        printf("Decode Image GPU:    %10.4f ms (only in-GPU processing)\n", stats.duration_in_gpu);
+        printf("Decode Image Bare:   %10.4f ms (without copy to/from GPU memory)\n",
+               duration_ms - stats.duration_memory_to - stats.duration_memory_from);
+        printf("Decode Image:        %10.4f ms\n", duration_ms);
+    }
+}
+
+/**
+ * @brief prints overal statistics
+ * @sa coder_process_stats
+ *
+ * call on encoder/decoder destroy
+ */
+void
+coder_process_stats_overall(struct gpujpeg_coder* coder) {
+    if ( !coder->param.perf_stats || coder->frames <= 1 ) { // aggregate stats not needed for 0 or 1 frame
+        return;
+    }
+    printf("\n");
+    printf("Avg %s Duration: %10.4f ms\n", coder->encoder ? "Encode" : "Decode",
+           coder->aggregate_duration / (double)coder->frames);
+    if ( coder->param.verbose >= 1 ) {
+        printf("Avg w/o 1st Iter:    %10.4f ms\n",
+               (coder->aggregate_duration - coder->first_frame_duration) / ((double)coder->frames - 1));
+    }
+    printf("\n");
+}
+
 /* vi: set expandtab sw=4 : */

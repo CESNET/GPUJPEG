@@ -29,6 +29,7 @@
  */
 
 #include "../libgpujpeg/gpujpeg_decoder.h"
+#include "gpujpeg_common_internal.h"
 #include "gpujpeg_dct_cpu.h"
 #include "gpujpeg_dct_gpu.h"
 #include "gpujpeg_decoder_internal.h"
@@ -209,6 +210,8 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
     struct gpujpeg_coder* coder = &decoder->coder;
     int rc;
     int unsupp_gpu_huffman_params = 0;
+
+    coder->start_time = coder->param.perf_stats ? gpujpeg_get_time() : 0;
 
     GPUJPEG_CUSTOM_TIMER_START(coder->duration_stream, coder->param.perf_stats, decoder->stream, return -1);
 
@@ -403,6 +406,8 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
         assert(0);
     }
 
+    coder_process_stats(coder);
+
     return 0;
 }
 
@@ -425,6 +430,8 @@ int
 gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
 {
     assert(decoder != NULL);
+
+    coder_process_stats_overall(&decoder->coder);
 
     if (0 != gpujpeg_coder_deinit(&decoder->coder)) {
         return -1;
