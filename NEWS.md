@@ -1,7 +1,10 @@
 2024-10-08 - 0.25.5
 ----------
-- add gpujpeg_decoder_create_with_params() (+ struct
+- added gpujpeg_decoder_create_with_params() (+ struct
   gpujpeg_decoder_init_parameters, gpujpeg_decoder_default_init_parameters())
+- added gpujpeg_decoder_init_parameters.ff_cs_itu601_is_709 flag to
+  override colorspace to limited 709 if FFmpeg-specific comment CS=ITU601
+  is present (as 709 is used by UltraGrid)
 
 2024-10-07 - 0.25.4
 ----------
@@ -10,7 +13,7 @@
 2024-06-05 - 0.25.3
 ----------
 - added gpujpeg_color_space_by_name
-- addeg gpujpeg_print_pixel_format
+- added gpujpeg_print_pixel_format
 
 2024-04-09 - 0.25.2
 ----------

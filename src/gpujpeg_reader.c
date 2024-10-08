@@ -31,6 +31,7 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "../libgpujpeg/gpujpeg_decoder.h"
 #include "gpujpeg_decoder_internal.h"
@@ -578,7 +579,8 @@ gpujpeg_reader_read_app14(uint8_t** image, const uint8_t* image_end, enum gpujpe
 }
 
 static int
-gpujpeg_reader_read_com(uint8_t** image, const uint8_t* image_end, enum gpujpeg_color_space *color_space)
+gpujpeg_reader_read_com(uint8_t** image, const uint8_t* image_end, bool ff_cs_itu601_is_709,
+                        enum gpujpeg_color_space* color_space)
 {
     if(image_end - *image < 2) {
         fprintf(stderr, "[GPUJPEG] [Error] Could not read com length\n");
@@ -596,7 +598,7 @@ gpujpeg_reader_read_com(uint8_t** image, const uint8_t* image_end, enum gpujpeg_
     const size_t com_length = length - 2; // check both with '\0' and without:
     if ( (com_length == sizeof cs_itu601 || com_length == sizeof cs_itu601 - 1) &&
          strncmp((char*)*image, cs_itu601, com_length) == 0 ) {
-        *color_space = GPUJPEG_YCBCR_BT601;
+        *color_space = ff_cs_itu601_is_709 ? GPUJPEG_YCBCR_BT709 : GPUJPEG_YCBCR_BT601;
     }
 
     *image += length - 2;
@@ -1232,7 +1234,9 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, struct gpujpeg_reader* 
  * @retval @ref Errors
  */
 static int
-gpujpeg_reader_read_common_markers(uint8_t **image, const uint8_t* image_end, int marker, int log_level, enum gpujpeg_color_space *color_space, int *restart_interval, _Bool *in_spiff)
+gpujpeg_reader_read_common_markers(uint8_t** image, const uint8_t* image_end, int marker, int log_level,
+                                   bool ff_cs_itu601_is_709, enum gpujpeg_color_space* color_space,
+                                   int* restart_interval, bool* in_spiff)
 {
     int rc = 0;
     switch (marker)
@@ -1310,7 +1314,7 @@ gpujpeg_reader_read_common_markers(uint8_t **image, const uint8_t* image_end, in
             return -1;
 
         case GPUJPEG_MARKER_COM:
-            if ( gpujpeg_reader_read_com(image, image_end, color_space) != 0 ) {
+            if ( gpujpeg_reader_read_com(image, image_end, ff_cs_itu601_is_709, color_space) != 0 ) {
                 return -1;
             }
             break;
@@ -1420,8 +1424,9 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
         }
 
         // Read more info according to the marker
-        int rc = gpujpeg_reader_read_common_markers(&image, image_end, marker, decoder->coder.param.verbose, &header_color_space, &reader.param.restart_interval, &in_spiff);
-        if (rc < 0) {
+        int rc = gpujpeg_reader_read_common_markers(&image, image_end, marker, decoder->coder.param.verbose, decoder->ff_cs_itu601_is_709,
+                                                    &header_color_space, &reader.param.restart_interval, &in_spiff);
+        if ( rc < 0 ) {
             return rc;
         }
         if (rc == 0) { // already processed
@@ -1547,8 +1552,9 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
         }
 
         // Read more info according to the marker
-        int rc = gpujpeg_reader_read_common_markers(&image, image_end, marker, param->verbose, &header_color_space, &param->restart_interval, &in_spiff);
-        if (rc < 0) {
+        int rc = gpujpeg_reader_read_common_markers(&image, image_end, marker, param->verbose, false,
+                                                    &header_color_space, &param->restart_interval, &in_spiff);
+        if ( rc < 0 ) {
             return rc;
         }
         if (rc == 0) { // already processed

@@ -157,7 +157,7 @@ gpujpeg_decoder_create(cudaStream_t stream)
 struct gpujpeg_decoder_init_parameters
 gpujpeg_decoder_default_init_parameters()
 {
-    return (struct gpujpeg_decoder_init_parameters){cudaStreamDefault, 0, false};
+    return (struct gpujpeg_decoder_init_parameters){cudaStreamDefault, 0, false, false};
 }
 /**
  * Create JPEG decoder
@@ -174,6 +174,7 @@ gpujpeg_decoder_create_with_params(const struct gpujpeg_decoder_init_parameters 
     }
     decoder->coder.param.verbose = params->verbose;
     decoder->coder.param.perf_stats = params->perf_stats;
+    decoder->ff_cs_itu601_is_709 = params->ff_cs_itu601_is_709;
     return decoder;
 }
 

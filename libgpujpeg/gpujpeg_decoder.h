@@ -90,6 +90,8 @@ struct gpujpeg_decoder_init_parameters
     cudaStream_t stream; ///< stream CUDA stream to be used, cudaStreamDefault (0x00) is default
     int verbose; ///< verbosity level (-1 - quiet, 0 - normal, 1 - verbose)
     bool perf_stats; ///< print performance statistics on output
+    bool ff_cs_itu601_is_709; ///< if FFmpeg specific COM marker "CS=ITU601" present, interpret the data as
+                              ///< limited-range BT.709 not BT.601
 };
 
 /**

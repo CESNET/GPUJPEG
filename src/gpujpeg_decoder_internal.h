@@ -31,6 +31,8 @@
 #ifndef GPUJPEG_DECODER_INTERNAL_H
 #define GPUJPEG_DECODER_INTERNAL_H
 
+#include <stdbool.h>
+
 #include "../libgpujpeg/gpujpeg_common.h"
 #include "gpujpeg_common_internal.h"
 #include "gpujpeg_table.h"
@@ -68,6 +70,8 @@ struct gpujpeg_decoder
 
     enum gpujpeg_pixel_format req_pixel_format;
     enum gpujpeg_color_space req_color_space;
+    bool ff_cs_itu601_is_709; ///< if FFmpeg specific COM marker "CS=ITU601" present, interpret the data as
+                              ///< limited-range BT.709 not BT.601
 };
 
 #endif // GPUJPEG_DECODER_INTERNAL_H
