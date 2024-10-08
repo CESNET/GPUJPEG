@@ -51,7 +51,7 @@ struct CUstream_st;
 typedef struct CUstream_st *cudaStream_t;
 #endif
 
-#if __cplusplus >= 201402L
+#if __cplusplus >= 201402L || __STDC_VERSION__ >= 202311L
 #define GPUJPEG_DEPRECATED [[deprecated]]
 #elif defined _MSC_VER
 #define GPUJPEG_DEPRECATED __declspec(deprecated)
