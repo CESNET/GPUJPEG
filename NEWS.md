@@ -1,3 +1,7 @@
+2024-10-07 - 0.25.4
+----------
+- deprecate gpujpeg_decoder_get_stats()/gpujpeg_decoder_get_stats()
+
 2024-06-05 - 0.25.3
 ----------
 - added gpujpeg_color_space_by_name
