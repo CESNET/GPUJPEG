@@ -14,6 +14,7 @@
 #define ASSERT_STR_EQ(expected, actual) do { if (strcmp(expected, actual) != 0) { fprintf(stderr, "Assertion failed! Expected '%s', result '%s'\n", expected, actual); abort(); } } while(0)
 
 static void subsampling_name_test() {
+        printf("testing %s: ", __func__);
         struct {
                 enum gpujpeg_pixel_format fmt;
                 const char *exp_subs_name;
@@ -29,12 +30,14 @@ static void subsampling_name_test() {
                         gpujpeg_subsampling_get_name(gpujpeg_pixel_format_get_comp_count(test_pairs[i].fmt), gpujpeg_pixel_format_get_sampling_factor(test_pairs[i].fmt));
                 ASSERT_STR_EQ(test_pairs[i].exp_subs_name, name);
         }
+        printf("Ok\n");
 }
 
 /*
  * Test if we can encode GPU pointer as usual CPU pointer.
  */
 static void encode_gpu_mem_as_cpu() {
+        printf("testing %s: ", __func__);
         struct gpujpeg_encoder *encoder = gpujpeg_encoder_create(0);
         if (encoder == NULL) { // do not fail here if we do not have CUDA capable device - just skip this test
                 return;
@@ -69,11 +72,17 @@ static void encode_gpu_mem_as_cpu() {
 
         cudaFree(image);
         gpujpeg_encoder_destroy(encoder);
+        printf("Ok\n");
 }
+
+// defined in test_gh_95.c
+void
+test_gh_95();
 
 int main() {
         subsampling_name_test();
         encode_gpu_mem_as_cpu();
+        test_gh_95();
         printf("PASSED\n");
 }
 
