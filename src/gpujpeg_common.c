@@ -1017,6 +1017,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     return allocated_gpu_memory_size;
 }
 
+/// @retval 0 on success, nonzero otherwise
 int
 gpujpeg_coder_get_stats(struct gpujpeg_coder *coder, struct gpujpeg_duration_stats *stats)
 {
@@ -1030,7 +1031,12 @@ gpujpeg_coder_get_stats(struct gpujpeg_coder *coder, struct gpujpeg_duration_sta
     stats->duration_stream = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_stream);
     stats->duration_in_gpu = GPUJPEG_CUSTOM_TIMER_DURATION(coder->duration_in_gpu);
 
-    return 0;
+    return stats->duration_memory_to >= 0 && stats->duration_memory_from >= 0 && stats->duration_memory_map >= 0 &&
+                   stats->duration_memory_unmap >= 0 && stats->duration_preprocessor >= 0 &&
+                   stats->duration_dct_quantization >= 0 && stats->duration_huffman_coder >= 0 &&
+                   stats->duration_stream >= 0 && stats->duration_in_gpu >= 0
+               ? 0
+               : -1;
 }
 
 /* Documented at declaration */
@@ -2017,26 +2023,16 @@ int gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format)
     return -1;
 }
 
+/**
+ * @retval >=0 on success
+ * @retval  <0 on failure
+ */
 float gpujpeg_custom_timer_get_duration(cudaEvent_t start, cudaEvent_t stop) {
     float elapsedTime = NAN;
-    cudaError_t err = cudaEventSynchronize(stop);
-    if (err != cudaSuccess) {
-        if (err != cudaErrorInvalidResourceHandle) {
-            gpujpeg_cuda_check_error("cudaEventSynchronize", );
-        } else { // reset last error to cudaSuccess
-            cudaGetLastError();
-        }
-        return 0.0F;
-    }
-    err = cudaEventElapsedTime(&elapsedTime, start, stop);
-    if (err != cudaSuccess) {
-        if (err != cudaErrorInvalidResourceHandle) {
-            gpujpeg_cuda_check_error("cudaEventElapsedTime", );
-        } else { // reset last error to cudaSuccess
-            cudaGetLastError();
-        }
-        return 0.0F;
-    }
+    cudaEventSynchronize(stop);
+    gpujpeg_cuda_check_error("cudaEventSynchronize", return -1);
+    cudaEventElapsedTime(&elapsedTime, start, stop);
+    gpujpeg_cuda_check_error("cudaEventElapsedTime", return -1);
     return elapsedTime;
 }
 
