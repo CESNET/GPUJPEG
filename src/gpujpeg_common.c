@@ -2061,6 +2061,10 @@ coder_process_stats(struct gpujpeg_coder* coder)
     coder->aggregate_duration += duration_ms;
     coder->frames += 1;
 
+    if ( coder->param.verbose <= -1 ) { // quiet
+        return;
+    }
+
     struct gpujpeg_duration_stats stats;
     gpujpeg_coder_get_stats(coder, &stats);
 
@@ -2111,6 +2115,9 @@ coder_process_stats(struct gpujpeg_coder* coder)
 void
 coder_process_stats_overall(struct gpujpeg_coder* coder) {
     if ( !coder->param.perf_stats || coder->frames <= 1 ) { // aggregate stats not needed for 0 or 1 frame
+        return;
+    }
+    if ( coder->param.verbose <= -1 ) { // quiet
         return;
     }
     printf("\n");
