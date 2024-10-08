@@ -99,6 +99,11 @@
     }
 #endif
 
+#define GPUJPEG_CUSTOM_TIMER_RESET(name)                                                                           \
+        do {                                                                                                           \
+            (name).started = 0;                                                                                        \
+        } while ( 0 )
+
 #define PLANAR   1u
 static const struct {
     enum gpujpeg_pixel_format pixel_format;
@@ -543,9 +548,24 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
     return 0;
 }
 
+static void
+reset_timers(struct gpujpeg_coder* coder)
+{
+    GPUJPEG_CUSTOM_TIMER_RESET(coder->duration_memory_to);
+    GPUJPEG_CUSTOM_TIMER_RESET(coder->duration_memory_from);
+    GPUJPEG_CUSTOM_TIMER_RESET(coder->duration_memory_map);
+    GPUJPEG_CUSTOM_TIMER_RESET(coder->duration_memory_unmap);
+    GPUJPEG_CUSTOM_TIMER_RESET(coder->duration_preprocessor);
+    GPUJPEG_CUSTOM_TIMER_RESET(coder->duration_dct_quantization);
+    GPUJPEG_CUSTOM_TIMER_RESET(coder->duration_huffman_coder);
+    GPUJPEG_CUSTOM_TIMER_RESET(coder->duration_stream);
+    GPUJPEG_CUSTOM_TIMER_RESET(coder->duration_in_gpu);
+}
+
 size_t
 gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_parameters * param, const struct gpujpeg_image_parameters * param_image, cudaStream_t stream)
 {
+    reset_timers(coder);
     if (gpujpeg_parameters_equals(&coder->param, param) && gpujpeg_image_parameters_equals(&coder->param_image, param_image)) {
         // gpujpeg_parameters::{verbose,perf_stats,quality} may change without reconf but store them
         coder->param_image = *param_image;
