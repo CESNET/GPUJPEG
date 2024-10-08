@@ -35,6 +35,7 @@
 #include "gpujpeg_decoder_internal.h"
 #include "gpujpeg_huffman_cpu_decoder.h"
 #include "gpujpeg_huffman_gpu_decoder.h"
+#include "gpujpeg_marker.h"
 #include "gpujpeg_postprocessor.h"
 #include "gpujpeg_reader.h"
 #include "gpujpeg_util.h"
@@ -150,6 +151,29 @@ gpujpeg_decoder_create(cudaStream_t stream)
         return NULL;
     }
 
+    return decoder;
+}
+
+struct gpujpeg_decoder_init_parameters
+gpujpeg_decoder_default_init_parameters()
+{
+    return (struct gpujpeg_decoder_init_parameters){cudaStreamDefault, 0, false};
+}
+/**
+ * Create JPEG decoder
+ *
+ * @sa gpujpeg_decoder_create
+ * @return decoder structure if succeeds, otherwise NULL
+ */
+struct gpujpeg_decoder*
+gpujpeg_decoder_create_with_params(const struct gpujpeg_decoder_init_parameters *params)
+{
+    struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(params->stream);
+    if ( decoder == NULL ) {
+        return NULL;
+    }
+    decoder->coder.param.verbose = params->verbose;
+    decoder->coder.param.perf_stats = params->perf_stats;
     return decoder;
 }
 

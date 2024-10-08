@@ -31,6 +31,10 @@
 #ifndef GPUJPEG_DECODER_H
 #define GPUJPEG_DECODER_H
 
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif // __cplusplus
+
 #include "gpujpeg_common.h"
 #include "gpujpeg_type.h"
 
@@ -75,6 +79,17 @@ struct gpujpeg_decoder_output
 
     /// OpenGL texture
     struct gpujpeg_opengl_texture* texture;
+};
+
+/**
+ * @sa gpujpeg_parametes
+ * call gpujpeg_decoder_default_init_parameters() to initialize
+ */
+struct gpujpeg_decoder_init_parameters
+{
+    cudaStream_t stream; ///< stream CUDA stream to be used, cudaStreamDefault (0x00) is default
+    int verbose; ///< verbosity level (-1 - quiet, 0 - normal, 1 - verbose)
+    bool perf_stats; ///< print performance statistics on output
 };
 
 /**
@@ -126,11 +141,27 @@ gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, ui
 /**
  * Create JPEG decoder
  *
+ * @sa gpujpeg_decoder_create_with_params
  * @param stream CUDA stream to be used, may be cudaStreamDefault (0x00)
  * @return decoder structure if succeeds, otherwise NULL
  */
 GPUJPEG_API struct gpujpeg_decoder*
 gpujpeg_decoder_create(cudaStream_t stream);
+
+GPUJPEG_API struct gpujpeg_decoder_init_parameters
+gpujpeg_decoder_default_init_parameters(void);
+/**
+ * @brief Create JPEG decoder - extended versison
+ *
+ * This version is an alternative to gpujpeg_decoder_create() allowing setting more parameters during initialization
+ * (verbose, perf_stats). Previously, if those needed to be set, it the decoder must have been configured with
+ * gpujpeg_decoder_init().
+ *
+ * @sa gpujpeg_decoder_create
+ * @return decoder structure if succeeds, otherwise NULL
+ */
+GPUJPEG_API struct gpujpeg_decoder*
+gpujpeg_decoder_create_with_params(const struct gpujpeg_decoder_init_parameters *params);
 
 /**
  * Init JPEG decoder for specific image properties

@@ -1,3 +1,8 @@
+2024-10-08 - 0.25.5
+----------
+- add gpujpeg_decoder_create_with_params() (+ struct
+  gpujpeg_decoder_init_parameters, gpujpeg_decoder_default_init_parameters())
+
 2024-10-07 - 0.25.4
 ----------
 - deprecate gpujpeg_decoder_get_stats()/gpujpeg_decoder_get_stats()
