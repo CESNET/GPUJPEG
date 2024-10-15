@@ -1112,10 +1112,14 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, struct gpujpeg_reader* 
         return -1;
     }
 
-    int length = (int)gpujpeg_reader_read_2byte(*image);
-    int comp_count = (int)gpujpeg_reader_read_byte(*image);
+    const int length = (int)gpujpeg_reader_read_2byte(*image);
+    const int comp_count = (int)gpujpeg_reader_read_byte(*image);
     if (length != comp_count * 2 + 6) {
         fprintf(stderr, "[GPUJPEG] [Error] Wrong SOS length (expected %d, got %d)\n", comp_count * 2 + 6, length);
+        return -1;
+    }
+    if ( *image + length - 3 > image_end ) {
+        fprintf(stderr, "[GPUJPEG] [Error] SOS goes beyond end of data\n");
         return -1;
     }
     // Not interleaved mode
@@ -1159,11 +1163,6 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, struct gpujpeg_reader* 
     // Collect the component-spec parameters
     for ( int comp = 0; comp < comp_count; comp++ )
     {
-        if(*image + 2 > image_end) {
-            fprintf(stderr, "[GPUJPEG] [Error] SOS goes beyond end of data\n");
-            return -1;
-        }
-
         int comp_id = (int)gpujpeg_reader_read_byte(*image);
         int table = (int)gpujpeg_reader_read_byte(*image);
         int table_dc = (table >> 4) & 15;
