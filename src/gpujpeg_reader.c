@@ -436,7 +436,7 @@ gpujpeg_reader_read_spiff_directory(uint8_t** image, const uint8_t* image_end, i
 /**
  * Read APP8 marker
  *
- * Obtains colorspace from APP14.
+ * Obtains colorspace from APP8.
  *
  * @param         decoder     decoder state
  * @param[in,out] image       JPEG data
@@ -547,7 +547,7 @@ gpujpeg_reader_read_app14(uint8_t** image, const uint8_t* image_end, enum gpujpe
 
     int length = gpujpeg_reader_read_2byte(*image);
 
-    if(length > image_end - *image) {
+    if ( length - 2 > image_end - *image ) {
         fprintf(stderr, "[GPUJPEG] [Error] APP14 segment goes beyond end of data\n");
         return -1;
     }
@@ -564,8 +564,8 @@ gpujpeg_reader_read_app14(uint8_t** image, const uint8_t* image_end, enum gpujpe
         return rc;
     }
 
+    fprintf(stderr, "[GPUJPEG] [Warning] Unknown APP14 marker %dB (%dB) long was presented: ", length, length - 2);
     length -= 2;
-    fprintf(stderr, "[GPUJPEG] [Warning] Unknown APP14 marker %dB long was presented: ", length);
     while (length > 0 && isprint(**image)) {
         putc(*(*image)++, stderr);
         length--;
