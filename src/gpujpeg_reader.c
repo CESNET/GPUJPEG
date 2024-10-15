@@ -725,7 +725,7 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
 
     int length = (int)gpujpeg_reader_read_2byte(*image);
     if ( length < 8 ) {
-        fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker length should be greater than 8 but %d was presented!\n", length);
+        fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker length should be at least 8 but %d was presented!\n", length);
         return -1;
     }
     length -= 2;
@@ -741,6 +741,15 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
     param->comp_count = (int)gpujpeg_reader_read_byte(*image);
     length -= 6;
 
+    if ( param->comp_count == 0 ) {
+        fprintf(stderr, "[GPUJPEG] [Error] SOF0 has 0 components!\n");
+        return -1;
+    }
+    if ( param->comp_count > GPUJPEG_MAX_COMPONENT_COUNT ) {
+        fprintf(stderr, "[GPUJPEG] [Error] SOF0 has %d components but JPEG can contain at most %d components\n",
+                param->comp_count, (int)GPUJPEG_MAX_COMPONENT_COUNT);
+        return -1;
+    }
     if ( precision != 8 ) {
         fprintf(stderr, "[GPUJPEG] [Error] SOF0 marker precision should be 8 but %d was presented!\n", precision);
         return -1;
