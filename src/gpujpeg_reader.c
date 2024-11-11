@@ -1535,12 +1535,12 @@ int
 gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count)
 {
     int segments = 0;
-    int interleaved = 0;
     int unused[4];
     uint8_t unused2[4];
     enum gpujpeg_color_space header_color_space = GPUJPEG_NONE;
     uint8_t *image_end = image + image_size;
 
+    param->interleaved = 0;
     param->restart_interval = 0;
 
     // Check first SOI marker
@@ -1602,7 +1602,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
                 assert(length > 3);
                 int comp_count = (int) gpujpeg_reader_read_byte(image); // comp count in the segment
                 if (comp_count > 1) {
-                    interleaved = 1;
+                    param->interleaved = 1;
                 }
                 if (segment_count == NULL) { // if not counting segments, we can skip the rest
                     eoi_presented = 1;
@@ -1675,7 +1675,8 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
 
         if (param->sampling_factor[1].horizontal == 1 && param->sampling_factor[1].vertical == 1
                 && param->sampling_factor[2].horizontal == 1 && param->sampling_factor[2].vertical == 1) {
-            int sum = interleaved << 16 | param->sampling_factor[0].horizontal << 8 |  param->sampling_factor[0].vertical; // NOLINT
+            int sum = param->interleaved << 16 | param->sampling_factor[0].horizontal << 8 |
+                      param->sampling_factor[0].vertical; // NOLINT
             switch (sum) {
                 case 1<<16 | 1<<8 | 1: param_image->pixel_format = GPUJPEG_444_U8_P012; break;   // NOLINT
                 case 0<<16 | 1<<8 | 1: param_image->pixel_format = GPUJPEG_444_U8_P0P1P2; break; // NOLINT

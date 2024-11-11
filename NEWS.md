@@ -1,3 +1,8 @@
+2024-11-11 - 0.25.6
+----------
+- gpujpeg_decoder_get_image_info(): fill also interleaved (+ print
+with gpujpegtool)
+
 2024-10-08 - 0.25.5
 ----------
 - added gpujpeg_decoder_create_with_params() (+ struct
