@@ -163,7 +163,7 @@ enum restart_int {
 struct gpujpeg_parameters
 {
     /// Verbosity level - show more information, collects duration of each phase, etc.
-    /// 0 - normal, 1 - verbose, 2 - debug, 3 - debug2 (if not defined NDEBUG)
+    /// 0 - normal, 1 - verbose, 2 - debug, 3 - debug2
     int verbose;
     int perf_stats; /// record performance stats, set to 1 to allow gpujpeg_encoder_get_stats()
 
