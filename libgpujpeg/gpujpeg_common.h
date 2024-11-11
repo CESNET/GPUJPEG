@@ -155,6 +155,13 @@ enum restart_int {
     RESTART_NONE = 0,  ///< disabled; CPU Huffman encoder will be used
 };
 
+enum verbosity {
+    LL_NORMAL = 0,  ///< normal verbosity
+    LL_VERBOSE = 1, ///< print additional information
+    LL_DEBUG = 2,   ///< print more information, including internal ones
+    LL_DEBUG2 = 3,  ///< print maximum of information, including JPEG file internal structure
+};
+
 /**
  * JPEG parameters. This structure should not be initialized only be hand,
  * but at first gpujpeg_set_default_parameters should be call and then
@@ -163,7 +170,7 @@ enum restart_int {
 struct gpujpeg_parameters
 {
     /// Verbosity level - show more information, collects duration of each phase, etc.
-    /// 0 - normal, 1 - verbose, 2 - debug, 3 - debug2
+    /// @sa @ref verbosity for values
     int verbose;
     int perf_stats; /// record performance stats, set to 1 to allow gpujpeg_encoder_get_stats()
 
