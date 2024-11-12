@@ -30,8 +30,9 @@
 
 #include <ctype.h>
 #include <inttypes.h>
-#include <string.h>
 #include <stdbool.h>
+#include <stdio.h>                          // for fprintf, stderr
+#include <string.h>                         // for memcmp, strlen, memcpy
 
 #include "../libgpujpeg/gpujpeg_decoder.h"
 #include "gpujpeg_decoder_internal.h"
@@ -117,7 +118,7 @@ struct gpujpeg_reader
  * @return marker code or -1 if failed
  */
 static int
-gpujpeg_reader_read_marker(uint8_t** image, const uint8_t* image_end)
+gpujpeg_reader_read_marker(uint8_t** image, const uint8_t* image_end, int verbose)
 {
     if(image_end - *image < 2) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to read marker from JPEG data (end of data)\n");
@@ -130,6 +131,7 @@ gpujpeg_reader_read_marker(uint8_t** image, const uint8_t* image_end)
         return -1;
     }
     int marker = gpujpeg_reader_read_byte(*image);
+    DEBUG2_MSG(verbose, "Read marker %s\n", gpujpeg_marker_name(marker));
     return marker;
 }
 
@@ -418,7 +420,7 @@ gpujpeg_reader_read_spiff_directory(uint8_t** image, const uint8_t* image_end, i
     uint32_t tag = gpujpeg_reader_read_4byte(*image);
     DEBUG2_MSG(verbose, "Read SPIFF tag 0x%x with length %d.\n", tag, length + 2);
     if (tag == SPIFF_ENTRY_TAG_EOD && length == SPIFF_ENTRY_TAG_EOD_LENGHT - 2) {
-        int marker_soi = gpujpeg_reader_read_marker(image, image_end);
+        int marker_soi = gpujpeg_reader_read_marker(image, image_end, verbose);
         if ( marker_soi != GPUJPEG_MARKER_SOI ) {
             VERBOSE_MSG(verbose, "SPIFF entry 0x1 should be followed directly with SOI.\n");
             return -1;
@@ -606,6 +608,19 @@ gpujpeg_reader_read_com(uint8_t** image, const uint8_t* image_end, bool ff_cs_it
     return 0;
 }
 
+static void
+quant_table_dump(unsigned index, const struct gpujpeg_table_quantization* table)
+{
+    printf("quantization table 0x%02x:", index);
+    for ( int i = 0; i < 64; ++i ) {
+        if ( i % 8 == 0 ) {
+            printf("\n");
+        }
+        printf("%hu\t", table->table[i]);
+    }
+    printf("\n\n");
+}
+
 /**
  * Read quantization table definition block from image
  *
@@ -656,6 +671,10 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image, const 
 
         // Prepare quantization table for read raw table
         gpujpeg_table_quantization_decoder_compute(table);
+
+        if (decoder->coder.param.verbose >= LL_DEBUG2) {
+            quant_table_dump(index, table);
+        }
     }
     return 0;
 }
@@ -788,6 +807,32 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
     return 0;
 }
 
+static void
+huff_table_dump(int Th, int Tc, const struct gpujpeg_table_huffman_decoder* table)
+{
+    const char* comp_type = "(unknown)";
+    switch ( Th ) {
+    case 0:
+        comp_type = "lum";
+        break;
+    case 1:
+        comp_type = "chr";
+        break;
+    }
+    printf("table index 0x%02x (Tc: %d /%s/, Th: %d /%s/):\n", Th | (Tc << 4), Tc, Tc == 0 ? "DC" : "AC", Th,
+           comp_type);
+    int hi = 0;
+    for ( unsigned i = 1; i < sizeof table->bits / sizeof table->bits[0]; ++i ) {
+        printf("values per %2u bits - count: %3hhu, list:", i, table->bits[i]);
+        for ( int j = hi; j < hi + table->bits[i]; ++j ) {
+            printf(" %3hhu", table->huffval[j]);
+        }
+        hi += table->bits[i];
+        printf("\n");
+    }
+    printf("total: %d\n\n", hi);
+}
+
 /**
  * Read huffman table definition block from image
  *
@@ -851,6 +896,10 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image, const 
         }
         // Compute huffman table for read values
         gpujpeg_table_huffman_decoder_compute(table);
+
+        if (decoder->coder.param.verbose >= LL_DEBUG2) {
+            huff_table_dump(Th, Tc, table);
+        }
 
         // Copy table to device memory
         cudaMemcpyAsync(d_table, table, sizeof(struct gpujpeg_table_huffman_decoder), cudaMemcpyHostToDevice, decoder->stream);
@@ -1416,7 +1465,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
     uint8_t* image_end = image + image_size;
 
     // Check first SOI marker
-    int marker_soi = gpujpeg_reader_read_marker(&image, image_end);
+    int marker_soi = gpujpeg_reader_read_marker(&image, image_end, decoder->coder.param.verbose);
     if ( marker_soi != GPUJPEG_MARKER_SOI ) {
         fprintf(stderr, "[GPUJPEG] [Error] JPEG data should begin with SOI marker, but marker %s was found!\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker_soi));
         return -1;
@@ -1426,7 +1475,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
     _Bool in_spiff = 0;
     while ( eoi_presented == 0 ) {
         // Read marker
-        int marker = gpujpeg_reader_read_marker(&image, image_end);
+        int marker = gpujpeg_reader_read_marker(&image, image_end, decoder->coder.param.verbose);
         if ( marker == -1 ) {
             return -1;
         }
@@ -1544,7 +1593,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
     param->restart_interval = 0;
 
     // Check first SOI marker
-    int marker_soi = gpujpeg_reader_read_marker(&image, image_end);
+    int marker_soi = gpujpeg_reader_read_marker(&image, image_end, param->verbose);
     if (marker_soi != GPUJPEG_MARKER_SOI) {
         fprintf(stderr, "[GPUJPEG] [Error] JPEG data should begin with SOI marker, but marker %s was found!\n", gpujpeg_marker_name((enum gpujpeg_marker_code)marker_soi));
         return -1;
@@ -1554,7 +1603,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
     _Bool in_spiff = 0;
     while (eoi_presented == 0) {
         // Read marker
-        int marker = gpujpeg_reader_read_marker(&image, image_end);
+        int marker = gpujpeg_reader_read_marker(&image, image_end, param->verbose);
         if (marker == -1) {
             return -1;
         }
