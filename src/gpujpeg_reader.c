@@ -1153,6 +1153,20 @@ gpujpeg_reader_read_scan_content_by_segment_info(struct gpujpeg_decoder* decoder
     return 0;
 }
 
+static void
+sos_check_dump(int verbose, int comp_count, int Ss, int Se, int Ah, int Al)
+{
+    bool invalid_val = false;
+    if (Ss != 0 || Se != 63 || Ah != 0 || Al != 0) {
+        WARN_MSG("Some of SOS parameters not valid for sequential DCT.\n");
+        invalid_val = true;
+    }
+    if (!invalid_val && verbose < LL_DEBUG2) {
+        return;
+    }
+    printf("SOS components=%d Ss=%d Se=%d Ah=%d Al=%d\n", comp_count, Ss, Se, Ah, Al);
+}
+
 /**
  * Read start of scan block from image
  *
@@ -1240,6 +1254,10 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, struct gpujpeg_reader* 
 
         decoder->comp_table_huffman_map[component_index][GPUJPEG_HUFFMAN_DC] = table_dc;
         decoder->comp_table_huffman_map[component_index][GPUJPEG_HUFFMAN_AC] = table_ac;
+
+        if ( decoder->coder.param.verbose >= LL_DEBUG2 ) {
+            printf("SOS component #%d table DC: %d table AC: %d\n", comp_id, table_dc, table_ac);
+        }
     }
 
     // Collect the additional scan parameters Ss, Se, Ah/Al.
@@ -1253,7 +1271,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, struct gpujpeg_reader* 
     int Ax = (int)gpujpeg_reader_read_byte(*image);
     int Ah = (Ax >> 4) & 15;
     int Al = (Ax) & 15;
-    (void) Ss, (void) Se, (void) Ax, (void) Ah, (void) Al;
+    sos_check_dump(decoder->coder.param.verbose, comp_count, Ss, Se, Ah, Al);
 
     // Check maximum scan count
     if ( reader->scan_count >= GPUJPEG_MAX_COMPONENT_COUNT ) {
