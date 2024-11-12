@@ -118,6 +118,7 @@ static int print_image_info_jpeg(const char *filename, int verbose) {
     }
     fseek(f, 0L, SEEK_END);
     long int len = ftell(f);
+    printf("size: %lu B\n", len);
     fseek(f, 0L, SEEK_SET);
     uint8_t *jpeg = malloc(len);
     size_t ret = fread(jpeg, len, 1, f);
@@ -149,6 +150,7 @@ static int print_image_info(const char *filename, int verbose) {
         fprintf(stderr, "Missing filename!\n");
         return 1;
     }
+    printf("name: %s\n", filename);
     enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);
     if (format == GPUJPEG_IMAGE_FILE_JPEG ) {
         return print_image_info_jpeg(filename, verbose);
