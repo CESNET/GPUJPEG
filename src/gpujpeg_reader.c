@@ -691,6 +691,9 @@ static const char *array_serialize(int comp_count, const uint8_t *comp_id) {
     return buffer;
 }
 
+/**
+ * checks component ID to determine if JPEG is in YCbCr (component IDs 1, 2, 3) or RGB (component IDs 'R', 'G', 'B')
+ */
 static enum gpujpeg_color_space gpujpeg_reader_process_cid(int comp_count, uint8_t *comp_id, enum gpujpeg_color_space header_color_space) {
     _Static_assert(GPUJPEG_MAX_COMPONENT_COUNT >= 3, "An array of at least 3 components expected");
     static const uint8_t ycbcr_ids[] = { 1, 2, 3 };
@@ -725,6 +728,21 @@ static enum gpujpeg_color_space gpujpeg_reader_process_cid(int comp_count, uint8
         fprintf(stderr, "[GPUJPEG] [Warning] SOF0 marker component id should be %s but %s was presented!\n", array_serialize(sizeof rgb_ids, rgb_ids), array_serialize(comp_count, comp_id));
     }
     return GPUJPEG_NONE;
+}
+
+static void
+sof0_dump(int comp_count, const struct gpujpeg_component_sampling_factor* sampling_factor, const uint8_t* id,
+          const int* map)
+{
+    printf("SOF0 subsampling:");
+    for (int comp = 0; comp < comp_count; ++comp) {
+        printf(" %dx%d", sampling_factor[comp].horizontal, sampling_factor[comp].vertical);
+    }
+    printf("\nSOF0 component quantization tab usage:");
+    for (int comp = 0; comp < comp_count; ++comp) {
+        printf(" %" PRIu8 "->%d", id[comp], map[comp]);
+    }
+    printf("\n");
 }
 
 /**
@@ -789,6 +807,10 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
         }
         quant_map[comp] = table_index;
         length -= 3;
+    }
+
+    if (param->verbose >= LL_DEBUG2) {
+        sof0_dump(param->comp_count, param->sampling_factor, comp_id, quant_map);
     }
 
     // Deduce color space if not known from headers
