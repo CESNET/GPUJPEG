@@ -1,5 +1,7 @@
 gpujpeg
 .cache
+.clang-tidy
+.envrc
 .libs
 src/*.o
 src/*.lo
@@ -12,6 +14,7 @@ Makefile.in
 aclocal.m4
 autom4te.cache/
 compile
+compile_flags.txt
 config.guess
 config.log
 config.status
@@ -23,6 +26,7 @@ depcomp
 install-sh
 libgpujpeg.pc
 libtool
+/local/
 ltmain.sh
 m4/
 missing
