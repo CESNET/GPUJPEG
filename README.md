@@ -4,6 +4,8 @@ GPUJPEG
 [![License](https://img.shields.io/badge/License-BSD_2--Clause-orange.svg)](https://opensource.org/licenses/BSD-2-Clause)
 [![C/C++ CI](../../workflows/C%2FC%2B%2B%20CI/badge.svg)](../../actions)
 
+![GPUJPEG Logo](logo.svg)
+
 **JPEG** encoder and decoder library and console application for **NVIDIA GPUs**
 for high-performance image encoding and decoding. The software runs also on
 **AMD GPUs** using [ZLUDA](https://github.com/vosen/ZLUDA) (see
