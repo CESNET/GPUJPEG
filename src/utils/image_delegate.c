@@ -248,7 +248,13 @@ tst_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format fo
     const int nelem = sscanf(filename, "%dx%d_%20[^_.]_%20[^_.]s", &param_image->width, &param_image->height,
                              color_space, pixel_format);
     if ( nelem < 2 ) {
-        printf("Usage:\n\t<W>x<H>[_<CS>[_<PF>]]\n");
+        printf("Usage:\n"
+               "\t<W>x<H>[_<CS>[_<PF>]].tst\n");
+        printf("\nExamples:\n"
+               "\t- 1920x1080.tst\n"
+               "\t- 1920x1080_rgb.tst\n"
+               "\t- 1920x1080_ycbcr-jpeg.tst\n"
+               "\t- 1920x1080_ycbcr-jpeg_422-u8-p1020.tst\n");
         return -1;
     }
     if ( nelem >= 3 ) {
