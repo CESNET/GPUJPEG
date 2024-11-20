@@ -86,7 +86,7 @@ template<enum gpujpeg_pixel_format>
 inline __device__ void raw_to_comp_load(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r);
 
 template<enum gpujpeg_pixel_format>
-constexpr int __device__ unit_size() { return 1; }
+inline __device__ int unit_size() { return 1; }
 
 template<>
 inline __device__ void raw_to_comp_load<GPUJPEG_U8>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
@@ -121,7 +121,7 @@ inline __device__ void raw_to_comp_load<GPUJPEG_420_U8_P0P1P2>(const uint8_t* d_
 }
 
 template<>
-constexpr int __device__ unit_size<GPUJPEG_444_U8_P012>() { return 3; }
+inline __device__ int unit_size<GPUJPEG_444_U8_P012>() { return 3; }
 
 template<>
 inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &offset, int &x, int &y, uchar4 &r)
@@ -132,7 +132,7 @@ inline __device__ void raw_to_comp_load<GPUJPEG_444_U8_P012>(const uint8_t* d_da
 }
 
 template<>
-constexpr int __device__ unit_size<GPUJPEG_4444_U8_P0123>() { return 4; }
+inline __device__ int unit_size<GPUJPEG_4444_U8_P0123>() { return 4; }
 
 template<>
 inline __device__ void raw_to_comp_load<GPUJPEG_4444_U8_P0123>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &offset, int &x, int &y, uchar4 &r)
@@ -144,7 +144,7 @@ inline __device__ void raw_to_comp_load<GPUJPEG_4444_U8_P0123>(const uint8_t* d_
 }
 
 template<>
-constexpr int __device__ unit_size<GPUJPEG_422_U8_P1020>() { return 2; }
+inline __device__ int unit_size<GPUJPEG_422_U8_P1020>() { return 2; }
 
 template<>
 inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P1020>(const uint8_t* d_data_raw, int &image_width, int &image_height, int &offset, int &x, int &y, uchar4 &r)
