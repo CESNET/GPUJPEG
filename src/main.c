@@ -80,7 +80,9 @@ print_help(void)
            "   -a  --alpha            encode/decode alpha channel (otherwise stripped)\n"
            "   -N  --native           create native JPEG (Adobe RGB for RGB, SPIFF for Y709;\n"
            "                                              may be incompatible with some decoders;\n"
-           "                                              works also for decoding)\n");
+           "                                              works also for decoding)\n"
+           "   -V  --version          print GPUJPEG version\n"
+           );
     printf("recognized raw input/output file extensions: rgb, yuv, pnm... (use`gpujpegtool exts` for the full list)\n");
 }
 
@@ -287,12 +289,13 @@ main(int argc, char *argv[])
         {"use-opengl",              no_argument,       0,  'o' },
         {"info",                    required_argument, 0,  'I' },
         {"native",                  no_argument,       0,  'N' },
+        {"version",                 no_argument,       0,  'V' },
         {0}
     };
     int ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "CLRahvD:s:f:c:q:r:g::i::edn:oI:NS::", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "CLRahvD:s:f:c:q:r:g::i::edn:oI:NS::V", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'a':
             opts.keep_alpha = true;
@@ -398,6 +401,8 @@ main(int argc, char *argv[])
         case 'N':
             opts.native_file_format = true;
             break;
+        case 'V':
+            return 0; // already printed, just exit
         case '?':
             return -1;
         default:
