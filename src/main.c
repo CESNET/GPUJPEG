@@ -230,7 +230,8 @@ parse_pixel_format(const char *arg)
 int
 main(int argc, char *argv[])
 {
-    printf("GPUJPEG rev %s\n", strlen(GIT_REV) > 0 ? GIT_REV : "unknown");
+
+    printf("GPUJPEG rev %s built " __DATE__ " " __TIME__ " \n", GIT_REV);
 
     int ret = EXIT_SUCCESS;
     // Default coder parameters
