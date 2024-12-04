@@ -68,12 +68,13 @@ int main(int argc, char *argv[])
     gpujpeg_image_destroy(image_old);
 
     // Get image size and check number of color components
+    struct gpujpeg_parameters param;
     struct gpujpeg_image_parameters param_image;
-    if (0 != gpujpeg_decoder_get_image_info(image, image_size, &param_image, NULL, 0 /* verbose */)) {
+    if (0 != gpujpeg_decoder_get_image_info(image, image_size, &param_image, &param, 0 /* verbose */)) {
         fprintf(stderr, "Failed to read image size from file [%s]!\n", input_filename);
         return -1;
     }
-    if (param_image.comp_count != 3) {
+    if (param.comp_count != 3) {
         fprintf(stderr, "Only JPEG images with 3 color components can be decoded into OpenGL texture!\n");
         return -1;
     }
@@ -122,7 +123,7 @@ int main(int argc, char *argv[])
     // Get data from OpenGL texture
     uint8_t* data = NULL;
     size_t data_size = 0;
-    data = malloc(param_image.width * param_image.height * param_image.comp_count);
+    data = malloc(param_image.width * param_image.height * param.comp_count);
     gpujpeg_opengl_texture_get_data(texture->texture_id, data, &data_size);
 
     // Save image
