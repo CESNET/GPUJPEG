@@ -156,10 +156,10 @@ enum restart_int {
 };
 
 enum verbosity {
-    LL_NORMAL = 0,  ///< normal verbosity
-    LL_VERBOSE = 1, ///< print additional information
-    LL_DEBUG = 2,   ///< print more information, including internal ones
-    LL_DEBUG2 = 3,  ///< print maximum of information, including JPEG file internal structure
+    GPUJPEG_LL_NORMAL = 0,  ///< normal verbosity
+    GPUJPEG_LL_VERBOSE = 1, ///< print additional information
+    GPUJPEG_LL_DEBUG = 2,   ///< print more information, including internal ones
+    GPUJPEG_LL_DEBUG2 = 3,  ///< print maximum of information, including JPEG file internal structure
 };
 
 /**

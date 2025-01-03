@@ -672,7 +672,7 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image, const 
         // Prepare quantization table for read raw table
         gpujpeg_table_quantization_decoder_compute(table);
 
-        if (decoder->coder.param.verbose >= LL_DEBUG2) {
+        if (decoder->coder.param.verbose >= GPUJPEG_LL_DEBUG2) {
             quant_table_dump(Pq, Tq, table);
         }
     }
@@ -809,7 +809,7 @@ gpujpeg_reader_read_sof0(struct gpujpeg_parameters * param, struct gpujpeg_image
         length -= 3;
     }
 
-    if (param->verbose >= LL_DEBUG2) {
+    if (param->verbose >= GPUJPEG_LL_DEBUG2) {
         sof0_dump(param->comp_count, param->sampling_factor, comp_id, quant_map);
     }
 
@@ -919,7 +919,7 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image, const 
         // Compute huffman table for read values
         gpujpeg_table_huffman_decoder_compute(table);
 
-        if (decoder->coder.param.verbose >= LL_DEBUG2) {
+        if (decoder->coder.param.verbose >= GPUJPEG_LL_DEBUG2) {
             huff_table_dump(Th, Tc, table);
         }
 
@@ -1183,7 +1183,7 @@ sos_check_dump(int verbose, int comp_count, int Ss, int Se, int Ah, int Al)
         WARN_MSG("Some of SOS parameters not valid for sequential DCT.\n");
         invalid_val = true;
     }
-    if (!invalid_val && verbose < LL_DEBUG2) {
+    if (!invalid_val && verbose < GPUJPEG_LL_DEBUG2) {
         return;
     }
     printf("SOS components=%d Ss=%d Se=%d Ah=%d Al=%d\n", comp_count, Ss, Se, Ah, Al);
@@ -1277,7 +1277,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, struct gpujpeg_reader* 
         decoder->comp_table_huffman_map[component_index][GPUJPEG_HUFFMAN_DC] = table_dc;
         decoder->comp_table_huffman_map[component_index][GPUJPEG_HUFFMAN_AC] = table_ac;
 
-        if ( decoder->coder.param.verbose >= LL_DEBUG2 ) {
+        if ( decoder->coder.param.verbose >= GPUJPEG_LL_DEBUG2 ) {
             printf("SOS component #%d table DC: %d table AC: %d\n", comp_id, table_dc, table_ac);
         }
     }
