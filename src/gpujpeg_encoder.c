@@ -69,6 +69,30 @@ gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gp
     input->texture = texture;
 }
 
+struct gpujpeg_encoder_input
+gpujpeg_encoder_input_image(uint8_t* image)
+{
+    struct gpujpeg_encoder_input ret;
+    gpujpeg_encoder_input_set_image(&ret, image);
+    return ret;
+}
+
+struct gpujpeg_encoder_input
+gpujpeg_encoder_input_gpu_image(uint8_t* image)
+{
+    struct gpujpeg_encoder_input ret;
+    gpujpeg_encoder_input_set_gpu_image(&ret, image);
+    return ret;
+}
+
+struct gpujpeg_encoder_input
+gpujpeg_encoder_input_texture(struct gpujpeg_opengl_texture* texture)
+{
+    struct gpujpeg_encoder_input ret;
+    gpujpeg_encoder_input_set_texture(&ret, texture);
+    return ret;
+}
+
 /* Documented at declaration */
 struct gpujpeg_encoder*
 gpujpeg_encoder_create(cudaStream_t stream)

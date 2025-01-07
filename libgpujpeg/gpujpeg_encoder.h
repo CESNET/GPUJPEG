@@ -72,6 +72,7 @@ struct gpujpeg_encoder_input
  * @param encoder_input  Encoder input structure
  * @param image  Input image data
  * @return void
+ * @sa gpujpeg_encoder_input_image
  */
 GPUJPEG_API void
 gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* image);
@@ -82,6 +83,7 @@ gpujpeg_encoder_input_set_image(struct gpujpeg_encoder_input* input, uint8_t* im
  * @param encoder_input  Encoder input structure
  * @param image GPU image data
  * @return void
+ * @sa gpujpeg_encoder_input_gpu_image
  */
 GPUJPEG_API void
 gpujpeg_encoder_input_set_gpu_image(struct gpujpeg_encoder_input* input, uint8_t* image);
@@ -92,9 +94,20 @@ gpujpeg_encoder_input_set_gpu_image(struct gpujpeg_encoder_input* input, uint8_t
  * @param encoder_input  Encoder input structure
  * @param texture_id  OpenGL texture id
  * @return void
+ * @sa gpujpeg_encoder_input_set_texture
  */
 GPUJPEG_API void
 gpujpeg_encoder_input_set_texture(struct gpujpeg_encoder_input* input, struct gpujpeg_opengl_texture* texture);
+
+/// alternative to @ref gpujpeg_encoder_input_set_image returning the struct as a return value
+GPUJPEG_API struct gpujpeg_encoder_input
+gpujpeg_encoder_input_image(uint8_t* image);
+/// alternative to @ref gpujpeg_encoder_input_set_gpu_image returning the struct as a return value
+GPUJPEG_API struct gpujpeg_encoder_input
+gpujpeg_encoder_input_gpu_image(uint8_t* image);
+/// alternative to @ref gpujpeg_encoder_input_set_texture returning the struct as a return value
+GPUJPEG_API struct gpujpeg_encoder_input
+gpujpeg_encoder_input_texture(struct gpujpeg_opengl_texture* texture);
 
 /**
  * Create JPEG encoder

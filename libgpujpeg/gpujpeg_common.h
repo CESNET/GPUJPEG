@@ -213,6 +213,7 @@ struct gpujpeg_parameters
  *
  * @param param  Parameters for JPEG coder
  * @return void
+ * @sa gpujpeg_default_parameters
  */
 GPUJPEG_API void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param);
