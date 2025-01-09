@@ -9,6 +9,9 @@ described on the linked page. It is sufficient to download the
 [binary build](https://github.com/vosen/ZLUDA/releases)
 (at least as for the version 3) and use as described.
 
+**Note:** The instructions below are wriiten for ZLUDA version **3**,
+version **4** seem not to be working.
+
 Below follow the platform specific notes.
 
 Linux
