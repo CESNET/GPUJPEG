@@ -58,8 +58,10 @@ extern "C" {
  * @addtogroup Flags
  * @{
  */
-#define GPUJPEG_VERBOSE                         1
+#define GPUJPEG_INIT_DEV_VERBOSE                1
 #define GPUJPEG_OPENGL_INTEROPERABILITY         2
+/// @deprecated use @ref GPUJPEG_INIT_VERBOSE
+#define GPUJPEG_VERBOSE                 GPUJPEG_INIT_DEV_VERBOSE
 /// @}
 
 /** Maximum number of segment info header in stream */

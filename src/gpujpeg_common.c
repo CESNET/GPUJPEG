@@ -231,7 +231,7 @@ gpujpeg_init_device(int device_id, int flags)
     }
 #endif
 
-    if ( flags & GPUJPEG_VERBOSE ) {
+    if ( flags & GPUJPEG_INIT_DEV_VERBOSE ) {
         int cuda_driver_version = 0;
         cudaDriverGetVersion(&cuda_driver_version);
         printf("CUDA driver version:   %d.%d\n", cuda_driver_version / 1000, (cuda_driver_version % 100) / 10);

@@ -441,7 +441,7 @@ main(int argc, char *argv[])
     }
 
     // Init device
-    int flags = GPUJPEG_VERBOSE;
+    int flags = GPUJPEG_INIT_DEV_VERBOSE;
     struct gpujpeg_opengl_context *gl_context = NULL;
     if ( use_opengl ) {
         flags |= GPUJPEG_OPENGL_INTEROPERABILITY;
