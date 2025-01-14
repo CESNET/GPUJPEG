@@ -2074,6 +2074,7 @@ coder_process_stats(struct gpujpeg_coder* coder)
     }
     coder->stop_time = gpujpeg_get_time();
     const double duration_ms = (coder->stop_time - coder->start_time) * 1000.0;
+    const double duration_init_ms = (coder->init_end_time - coder->start_time) * 1000.0;
 
     if ( coder->frames == 0 ) {
         coder->first_frame_duration = duration_ms;
@@ -2090,6 +2091,7 @@ coder_process_stats(struct gpujpeg_coder* coder)
 
     if ( coder->encoder ) {
         if ( coder->param.verbose >= 1 ) {
+            printf(" -(Re)initialization:%10.4f ms\n", duration_init_ms);
             printf(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
             if ( stats.duration_memory_map != 0.0 && stats.duration_memory_unmap != 0.0 ) {
                 printf(" -OpenGL Memory Map: %10.4f ms\n", stats.duration_memory_map);
@@ -2108,6 +2110,7 @@ coder_process_stats(struct gpujpeg_coder* coder)
     }
     else {
         if ( coder->param.verbose >= 1 ) {
+            printf(" -(Re)initialization:%10.4f ms\n", duration_init_ms);
             printf(" -Stream Reader:     %10.4f ms\n", stats.duration_stream);
             printf(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
             printf(" -Huffman Decoder:   %10.4f ms\n", stats.duration_huffman_coder);

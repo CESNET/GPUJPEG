@@ -1245,6 +1245,7 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, struct gpujpeg_reader* 
         if ( rc != GPUJPEG_NOERR ) {
             return -1;
         }
+        decoder->coder.init_end_time = decoder->coder.param.perf_stats ? gpujpeg_get_time() : 0;
     }
 
     // Check maximum component count

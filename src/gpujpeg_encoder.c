@@ -389,6 +389,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
             return -1;
         }
     }
+    coder->init_end_time = param->perf_stats ? gpujpeg_get_time() : 0;
 
     // Load input image
     if ( input->type == GPUJPEG_ENCODER_INPUT_IMAGE ) {

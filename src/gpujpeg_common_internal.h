@@ -350,7 +350,9 @@ struct gpujpeg_coder
     int cuda_cc_minor; ///< CUDA Compute capability (minor version)
 
     // Operation durations
-    double start_time, stop_time;
+    double start_time;    ///< overal coding CPU start time
+    double init_end_time; ///< CPU time after coder (re)initialization
+    double stop_time;     ///< overal coding CPU end time
     struct gpujpeg_timer duration_memory_to;
     struct gpujpeg_timer duration_memory_from;
     struct gpujpeg_timer duration_memory_map;
