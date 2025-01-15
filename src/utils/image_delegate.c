@@ -249,13 +249,15 @@ static void
 tst_usage()
 {
     printf("Usage:\n"
-           "\t<W>x<H>[.c_<CS>][.p_<PF>].tst\n");
+           "\t<W>x<H>[.c_<CS>][.p_<PF>][.<pattern>].tst\n");
     printf("\nOptional options are sepearated by a dot, key is after an underscore, order\n"
            "doesn't matter.\n");
     printf("\nOptions:\n"
            "\t- c_<CS> - color space\n"
            "\t- p_<PF> - pixel format\n"
-           "\t- noise  - use white noise instead of default gradient pattern\n");
+           "\t- gradient - use gradient pattern (default)\n"
+           "\t- noise  - use white noise\n"
+           "\t- blank  - use pattern\n");
     printf("\nExamples:\n"
            "\t- 1920x1080.tst              - use FullHD image\n"
            "\t- 1920x1080.c_ycbcr-jpeg.tst - \" with YCbCr color space\n"
@@ -268,6 +270,7 @@ enum tst_pattern {
     TST_GRADIENT,
     TST_DEFAULT = TST_GRADIENT,
     TST_NOISE,
+    TST_BLANK,
 };
 
 static int
@@ -319,6 +322,12 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
         else if ( strcmp(item, "noise") == 0) {
             *pattern = TST_NOISE;
         }
+        else if ( strcmp(item, "blank") == 0) {
+            *pattern = TST_BLANK;
+        }
+        else if ( strcmp(item, "gradient") == 0) {
+            *pattern = TST_GRADIENT;
+        }
         else {
             fprintf(stderr, "unknow test image option: %s!\n", item);
             return -1;
@@ -367,6 +376,10 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
             for ( unsigned i = 0; i < *image_size; ++i ) {
                 data[i] = rand();
             }
+            break;
+        }
+        case TST_BLANK: {
+            memset(*image_data, 0, *image_size);
             break;
         }
     }
