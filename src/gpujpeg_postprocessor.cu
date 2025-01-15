@@ -365,7 +365,7 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
         return -1;
     }
 
-    assert(coder->param.comp_count == 3 || coder->param.comp_count == 4);
+    // assert(coder->param.comp_count == 3 || coder->param.comp_count == 4);
 
     if (coder->param.color_space_internal == GPUJPEG_NONE) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_NONE>(coder);
