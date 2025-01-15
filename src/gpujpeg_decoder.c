@@ -265,6 +265,11 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
     // Perform huffman decoding on CPU (when there are not enough segments to saturate GPU)
     if (coder->segment_count < 32 || unsupp_gpu_huffman_params) {
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_huffman_coder, coder->param.perf_stats, decoder->stream, return -1);
+        if (coder->data_quantized == NULL) {
+            if (gpujpeg_coder_allocate_cpu_huffman_buf(coder) != 0) {
+                return -1;
+            }
+        }
         if (0 != gpujpeg_huffman_cpu_decoder_decode(decoder)) {
             fprintf(stderr, "[GPUJPEG] [Error] Huffman decoder failed!\n");
             return -1;

@@ -562,6 +562,21 @@ reset_timers(struct gpujpeg_coder* coder)
     GPUJPEG_CUSTOM_TIMER_RESET(coder->duration_in_gpu);
 }
 
+int
+gpujpeg_coder_allocate_cpu_huffman_buf(struct gpujpeg_coder * coder) {
+    cudaMallocHost((void**)&coder->data_quantized, coder->data_size * sizeof(int16_t));
+    gpujpeg_cuda_check_error("Coder quantized data host allocation", return -1);
+
+    int16_t* comp_data_quantized = coder->data_quantized;
+    for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
+        struct gpujpeg_component* component = &coder->component[comp];
+        component->data_quantized = comp_data_quantized;
+        comp_data_quantized += (size_t) component->data_width * component->data_height;
+    }
+
+    return 0;
+}
+
 size_t
 gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_parameters * param, const struct gpujpeg_image_parameters * param_image, cudaStream_t stream)
 {
@@ -853,13 +868,12 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
         cudaMalloc((void**)&coder->d_data, (coder->data_size + idct_overhead) * sizeof(uint8_t));
         gpujpeg_cuda_check_error("Coder data device allocation", return 0);
 
-        // (Re)allocated DCT and quantizer data in host memory
-        if (coder->data_quantized != NULL) {
+        // Deallocate DCT and quantizer data in host memory, alloc just if needed
+        // (gpujpeg_coder_allocate_cpu_huff_data())
+        if ( coder->data_quantized != NULL ) {
             cudaFreeHost(coder->data_quantized);
             coder->data_quantized = NULL;
         }
-        cudaMallocHost((void**)&coder->data_quantized, coder->data_size * sizeof(int16_t));
-        gpujpeg_cuda_check_error("Coder quantized data host allocation", return 0);
 
         // (Re)allocated DCT and quantizer data in device memory
         if (coder->d_data_quantized != NULL) {
@@ -882,17 +896,14 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     // Set data buffer to color components
     uint8_t* d_comp_data = coder->d_data;
     int16_t* d_comp_data_quantized = coder->d_data_quantized;
-    int16_t* comp_data_quantized = coder->data_quantized;
     unsigned int data_quantized_index = 0;
     for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
         struct gpujpeg_component* component = &coder->component[comp];
         component->d_data = d_comp_data;
         component->d_data_quantized = d_comp_data_quantized;
         component->data_quantized_index = data_quantized_index;
-        component->data_quantized = comp_data_quantized;
         d_comp_data += component->data_width * component->data_height;
         d_comp_data_quantized += component->data_width * component->data_height;
-        comp_data_quantized += component->data_width * component->data_height;
         data_quantized_index += component->data_width * component->data_height;
     }
 

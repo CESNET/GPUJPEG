@@ -502,6 +502,11 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
     // Perform huffman coding on CPU (when restart interval is not set)
     if ( coder->param.restart_interval == 0 ) {
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_memory_from, coder->param.perf_stats, encoder->stream, return -1);
+        if (coder->data_quantized == NULL) {
+            if (gpujpeg_coder_allocate_cpu_huffman_buf(coder) != 0) {
+                return -1;
+            }
+        }
         // Copy quantized data from device memory to cpu memory
         cudaMemcpyAsync(coder->data_quantized, coder->d_data_quantized, coder->data_size * sizeof(int16_t), cudaMemcpyDeviceToHost, encoder->stream);
 

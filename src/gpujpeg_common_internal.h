@@ -394,6 +394,15 @@ size_t
 gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_parameters * param, const struct gpujpeg_image_parameters * param_image, cudaStream_t stream);
 
 /**
+ * @brief allocate buffers for CPU Huffman coder
+ * Separated from gpujpeg_coder_init_image() - called only if needed, which is not normally so (using GPU Huffman
+ * coder if restart intervals are not disabled).
+ * @return 0 if succeeds, otherwise nonzero
+ */
+int
+gpujpeg_coder_allocate_cpu_huffman_buf(struct gpujpeg_coder * coder);
+
+/**
  * Returns duration statistics for last coded image
  */
 int
