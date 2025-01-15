@@ -31,6 +31,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#define PATH_MAX MAX_PATH
+#endif
+
+#ifdef __linux__
+#define strtok_s strtok_r
+#endif
+
 #include "../gpujpeg_common_internal.h"
 #include "../../libgpujpeg/gpujpeg_decoder.h" // ddecoder placeholders
 #include "image_delegate.h"
@@ -236,47 +245,80 @@ int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameter
     return y4m_write(filename, &info, (const unsigned char *) data) ? 0 : -1;
 }
 
+static void
+tst_usage()
+{
+    printf("Usage:\n"
+           "\t<W>x<H>[.c_<CS>][.p_<PF>].tst\n");
+    printf("\nOptional options are sepearated by a dot, key is after an underscore, order\n"
+           "doesn't matter.\n");
+    printf("\nOptions:\n"
+           "\t- c_<CS> - color space\n"
+           "\t- p_<PF> - pixel format\n");
+    printf("\nExamples:\n"
+           "\t- 1920x1080.tst              - use FullHD image\n"
+           "\t- 1920x1080.c_ycbcr-jpeg.tst - \" with YCbCr color space\n"
+           "\t- 1920x1080.p_u8.tst         - FHD grayscale (u8 pixel format)\n"
+           "\t- 1920x1080.c_ycbcr-jpeg.p_422-u8-p1020.tst - YCbCr 4:2:2\n");
+    printf("\n");
+}
+
 static int
 tst_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
                    struct gpujpeg_image_parameters* param_image, bool file_exists)
 {
-    (void) format;
-    (void) file_exists;
+    (void)format;
+    (void)file_exists;
 
-    char color_space[21];
-    char pixel_format[21];
-    const int nelem = sscanf(filename, "%dx%d_%20[^_.]_%20[^_.]s", &param_image->width, &param_image->height,
-                             color_space, pixel_format);
-    if ( nelem < 2 ) {
-        printf("Usage:\n"
-               "\t<W>x<H>[_<CS>[_<PF>]].tst\n");
-        printf("\nExamples:\n"
-               "\t- 1920x1080.tst\n"
-               "\t- 1920x1080_rgb.tst\n"
-               "\t- 1920x1080_ycbcr-jpeg.tst\n"
-               "\t- 1920x1080_ycbcr-jpeg_422-u8-p1020.tst\n");
+    char fname[PATH_MAX];
+    snprintf(fname, sizeof fname, "%s", filename);
+    // drop extension
+    char* ext_dot = strrchr(fname, '.');
+    assert(ext_dot != NULL && strlen(ext_dot + 1) == 3); // 3 char ext (.tst)
+    *ext_dot = '\0';
+
+    char* endptr = "";
+    param_image->width = (int)strtoul(fname, &endptr, 10);
+    if ( *endptr != 'x' ) {
+        tst_usage();
         return -1;
     }
-    if ( nelem >= 3 ) {
-        param_image->color_space = gpujpeg_color_space_by_name(color_space);
-        if ( param_image->color_space == GPUJPEG_NONE ) {
-            fprintf(stderr, "Unknown color space: %s\n", color_space);
+    endptr += 1;
+    param_image->height = (int)strtoul(endptr, &endptr, 10);
+    if (param_image->height == 0) {
+        tst_usage();
+        return -1;
+    }
+
+    // defaults
+    param_image->color_space = GPUJPEG_RGB;
+    param_image->pixel_format = GPUJPEG_444_U8_P012;
+
+    char *item = NULL;
+    char *saveptr = NULL;
+    while ((item = strtok_s(endptr, ".", &saveptr)) != 0) {
+        const char* value = strchr(item, '_') + 1;
+        if ( strstr(item, "c_") == item ) {
+            param_image->color_space = gpujpeg_color_space_by_name(value);
+            if ( param_image->color_space == GPUJPEG_NONE ) {
+                fprintf(stderr, "Unknown color space: %s\n", value);
+                return -1;
+            }
+        }
+        else if ( strstr(item, "p_") == item ) {
+            param_image->pixel_format = gpujpeg_pixel_format_by_name(value);
+            if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
+                fprintf(stderr, "Unknown pixel format: %s\n", value);
+                return -1;
+            }
+        }
+        else {
+            fprintf(stderr, "unknow test image option: %s!\n", item);
             return -1;
         }
+        endptr = NULL;
     }
-    else {
-        param_image->color_space = GPUJPEG_RGB;
-    }
-    if ( nelem >= 4 ) {
-        param_image->pixel_format = gpujpeg_pixel_format_by_name(pixel_format);
-        if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
-            fprintf(stderr, "Unknown pixel format: %s\n", pixel_format);
-            return -1;
-        }
-    }
-    else {
-        param_image->pixel_format = GPUJPEG_444_U8_P012;
-    }
+
     return 0;
 }
 
