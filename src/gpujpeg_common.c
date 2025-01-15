@@ -916,11 +916,15 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
 
         // (Re)allocate huffman coder data in host memory
         if (coder->data_compressed != NULL) {
-            cudaFreeHost(coder->data_compressed);
+            cudaHostUnregister(coder->data_compressed);
+            free(coder->data_compressed);
             coder->data_compressed = NULL;
         }
-        cudaMallocHost((void**)&coder->data_compressed, max_compressed_data_size * sizeof(uint8_t));
-        gpujpeg_cuda_check_error("Coder data compressed host allocation", return 0);
+        coder->data_compressed = malloc(max_compressed_data_size);
+        coder->data_compressed_pinned_sz = max_compressed_data_size / (GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE
+          / GPUJPEG_BLOCK_SQUARED_SIZE); // divide by 8 to get the WxHxCH bytes
+        cudaHostRegister(coder->data_compressed, coder->data_compressed_pinned_sz, cudaHostRegisterDefault);
+        gpujpeg_cuda_check_error("Coder data compressed host registration", return 0);
 
         // (Re)allocate huffman coder data in device memory
         if (coder->d_data_compressed != NULL) {
@@ -1088,8 +1092,10 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
         cudaFreeHost(coder->data_quantized);
     if ( coder->d_data_quantized != NULL )
         cudaFree(coder->d_data_quantized);
-    if ( coder->data_compressed != NULL )
-        cudaFreeHost(coder->data_compressed);
+    if ( coder->data_compressed != NULL ) {
+        cudaHostUnregister(coder->data_compressed);
+        free(coder->data_compressed);
+    }
     if ( coder->d_data_compressed != NULL )
         cudaFree(coder->d_data_compressed);
     if ( coder->segment != NULL )

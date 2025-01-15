@@ -338,7 +338,9 @@ struct gpujpeg_coder
     size_t data_allocated_size;
 
     /// Huffman coder data in host memory (output/input for encoder/decoder)
+    /// only **partially** pinned (needs special treatment - @sa data_compressed_pinned_sz occurrences)
     uint8_t* data_compressed;
+    size_t data_compressed_pinned_sz; ///< amount of pinned memory from data_compressed
     /// Huffman coder data in device memory (output/input for encoder/decoder)
     uint8_t* d_data_compressed;
     /// Huffman coder temporary data (in device memory only)
