@@ -2099,7 +2099,7 @@ coder_process_stats(struct gpujpeg_coder* coder)
     coder->aggregate_duration += duration_ms;
     coder->frames += 1;
 
-    if ( coder->param.verbose <= GPUJPEG_LL_QUIET ) {
+    if ( coder->param.verbose < GPUJPEG_LL_STATUS ) {
         return;
     }
 

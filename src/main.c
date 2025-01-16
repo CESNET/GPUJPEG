@@ -237,7 +237,7 @@ main(int argc, char *argv[])
     // Default coder parameters
     struct gpujpeg_parameters param;
     gpujpeg_set_default_parameters(&param);
-    param.perf_stats = 1;
+    param.verbose = GPUJPEG_LL_STATUS;
 
     // Default image parameters
     struct gpujpeg_image_parameters param_image;

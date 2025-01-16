@@ -356,10 +356,11 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
     struct gpujpeg_coder* coder = &encoder->coder;
     int rc;
 
-    coder->start_time = param->perf_stats ? gpujpeg_get_time() : 0;
-
     const bool img_changed = !gpujpeg_image_parameters_equals(&coder->param_image, param_image);
     struct gpujpeg_parameters param_adjusted = adjust_params(coder, param, param_image, img_changed);
+    param_adjusted.perf_stats = param->perf_stats || param->verbose >= GPUJPEG_LL_STATUS;
+
+    coder->start_time = param_adjusted.perf_stats ? gpujpeg_get_time() : 0;
 
     // (Re)initialize encoder
     if (coder->param.quality != param->quality) {
@@ -389,7 +390,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
             return -1;
         }
     }
-    coder->init_end_time = param->perf_stats ? gpujpeg_get_time() : 0;
+    coder->init_end_time = param_adjusted.perf_stats ? gpujpeg_get_time() : 0;
 
     // Load input image
     if ( input->type == GPUJPEG_ENCODER_INPUT_IMAGE ) {

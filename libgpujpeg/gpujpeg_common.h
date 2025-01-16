@@ -158,9 +158,10 @@ enum restart_int {
 enum verbosity {
     GPUJPEG_LL_QUIET = -1,  ///< suppress informative messages (but not warnings and errors)
     GPUJPEG_LL_INFO = 0,    ///< normal verbosity
-    GPUJPEG_LL_VERBOSE = 1, ///< print additional information
-    GPUJPEG_LL_DEBUG = 2,   ///< print more information, including internal ones
-    GPUJPEG_LL_DEBUG2 = 3,  ///< print maximum of information, including JPEG file internal structure
+    GPUJPEG_LL_STATUS = 1,  ///< print summary (image size, duration)
+    GPUJPEG_LL_VERBOSE = 2, ///< print additional information
+    GPUJPEG_LL_DEBUG = 3,   ///< print more information, including internal ones
+    GPUJPEG_LL_DEBUG2 = 4,  ///< print maximum of information, including JPEG file internal structure
 };
 
 /**
