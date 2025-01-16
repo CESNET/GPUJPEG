@@ -585,7 +585,7 @@ main(int argc, char *argv[])
 
             duration = gpujpeg_get_time() - duration;
             printf("Save Image:          %10.4f ms\n", duration * 1000.0);
-            printf("Compressed Size:     %10.zu bytes [%s]\n", image_compressed_size, output);
+            printf("Image Name:          %10s\n", output);
 
             // Destroy image
             gpujpeg_image_destroy(image);
@@ -730,8 +730,7 @@ main(int argc, char *argv[])
 
             duration = gpujpeg_get_time() - duration;
             printf("Save Image:          %10.2f ms\n", duration * 1000.0);
-            printf("Decompressed Size:   %10.zu bytes [%s] ", decoder_output.data_size, output);
-            print_gpujpeg_image_parameters(decoder_output.param_image, true, NULL);
+            printf("Image Name:          %10s\n", output);
 
             if ( use_opengl ) {
                 free(data);

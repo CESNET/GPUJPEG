@@ -625,6 +625,13 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
     coder->d_data_raw = NULL;
 
     coder_process_stats(coder);
+    if (coder->param.verbose >= GPUJPEG_LL_STATUS ) {
+        const char* interleaved =
+            coder->param.comp_count == 1 ? "" : (coder->param.interleaved ? " interleaved" : " non-interleaved");
+        printf("Compressed Size:     %10.zu bytes %dx%d %s %s%s\n", *image_compressed_size, coder->param_image.width,
+               coder->param_image.height, gpujpeg_color_space_get_name(coder->param.color_space_internal),
+               gpujpeg_subsampling_get_name(coder->param.comp_count, coder->param.sampling_factor), interleaved);
+    }
 
     return 0;
 }

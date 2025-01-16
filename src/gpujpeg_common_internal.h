@@ -467,11 +467,6 @@ gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , cons
 float
 gpujpeg_custom_timer_get_duration(cudaEvent_t start, cudaEvent_t stop);
 
-/// sets comp_count and sampling_factor from given pixel_format
-void
-gpujpeg_set_subsampling_from_pixel_format(enum gpujpeg_pixel_format pixel_format, int* comp_count,
-                                          struct gpujpeg_component_sampling_factor* sampling_factor);
-
 /**
  * @sa MK_SUBSAMPLING
  * This is mostly the same except but it zeroes unused coefficient (if comp_count < 4).
