@@ -267,7 +267,7 @@ gpujpeg_init_device(int device_id, int flags)
 void
 gpujpeg_set_default_parameters(struct gpujpeg_parameters* param)
 {
-    param->verbose = 0;
+    param->verbose = GPUJPEG_LL_INFO;
     param->perf_stats = 0;
     param->quality = 75;
     param->restart_interval = 8;
@@ -821,7 +821,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     //printf("Compressed size %d (segments %d)\n", coder->data_compressed_size, coder->segment_count);
 
     // Print allocation info
-    if ( coder->param.verbose >= 1 ) {
+    if ( coder->param.verbose >= GPUJPEG_LL_VERBOSE ) {
         int structures_size = 0;
         structures_size += coder->segment_count * sizeof(struct gpujpeg_segment);
         structures_size += coder->param.comp_count * sizeof(struct gpujpeg_component);
@@ -2099,7 +2099,7 @@ coder_process_stats(struct gpujpeg_coder* coder)
     coder->aggregate_duration += duration_ms;
     coder->frames += 1;
 
-    if ( coder->param.verbose <= -1 ) { // quiet
+    if ( coder->param.verbose <= GPUJPEG_LL_QUIET ) {
         return;
     }
 
@@ -2107,7 +2107,7 @@ coder_process_stats(struct gpujpeg_coder* coder)
     gpujpeg_coder_get_stats(coder, &stats);
 
     if ( coder->encoder ) {
-        if ( coder->param.verbose >= 1 ) {
+        if ( coder->param.verbose >= GPUJPEG_LL_VERBOSE ) {
             printf(" -(Re)initialization:%10.4f ms\n", duration_init_ms);
             printf(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
             if ( stats.duration_memory_map != 0.0 && stats.duration_memory_unmap != 0.0 ) {
@@ -2126,7 +2126,7 @@ coder_process_stats(struct gpujpeg_coder* coder)
         printf("Encode Image:        %10.4f ms\n", duration_ms);
     }
     else {
-        if ( coder->param.verbose >= 1 ) {
+        if ( coder->param.verbose >= GPUJPEG_LL_VERBOSE ) {
             printf(" -(Re)initialization:%10.4f ms\n", duration_init_ms);
             printf(" -Stream Reader:     %10.4f ms\n", stats.duration_stream);
             printf(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
@@ -2157,13 +2157,13 @@ coder_process_stats_overall(struct gpujpeg_coder* coder) {
     if ( !coder->param.perf_stats || coder->frames <= 1 ) { // aggregate stats not needed for 0 or 1 frame
         return;
     }
-    if ( coder->param.verbose <= -1 ) { // quiet
+    if ( coder->param.verbose <= GPUJPEG_LL_QUIET ) {
         return;
     }
     printf("\n");
     printf("Avg %s Duration: %10.4f ms\n", coder->encoder ? "Encode" : "Decode",
            coder->aggregate_duration / (double)coder->frames);
-    if ( coder->param.verbose >= 1 ) {
+    if ( coder->param.verbose >= GPUJPEG_LL_VERBOSE ) {
         printf("Avg w/o 1st Iter:    %10.4f ms\n",
                (coder->aggregate_duration - coder->first_frame_duration) / ((double)coder->frames - 1));
     }

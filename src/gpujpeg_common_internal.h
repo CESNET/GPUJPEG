@@ -89,9 +89,15 @@ enum {
 
 #define ERROR_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__); } while(0)
 #define WARN_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
-#define VERBOSE_MSG(log_level, ...) do { if (log_level >= 1) fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
-#define DEBUG_MSG(log_level, ...) do { if (log_level >= 2) fprintf(stderr, "[GPUJPEG] [Debug] " __VA_ARGS__); } while(0)
-#define DEBUG2_MSG(log_level, ...) do { if (log_level >= 3) fprintf(stderr, "[GPUJPEG] [Debug2] " __VA_ARGS__); } while(0)
+#define VERBOSE_MSG(log_level, ...)                                                                                    \
+    if ( log_level >= GPUJPEG_LL_VERBOSE )                                                                             \
+        fprintf(stderr, "[GPUJPEG] [Verbose] " __VA_ARGS__)
+#define DEBUG_MSG(log_level, ...)                                                                                      \
+    if ( log_level >= GPUJPEG_LL_DEBUG )                                                                               \
+        fprintf(stderr, "[GPUJPEG] [Debug] " __VA_ARGS__)
+#define DEBUG2_MSG(log_level, ...)                                                                                     \
+    if ( log_level >= GPUJPEG_LL_DEBUG2 )                                                                              \
+        fprintf(stderr, "[GPUJPEG] [Debug2] " __VA_ARGS__)
 
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))

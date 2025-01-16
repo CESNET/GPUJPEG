@@ -304,7 +304,7 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
     if ( !interleaved ) {
         restart_interval *= comp_count;
     }
-    if ( verbose >= 1 ) {
+    if ( verbose >= GPUJPEG_LL_VERBOSE ) {
         printf("\nAuto-adjusting restart interval to %d for better performance.\n", restart_interval);
     }
     return restart_interval;

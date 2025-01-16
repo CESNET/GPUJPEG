@@ -252,7 +252,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 
 #define RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) \
     if ( sampling_factor == gpujpeg_make_sampling_factor(COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) ) { \
-        if ( coder->param.verbose >= 1 ) { \
+        if ( coder->param.verbose >= GPUJPEG_LL_VERBOSE ) {                                                            \
             print_kernel_configuration(                                                                                \
                 "Using faster kernel for postprocessor (precompiled %dx%d, %dx%d, %dx%d, %dx%d).\n");                  \
         } \
@@ -265,7 +265,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 3, 1, 1, 1, 2, 1, 2, 0, 0) /* 4:4:0 */ \
     else RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, 3, 1, 1, 2, 1, 2, 1, 0, 0) /* 4:2:2 */ \
     else { \
-        if ( coder->param.verbose >= 0 ) { \
+        if ( coder->param.verbose >= GPUJPEG_LL_INFO ) {                                                               \
             print_kernel_configuration(                                                                                \
                 "Using slower kernel for postprocessor (dynamic %dx%d, %dx%d, %dx%d, %dx%d).\n");                      \
         } \
@@ -354,14 +354,14 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
     if (!gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format) &&
             gpujpeg_preprocessor_decode_no_transform(coder) &&
             gpujpeg_preprocessor_decode_aligned(coder)) {
-        if ( coder->param.verbose >= 2 ) {
+        if ( coder->param.verbose >= GPUJPEG_LL_DEBUG ) {
             printf("Matching format detected - not using postprocessor, using memcpy instead.\n");
         }
         return 0;
     }
 
     if ( coder->param.comp_count == 1 && gpujpeg_pixel_format_get_comp_count(coder->param_image.pixel_format) > 1 ) {
-        coder->param.verbose >= 0 && fprintf(stderr, "[GPUJPEG] [Error] Decoding single component JPEG allowed only to single component output format!\n");
+        ERROR_MSG("Decoding single component JPEG allowed only to single component output format!\n");
         return -1;
     }
 
