@@ -922,7 +922,7 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
         }
         coder->data_compressed = malloc(max_compressed_data_size);
         coder->data_compressed_pinned_sz = max_compressed_data_size / (GPUJPEG_MAX_BLOCK_COMPRESSED_SIZE
-          / GPUJPEG_BLOCK_SQUARED_SIZE); // divide by 8 to get the WxHxCH bytes
+          / GPUJPEG_BLOCK_SQUARED_SIZE) / 3; // WxHxCH/3 bytes
         cudaHostRegister(coder->data_compressed, coder->data_compressed_pinned_sz, cudaHostRegisterDefault);
         gpujpeg_cuda_check_error("Coder data compressed host registration", return 0);
 
