@@ -1,3 +1,29 @@
+2025-01-17 - 0.26.0
+----------
+
+This release brings mainly much faster start-up (and reinitialization) times
+in Linux, which is significant especially when encoding small amount of images.
+The speed-up for first frame is as much as 20x (eg. 43 ms for 10000x1000.tst
+compared to original 810 ms). Subsequent images are still faster but this
+narrows the gap. The improvement is especially noticable for big images.
+
+### API changes
+- \[changed\] log level version numbers (verbose + debug +1)
+- \[added\] log levels symbolic names
+- \[renamed\] GPUJPEG_VERBOSE to GPUJPEG_INIT_DEV_VERBOSE
+- \[added\] struct gpujpeg_encoder_input init functions returning the struct
+(like gpujpeg_encoder_input_gpu_image) to be able to directly initialize
+the variable
+- if verbosity is at least GPUJPEG_LL_STATUS, gpujpeg_parameters.perf_stats
+doesn't need to be set to output coding duration
+
+### Other
+- new patterns (noise, blank) to test images (.tst extension)
+- cmake - add hint to enable the architecture to native (to speed up startup)
+- improved logging of JPEG reader in debug mode to inspect JPEG structure
+- print also coded image size and properties (useful if autodeduced)
+- report also (re)initialization duration (in verbose mode)
+
 2024-11-11 - 0.25.6
 ----------
 - gpujpeg_decoder_get_image_info(): fill also interleaved (+ print
