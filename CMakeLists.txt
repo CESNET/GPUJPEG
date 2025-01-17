@@ -19,6 +19,10 @@ if(WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
+if (CMAKE_CUDA_ARCHITECTURES MATCHES OFF)
+    message(NOTICE "You may want to set CUDA architecture, suggested `-DCMAKE_CUDA_ARCHITECTURES=native`")
+endif()
+
 cmake_policy(SET CMP0010 NEW) # error on undefined variable
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "gpujpeg") # may be removed when version will be explicitly defined
