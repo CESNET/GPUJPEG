@@ -5,7 +5,7 @@
 TAG_NAME=${1?}
 FILE=${2?}
 CONTENT_TYPE=${3?}
-LABEL=${4?}
+LABEL=$(echo "${4?}" | sed 's/ /%20/g')
 
 JSON=$(fetch_json https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG_NAME $GITHUB_TOKEN)
 UPLOAD_URL=$(echo "$JSON" | jq -r .upload_url | sed "s/{.*}//")
