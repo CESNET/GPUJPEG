@@ -13,10 +13,17 @@
 
 ## Encoding/decoding is slow in first iteration
 
-Correct. GPUJPEG was intended to provide when running many times (ideally with
-a equal-sized pictures, like a video). But using for few or even single image
-will not pay off, because there is an initialization burden (let say 230 ms for
-a 33 Mpix image).
+Correct. This is because the there is initialization of GPUJPEG internal
+structures, CUDA buffers, the initialization of GPU execution pipeline
+as well as kernel compilation for actual device capability. The last
+point can be eliminated by generating code for the particular device
+during the compilation:
+
+    cmake -DCMAKE_CUDA_ARCHITECTURES=native -DCMAKE_BUILD_TYPE=Release ...
+
+(`all-major` or `all` will also work but the compilation will take longer)
+
+Ideal use case for GPUJPEG is to run for many images (ideally equal-sized).
 
 ## What is a restart interval
 

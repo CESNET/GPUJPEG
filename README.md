@@ -12,7 +12,8 @@ for high-performance image encoding and decoding. The software runs also on
 [ZLUDA.md](ZLUDA.md)).
 
 This documents provides an introduction to the library and how to use it. You
-can also look to [FAQ.md](FAQ.md) for additional information. To see _latest changes_
+can also look to [FAQ.md](FAQ.md) for _performance tuning_
+and additional information. To see _latest changes_
 you can display file [NEWS.md](NEWS.md).
 
 Table of contents
