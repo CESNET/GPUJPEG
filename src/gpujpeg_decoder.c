@@ -449,7 +449,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
     if ( coder->param.verbose >= GPUJPEG_LL_STATUS ) {
         char buf[21];
         char* comp_size_delim = format_number_with_delim(output->data_size, buf, sizeof buf);
-        printf("Decompressed Size:   %10s bytes %dx%d %s %s\n",comp_size_delim, output->param_image.width,
+        printf("Decompressed Size:%13s bytes %dx%d %s %s\n",comp_size_delim, output->param_image.width,
                output->param_image.height, gpujpeg_pixel_format_get_name(output->param_image.pixel_format),
                gpujpeg_color_space_get_name(output->param_image.color_space));
     }
