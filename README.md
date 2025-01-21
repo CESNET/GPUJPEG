@@ -99,16 +99,17 @@ iteration) with following command:
 
 |      GPU \ resolution      | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
 |----------------------------|-------------|-------------|--------------|----------------|
-|          GTX 3080          |   0.54 ms   |   1.71 ms   |    6.20 ms   |    24.48 ms    |
-|          GTX 2080 Ti       |   0.82 ms   |   2.89 ms   |   11.15 ms   |    46.23 ms    |
+|          RTX 3080          |   0.54 ms   |   1.71 ms   |    6.20 ms   |    24.48 ms    |
+|          RTX 2080 Ti       |   0.82 ms   |   2.89 ms   |   11.15 ms   |    46.23 ms    |
 |          GTX 1060M         |   1.36 ms   |   4.55 ms   |   17.34 ms   |  _(low mem)_   |
 |          GTX 580           |   2.38 ms   |   8.68 ms   |  _(low mem)_ |  _(low mem)_   |
 | AMD Radeon RX 7600 [ZLUDA] |   0.88 ms   |   3.16 ms   |   13.09 ms   |    50.52 ms    |
 
-**Note:** First iteration took _233 ms_ for 8K on GTX 3080 and scales proportionally with
-respect to resolution.
+**Note:** First iteration is slower because the initialization takes place and
+lasts about _28.6 ms_ for 8K (_87.1 ms_ for 16K) with RTX 3080 (but the
+overhead depends more on CPU than the GPU).
 
-Further measurements were performed on _GTX 3080_ only:
+Further measurements were performed on _RTX 3080_ only:
 
 |             quality              | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100 |
 |----------------------------------|----|----|----|----|----|----|----|----|----|-----|
@@ -131,8 +132,8 @@ taking 99 samples excluding the first one. Command used:
 
 |       GPU \ resolution     | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
 |----------------------------|-------------|-------------|--------------|----------------|
-|          GTX 3080          |   0.75 ms   |   1.94 ms   |    6.76 ms   |    31.50 ms    |
-|          GTX 2080 Ti       |   1.02 ms   |   1.07 ms   |   11.29 ms   |    44.42 ms    |
+|          RTX 3080          |   0.75 ms   |   1.94 ms   |    6.76 ms   |    31.50 ms    |
+|          RTX 2080 Ti       |   1.02 ms   |   1.07 ms   |   11.29 ms   |    44.42 ms    |
 |          GTX 1060M         |   1.68 ms   |   4.81 ms   |   17.56 ms   |  _(low mem)_   |
 |          GTX 580           |   2.61 ms   |   7.96 ms   | _(low mem)_  |  _(low mem)_   |
 | AMD Radeon RX 7600 [ZLUDA] |   1.00 ms   |   3.02 ms   |   11.25 ms   |    45.06 ms    |
@@ -140,7 +141,7 @@ taking 99 samples excluding the first one. Command used:
 **Note**: _(low mem)_ above means that the card didn't have sufficient memory to
 encode or decode the picture.
 
-Following measurements were performed on _GTX 3080_ only:
+Following measurements were performed on _RTX 3080_ only:
 
 |              quality             | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100 |
 |----------------------------------|----|----|----|----|----|----|----|----|----|-----|
