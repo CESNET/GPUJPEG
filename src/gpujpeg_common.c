@@ -2170,4 +2170,44 @@ coder_process_stats_overall(struct gpujpeg_coder* coder) {
     printf("\n");
 }
 
+char*
+format_number_with_delim(size_t num, char* buf, size_t buflen)
+{
+    assert(buflen >= 1);
+    buf[buflen - 1] = '\0';
+    char* ptr = buf + buflen - 1;
+    while ( 1 ) {
+        const int tmp = num % 1000;
+        num /= 1000;
+        if ( num == 0 ) {
+            ptr -= 1;
+            if ( tmp >= 10 ) {
+                ptr -= 1;
+                if ( tmp >= 100 ) {
+                    ptr -= 1;
+                }
+            }
+            if ( ptr < buf ) {
+                snprintf(buf, buflen, "%s", "ERR");
+                return buf;
+            }
+            char numbuf[4];
+            snprintf(numbuf, sizeof numbuf, "%i", tmp);
+            // NOLINTNEXTLINE(bugprone-not-null-terminated-result): prepending, no null-termination
+            memcpy(ptr, numbuf, strlen(numbuf));
+            return ptr;
+        }
+        ptr -= 4;
+        if ( ptr < buf ) {
+            snprintf(buf, buflen, "%s", "ERR");
+            return buf;
+        }
+        char numbuf[5];
+        snprintf(numbuf, sizeof numbuf, ",%03d", tmp);
+        // NOLINTNEXTLINE(bugprone-not-null-terminated-result): prepending, no null-termination
+        memcpy(ptr, numbuf, 4);
+    }
+    return ptr;
+}
+
 /* vi: set expandtab sw=4 : */

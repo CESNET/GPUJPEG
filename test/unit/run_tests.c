@@ -3,6 +3,7 @@
 #include <libgpujpeg/gpujpeg_common.h>
 #include <libgpujpeg/gpujpeg_encoder.h>
 #include "../../src/gpujpeg_common_internal.h"
+#include "../../src/gpujpeg_util.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,10 +80,49 @@ static void encode_gpu_mem_as_cpu() {
 void
 test_gh_95();
 
+static char*
+test_format_number_with_delim() {
+        struct {
+                size_t val;
+                char exp_res[1024];
+        } test_cases[] = {
+            {0,                          "0"             },
+            {1,                          "1"             },
+            {10,                         "10"            },
+            {11,                         "11"            },
+            {100,                        "100"           },
+            {101,                        "101"           },
+            {1000,                       "1,000"         },
+            {1001,                       "1,001"         },
+            {1100,                       "1,100"         },
+            {101100,                     "101,100"       },
+            {10LLU * 1000 * 1000 * 1000, "10,000,000,000"},
+        };
+        char buf[1024];
+        for ( unsigned i = 0; i < ARR_SIZE(test_cases); i++ ) {
+            char* res = format_number_with_delim(test_cases[i].val, buf, sizeof buf);
+            ASSERT_STR_EQ(test_cases[i].exp_res, res);
+            // "tight" buffer
+            res = format_number_with_delim(test_cases[i].val, buf, strlen(test_cases[i].exp_res) + 1);
+            ASSERT_STR_EQ(test_cases[i].exp_res, res);
+        }
+
+        // test not enough space
+        char* res = format_number_with_delim(1000000, buf, 4);
+        ASSERT_STR_EQ(res, "ERR");
+        res = format_number_with_delim(1000000, buf, 2);
+        ASSERT_STR_EQ(res, "E");
+        res = format_number_with_delim(1000000, buf, 1);
+        ASSERT_STR_EQ(res, "");
+
+        printf("Ok\n");
+}
+
 int main() {
         subsampling_name_test();
         encode_gpu_mem_as_cpu();
         test_gh_95();
+        test_format_number_with_delim();
         printf("PASSED\n");
 }
 

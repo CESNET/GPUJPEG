@@ -81,6 +81,18 @@ struct { int x; int y; int z; } gridDim;
     fprintf(stderr, "[GPUJPEG] [Error] Can't use OpenGL. The codec was compiled without OpenGL!\n"); \
     action; \
 
+#define ARR_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+/**
+ * formats num with thousands delimitered by a comma (,)
+ * @param buf    output buffer, must not be NULL or zero bytes long
+ * @param buflen buffer len, should be long enough to hold the result
+ * @returns pointer to buf (not necessarily the beginning) containng the represented number of "ERR"
+ *          if not enough space
+ */
+char*
+format_number_with_delim(size_t num, char* buf, size_t buflen);
+
 #ifdef __cplusplus
 }
 #endif

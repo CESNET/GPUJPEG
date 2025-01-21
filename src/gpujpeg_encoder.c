@@ -628,7 +628,9 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
     if (coder->param.verbose >= GPUJPEG_LL_STATUS ) {
         const char* interleaved =
             coder->param.comp_count == 1 ? "" : (coder->param.interleaved ? " interleaved" : " non-interleaved");
-        printf("Compressed Size:     %10.zu bytes %dx%d %s %s%s\n", *image_compressed_size, coder->param_image.width,
+        char buf[21];
+        char* comp_size_delim = format_number_with_delim(*image_compressed_size, buf, sizeof buf);
+        printf("Compressed Size:     %10s bytes %dx%d %s %s%s\n", comp_size_delim, coder->param_image.width,
                coder->param_image.height, gpujpeg_color_space_get_name(coder->param.color_space_internal),
                gpujpeg_subsampling_get_name(coder->param.comp_count, coder->param.sampling_factor), interleaved);
     }
