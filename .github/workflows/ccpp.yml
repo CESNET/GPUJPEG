@@ -98,17 +98,25 @@ jobs:
     name: run Windows
     needs: retag-continuous
     runs-on: windows-2019
+    strategy:
+      matrix:
+        conf: [legacy]
+        include:
+          - conf: legacy
+            cuda_arch: 30
+            cuda_installer: cuda_10.2.89_win10_network.exe
 
     steps:
     - uses: actions/checkout@main
     - name: install CUDA
       run: |
-        choco install cuda -y --no-progress --version=10.1.243
-        #$url="https://developer.download.nvidia.com/compute/cuda/12.1.0/network_installers/cuda_12.1.0_windows_network.exe"
-        #$url -match 'cuda/(?<version>[0-9]+.[0-9]+)'
-        #$version=$Matches.version
-        #Invoke-WebRequest $url -OutFile cuda_inst.exe
-        #Start-Process -FilePath "cuda_inst.exe" -ArgumentList "-s cudart_$version nvcc_$version visual_studio_integration_$version" -Wait -NoNewWindow
+        #choco install cuda -y --no-progress --version=10.1.243
+        $installer="${{ matrix.cuda_installer }}"
+        $installer -match 'cuda_(?<version>[0-9]+.[0-9]+)'
+        $version=$Matches.version # major.minor (without patch level)
+        $url="https://developer.download.nvidia.com/compute/cuda/$version/Prod/network_installers/$installer"
+        Invoke-WebRequest $url -OutFile cuda_inst.exe
+        Start-Process -FilePath "cuda_inst.exe" -ArgumentList "-s cudart_$version nvcc_$version visual_studio_integration_$version" -Wait -NoNewWindow
     - name: install NSIS
       run: choco install nsis -y --no-progress
     - name: install GLFW
@@ -132,7 +140,7 @@ jobs:
         cmake.exe -DCMAKE_SYSTEM_VERSION=10.0.18362 -DCMAKE_BUILD_TYPE=Release `
           -DBUILD_OPENGL=ON -DGLFW_ROOT_DIR='C:\glfw' -DGLFW_USE_STATIC_LIBS=ON `
           -DGLEW_ROOT='C:\glew' -DGLEW_USE_STATIC_LIBS=ON `
-          -DCMAKE_CUDA_ARCHITECTURES=30 -Bbuild .
+          -DCMAKE_CUDA_ARCHITECTURES=${{ matrix.cuda_arch }} -Bbuild .
         cmake.exe --build build --config Release --parallel (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
         cmake.exe --install build --prefix GPUJPEG
         cpack.exe --config build/CPackConfig.cmake -GNSIS64
