@@ -3,7 +3,7 @@
 
 This release brings mainly much faster start-up (and reinitialization) times
 in Linux, which is significant especially when encoding small amount of images.
-The speed-up for first frame is as much as 20x (eg. 43 ms for 10000x1000.tst
+The speed-up for first frame is as much as 20x (eg. 43 ms for 10000x10000.tst
 compared to original 810 ms). Subsequent images are still faster but this
 narrows the gap. The improvement is especially noticable for big images.
 
