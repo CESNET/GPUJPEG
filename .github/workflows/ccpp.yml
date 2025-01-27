@@ -103,8 +103,10 @@ jobs:
         conf: [legacy]
         include:
           - conf: legacy
+            build_filename: GPUJPEG-Windows
             cuda_arch: 30
             cuda_installer: cuda_10.2.89_win10_network.exe
+            name_prefix: Windows
 
     steps:
     - uses: actions/checkout@main
@@ -165,10 +167,13 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        fname="${{ matrix.build_filename }}.zip"
+        mv GPUJPEG.zip "./$fname"
         pacman -Sy --noconfirm mingw-w64-x86_64-jq
         PATH=/mingw64/bin:$PATH
         echo 'PATH=/mingw64/bin:$PATH' >> ~/.bash_profile # store the path also for next step
-        .github/scripts/replace-asset.sh continuous GPUJPEG.zip application/zip Windows%20build
+        .github/scripts/replace-asset.sh continuous "$fname"\
+         application/zip "${{ matrix.name_prefix }} build"
       shell: C:\shells\msys2bash.cmd {0}
 
     - name: Upload Release Installer Asset
@@ -176,8 +181,11 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        mv gpujpeg-*-win64.exe GPUJPEG.exe
-        .github/scripts/replace-asset.sh continuous GPUJPEG.exe application/vnd.microsoft.portable-executable Windows%20installer
+        fname="${{ matrix.build_filename }}.exe"
+        mv gpujpeg-*-win64.exe "./$fname"
+        .github/scripts/replace-asset.sh continuous "$fname" \
+          application/vnd.microsoft.portable-executable\
+          "${{ matrix.name_prefix }} installer"
       shell: C:\shells\msys2bash.cmd {0}
 
 # vi: set expandtab sw=2:
