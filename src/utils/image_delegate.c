@@ -262,6 +262,7 @@ tst_usage()
            "\t- 1920x1080.tst              - use FullHD image\n"
            "\t- 1920x1080.c_ycbcr-jpeg.tst - \" with YCbCr color space\n"
            "\t- 1920x1080.p_u8.tst         - FHD grayscale (u8 pixel format)\n"
+           "\t- 1920x1080.noise.tst        - FHD RGB noise\n"
            "\t- 1920x1080.c_ycbcr-jpeg.p_422-u8-p1020.tst - YCbCr 4:2:2\n");
     printf("\n");
 }

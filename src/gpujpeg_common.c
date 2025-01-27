@@ -416,7 +416,7 @@ gpujpeg_image_get_file_format(const char* filename)
             return extensions[i].format;
         }
     }
-    printf("\nUse \"help.tst\" for test image usage.\n");
+    printf("\nUse \"help.tst\" (eg. `gpujpegtool help.tst null.jpg`) for test image usage).\n");
     return GPUJPEG_IMAGE_FILE_UNKNOWN;
 }
 
