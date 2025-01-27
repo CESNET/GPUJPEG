@@ -40,12 +40,14 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        cuda_arch: [35, all]
+        conf: [legacy, all]
         include:
-          - cuda_arch: 35
+          - conf: legacy
+            cuda_arch: 30
             tar_name: GPUJPEG-Linux.tar.xz
             name: Linux build
-          - cuda_arch: all
+          - conf: all
+            cuda_arch: all
             tar_name: GPUJPEG-Linux-all.tar.xz
             name: Linux build (all CUDA architetures)
 
@@ -56,7 +58,7 @@ jobs:
         sudo apt update
         sudo apt install cmake jq
     - name: Install disro CUDA
-      if: matrix.cuda_arch == 35
+      if: matrix.conf == 'legacy'
       run: |
         sudo apt install nvidia-cuda-toolkit
       id: install-distro-cuda
@@ -95,13 +97,13 @@ jobs:
   Windows:
     name: run Windows
     needs: retag-continuous
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
     - uses: actions/checkout@main
     - name: install CUDA
       run: |
-        choco install cuda -y --no-progress --version=11.8.0.52206
+        choco install cuda -y --no-progress --version=10.1.243
         #$url="https://developer.download.nvidia.com/compute/cuda/12.1.0/network_installers/cuda_12.1.0_windows_network.exe"
         #$url -match 'cuda/(?<version>[0-9]+.[0-9]+)'
         #$version=$Matches.version
@@ -130,7 +132,7 @@ jobs:
         cmake.exe -DCMAKE_SYSTEM_VERSION=10.0.18362 -DCMAKE_BUILD_TYPE=Release `
           -DBUILD_OPENGL=ON -DGLFW_ROOT_DIR='C:\glfw' -DGLFW_USE_STATIC_LIBS=ON `
           -DGLEW_ROOT='C:\glew' -DGLEW_USE_STATIC_LIBS=ON `
-          -DCMAKE_CUDA_ARCHITECTURES=35 -Bbuild .
+          -DCMAKE_CUDA_ARCHITECTURES=30 -Bbuild .
         cmake.exe --build build --config Release --parallel (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
         cmake.exe --install build --prefix GPUJPEG
         cpack.exe --config build/CPackConfig.cmake -GNSIS64
