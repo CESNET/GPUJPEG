@@ -100,13 +100,19 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        conf: [legacy]
         include:
           - conf: legacy
             build_filename: GPUJPEG-Windows
             cuda_arch: 30
-            cuda_installer: cuda_10.2.89_win10_network.exe
+            cuda_installer: "https://developer.download.nvidia.com/compute/\
+              cuda/10.2/Prod/network_installers/cuda_10.2.89_win10_network.exe"
             name_prefix: Windows
+          # - conf: all
+          #   build_filename: GPUJPEG-Windows-all
+          #   cuda_arch: all
+          #   cuda_installer: "https://developer.download.nvidia.com/compute/\
+          #     cuda/12.8.0/network_installers/cuda_12.8.0_windows_network.exe"
+          #   name_prefix: Windows (all CUDA architectures)
 
     steps:
     - uses: actions/checkout@main
@@ -116,8 +122,7 @@ jobs:
         $installer="${{ matrix.cuda_installer }}"
         $installer -match 'cuda_(?<version>[0-9]+.[0-9]+)'
         $version=$Matches.version # major.minor (without patch level)
-        $url="https://developer.download.nvidia.com/compute/cuda/$version/Prod/network_installers/$installer"
-        Invoke-WebRequest $url -OutFile cuda_inst.exe
+        Invoke-WebRequest $installer -OutFile cuda_inst.exe
         Start-Process -FilePath "cuda_inst.exe" -ArgumentList "-s cudart_$version nvcc_$version visual_studio_integration_$version" -Wait -NoNewWindow
     - name: install NSIS
       run: choco install nsis -y --no-progress
@@ -152,14 +157,14 @@ jobs:
       if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
       uses: actions/upload-artifact@main
       with:
-        name: GPUJPEG CI Windows build
+        name: GPUJPEG CI ${{ matrix.name_prefix }} build
         path: GPUJPEG
 
     - name: Upload Installer
       if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
       uses: actions/upload-artifact@main
       with:
-        name: GPUJPEG CI Windows installer
+        name: GPUJPEG CI ${{ matrix.name_prefix }} installer
         path: gpujpeg-*-win64.exe
 
     - name: Upload Release Build Asset
