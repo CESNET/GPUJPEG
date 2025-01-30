@@ -467,18 +467,19 @@ main(int argc, char *argv[])
     }
 
     // Detect action if none is specified
-    if ( encode == 0 && decode == 0 ) {
+    if ( encode == 0 && decode == 0 && argc == 2 ) {
         enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(argv[0]);
         enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(argv[1]);
         if ( (input_format >= GPUJPEG_IMAGE_FILE_RAW) && output_format == GPUJPEG_IMAGE_FILE_JPEG ) {
             encode = 1;
         } else if ( input_format == GPUJPEG_IMAGE_FILE_JPEG && (output_format >= GPUJPEG_IMAGE_FILE_RAW) ) {
             decode = 1;
-        } else {
-            fprintf(stderr, "Action can't be recognized for specified images!\n");
-            fprintf(stderr, "You must specify --encode or --decode option!\n");
-            return -1;
         }
+    }
+    if ( encode == 0 && decode == 0 ) {
+        fprintf(stderr, "Action can't be recognized for specified images!\n");
+        fprintf(stderr, "You must specify --encode or --decode option!\n");
+        return -1;
     }
 
     struct gpujpeg_parameters param_saved = param;
