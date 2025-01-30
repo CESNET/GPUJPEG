@@ -193,7 +193,11 @@ adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters*
         }
     }
     if ( opts->keep_alpha && encode && param_image->pixel_format == GPUJPEG_4444_U8_P0123 ) {
-        gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);
+        gpujpeg_sampling_factor_t subs = GPUJPEG_SUBSAMPLING_4444;
+        if ( opts->subsampling != GPUJPEG_SUBSAMPLING_UNKNOWN && (opts->subsampling & 0xFF) == 0 ) {
+            subs = opts->subsampling | opts->subsampling >> 24; // copy Y samp factor to alpha
+        }
+        gpujpeg_parameters_chroma_subsampling(param, subs);
     }
 
     if (encode && (param_image->width <= 0 || param_image->height <= 0)) {
