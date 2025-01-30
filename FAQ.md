@@ -72,7 +72,8 @@ You can also benchmark and find the potential bottleneck by running:
     Decode Image:            609.70 ms
     Save Image:              139.37 ms
 
-which shows duration of individual decoding steps.
+which shows duration of individual decoding steps (use `-n <iter>` to see
+duration of more iterations with the same image).
 
 ## Encoding different color spaces than full-range YCbCr BT.601
 For compatibility reasons, GPUJPEG produces a full-range **YCbCr BT.601** with **JFIF**
@@ -91,6 +92,10 @@ color space, it cannot be changed by the app now). The relevant option is "**-N*
 
 
     gpujpeg -s 1920x1080 -N -e image.rgb image.jpg
+
+**Note:** **SPIFF** is not a widely adopted format of _JPEG_ files so is
+hightly probable that the decoder other than GPUJPEG won't support the picture
+and will ignore the color-space information.
 
 ## Optimizing encoding/decoding performance
 To optimze encoding/decoding performance, following features can be tweaked (in order of importance):
@@ -141,18 +146,29 @@ and 0x01, 0x02, 0x03, 0x04).
 
 ### API for alpha
 #### Encode
-Encoding alpha is quite simple, as indicated above, just set the pixel format `GPUJPEG_444_U8_P012A`
-as `gpujpeg_image_parameters::pixel_format` and `gpujpeg_image_parameters` to **4**.
+Encoding alpha is quite simple, as indicated above, just set the pixel format `GPUJPEG_444_U8_P0123`
+as `gpujpeg_image_parameters::pixel_format` and set subsampling to _4:4:4:4_ :
+`gpujpeg_parameters_chroma_subsampling(param, GPUJPEG_SUBSAMPLING_4444);`.`
 
 #### Decode
-Select output pixel format either `GPUJPEG_444_U8_P012A` or `GPUJPEG_NONE` (autodetect).
+Select output pixel format either `GPUJPEG_444_U8_P0123` or
+`GPUJPEG_PIXFMT_AUTODETECT` (RGB will be used if set to GPUJPEG_PIXFMT_NONE).
 
 ## What are memory requirements for encoding/decoding
 
-Currently you can compute something like 20 bytes for every pixel and component for both
-encode and decode, eg. for 33 Mpix 4:4:4 frame it is 7680x4320x3x20=1901 MiB. If the JPEG
-was 4:2:0 subsampled, the memory requirements would be halfway.
+Currently you can count about _20 bytes_ of **GPU memory** for every
+_pixel and component_ for both encode and decode, eg. for 33 Mpix 4:4:4
+frame it is _7680x4320x3x20=1901 MiB_. If the JPEG is 4:2:0 subsampled,
+the memory requirements would be halfway.
 
-The memory requirements may be excessive if dealing with really huge images - let us know
-if there is a problem with this.
+You can check the amount of required GPU memory by running (adjust the
+image format and parameters according to your needs):
+
+    $ gpujpegtool -v -e 1920x1080.tst /dev/null   # or output file "nul" in MSW
+    $ gpujpegtool -v -S -N -ai -r 16 -e 1920x1080.p_4444-u8-p0123.tst /dev/null
+    ...
+        Total GPU Memory Size:    102.6 MiB
+
+The memory requirements may be excessive if dealing with really huge
+images - let us know if there is a problem with this.
 
