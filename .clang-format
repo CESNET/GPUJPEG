@@ -9,6 +9,7 @@ BraceWrapping:
 ColumnLimit: 120
 IndentWidth: 4
 PointerAlignment: Left
+IndentPPDirectives: BeforeHash
 ReflowComments: true
 SpacesInParens: Custom
 SpacesInParensOptions:

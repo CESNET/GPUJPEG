@@ -695,7 +695,7 @@ static const char *array_serialize(int comp_count, const uint8_t *comp_id) {
  * checks component ID to determine if JPEG is in YCbCr (component IDs 1, 2, 3) or RGB (component IDs 'R', 'G', 'B')
  */
 static enum gpujpeg_color_space gpujpeg_reader_process_cid(int comp_count, uint8_t *comp_id, enum gpujpeg_color_space header_color_space) {
-    _Static_assert(GPUJPEG_MAX_COMPONENT_COUNT >= 3, "An array of at least 3 components expected");
+    static_assert(GPUJPEG_MAX_COMPONENT_COUNT >= 3, "An array of at least 3 components expected");
     static const uint8_t ycbcr_ids[] = { 1, 2, 3 };
     static const uint8_t rgb_ids[] = { 'R', 'G', 'B' };
     static const uint8_t bg_rgb_ids[] = { 'r', 'g', 'b' }; // big gamut sRGB (see ILG libjpeg - seemingly handled as above)
@@ -1468,7 +1468,7 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
 static void
 adjust_format(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image)
 {
-    _Static_assert(GPUJPEG_PIXFMT_AUTODETECT < 0, "enum gpujpeg_pixel_format type should be signed");
+    static_assert(GPUJPEG_PIXFMT_AUTODETECT < 0, "enum gpujpeg_pixel_format type should be signed");
     if ( param_image->color_space == GPUJPEG_CS_DEFAULT ) {
         if ( param_image->pixel_format == GPUJPEG_U8 ||
              (param_image->pixel_format <= GPUJPEG_PIXFMT_AUTODETECT && param->comp_count == 1) ) {

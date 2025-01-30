@@ -311,14 +311,14 @@ gpujpeg_table_huffman_encoder_init(struct gpujpeg_table_huffman_encoder* table, 
 {
     assert(comp_type == GPUJPEG_COMPONENT_LUMINANCE || comp_type == GPUJPEG_COMPONENT_CHROMINANCE);
     assert(huff_type == GPUJPEG_HUFFMAN_DC || huff_type == GPUJPEG_HUFFMAN_AC);
-    _Static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_y_dc_bits), "table buffer too small");
-    _Static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_y_dc_value), "table buffer too small");
-    _Static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_y_ac_bits), "table buffer too small");
-    _Static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_y_ac_value), "table buffer too small");
-    _Static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_cbcr_dc_bits), "table buffer too small");
-    _Static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_cbcr_dc_value), "table buffer too small");
-    _Static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_cbcr_ac_bits), "table buffer too small");
-    _Static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_cbcr_ac_value), "table buffer too small");
+    static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_y_dc_bits), "table buffer too small");
+    static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_y_dc_value), "table buffer too small");
+    static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_y_ac_bits), "table buffer too small");
+    static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_y_ac_value), "table buffer too small");
+    static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_cbcr_dc_bits), "table buffer too small");
+    static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_cbcr_dc_value), "table buffer too small");
+    static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_cbcr_ac_bits), "table buffer too small");
+    static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_cbcr_ac_value), "table buffer too small");
 
     if ( comp_type == GPUJPEG_COMPONENT_LUMINANCE ) {
         if ( huff_type == GPUJPEG_HUFFMAN_DC ) {
@@ -348,14 +348,14 @@ gpujpeg_table_huffman_decoder_init(struct gpujpeg_table_huffman_decoder* table, 
 {
     assert(comp_type == GPUJPEG_COMPONENT_LUMINANCE || comp_type == GPUJPEG_COMPONENT_CHROMINANCE);
     assert(huff_type == GPUJPEG_HUFFMAN_DC || huff_type == GPUJPEG_HUFFMAN_AC);
-    _Static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_y_dc_bits), "table buffer too small");
-    _Static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_y_dc_value), "table buffer too small");
-    _Static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_y_ac_bits), "table buffer too small");
-    _Static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_y_ac_value), "table buffer too small");
-    _Static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_cbcr_dc_bits), "table buffer too small");
-    _Static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_cbcr_dc_value), "table buffer too small");
-    _Static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_cbcr_ac_bits), "table buffer too small");
-    _Static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_cbcr_ac_value), "table buffer too small");
+    static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_y_dc_bits), "table buffer too small");
+    static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_y_dc_value), "table buffer too small");
+    static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_y_ac_bits), "table buffer too small");
+    static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_y_ac_value), "table buffer too small");
+    static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_cbcr_dc_bits), "table buffer too small");
+    static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_cbcr_dc_value), "table buffer too small");
+    static_assert(sizeof(table->bits) >= sizeof(gpujpeg_table_huffman_cbcr_ac_bits), "table buffer too small");
+    static_assert(sizeof(table->huffval) >= sizeof(gpujpeg_table_huffman_cbcr_ac_value), "table buffer too small");
 
     if ( comp_type == GPUJPEG_COMPONENT_LUMINANCE ) {
         if ( huff_type == GPUJPEG_HUFFMAN_DC ) {

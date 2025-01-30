@@ -187,7 +187,7 @@ gpujpeg_huffman_cpu_decoder_value_from_category(int category, int offset)
 #pragma GCC diagnostic ignored "-Wshift-negative-value"
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif // defined __GNUC_
-    _Static_assert((-1)<<1 == -2, "Implementation defined behavior doesn't work as assumed.");
+    static_assert((-1)<<1 == -2, "Implementation defined behavior doesn't work as assumed.");
     //start[i] is the starting value in this category; surely it is below zero
     // entry n is (-1 << n) + 1
     static const int start[16] = { 
