@@ -48,7 +48,7 @@ libgpujpeg_DEP = @LIBGPUJPEG_CUDA_OBJS@
 
 libgpujpeg_LIB = $(libgpujpeg_DEP) -lm
 libgpujpeg_LD = -export-dynamic -version-info $(GPUJPEG_LIBRARY_VERSION) @GPUJPEG_LDFLAGS@ @GPUJPEG_LIBS@
-libgpujpeg_CFLAGS = -std=c99 -fPIC @COMMON_FLAGS@
+libgpujpeg_CFLAGS = -std=c11 -D_POSIX_C_SOURCE=200809L -fPIC @COMMON_FLAGS@
 libgpujpeg_CXXFLAGS = -fPIC @COMMON_FLAGS@
 #libgpujpeg_a_LINK = g++ -fPIC
 if STATIC
