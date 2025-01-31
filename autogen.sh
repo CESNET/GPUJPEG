@@ -24,5 +24,12 @@ STATUS=$?
 
 ([ $STATUS -eq 0 ] && echo "Autogen done." ) || echo "Autogen failed."
 
+echo "Note: CMake is now preferred for GPUJPEG build configuration."
+
+if expr "$(uname -s)" : MSYS >/dev/null; then
+    printf "\nIt is highly probable that autoconf won't work in MSW - \
+use cmake if possible\n"
+fi
+
 exit $STATUS
 
