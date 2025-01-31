@@ -21,7 +21,6 @@ bin_PROGRAMS = gpujpegtool
 pkgconfig_DATA = libgpujpeg.pc
 
 library_include_HEADERS = $(srcdir)/libgpujpeg/*.h libgpujpeg/gpujpeg_version.h
-nodist_gpujpeg_libinclude_HEADERS = config.h
 
 gpujpegtool_SOURCES = src/main.c dummy.cc
 gpujpegtool_CFLAGS = -std=c11 @COMMON_FLAGS@
