@@ -138,6 +138,8 @@ jobs:
         Move-Item 'C:\glew-2.2.0' 'C:\glew'
     - name: Build
       run: |
+        $ErrorActionPreference = 'Stop'
+        $PSNativeCommandUseErrorActionPreference = $true
         #Set-PSDebug -Trace 1
         $env:ChocolateyInstall = Convert-Path "$((Get-Command choco).Path)\..\.."
         Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
