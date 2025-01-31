@@ -166,7 +166,7 @@ case "$CUDA_COMPILER" in
                 ;;
         *clang*)
                 CUDA_COMPUTE_ARGS="--cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35"
-                CUDA_FLAGS+=" --cuda-path=$CUDA_INSTALL_PATH"
+                CUDA_FLAGS="$CUDA_FLAGS --cuda-path=$CUDA_INSTALL_PATH"
                 ;;
         *)
                 AC_MSG_ERROR([Unsupported cuda compiler $CUDA_COMPILER])
@@ -186,7 +186,7 @@ AC_ARG_WITH(cuda-host-compiler,
 if test "x${with_cuda_host_compiler}" != "x" ; then
 	AC_CHECK_PROG([cuda_host_cc], [${with_cuda_host_compiler}],[yes])
 	if test "x${cuda_host_cc}" = "xyes" -o -x "${with_cuda_host_compiler}"; then
-		CUDA_FLAGS+=" -ccbin ${with_cuda_host_compiler}"
+		CUDA_FLAGS="$CUDA_FLAGS -ccbin ${with_cuda_host_compiler}"
 	else
 		AC_MSG_FAILURE([Binary ${with_cuda_host_compiler} given as cuda host compiler, yet not found!])
 	fi
