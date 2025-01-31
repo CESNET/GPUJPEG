@@ -46,7 +46,14 @@
 // static_assert compat
 #if defined __cplusplus
     #if __cplusplus < 201103L
-        #error "compiler is not supporting C++11 - perhaps not passed std?"
+        #if defined _MSC_VER
+            #if _MSC_VER >= 1914
+                #error "compiler is not advertising C++11 - perhaps not passed /Zc:__cplusplus?"
+            #endif
+            // do nothing for earlier versions - unsolvable, __cplusplus is always 199711L
+        #else
+            #error "compiler is not supporting C++11 - perhaps not passed std?"
+        #endif
     #endif
 #elif __STDC_VERSION__ < 201112L
     #if defined _MSC_VER && _MSC_VER <= 1900
