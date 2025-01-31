@@ -44,14 +44,18 @@
 #include "gpujpeg_util.h"
 
 // static_assert compat
-#if __STDC_VERSION__ < 202311L
-    #include <assert.h> // static_assert compat macro in C11-C17
+#if defined __cplusplus
+    #if __cplusplus < 201103L
+        #error "compiler is not supporting C++11 - perhaps not passed std?"
+    #endif
 #elif __STDC_VERSION__ < 201112L
     #if defined _MSC_VER && _MSC_VER <= 1900
         #define static_assert(cond, msg)
     #else
         #error "compiler is not supporting C11 - perhaps an error?"
     #endif
+#elif __STDC_VERSION__ < 202311L
+    #include <assert.h> // static_assert compat macro in C11-C17
 #endif
 
 // VS 2015 compat
