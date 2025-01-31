@@ -43,7 +43,9 @@ if test "$enable_static" = yes; then
 fi
 AC_SUBST(pc_cflags)
 
-AC_ARG_VAR([CUDA_FLAGS], [Flags passed to nvcc])
+# use CUDAFLAGS (without _) from caller but use CUDA_FLAGS internaly (legacy)
+AC_ARG_VAR([CUDAFLAGS], [Flags passed to nvcc])
+CUDA_FLAGS="$CUDAFLAGS $CUDA_FLAGS"
 
 if test x$enable_debug = xyes ; then
 	COMMON_FLAGS="$COMMON_FLAGS -g -D_DEBUG -O0"
