@@ -58,7 +58,7 @@ static int pam_load_delegate(const char *filename, size_t *image_size, void **im
     bool ret = pam_read(filename, &info, (unsigned char **) image_data, alloc);
     if (ret) {
         assert(info.maxval == 255);
-        *image_size = (size_t) info.width * info.height * info.depth;
+        *image_size = (size_t) info.width * info.height * info.ch_count;
     }
     return ret ? 0 : 1;
 }
@@ -103,7 +103,7 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
     param_image->width = info.width;
     param_image->height = info.height;
     param_image->color_space = GPUJPEG_RGB;
-    switch (info.depth) {
+    switch (info.ch_count) {
     case 4:
         param_image->pixel_format = GPUJPEG_4444_U8_P0123;
         break;
@@ -115,7 +115,7 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
         param_image->pixel_format = GPUJPEG_U8;
         break;
     default:
-        fprintf(stderr, "Unsupported PAM/PNM component count %d!\n", info.depth);
+        fprintf(stderr, "Unsupported PAM/PNM component count %d!\n", info.ch_count);
         return GPUJPEG_ERROR;
     }
     return 0;
