@@ -502,7 +502,8 @@ gpujpeg_reader_read_app8(uint8_t** image, const uint8_t* image_end, enum gpujpeg
  * @return        0 if succeeds, >0 if unsupported features were found, <0 on error
  */
 static int
-gpujpeg_reader_read_adobe_header(uint8_t** image, const uint8_t* image_end, enum gpujpeg_color_space *color_space)
+gpujpeg_reader_read_adobe_header(uint8_t** image, const uint8_t* image_end, enum gpujpeg_color_space* color_space,
+                                 int verbose)
 {
     if(image_end - *image < 7) {
         fprintf(stderr, "[GPUJPEG] [Error] APP14 marker goes beyond end of data\n");
@@ -513,7 +514,8 @@ gpujpeg_reader_read_adobe_header(uint8_t** image, const uint8_t* image_end, enum
     int flags0 = gpujpeg_reader_read_2byte(*image);
     int flags1 = gpujpeg_reader_read_2byte(*image);
     int color_transform = gpujpeg_reader_read_byte(*image);
-    (void) version, (void) flags0, (void) flags1;
+    DEBUG_MSG(verbose, "APP14 Adobe header - version: %d, flags0: %d, flags1: %d, color_transform: %d\n", version,
+              flags0, flags1, color_transform);
 
     if (color_transform == 0) {
         *color_space = GPUJPEG_RGB;
@@ -540,7 +542,7 @@ gpujpeg_reader_read_adobe_header(uint8_t** image, const uint8_t* image_end, enum
  * @return        0 if succeeds, >0 if unsupported features were found, <0 on error
  */
 static int
-gpujpeg_reader_read_app14(uint8_t** image, const uint8_t* image_end, enum gpujpeg_color_space *color_space)
+gpujpeg_reader_read_app14(uint8_t** image, const uint8_t* image_end, enum gpujpeg_color_space *color_space, int verbose)
 {
     if(image_end - *image < 2) {
         fprintf(stderr, "[GPUJPEG] [Error] Could not read APP14 marker size (end of data)\n");
@@ -557,7 +559,7 @@ gpujpeg_reader_read_app14(uint8_t** image, const uint8_t* image_end, enum gpujpe
     const char adobe_tag[] = { 'A', 'd', 'o' ,'b', 'e' };
     if (length >= APP14_ADOBE_MARKER_LEN && strncmp((char *) *image, adobe_tag, sizeof adobe_tag) == 0) {
         *image += sizeof adobe_tag;
-        int rc = gpujpeg_reader_read_adobe_header(image, image_end, color_space);
+        int rc = gpujpeg_reader_read_adobe_header(image, image_end, color_space, verbose);
         *image += length - APP14_ADOBE_MARKER_LEN;
         if (length > APP14_ADOBE_MARKER_LEN) {
             fprintf(stderr, "[GPUJPEG] [Warning] APP14 Adobe marker length should be 14 but %d was presented!\n", length);
@@ -1350,7 +1352,7 @@ gpujpeg_reader_read_common_markers(uint8_t** image, const uint8_t* image_end, in
             }
             break;
         case GPUJPEG_MARKER_APP14:
-            if ( gpujpeg_reader_read_app14(image, image_end, color_space) < 0 ) {
+            if ( gpujpeg_reader_read_app14(image, image_end, color_space, log_level) < 0 ) {
                 return -1;
             }
             break;
