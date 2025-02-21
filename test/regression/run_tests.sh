@@ -5,28 +5,46 @@ GPUJPEG=${1:-$DIR/../../gpujpegtool}
 if [ ! -x "$GPUJPEG" ] && [ -x "$DIR/../../build/gpujpegtool" ]; then
         GPUJPEG=$DIR/../../build/gpujpegtool
 fi
-REQUESTED_PSNR=50
+
+readonly REQUESTED_PSNR=50
+
+numeric_compare() {
+        rc=$(awk "BEGIN {if ($1) print 0; else print 1}")
+        return "$rc"
+}
+
+## $1 img1
+## $2 img2
+## $3 image props (aka -depth 8 -size 16x16)
+imagemagick_compare() {
+        # shellcheck disable=SC2086 # intentional
+        PSNR=$(compare -metric PSNR $3 "${1?}" "${2?}" null: 2>&1 |
+                cut -d\  -f1 || true)
+        echo PSNR: "$PSNR (required $REQUESTED_PSNR)"
+        if [ "$PSNR" != inf ] && numeric_compare "$PSNR != 0" &&
+        numeric_compare "$PSNR < $REQUESTED_PSNR"; then
+                return 1
+        fi
+}
 
 test_commit_b620be2() {
         $GPUJPEG -e -s 1920x1080 -r 1 -f 444-u8-p0p1p2 /dev/zero out.jpg
         $GPUJPEG -d out.jpg out.rgb
         SIZE=$(stat -c %s out.rgb)
-        dd if=/dev/zero bs=$SIZE count=1 of=in.rgb
-        PSNR=`compare -metric PSNR -depth 8 -size 1920x1080 out.rgb in.rgb null: 2>&1 || true`
-        echo PSNR: $PSNR
-        if [ $PSNR != inf ] && expr $PSNR != 0 && expr $PSNR \< $REQUESTED_PSNR; then
-                echo " black pattern doesn't match!\n" >&2
+        dd if=/dev/zero bs="$SIZE" count=1 of=in.rgb
+        if ! imagemagick_compare out.rgb in.rgb "-depth 8 -size 1920x1080"
+        then
+                echo " black pattern doesn't match!" >&2
                 exit 1
         fi
 
         $GPUJPEG -e -s 16x16 -r 1 -f u8 /dev/zero out.jpg
         $GPUJPEG -d out.jpg out.r
         SIZE=$(stat -c %s out.r)
-        dd if=/dev/zero bs=$SIZE count=1 of=in.r
-        PSNR=`compare -metric PSNR -depth 8 -size 16x16 gray:out.r gray:in.r null: 2>&1 || true`
-        echo PSNR: $PSNR
-        if [ $PSNR != inf ] && expr $PSNR != 0 && expr $PSNR \< $REQUESTED_PSNR; then
-                echo "grayscale pattern doesn't match!\n" >&2
+        dd if=/dev/zero bs="$SIZE" count=1 of=in.r
+        if ! imagemagick_compare gray:out.r gray:in.r "-depth 8 -size 16x16"
+        then
+                echo "grayscale pattern doesn't match!" >&2
                 exit 1
         fi
 
