@@ -66,9 +66,9 @@ test_different_sizes() {
         done
 
         # shellcheck disable=SC2086 # intentional
-        $GPUJPEG $param_enc
+        "$GPUJPEG" -e $param_enc
         # shellcheck disable=SC2086 # intentional
-        $GPUJPEG $param_dec
+        "$GPUJPEG" -d $param_dec
         # shellcheck disable=SC2086 # intentional
         rm $files
 }
