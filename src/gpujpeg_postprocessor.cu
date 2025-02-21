@@ -190,7 +190,6 @@ template<
     enum gpujpeg_color_space color_space_internal,
     enum gpujpeg_color_space color_space,
     enum gpujpeg_pixel_format pixel_format,
-    int comp_count,
     uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v,
     uint8_t s_comp2_samp_factor_h, uint8_t s_comp2_samp_factor_v,
     uint8_t s_comp3_samp_factor_h, uint8_t s_comp3_samp_factor_v,
@@ -207,17 +206,18 @@ gpujpeg_preprocessor_comp_to_raw_kernel(struct gpujpeg_preprocessor_data data, u
     int image_position_x = image_position % image_width;
     int image_position_y = image_position / image_width;
 
+
     // Load
     uchar4 r;
+    if (pixel_format == GPUJPEG_4444_U8_P0123) {
+        r.w = 0xFF;
+    }
     gpujpeg_preprocessor_comp_to_raw_load<s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v, s_comp4_samp_factor_h, s_comp4_samp_factor_v>::perform(r, image_position_x, image_position_y, data);
 
     // Color transform
     gpujpeg_color_transform<color_space_internal, color_space>::perform(r);
 
     // Save
-    if (pixel_format == GPUJPEG_4444_U8_P0123 && comp_count == 3) {
-        r.w = 0xFF;
-    }
     gpujpeg_comp_to_raw_store<pixel_format>(d_data_raw, image_width, image_height, image_position, image_position_x, image_position_y, r);
 }
 
@@ -238,22 +238,32 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical,
         coder->component[3].sampling_factor.horizontal, coder->component[3].sampling_factor.vertical);
 
-#define RETURN_KERNEL_SWITCH(PIXEL_FORMAT, COLOR, P1, P2, P3, P4, P5, P6, P7, P8) \
-        switch ( PIXEL_FORMAT ) { \
-            case GPUJPEG_U8: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_U8, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
-            case GPUJPEG_444_U8_P012: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
-            case GPUJPEG_4444_U8_P0123:\
-                    return coder->param.comp_count == 4\
-                           ? &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_4444_U8_P0123,\
-                                                           4, P1, P2, P3, P4, P5, P6, P7, P8>\
-                           : &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_4444_U8_P0123,\
-                                                           3, P1, P2, P3, P4, P5, P6, P7, P8>;\
-            case GPUJPEG_422_U8_P1020: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P1020, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
-            case GPUJPEG_444_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P0P1P2, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
-            case GPUJPEG_422_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P0P1P2, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
-            case GPUJPEG_420_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_420_U8_P0P1P2, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
-            case GPUJPEG_PIXFMT_NONE: GPUJPEG_ASSERT(0 && "Postprocess to GPUJPEG_PIXFMT_NONE not allowed"); \
-        } \
+#define RETURN_KERNEL_SWITCH(PIXEL_FORMAT, COLOR, P1, P2, P3, P4, P5, P6, P7, P8)                                      \
+    switch ( PIXEL_FORMAT ) {                                                                                          \
+    case GPUJPEG_U8:                                                                                                   \
+        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_U8, P1, P2, P3, P4, P5,   \
+                                                        P6, P7, P8>;                                                   \
+    case GPUJPEG_444_U8_P012:                                                                                          \
+        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012, P1, P2, P3,  \
+                                                        P4, P5, P6, P7, P8>;                                           \
+    case GPUJPEG_4444_U8_P0123:                                                                                        \
+        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_4444_U8_P0123, P1, P2,    \
+                                                        P3, P4, P5, P6, P7, P8>;                                       \
+    case GPUJPEG_422_U8_P1020:                                                                                         \
+        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P1020, P1, P2, P3, \
+                                                        P4, P5, P6, P7, P8>;                                           \
+    case GPUJPEG_444_U8_P0P1P2:                                                                                        \
+        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P0P1P2, P1, P2,    \
+                                                        P3, P4, P5, P6, P7, P8>;                                       \
+    case GPUJPEG_422_U8_P0P1P2:                                                                                        \
+        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P0P1P2, P1, P2,    \
+                                                        P3, P4, P5, P6, P7, P8>;                                       \
+    case GPUJPEG_420_U8_P0P1P2:                                                                                        \
+        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_420_U8_P0P1P2, P1, P2,    \
+                                                        P3, P4, P5, P6, P7, P8>;                                       \
+    case GPUJPEG_PIXFMT_NONE:                                                                                          \
+        GPUJPEG_ASSERT(0 && "Postprocess to GPUJPEG_PIXFMT_NONE not allowed");                                         \
+    }
 
 #define RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) \
     if ( sampling_factor == gpujpeg_make_sampling_factor(COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) ) { \
