@@ -63,6 +63,9 @@ struct gpujpeg_preprocessor_comp_to_raw_load_comp
         if ( samp_factor_v == GPUJPEG_DYNAMIC ) {
             samp_factor_v = comp.sampling_factor.vertical;
         }
+        if (samp_factor_v == 0 || samp_factor_h == 0) {
+            return;
+        }
 
         position_x = position_x / samp_factor_h;
         position_y = position_y / samp_factor_v;
@@ -174,6 +177,61 @@ inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_420_U8_P0P1P2>(uint8_t 
     }
 }
 
+/// set alpha that may not be included in input data but may be read by the CS conv
+template <enum gpujpeg_pixel_format pixel_format>
+struct pre_load {
+    static __device__ void
+    perform(uchar4& value)
+    {
+        if ( pixel_format == GPUJPEG_4444_U8_P0123 ) {
+            value.w = 0xFF;
+        }
+    }
+};
+/// set channel 2 and 3 if source has 1 channel for cs conversion;
+/// do nothing by default
+template <bool in_is_rgb, uint8_t s_comp2_samp_factor_h>
+struct post_load
+{
+    static __device__ void
+    perform(uchar4& value, struct gpujpeg_preprocessor_data data)
+    {
+    }
+};
+static __device__ void
+fill_ch_2_3(uchar4& value, bool is_rgb)
+{
+    if ( is_rgb ) {
+        value.y = value.z = value.x;
+    }
+    else {
+        value.y = value.z = 128;
+    }
+}
+/// specialization - 1 channel + fast kernels
+template <bool in_is_rgb>
+struct post_load<in_is_rgb, 0>
+{
+    static __device__ void
+    perform(uchar4& value, struct gpujpeg_preprocessor_data data)
+    {
+        fill_ch_2_3(value, in_is_rgb);
+    }
+};
+/// specialization - slow kernel (actual ch count need to be deduced from data)
+template <bool in_is_rgb>
+struct post_load<in_is_rgb, GPUJPEG_DYNAMIC>
+{
+    static __device__ void
+    perform(uchar4& value, struct gpujpeg_preprocessor_data data)
+    {
+        if ( data.comp[1].sampling_factor.horizontal != 0 ) {
+            return;
+        }
+        fill_ch_2_3(value, in_is_rgb);
+    }
+};
+
 /**
  * Kernel - Copy three separated component buffers into target image data
  *
@@ -206,13 +264,11 @@ gpujpeg_preprocessor_comp_to_raw_kernel(struct gpujpeg_preprocessor_data data, u
     int image_position_x = image_position % image_width;
     int image_position_y = image_position / image_width;
 
-
     // Load
     uchar4 r;
-    if (pixel_format == GPUJPEG_4444_U8_P0123) {
-        r.w = 0xFF;
-    }
+    pre_load<pixel_format>::perform(r);
     gpujpeg_preprocessor_comp_to_raw_load<s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v, s_comp4_samp_factor_h, s_comp4_samp_factor_v>::perform(r, image_position_x, image_position_y, data);
+    post_load<color_space_internal == GPUJPEG_RGB, s_comp2_samp_factor_h>::perform(r, data);
 
     // Color transform
     gpujpeg_color_transform<color_space_internal, color_space>::perform(r);
@@ -482,7 +538,7 @@ gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     }
 
     // Run kernel
-    struct gpujpeg_preprocessor_data data;
+    struct gpujpeg_preprocessor_data data = {};
     for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
         assert(coder->sampling_factor.horizontal % coder->component[comp].sampling_factor.horizontal == 0);
         assert(coder->sampling_factor.vertical % coder->component[comp].sampling_factor.vertical == 0);
