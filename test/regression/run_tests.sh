@@ -15,10 +15,10 @@ numeric_compare() {
 
 ## $1 img1
 ## $2 img2
-## $3 image props (aka -depth 8 -size 16x16)
+## $3 image props (aka -depth 8 -size 16x16), optional
 imagemagick_compare() {
         # shellcheck disable=SC2086 # intentional
-        PSNR=$(compare -metric PSNR $3 "${1?}" "${2?}" null: 2>&1 |
+        PSNR=$(compare -metric PSNR ${3-} "${1?}" "${2?}" null: 2>&1 |
                 cut -d\  -f1 || true)
         echo PSNR: "$PSNR (required $REQUESTED_PSNR)"
         if [ "$PSNR" != inf ] && numeric_compare "$PSNR != 0" &&
@@ -94,8 +94,35 @@ test_pam_pnm_y4m() {
         rm data.raw in.y4m out.jpg out.pam out.pnm out.y4m
 }
 
+# test the gray_image.jpg from TwelveMonkeys sample set that caused
+# problems (see Git history)
+test_gray_image() {
+        filename=gray-sample.jpg
+
+        if [ ! -f "$filename" ]; then
+                url="https://github.com/haraldk/TwelveMonkeys/blob/master/\
+imageio/imageio-jpeg/src/test/resources/jpeg/$filename?raw=true"
+                if ! curl -LO "$url"; then
+                        echo "Cannot download the image $filename from $url"
+                        return
+                fi
+        fi
+
+        "$GPUJPEG" -d "$filename" out.pnm
+
+        if ! imagemagick_compare "$filename" out.pnm
+        then
+                echo "$filename doesn't match!" >&2
+                exit 1
+        fi
+
+        # keeping the $filename intentionally as a cache
+        rm out.pnm
+}
+
 test_commit_b620be2
 test_different_sizes
+test_gray_image
 test_nonexistent
 test_pam_pnm_y4m
 
