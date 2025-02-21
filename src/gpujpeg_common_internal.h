@@ -108,17 +108,17 @@ enum {
 /// unconditional assert
 #define GPUJPEG_ASSERT(cond) do { if (!(cond)) { fprintf(stderr, "%s:%d: %s: Assertion `" #cond "' failed.\n", __FILE__, __LINE__, __func__); abort(); } } while(0)
 
-#define ERROR_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__); } while(0)
-#define WARN_MSG(...) do { fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__); } while(0)
+#define ERROR_MSG(...) (void)fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__)
+#define WARN_MSG(...) (void)fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__)
 #define VERBOSE_MSG(log_level, ...)                                                                                    \
     if ( log_level >= GPUJPEG_LL_VERBOSE )                                                                             \
-        fprintf(stderr, "[GPUJPEG] [Verbose] " __VA_ARGS__)
+        (void)fprintf(stderr, "[GPUJPEG] [Verbose] " __VA_ARGS__)
 #define DEBUG_MSG(log_level, ...)                                                                                      \
     if ( log_level >= GPUJPEG_LL_DEBUG )                                                                               \
-        fprintf(stderr, "[GPUJPEG] [Debug] " __VA_ARGS__)
+        (void)fprintf(stderr, "[GPUJPEG] [Debug] " __VA_ARGS__)
 #define DEBUG2_MSG(log_level, ...)                                                                                     \
     if ( log_level >= GPUJPEG_LL_DEBUG2 )                                                                              \
-        fprintf(stderr, "[GPUJPEG] [Debug2] " __VA_ARGS__)
+        (void)fprintf(stderr, "[GPUJPEG] [Debug2] " __VA_ARGS__)
 
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
