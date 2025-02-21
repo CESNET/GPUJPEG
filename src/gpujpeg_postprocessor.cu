@@ -242,7 +242,12 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         switch ( PIXEL_FORMAT ) { \
             case GPUJPEG_U8: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_U8, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
             case GPUJPEG_444_U8_P012: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
-            case GPUJPEG_4444_U8_P0123: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_4444_U8_P0123, 3, P1, P2, P3, P4, P5, P6, P7, P8>;\
+            case GPUJPEG_4444_U8_P0123:\
+                    return coder->param.comp_count == 4\
+                           ? &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_4444_U8_P0123,\
+                                                           4, P1, P2, P3, P4, P5, P6, P7, P8>\
+                           : &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_4444_U8_P0123,\
+                                                           3, P1, P2, P3, P4, P5, P6, P7, P8>;\
             case GPUJPEG_422_U8_P1020: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P1020, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
             case GPUJPEG_444_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P0P1P2, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
             case GPUJPEG_422_U8_P0P1P2: return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P0P1P2, 3, P1, P2, P3, P4, P5, P6, P7, P8>; \
