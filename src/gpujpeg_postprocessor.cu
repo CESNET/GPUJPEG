@@ -406,16 +406,6 @@ static int gpujpeg_preprocessor_decode_no_transform(struct gpujpeg_coder * coder
     return 1;
 }
 
-static int gpujpeg_preprocessor_decode_aligned(struct gpujpeg_coder * coder)
-{
-    for ( int i = 0; i < coder->param.comp_count; ++i ) {
-        if (coder->component[i].data_width !=  coder->component[i].width) {
-            return 0;
-        }
-    }
-    return 1;
-}
-
 /* Documented at declaration */
 int
 gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
@@ -423,8 +413,7 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
     coder->preprocessor = NULL;
 
     if (!gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format) &&
-            gpujpeg_preprocessor_decode_no_transform(coder) &&
-            gpujpeg_preprocessor_decode_aligned(coder)) {
+            gpujpeg_preprocessor_decode_no_transform(coder)) {
         if ( coder->param.verbose >= GPUJPEG_LL_DEBUG ) {
             printf("Matching format detected - not using postprocessor, using memcpy instead.\n");
         }
