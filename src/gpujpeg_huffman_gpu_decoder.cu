@@ -381,13 +381,6 @@ gpujpeg_huffman_gpu_decoder_decode_block(
     return 0;
 }
 
-template <int THREADS_PER_TBLOCK>
-__global__ void clear_buffer(
-    int32_t* buffer
-) {
-    int idx = blockIdx.x * THREADS_PER_TBLOCK + threadIdx.x;
-    buffer[idx] = 0;
-}
 
 /**
  * Huffman decoder kernel
@@ -719,12 +712,6 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     // Copy updated components to device memory
     cudaMemcpyAsync(coder->d_component, coder->component, coder->param.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice, decoder->stream);
     gpujpeg_cuda_check_error("Coder component copy", return 0);
-
-    // Clear output buffer
-    dim3 clr_thread(THREADS_PER_TBLOCK);
-    dim3 clr_grid(decoder->coder.data_size / THREADS_PER_TBLOCK / 2);
-    clear_buffer<THREADS_PER_TBLOCK><<<clr_grid, clr_thread, 0, decoder->stream>>>((int32_t *) coder->d_data_quantized);
-    gpujpeg_cuda_check_error("Reset Huffman output", return 0);
     
     // Run decoding kernel
     dim3 thread(THREADS_PER_TBLOCK);

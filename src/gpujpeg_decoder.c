@@ -287,6 +287,9 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
     else {
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_memory_to, coder->param.perf_stats, decoder->stream, return -1);
 
+        // Reset huffman output
+        cudaMemsetAsync(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t), decoder->stream);
+
         // Copy scan data to device memory
         cudaMemcpyAsync(coder->d_data_compressed, coder->data_compressed,
                         MIN(decoder->data_compressed_size * sizeof(uint8_t), coder->data_compressed_pinned_sz),
