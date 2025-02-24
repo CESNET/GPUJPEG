@@ -297,7 +297,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
         gpujpeg_cuda_check_error("Decoder copy compressed data to pinned memory", return -1);
         if ( decoder->data_compressed_size * sizeof(uint8_t) > coder->data_compressed_pinned_sz ) {
             cudaMemcpyAsync(coder->d_data_compressed + coder->data_compressed_pinned_sz,
-                            coder->d_data_compressed + coder->data_compressed_pinned_sz,
+                            coder->data_compressed + coder->data_compressed_pinned_sz,
                             decoder->data_compressed_size - coder->data_compressed_pinned_sz, cudaMemcpyHostToDevice,
                             decoder->stream);
             gpujpeg_cuda_check_error("Decoder copy compressed data to pageable memory", return -1);
