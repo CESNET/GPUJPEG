@@ -383,7 +383,7 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
 
 static int gpujpeg_preprocessor_decode_no_transform(struct gpujpeg_coder * coder)
 {
-    if ( coder->param.comp_count == 3 && coder->param_image.color_space != coder->param.color_space_internal ) {
+    if ( coder->param.comp_count >= 3 && coder->param_image.color_space != coder->param.color_space_internal ) {
             /*fprintf(stderr, "Decoding JPEG to a planar pixel format is supported only when no color transformation is required. "
                             "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
                             gpujpeg_color_space_get_name(coder->param.color_space_internal),
