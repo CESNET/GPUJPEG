@@ -259,6 +259,7 @@ main(int argc, char *argv[])
     _Bool component_range = 0;
     int iterate = 1;
     _Bool use_opengl = 0;
+    bool debug = false;
 
     // Flags
     struct options opts = {.subsampling = GPUJPEG_SUBSAMPLING_UNKNOWN,
@@ -274,6 +275,7 @@ main(int argc, char *argv[])
     // Parse command line
     struct option longopts[] = {
         {"alpha",                   no_argument,       0, 'a'},
+        {"debug",                   no_argument,       0, 'b'},
         {"help",                    no_argument,       0, 'h'},
         {"verbose",                 optional_argument, 0, 'v'},
         {"device",                  required_argument, 0, 'D'},
@@ -300,7 +302,7 @@ main(int argc, char *argv[])
     int ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "CD:I:LNRS::Vac:edf:ghin:oq:r:s:v", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "CD:I:LNRS::Vabc:edf:ghin:oq:r:s:v", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'a':
             opts.keep_alpha = true;
@@ -408,6 +410,9 @@ main(int argc, char *argv[])
             break;
         case 'V':
             return 0; // already printed, just exit
+        case 'b':
+            debug = true;
+            break;
         case '?':
             return -1;
         default:
@@ -760,9 +765,9 @@ main(int argc, char *argv[])
         gpujpeg_opengl_destroy(gl_context);
     }
 
-#ifdef DEBUG
-    gpujpeg_device_reset(); // to allow "cuda-memcheck --leak-check full"
-#endif // defined DEBUG
+    if ( debug ) {
+        gpujpeg_device_reset(); // to allow "cuda-memcheck --leak-check full"
+    }
 
     return ret;
 }
