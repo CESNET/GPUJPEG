@@ -300,7 +300,7 @@ main(int argc, char *argv[])
     int ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "CLRahvD:s:f:c:q:r:giedn:oI:NS::V", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "CD:I:LNRS::Vac:edf:ghin:oq:r:s:v", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'a':
             opts.keep_alpha = true;
