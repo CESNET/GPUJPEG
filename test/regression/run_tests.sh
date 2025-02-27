@@ -7,6 +7,7 @@ if [ ! -x "$GPUJPEG" ] && [ -x "$DIR/../../build/gpujpegtool" ]; then
 fi
 
 readonly REQUESTED_PSNR=50
+readonly BROKEN_IM_THR=110
 
 numeric_compare() {
         rc=$(awk "BEGIN {if ($1) print 0; else print 1}")
@@ -21,6 +22,22 @@ imagemagick_compare() {
         PSNR=$(compare -metric PSNR ${3-} "${1?}" "${2?}" null: 2>&1 |
                 cut -d\  -f1 || true)
         echo PSNR: "$PSNR (required $REQUESTED_PSNR)"
+        # TODO TOREMOVE if not needed (supposing it is IM bug, not feature)
+        if expr "$PSNR" : '[0-9][0-9.]*$' >/dev/null &&
+                numeric_compare "$PSNR > $BROKEN_IM_THR"; then
+                echo "Broken ImageMagick!"
+                if ! command -v gm >/dev/null; then
+                        return 2
+                fi
+                echo "will try graphicsmagick instead..."
+                PSNR=
+        fi
+        # IM not found, try GraphicsMagick
+        if [ ! "$PSNR" ]; then
+                # shellcheck disable=SC2086 # intentional for $3
+                PSNR=$(gm compare -metric PSNR ${3-} "${1?}" "${2?}" \
+                         | sed -n '/Total: / s/^.*Total: *\([0-9.]*\)/\1/p')
+        fi
         if [ "$PSNR" != inf ] && numeric_compare "$PSNR != 0" &&
         numeric_compare "$PSNR < $REQUESTED_PSNR"; then
                 return 1
@@ -49,6 +66,18 @@ test_commit_b620be2() {
         fi
 
         rm in.rgb in.r out.rgb out.r out.jpg
+}
+
+# the single test actually covers both fixes
+test_fix_decode_outside_pinned_AND_fix_huff_buf_partially_not_cleared() {
+        "$GPUJPEG" -e 392x386.p_u8.noise.tst out.jpg
+        "$GPUJPEG" -d out.jpg out.pnm
+        if ! imagemagick_compare out.jpg out.pnm
+        then
+                echo "pattern doesn't match!" >&2
+                exit 1
+        fi
+        rm out.jpg out.pnm
 }
 
 # commits e52abeab (increasing size) 791a9e6b (shrinking) crashes
@@ -122,6 +151,7 @@ imageio/imageio-jpeg/src/test/resources/jpeg/$filename?raw=true"
 
 test_commit_b620be2
 test_different_sizes
+test_fix_decode_outside_pinned_AND_fix_huff_buf_partially_not_cleared
 test_gray_image
 test_nonexistent
 test_pam_pnm_y4m
