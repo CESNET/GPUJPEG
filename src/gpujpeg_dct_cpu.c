@@ -206,6 +206,11 @@ gpujpeg_idct_cpu(struct gpujpeg_decoder* decoder)
 
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
+    if ( coder->data_quantized == NULL ) {
+        if ( gpujpeg_coder_allocate_cpu_huffman_buf(coder) != 0 ) {
+            abort();
+        }
+    }
 
     // Perform IDCT and dequantization
     for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {

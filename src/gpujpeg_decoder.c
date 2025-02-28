@@ -325,6 +325,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
     if (0 != gpujpeg_idct_gpu(decoder)) {
         return -1;
     }
+    // gpujpeg_idct_cpu(decoder);
 
     GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_dct_quantization, coder->param.perf_stats, decoder->stream, return -1);
 
