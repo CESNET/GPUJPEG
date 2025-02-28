@@ -417,7 +417,8 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* imag
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_image_save_to_file(char* filename, uint8_t* image, size_t image_size, const struct gpujpeg_image_parameters *param_image);
+gpujpeg_image_save_to_file(char* filename, const uint8_t* image, size_t image_size,
+                           const struct gpujpeg_image_parameters* param_image);
 
 /**
  * Reads/obtains properties from uncompressed file (PNM etc.)

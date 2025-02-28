@@ -227,6 +227,47 @@ parse_pixel_format(const char *arg)
     return ret;
 }
 
+/// dump input file if not a regular file (eg. test patern or  /dev/random)
+static void
+debug_dump_infile(const char* filename, const uint8_t* image_data, size_t image_size,
+                const struct gpujpeg_image_parameters* param_image)
+{
+    FILE* f = fopen(filename, "rb");
+    long file_sz = 0;
+    if ( f != NULL ) {
+        fseek(f, 0, SEEK_END);
+        file_sz = ftell(f);
+        fclose(f);
+    }
+    if ( file_sz > 0 ) { // regular file
+        return;
+    }
+    char raw_name[256];
+    const char* beg = strrchr(filename, '/');
+    if ( beg == NULL ) {
+        beg = strrchr(filename, '\\');
+    }
+    if ( beg == NULL ) {
+        beg = filename;
+    }
+    else {
+        beg += 1;
+    }
+    snprintf(raw_name, sizeof raw_name, "input-%s", beg);
+    char* end = strrchr(raw_name, '.');
+    if ( end == NULL ) {
+        snprintf(raw_name + strlen(raw_name), sizeof raw_name - strlen(raw_name), ".");
+        end = raw_name + strlen(raw_name);
+    }
+    else {
+        end += 1;
+    }
+    snprintf(end, sizeof raw_name - (end - raw_name), "XXX");
+    if ( gpujpeg_image_save_to_file(raw_name, image_data, image_size, param_image) == 0 ) {
+        printf("Input data saved to file %s.\n", raw_name);
+    }
+}
+
 #ifndef GIT_REV
 #define GIT_REV "unknown"
 #endif
@@ -555,6 +596,10 @@ main(int argc, char *argv[])
             if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
                 ret = EXIT_FAILURE; continue;
+            }
+
+            if ( debug ) {
+                debug_dump_infile(input, image, image_size, &param_image);
             }
 
             duration = gpujpeg_get_time() - duration;

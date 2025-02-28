@@ -1211,8 +1211,8 @@ set_file_extension(char *filename,
 
 /* Documented at declaration */
 int
-gpujpeg_image_save_to_file(char *filename, uint8_t *image, size_t image_size,
-                           const struct gpujpeg_image_parameters *param_image)
+gpujpeg_image_save_to_file(char* filename, const uint8_t* image, size_t image_size,
+                           const struct gpujpeg_image_parameters* param_image)
 {
     if (strrchr(filename, '.') != NULL &&
         strcmp(strrchr(filename, '.'), ".XXX") == 0) {
