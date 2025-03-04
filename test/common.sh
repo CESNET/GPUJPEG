@@ -16,7 +16,7 @@ magick_compare() {
         # shellcheck disable=SC2086 # intentional
         psnr=$(compare -metric PSNR ${3-} "${1?}" "${2?}" null: 2>&1 |
                 cut -d\  -f1 || true)
-        echo PSNR: "$psnr (required $requested_psnr)"
+        echo IM PSNR: "$psnr (required $requested_psnr)"
         # TODO TOREMOVE if not needed (supposing it is IM bug, not feature)
         if expr "$psnr" : '[0-9][0-9.]*$' >/dev/null &&
                 numeric_compare "$psnr > $broken_im_thr"; then
@@ -32,6 +32,7 @@ magick_compare() {
                 # shellcheck disable=SC2086 # intentional for $3
                 psnr=$(gm compare -metric PSNR ${3-} "${1?}" "${2?}" \
                          | sed -n '/Total: / s/^.*Total: *\([0-9.]*\)/\1/p')
+                echo GM PSNR: "$psnr (required $requested_psnr)"
         fi
         if [ "$psnr" != inf ] && numeric_compare "$psnr != 0" &&
         numeric_compare "$psnr < $requested_psnr"; then

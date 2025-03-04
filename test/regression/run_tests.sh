@@ -73,8 +73,8 @@ test_nonexistent() {
 
 # currently just a simple read/write tests without validating file contents
 test_pam_pnm_y4m() {
-        readonly w=256
-        readonly h=256
+        w=256
+        h=256
         printf "YUV4MPEG2 W%d H%d F25:1 Ip A0:0 C444 XCOLORRANGE=FULL\nFRAME\n" $w $h > in.y4m
         dd if=/dev/zero of=data.raw bs=$((w*h*3)) count=1
         cat data.raw >> in.y4m
@@ -113,10 +113,51 @@ imageio/imageio-jpeg/src/test/resources/jpeg/$filename?raw=true"
         rm out.pnm
 }
 
+## This test ensures given compression quality preserved
+## measured with PSNR. The required PSNR values are set
+## to the currently received values (measured with GM 1.3.45)
+test_random_psnr() {
+        # use weird resolution to catch more errors
+        w=$((7*8*20-1))
+        h=$((33*17))
+        out_patt=91af70a4 # random pattern
+
+        file1=${w}x$h.random.c_rgb
+        q1=75
+        flags1=
+        req_psnr1=22 # actually 22.26 at the time of writing
+
+        file2=${w}x$h.p_u8.random
+        q2=75
+        flags2=
+        req_psnr2=28.4 # actually 28.53
+
+        file3=${w}x$h.p_4444-u8-p0123.random
+        q3=90
+        flags3='-a -N'
+        req_psnr3=36.3 # actually 36.4
+
+        n=1
+        while [ "$(eval echo "\$file$n")" ]; do
+                eval name="\$file$n"
+                eval req_psnr="\$req_psnr$n"
+                eval q="\$q$n"
+                eval flags="\$flags$n"
+                out_n=$out_patt-$name
+                "$GPUJPEG" $flags -b -q "$q" -e -s ${w}x$h "$name.tst" in.jpg
+                "$GPUJPEG" $flags -d in.jpg "$out_n.XXX"
+                echo magick_compare "input-$name".* "$out_n".* '' "$req_psnr"
+                magick_compare "input-$name".* "$out_n".* '' "$req_psnr"
+                rm "input-$name".* "$out_n".* in.jpg
+                n=$((n+1))
+        done
+}
+
 test_commit_b620be2
 test_different_sizes
 test_fix_decode_outside_pinned_AND_fix_huff_buf_partially_not_cleared
 test_gray_image
 test_nonexistent
 test_pam_pnm_y4m
+test_random_psnr
 
