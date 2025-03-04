@@ -399,6 +399,7 @@ gpujpeg_image_get_file_format(const char* filename)
         { "pam",  GPUJPEG_IMAGE_FILE_PAM},
         { "y4m",  GPUJPEG_IMAGE_FILE_Y4M},
         { "tst",  GPUJPEG_IMAGE_FILE_TST},
+        { "XXX",  GPUJPEG_IMAGE_FILE_RAW},
     };
 
     const char * ext = strrchr(filename, '.');
@@ -1260,6 +1261,7 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
     }
 
     switch (format) {
+        case GPUJPEG_IMAGE_FILE_RAW:
         case GPUJPEG_IMAGE_FILE_UNKNOWN:
             param_image->pixel_format = GPUJPEG_PIXFMT_STD;
             break;
