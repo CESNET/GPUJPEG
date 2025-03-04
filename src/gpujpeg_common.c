@@ -641,7 +641,9 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
         }
 
         // Set type
-        component->type = (param->color_space_internal == GPUJPEG_RGB || comp == 0 || comp == 4) ? GPUJPEG_COMPONENT_LUMINANCE : GPUJPEG_COMPONENT_CHROMINANCE;
+        component->type = (param->color_space_internal == GPUJPEG_RGB || comp == 0 || comp == 3)
+                              ? GPUJPEG_COMPONENT_LUMINANCE
+                              : GPUJPEG_COMPONENT_CHROMINANCE;
 
         // Set proper color component sizes in pixels based on sampling factors
         //
