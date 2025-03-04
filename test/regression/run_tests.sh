@@ -6,43 +6,7 @@ if [ ! -x "$GPUJPEG" ] && [ -x "$DIR/../../build/gpujpegtool" ]; then
         GPUJPEG=$DIR/../../build/gpujpegtool
 fi
 
-readonly REQUESTED_PSNR=50
-readonly BROKEN_IM_THR=110
-
-numeric_compare() {
-        rc=$(awk "BEGIN {if ($1) print 0; else print 1}")
-        return "$rc"
-}
-
-## $1 img1
-## $2 img2
-## $3 image props (aka -depth 8 -size 16x16), optional
-imagemagick_compare() {
-        # shellcheck disable=SC2086 # intentional
-        PSNR=$(compare -metric PSNR ${3-} "${1?}" "${2?}" null: 2>&1 |
-                cut -d\  -f1 || true)
-        echo PSNR: "$PSNR (required $REQUESTED_PSNR)"
-        # TODO TOREMOVE if not needed (supposing it is IM bug, not feature)
-        if expr "$PSNR" : '[0-9][0-9.]*$' >/dev/null &&
-                numeric_compare "$PSNR > $BROKEN_IM_THR"; then
-                echo "Broken ImageMagick!"
-                if ! command -v gm >/dev/null; then
-                        return 2
-                fi
-                echo "will try graphicsmagick instead..."
-                PSNR=
-        fi
-        # IM not found, try GraphicsMagick
-        if [ ! "$PSNR" ]; then
-                # shellcheck disable=SC2086 # intentional for $3
-                PSNR=$(gm compare -metric PSNR ${3-} "${1?}" "${2?}" \
-                         | sed -n '/Total: / s/^.*Total: *\([0-9.]*\)/\1/p')
-        fi
-        if [ "$PSNR" != inf ] && numeric_compare "$PSNR != 0" &&
-        numeric_compare "$PSNR < $REQUESTED_PSNR"; then
-                return 1
-        fi
-}
+. "$DIR/../common.sh" # for imagemagick_compare
 
 test_commit_b620be2() {
         $GPUJPEG -e -s 1920x1080 -r 1 -f 444-u8-p0p1p2 /dev/zero out.jpg
