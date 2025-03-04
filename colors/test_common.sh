@@ -18,6 +18,8 @@ REQUESTED_PSNR=40
 IMAGE=image_bt709_422.yuv
 #IMAGE=camera_bt709_422.yuv
 
+. "$DIR/../test/common.sh" # for magick_compare
+
 if ! command -v compare >/dev/null; then
         echo "compare from ImageMagick not found!" >&2
         exit 2
@@ -46,11 +48,8 @@ fi
 
 # Display Left/Right Diff of the Original and the Processed Image
 #$DIR/display_diff.sh $DIR/$NAME.rgb $DIR/$NAME.decoded.rgb
-PSNR=`compare -metric PSNR -depth 8 -size 1920x1080  $DIR/$NAME.rgb $DIR/$NAME.decoded.rgb null: 2>&1 || true`
-
-echo PSNR: $PSNR
-
-if expr $PSNR != 0 && expr $PSNR \< $REQUESTED_PSNR; then
+if ! magick_compare "$DIR/$NAME.rgb" "$DIR/$NAME.decoded.rgb" \
+        '-depth 8 -size 1920x1080' "$REQUESTED_PSNR"; then
         exit 1
 fi
 
