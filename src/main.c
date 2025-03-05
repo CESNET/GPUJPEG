@@ -158,7 +158,7 @@ static int print_image_info(const char *filename, int verbose) {
         return print_image_info_jpeg(filename, verbose);
     }
     struct gpujpeg_image_parameters param_image = { 0 };
-    if (gpujpeg_image_get_properties(filename, &param_image, 1) != 0) {
+    if ( gpujpeg_image_get_properties(filename, &param_image, 1) < 0 ) {
         fprintf(stderr, "Error getting raw image %s info!\n", filename);
         return 1;
     }
