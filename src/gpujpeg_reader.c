@@ -1454,10 +1454,6 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
     }
 
     if (param_image->pixel_format == GPUJPEG_PIXFMT_STD && param_image->color_space != GPUJPEG_RGB) {
-        if ( param->comp_count == 4 ) {
-            param->comp_count = 3;
-        }
-        GPUJPEG_ASSERT(param->comp_count == 3);
         struct gpujpeg_parameters tmp;
         gpujpeg_parameters_chroma_subsampling(&tmp, GPUJPEG_SUBSAMPLING_420);
         if (sampling_factor_compare(3, param->sampling_factor, tmp.sampling_factor)) {
