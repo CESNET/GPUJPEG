@@ -343,12 +343,8 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         RETURN_KERNEL_SWITCH(PIXEL_FORMAT, COLOR, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC, GPUJPEG_DYNAMIC) \
     } \
 
-    // None color space
-    if ( coder->param_image.color_space == GPUJPEG_NONE ) {
-        RETURN_KERNEL(coder->param_image.pixel_format, GPUJPEG_NONE)
-    }
     // RGB color space
-    else if ( coder->param_image.color_space == GPUJPEG_RGB ) {
+    if ( coder->param_image.color_space == GPUJPEG_RGB ) {
         RETURN_KERNEL(coder->param_image.pixel_format, GPUJPEG_RGB)
     }
     // YCbCr color space
@@ -422,7 +418,7 @@ gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
 
     // assert(coder->param.comp_count == 3 || coder->param.comp_count == 4);
 
-    if (coder->param.color_space_internal == GPUJPEG_NONE) {
+    if (coder->param.color_space_internal == coder->param_image.color_space) {
         coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_NONE>(coder);
     }
     else if (coder->param.color_space_internal == GPUJPEG_RGB) {

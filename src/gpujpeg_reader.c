@@ -1480,9 +1480,14 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
 }
 
 static void
-adjust_format(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image)
+adjust_format(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image,
+              enum gpujpeg_color_space color_space_internal)
 {
     static_assert(GPUJPEG_PIXFMT_AUTODETECT < 0, "enum gpujpeg_pixel_format type should be signed");
+    if ( param_image->color_space == GPUJPEG_NONE) {
+        param_image->color_space = color_space_internal;
+    }
+
     if ( param_image->color_space == GPUJPEG_CS_DEFAULT ) {
         if ( param_image->pixel_format == GPUJPEG_U8 ||
              (param_image->pixel_format <= GPUJPEG_PIXFMT_AUTODETECT && param->comp_count == 1) ) {
@@ -1569,7 +1574,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
                                           image_end) != 0 ) {
                 return -1;
             }
-            adjust_format(&reader.param, &reader.param_image);
+            adjust_format(&reader.param, &reader.param_image, reader.param.color_space_internal);
             break;
 
         case GPUJPEG_MARKER_DHT:
