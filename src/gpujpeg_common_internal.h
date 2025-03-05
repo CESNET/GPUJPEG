@@ -106,7 +106,13 @@ enum {
 };
 
 /// unconditional assert
-#define GPUJPEG_ASSERT(cond) do { if (!(cond)) { fprintf(stderr, "%s:%d: %s: Assertion `" #cond "' failed.\n", __FILE__, __LINE__, __func__); abort(); } } while(0)
+#define GPUJPEG_ASSERT(cond)                                                                                           \
+    do {                                                                                                               \
+        if ( !(cond) ) {                                                                                               \
+            (void)fprintf(stderr, "%s:%d: %s: Assertion `" #cond "' failed.\n", __FILE__, __LINE__, __func__);         \
+            abort();                                                                                                   \
+        }                                                                                                              \
+    } while ( 0 )
 
 #define ERROR_MSG(...) (void)fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__)
 #define WARN_MSG(...) (void)fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__)
