@@ -37,7 +37,7 @@ jobs:
   Ubuntu:
     name: run Ubuntu
     needs: retag-continuous
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         conf: [legacy, all]
@@ -46,10 +46,14 @@ jobs:
             cuda_arch: 30
             tar_name: GPUJPEG-Linux.tar.xz
             name: Linux build
+            cuda_repo: ubuntu1804
+            cuda_pkg: cuda-toolkit-10-2
           - conf: all
             cuda_arch: all
             tar_name: GPUJPEG-Linux-all.tar.xz
             name: Linux build (all CUDA architetures)
+            cuda_repo: ubuntu2004
+            cuda_pkg: cuda-toolkit
 
     steps:
     - uses: actions/checkout@main
@@ -57,20 +61,22 @@ jobs:
       run: |
         sudo apt update
         sudo apt install cmake jq
-    - name: Install disro CUDA
-      if: matrix.conf == 'legacy'
-      run: |
-        sudo apt install nvidia-cuda-toolkit
-      id: install-distro-cuda
     - name: Install NVIDIA-distributed CUDA
-      if: steps.install-distro-cuda.conclusion == 'skipped'
       run: |
         wget https://developer.download.nvidia.com/compute/cuda/repos/\
-        ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb
+        ${{ matrix.cuda_repo }}/x86_64/cuda-keyring_1.1-1_all.deb
         sudo dpkg -i cuda-keyring_1.1-1_all.deb
         sudo apt-get update
-        sudo apt-get -y install cuda-toolkit
+        sudo apt-get -y install ${{ matrix.cuda_pkg }}
         echo CUDACXX=/usr/local/cuda/bin/nvcc >> "$GITHUB_ENV"
+    - name: Install GCC 8 for CUDA 10.2
+      if: matrix.conf == 'legacy'
+      run: |
+        echo 'deb http://archive.ubuntu.com/ubuntu/ focal main universe'\
+          | sudo tee -a /etc/apt/sources.list
+        sudo apt update
+        sudo apt install gcc-8 g++-8
+        sudo ln -sf /usr/bin/gcc-8 /usr/local/cuda/bin/gcc
     - name: Build
       run: |
         cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_RPATH='$ORIGIN/../lib' \
