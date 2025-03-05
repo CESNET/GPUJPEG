@@ -637,11 +637,11 @@ main(int argc, char *argv[])
                  gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size, &param_image) != 0 ) {
                 fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
                 ret = EXIT_FAILURE;
+            } else {
+                duration = gpujpeg_get_time() - duration;
+                printf("Save Image:          %10.4f ms\n", duration * 1000.0);
+                printf("Image Name:          %10s\n", output);
             }
-
-            duration = gpujpeg_get_time() - duration;
-            printf("Save Image:          %10.4f ms\n", duration * 1000.0);
-            printf("Image Name:          %10s\n", output);
 
             // Destroy image
             gpujpeg_image_destroy(image);
