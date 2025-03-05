@@ -475,7 +475,7 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
             for ( int i = 0; i < coder->param.comp_count; ++i ) {
                     int spitch = coder->component[i].data_width;
                     int dpitch = coder->component[i].width;
-                    size_t component_size = spitch * coder->component[i].height;
+                    size_t component_size = dpitch * coder->component[i].height;
                     cudaMemcpy2DAsync(coder->d_data_raw + data_raw_offset, dpitch, coder->component[i].d_data, spitch, coder->component[i].width, coder->component[i].height, cudaMemcpyDeviceToDevice, stream);
                     data_raw_offset += component_size;
             }
