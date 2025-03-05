@@ -342,6 +342,8 @@ enum gpujpeg_image_file_format {
     GPUJPEG_IMAGE_FILE_TST,
 };
 
+#define GPUJPEG_IMAGE_FORMAT_IS_RAW(format) ((format) >= GPUJPEG_IMAGE_FILE_RAW)
+
 /**
  * Encoder/decoder fine-grained statistics with duration of individual steps
  * of JPEG compression/decompression. All values are in milliseconds.

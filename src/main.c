@@ -520,9 +520,10 @@ main(int argc, char *argv[])
     if ( encode == 0 && decode == 0 && argc == 2 ) {
         enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(argv[0]);
         enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(argv[1]);
-        if ( (input_format >= GPUJPEG_IMAGE_FILE_RAW) && output_format == GPUJPEG_IMAGE_FILE_JPEG ) {
+        if ( GPUJPEG_IMAGE_FORMAT_IS_RAW(input_format) && output_format == GPUJPEG_IMAGE_FILE_JPEG ) {
             encode = 1;
-        } else if ( input_format == GPUJPEG_IMAGE_FILE_JPEG && (output_format >= GPUJPEG_IMAGE_FILE_RAW) ) {
+        }
+        else if ( input_format == GPUJPEG_IMAGE_FILE_JPEG && GPUJPEG_IMAGE_FORMAT_IS_RAW(output_format) ) {
             decode = 1;
         }
     }
@@ -561,7 +562,7 @@ main(int argc, char *argv[])
             char* output = argv[index + 1];
             enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
             enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
-            if ( (input_format >= GPUJPEG_IMAGE_FILE_RAW) == 0 ) {
+            if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(input_format) ) {
                 fprintf(stderr, "[Warning] Encoder input file [%s] should be raw image (*.rgb, *.yuv, *.r, *.pnm)!\n", input);
                 if ( input_format & GPUJPEG_IMAGE_FILE_JPEG ) {
                     return -1;
@@ -707,7 +708,7 @@ main(int argc, char *argv[])
             if ( input_format != GPUJPEG_IMAGE_FILE_JPEG ) {
                 fprintf(stderr, "[Warning] Decoder input file [%s] should be JPEG image (*.jpg)!\n", input);
             }
-            if ( (output_format >= GPUJPEG_IMAGE_FILE_RAW) == 0 ) {
+            if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(output_format) ) {
                 fprintf(stderr, "[Warning] Decoder output file [%s] should be raw image (*.rgb, *.yuv, *.r, *.pnm)!\n", output);
                 if ( output_format & GPUJPEG_IMAGE_FILE_JPEG ) {
                     ret = EXIT_FAILURE; continue;
