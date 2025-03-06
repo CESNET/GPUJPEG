@@ -66,6 +66,12 @@ test_different_sizes() {
         rm $files
 }
 
+test_fix_postprocess_memcpy_pitch_20250305() {
+        $GPUJPEG -e 1119x561.c_ycbcr-jpeg.p_422-u8-p0p1p2.tst ycbcr422.jpg
+        $GPUJPEG -d -c ycbcr-jpeg ycbcr422.jpg out.y4m
+        rm ycbcr422.jpg out.y4m
+}
+
 # sanity test (gpujpeg should fail)
 test_nonexistent() {
         ! $GPUJPEG -e nonexistent.pam fail.jpg
@@ -156,6 +162,7 @@ test_random_psnr() {
 test_commit_b620be2
 test_different_sizes
 test_fix_decode_outside_pinned_AND_fix_huff_buf_partially_not_cleared
+test_fix_postprocess_memcpy_pitch_20250305
 test_gray_image
 test_nonexistent
 test_pam_pnm_y4m
