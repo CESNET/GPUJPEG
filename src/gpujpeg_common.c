@@ -1261,8 +1261,13 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
     }
 
     switch (format) {
-        case GPUJPEG_IMAGE_FILE_RAW:
         case GPUJPEG_IMAGE_FILE_UNKNOWN:
+            ERROR_MSG("GPUJPEG_IMAGE_FILE_UNKNOWN should not be passed!\n");
+            return -1;
+        case GPUJPEG_IMAGE_FILE_JPEG:
+            ERROR_MSG("GPUJPEG_IMAGE_FILE_JPEG should not be passed!\n");
+            return -1;
+        case GPUJPEG_IMAGE_FILE_RAW:
             param_image->pixel_format = GPUJPEG_PIXFMT_STD;
             break;
         case GPUJPEG_IMAGE_FILE_GRAY:
@@ -1280,9 +1285,11 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
         case GPUJPEG_IMAGE_FILE_PNM:
         case GPUJPEG_IMAGE_FILE_PPM:
         case GPUJPEG_IMAGE_FILE_Y4M:
+        case GPUJPEG_IMAGE_FILE_TST:
             GPUJPEG_ASSERT(0 && "image delegate should handle this file type!");
             break;
-        default:
+        case GPUJPEG_IMAGE_FILE_RGB:
+        case GPUJPEG_IMAGE_FILE_YUV:
             param_image->pixel_format = GPUJPEG_444_U8_P012;
             break;
     }
