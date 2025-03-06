@@ -40,8 +40,3 @@ magick_compare() {
         fi
 }
 
-# compat ("image" prefix dropped because GraphicsMagic is also used if
-# IM not found /and may be prefered later/)
-imagemagick_compare() {
-        magick_compare "$@"
-}

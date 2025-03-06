@@ -6,42 +6,22 @@ if [ ! -x "$GPUJPEG" ] && [ -x "$DIR/../../build/gpujpegtool" ]; then
         GPUJPEG=$DIR/../../build/gpujpegtool
 fi
 
-. "$DIR/../common.sh" # for imagemagick_compare
+. "$DIR/../common.sh" # for magick_compare
 
 test_commit_b620be2() {
         $GPUJPEG -e -s 1920x1080 -r 1 -f 444-u8-p0p1p2 /dev/zero out.jpg
         $GPUJPEG -d out.jpg out.rgb
         SIZE=$(stat -c %s out.rgb)
         dd if=/dev/zero bs="$SIZE" count=1 of=in.rgb
-        if ! imagemagick_compare out.rgb in.rgb "-depth 8 -size 1920x1080"
-        then
-                echo " black pattern doesn't match!" >&2
-                exit 1
-        fi
+        magick_compare out.rgb in.rgb "-depth 8 -size 1920x1080"
 
         $GPUJPEG -e -s 16x16 -r 1 -f u8 /dev/zero out.jpg
         $GPUJPEG -d out.jpg out.r
         SIZE=$(stat -c %s out.r)
         dd if=/dev/zero bs="$SIZE" count=1 of=in.r
-        if ! imagemagick_compare gray:out.r gray:in.r "-depth 8 -size 16x16"
-        then
-                echo "grayscale pattern doesn't match!" >&2
-                exit 1
-        fi
+        magick_compare gray:out.r gray:in.r "-depth 8 -size 16x16"
 
         rm in.rgb in.r out.rgb out.r out.jpg
-}
-
-# the single test actually covers both fixes
-test_fix_decode_outside_pinned_AND_fix_huff_buf_partially_not_cleared() {
-        "$GPUJPEG" -e 392x386.p_u8.noise.tst out.jpg
-        "$GPUJPEG" -d out.jpg out.pnm
-        if ! imagemagick_compare out.jpg out.pnm
-        then
-                echo "pattern doesn't match!" >&2
-                exit 1
-        fi
-        rm out.jpg out.pnm
 }
 
 # commits e52abeab (increasing size) 791a9e6b (shrinking) crashes
@@ -66,10 +46,39 @@ test_different_sizes() {
         rm $files
 }
 
+# the single test actually covers both fixes
+test_fix_decode_outside_pinned_AND_fix_huff_buf_partially_not_cleared() {
+        "$GPUJPEG" -e 392x386.p_u8.noise.tst out.jpg
+        "$GPUJPEG" -d out.jpg out.pnm
+        magick_compare out.jpg out.pnm
+        rm out.jpg out.pnm
+}
+
 test_fix_postprocess_memcpy_pitch_20250305() {
         $GPUJPEG -e 1119x561.c_ycbcr-jpeg.p_422-u8-p0p1p2.tst ycbcr422.jpg
         $GPUJPEG -d -c ycbcr-jpeg ycbcr422.jpg out.y4m
         rm ycbcr422.jpg out.y4m
+}
+
+# test the gray_image.jpg from TwelveMonkeys sample set that caused
+# problems (see Git history)
+test_gray_image() {
+        filename=gray-sample.jpg
+
+        if [ ! -f "$filename" ]; then
+                url="https://github.com/haraldk/TwelveMonkeys/blob/master/\
+imageio/imageio-jpeg/src/test/resources/jpeg/$filename?raw=true"
+                if ! curl -LO "$url"; then
+                        echo "Cannot download the image $filename from $url"
+                        return
+                fi
+        fi
+
+        "$GPUJPEG" -d "$filename" out.pnm
+        magick_compare "$filename" out.pnm
+
+        # keeping the $filename intentionally as a cache
+        rm out.pnm
 }
 
 # sanity test (gpujpeg should fail)
@@ -91,32 +100,6 @@ test_pam_pnm_y4m() {
         $GPUJPEG -e out.pam out.jpg
         $GPUJPEG -e out.pnm out.jpg
         rm data.raw in.y4m out.jpg out.pam out.pnm out.y4m
-}
-
-# test the gray_image.jpg from TwelveMonkeys sample set that caused
-# problems (see Git history)
-test_gray_image() {
-        filename=gray-sample.jpg
-
-        if [ ! -f "$filename" ]; then
-                url="https://github.com/haraldk/TwelveMonkeys/blob/master/\
-imageio/imageio-jpeg/src/test/resources/jpeg/$filename?raw=true"
-                if ! curl -LO "$url"; then
-                        echo "Cannot download the image $filename from $url"
-                        return
-                fi
-        fi
-
-        "$GPUJPEG" -d "$filename" out.pnm
-
-        if ! imagemagick_compare "$filename" out.pnm
-        then
-                echo "$filename doesn't match!" >&2
-                exit 1
-        fi
-
-        # keeping the $filename intentionally as a cache
-        rm out.pnm
 }
 
 ## This test ensures given compression quality preserved
