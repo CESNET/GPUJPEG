@@ -68,7 +68,7 @@ test_gray_image() {
         if [ ! -f "$filename" ]; then
                 url="https://github.com/haraldk/TwelveMonkeys/blob/master/\
 imageio/imageio-jpeg/src/test/resources/jpeg/$filename?raw=true"
-                if ! curl -LO "$url"; then
+                if ! curl -L "$url" -o "$filename"; then
                         echo "Cannot download the image $filename from $url"
                         return
                 fi
@@ -84,6 +84,14 @@ imageio/imageio-jpeg/src/test/resources/jpeg/$filename?raw=true"
 # sanity test (gpujpeg should fail)
 test_nonexistent() {
         ! $GPUJPEG -e nonexistent.pam fail.jpg
+}
+
+test_out_ext_XXX() {
+        "$GPUJPEG" -q 99 -e -b -Na 1111x511.p_4444-u8-p0123.random.tst rgba.jpg
+        "$GPUJPEG" -d -Na rgba.jpg test_out_ext_XXX.XXX
+        magick_compare input-1111x511.p_4444-u8-p0123.random.pam \
+                test_out_ext_XXX.pam
+        rm input-1111x511.p_4444-u8-p0123.random.* rgba.jpg test_out_ext_XXX.*
 }
 
 # currently just a simple read/write tests without validating file contents
@@ -148,6 +156,7 @@ test_fix_decode_outside_pinned_AND_fix_huff_buf_partially_not_cleared
 test_fix_postprocess_memcpy_pitch_20250305
 test_gray_image
 test_nonexistent
+test_out_ext_XXX
 test_pam_pnm_y4m
 test_random_psnr
 
