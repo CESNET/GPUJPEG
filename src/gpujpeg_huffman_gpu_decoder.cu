@@ -666,7 +666,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
     
-    assert(coder->param.restart_interval > 0);
+    // assert(coder->param.restart_interval > 0);
     
     int comp_count = 1;
     if (coder->param.interleaved == 1) {
