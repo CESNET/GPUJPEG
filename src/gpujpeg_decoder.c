@@ -234,7 +234,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
     // Get coder
     struct gpujpeg_coder* coder = &decoder->coder;
     int rc;
-    int unsupp_gpu_huffman_params = 0;
+    bool use_cpu_huffman_decoder = false;
 
     coder->start_time = coder->param.perf_stats ? gpujpeg_get_time() : 0;
 
@@ -253,17 +253,23 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
         // packed_block_info_ptr holds only component type
         if ( decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_DC] != decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_AC] ) {
             fprintf(stderr, "[GPUJPEG] [Warning] Using different table DC/AC indices (%d and %d) for component %d (ID %d)! Using Huffman CPU decoder. Please report to GPUJPEG developers.\n", decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_AC], decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_DC], i, decoder->comp_id[i]);
-            unsupp_gpu_huffman_params = 1;
+            use_cpu_huffman_decoder = true;
         }
         // only DC/AC tables 0 and 1 are processed gpujpeg_huffman_decoder_table_kernel()
         if ( decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_DC] > 1 || decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_AC] > 1 ) {
             fprintf(stderr, "[GPUJPEG] [Warning] Using Huffman tables (%d, %d) implies extended process! Using Huffman CPU decoder. Please report to GPUJPEG developers.\n", decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_AC], decoder->comp_table_huffman_map[i][GPUJPEG_HUFFMAN_DC]);
-            unsupp_gpu_huffman_params = 1;
+            use_cpu_huffman_decoder = true;
         }
     }
 
+    if ( coder->segment_count < 32 ) { // the CPU Huffman implementation will be likely faster
+        VERBOSE_MSG(decoder->coder.param.verbose, "Huffman has only %d segments. Using CPU decoder, which is slower!\n",
+                    coder->segment_count);
+        use_cpu_huffman_decoder = true;
+    }
+
     // Perform huffman decoding on CPU (when there are not enough segments to saturate GPU)
-    if (coder->segment_count < 32 || unsupp_gpu_huffman_params) {
+    if ( use_cpu_huffman_decoder ) {
         GPUJPEG_CUSTOM_TIMER_START(coder->duration_huffman_coder, coder->param.perf_stats, decoder->stream, return -1);
         if (coder->data_quantized == NULL) {
             if (gpujpeg_coder_allocate_cpu_huffman_buf(coder) != 0) {
