@@ -250,11 +250,11 @@ int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameter
 static void
 tst_usage()
 {
-    printf("Usage:\n"
+    PRINTF("Usage:\n"
            "\t<W>x<H>[.c_<CS>][.p_<PF>][.<pattern>].tst\n");
-    printf("\nOptional options are sepearated by a dot, key is after an underscore, order\n"
+    PRINTF("\nOptional options are sepearated by a dot, key is after an underscore, order\n"
            "doesn't matter.\n");
-    printf("\nOptions:\n"
+    PRINTF("\nOptions:\n"
            "\t- c_<CS> - color space\n"
            "\t- p_<PF> - pixel format\n"
            "\t- blank  - use blank pattern\n"
@@ -262,13 +262,13 @@ tst_usage()
            "\t- noise  - use white noise\n"
            "\t- random[=seed] - same as noise, but use deterministic pattern\n"
             );
-    printf("\nExamples:\n"
+    PRINTF("\nExamples:\n"
            "\t- 1920x1080.tst              - use FullHD image\n"
            "\t- 1920x1080.c_ycbcr-jpeg.tst - \" with YCbCr color space\n"
            "\t- 1920x1080.p_u8.tst         - FHD grayscale (u8 pixel format)\n"
            "\t- 1920x1080.noise.tst        - FHD RGB noise\n"
            "\t- 1920x1080.c_ycbcr-jpeg.p_422-u8-p1020.tst - YCbCr 4:2:2\n");
-    printf("\n");
+    PRINTF("\n");
 }
 
 enum tst_pattern {

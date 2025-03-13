@@ -668,7 +668,7 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image, const 
         gpujpeg_table_quantization_decoder_compute(table);
 
         if (decoder->coder.param.verbose >= GPUJPEG_LL_DEBUG2) {
-            printf("Quantization table 0x%02x (%d-bit, dst: %d):\n", index, (Pq + 1) * 8, Tq);
+            PRINTF("Quantization table 0x%02x (%d-bit, dst: %d):\n", index, (Pq + 1) * 8, Tq);
             gpujpeg_table_quantization_print(table);
         }
     }
@@ -730,15 +730,15 @@ static void
 sof0_dump(int comp_count, const struct gpujpeg_component_sampling_factor* sampling_factor, const uint8_t* id,
           const int* map)
 {
-    printf("SOF0 subsampling:");
+    PRINTF("SOF0 subsampling:");
     for (int comp = 0; comp < comp_count; ++comp) {
-        printf(" %dx%d", sampling_factor[comp].horizontal, sampling_factor[comp].vertical);
+        PRINTF(" %dx%d", sampling_factor[comp].horizontal, sampling_factor[comp].vertical);
     }
-    printf("\nSOF0 component quantization tab usage:");
+    PRINTF("\nSOF0 component quantization tab usage:");
     for (int comp = 0; comp < comp_count; ++comp) {
-        printf(" %" PRIu8 "->%d", id[comp], map[comp]);
+        PRINTF(" %" PRIu8 "->%d", id[comp], map[comp]);
     }
-    printf("\n");
+    PRINTF("\n");
 }
 
 /**
@@ -842,18 +842,17 @@ huff_table_dump(int Th, int Tc, const struct gpujpeg_table_huffman_decoder* tabl
         comp_type = "chr";
         break;
     }
-    printf("table index 0x%02x (Tc: %d /%s/, Th: %d /%s/):\n", Th | (Tc << 4), Tc, Tc == 0 ? "DC" : "AC", Th,
-           comp_type);
+    PRINTF("table index 0x%02x (Tc: %d /%s/, Th: %d /%s/):\n", Th | (Tc << 4), Tc, Tc == 0 ? "DC" : "AC", Th, comp_type);
     int hi = 0;
     for ( unsigned i = 1; i < sizeof table->bits / sizeof table->bits[0]; ++i ) {
-        printf("values per %2u bits - count: %3hhu, list:", i, table->bits[i]);
+        PRINTF("values per %2u bits - count: %3hhu, list:", i, table->bits[i]);
         for ( int j = hi; j < hi + table->bits[i]; ++j ) {
-            printf(" %3hhu", table->huffval[j]);
+            PRINTF(" %3hhu", table->huffval[j]);
         }
         hi += table->bits[i];
-        printf("\n");
+        PRINTF("\n");
     }
-    printf("total: %d\n\n", hi);
+    PRINTF("total: %d\n\n", hi);
 }
 
 /**

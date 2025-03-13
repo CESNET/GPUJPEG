@@ -118,7 +118,7 @@ gpujpeg_preprocessor_make_sampling_factor_i(int comp_count, int numerator_h, int
 }
 
 #define print_kernel_configuration(msg)                                                                                \
-    printf(msg, coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical,          \
+    PRINTF(msg, coder->component[0].sampling_factor.horizontal, coder->component[0].sampling_factor.vertical,          \
            coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical,               \
            coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical,               \
            coder->component[3].sampling_factor.horizontal, coder->component[3].sampling_factor.vertical)

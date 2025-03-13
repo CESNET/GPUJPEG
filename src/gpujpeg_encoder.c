@@ -304,9 +304,7 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
     if ( !interleaved ) {
         restart_interval *= comp_count;
     }
-    if ( verbose >= GPUJPEG_LL_VERBOSE ) {
-        printf("\nAuto-adjusting restart interval to %d for better performance.\n", restart_interval);
-    }
+    VERBOSE_MSG(verbose, "Auto-adjusting restart interval to %d for better performance.\n", restart_interval);
     return restart_interval;
 }
 
@@ -630,7 +628,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
             coder->param.comp_count == 1 ? "" : (coder->param.interleaved ? " interleaved" : " non-interleaved");
         char buf[21];
         char* comp_size_delim = format_number_with_delim(*image_compressed_size, buf, sizeof buf);
-        printf("Compressed Size:%15s bytes %dx%d %s %s%s\n", comp_size_delim, coder->param_image.width,
+        PRINTF("Compressed Size:%15s bytes %dx%d %s %s%s\n", comp_size_delim, coder->param_image.width,
                coder->param_image.height, gpujpeg_color_space_get_name(coder->param.color_space_internal),
                gpujpeg_subsampling_get_name(coder->param.comp_count, coder->param.sampling_factor), interleaved);
     }

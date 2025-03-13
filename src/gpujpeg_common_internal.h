@@ -114,6 +114,8 @@ enum {
         }                                                                                                              \
     } while ( 0 )
 
+#define PRINTF(...) (void)fprintf(stderr, __VA_ARGS__)
+
 #define ERROR_MSG(...) (void)fprintf(stderr, "[GPUJPEG] [Error] " __VA_ARGS__)
 #define WARN_MSG(...) (void)fprintf(stderr, "[GPUJPEG] [Warning] " __VA_ARGS__)
 #define VERBOSE_MSG(log_level, ...)                                                                                    \

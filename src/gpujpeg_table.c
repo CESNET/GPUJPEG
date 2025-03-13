@@ -169,20 +169,20 @@ gpujpeg_table_quantization_decoder_compute(struct gpujpeg_table_quantization* ta
 void
 gpujpeg_table_quantization_print(struct gpujpeg_table_quantization* table)
 {
-    puts("Raw Table (with quality):");
+    PRINTF("Raw Table (with quality):\n");
     for (int i = 0; i < 8; ++i) {
         for (int j = 0; j < 8; ++j) {
-            printf("%4u", table->table_raw[i * 8 + j]);
+            PRINTF("%4u", table->table_raw[i * 8 + j]);
         }
-        puts("");
+        PRINTF("\n");
     }
     
-    puts("Forward/Inverse Table:");
+    PRINTF("Forward/Inverse Table:\n");
     for (int i = 0; i < 8; ++i) {
         for (int j = 0; j < 8; ++j) {
-            printf("%6u", table->table[i * 8 + j]);
+            PRINTF("%6u", table->table[i * 8 + j]);
         }
-        puts("");
+        PRINTF("\n");
     }
 }
 

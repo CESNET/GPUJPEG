@@ -171,23 +171,23 @@ gpujpeg_print_devices_info(void)
 {
     struct gpujpeg_devices_info devices_info = gpujpeg_get_devices_info();
     if ( devices_info.device_count == 0 ) {
-        printf("There is no device supporting CUDA.\n");
+        PRINTF("There is no device supporting CUDA.\n");
         return -1;
     } else if ( devices_info.device_count == 1 ) {
-        printf("There is 1 device supporting CUDA:\n");
+        PRINTF("There is 1 device supporting CUDA:\n");
     } else {
-        printf("There are %d devices supporting CUDA:\n", devices_info.device_count);
+        PRINTF("There are %d devices supporting CUDA:\n", devices_info.device_count);
     }
 
     for ( int device_id = 0; device_id < devices_info.device_count; device_id++ ) {
         struct gpujpeg_device_info* device_info = &devices_info.device[device_id];
-        printf("\nDevice #%d: \"%s\"\n", device_info->id, device_info->name);
-        printf("  Compute capability: %d.%d\n", device_info->cc_major, device_info->cc_minor);
-        printf("  Total amount of global memory: %zu KiB\n", device_info->global_memory / 1024);
-        printf("  Total amount of constant memory: %zu KiB\n", device_info->constant_memory / 1024);
-        printf("  Total amount of shared memory per block: %zu KiB\n", device_info->shared_memory / 1024);
-        printf("  Total number of registers available per block: %d\n", device_info->register_count);
-        printf("  Multiprocessors: %d\n", device_info->multiprocessor_count);
+        PRINTF("\nDevice #%d: \"%s\"\n", device_info->id, device_info->name);
+        PRINTF("  Compute capability: %d.%d\n", device_info->cc_major, device_info->cc_minor);
+        PRINTF("  Total amount of global memory: %zu KiB\n", device_info->global_memory / 1024);
+        PRINTF("  Total amount of constant memory: %zu KiB\n", device_info->constant_memory / 1024);
+        PRINTF("  Total amount of shared memory per block: %zu KiB\n", device_info->shared_memory / 1024);
+        PRINTF("  Total number of registers available per block: %d\n", device_info->register_count);
+        PRINTF("  Multiprocessors: %d\n", device_info->multiprocessor_count);
     }
     return 0;
 }
@@ -234,13 +234,13 @@ gpujpeg_init_device(int device_id, int flags)
     if ( flags & GPUJPEG_INIT_DEV_VERBOSE ) {
         int cuda_driver_version = 0;
         cudaDriverGetVersion(&cuda_driver_version);
-        printf("CUDA driver version:   %d.%d\n", cuda_driver_version / 1000, (cuda_driver_version % 100) / 10);
+        PRINTF("CUDA driver version:   %d.%d\n", cuda_driver_version / 1000, (cuda_driver_version % 100) / 10);
 
         int cuda_runtime_version = 0;
         cudaRuntimeGetVersion(&cuda_runtime_version);
-        printf("CUDA runtime version:  %d.%d\n", cuda_runtime_version / 1000, (cuda_runtime_version % 100) / 10);
+        PRINTF("CUDA runtime version:  %d.%d\n", cuda_runtime_version / 1000, (cuda_runtime_version % 100) / 10);
 
-        printf("Using Device #%d:       %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
+        PRINTF("Using Device #%d:       %s (c.c. %d.%d)\n", device_id, devProp.name, devProp.major, devProp.minor);
     }
 
     cudaSetDevice(device_id);
@@ -407,17 +407,17 @@ gpujpeg_image_get_file_format(const char* filename)
         return GPUJPEG_IMAGE_FILE_UNKNOWN;
     ext++;
     if ( strcmp(ext, "help") == 0 ) {
-        printf("Recognized extensions:\n");
+        PRINTF("Recognized extensions:\n");
     }
     for ( unsigned i = 0; i < sizeof extensions / sizeof extensions[0]; i++ ) {
         if ( strcmp(ext, "help") == 0 ) {
-            printf("\t- %s\n", extensions[i].ext);
+            PRINTF("\t- %s\n", extensions[i].ext);
         }
         if ( strcasecmp(ext, extensions[i].ext) == 0 ) {
             return extensions[i].format;
         }
     }
-    printf("\nUse \"help.tst\" (eg. `gpujpegtool help.tst null.jpg`) for test image usage).\n");
+    PRINTF("\nUse \"help.tst\" (eg. `gpujpegtool help.tst null.jpg`) for test image usage).\n");
     return GPUJPEG_IMAGE_FILE_UNKNOWN;
 }
 
@@ -460,12 +460,12 @@ gpujpeg_component_print8(struct gpujpeg_component* component, uint8_t* d_data)
     cudaMallocHost((void**)&data, data_size * sizeof(uint8_t));
     cudaMemcpy(data, d_data, data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
 
-    printf("Print Data\n");
+    PRINTF("Print Data\n");
     for ( int y = 0; y < component->data_height; y++ ) {
         for ( int x = 0; x < component->data_width; x++ ) {
-            printf("%3u ", data[y * component->data_width + x]);
+            PRINTF("%3u ", data[y * component->data_width + x]);
         }
-        printf("\n");
+        PRINTF("\n");
     }
     cudaFreeHost(data);
 }
@@ -479,12 +479,12 @@ gpujpeg_component_print16(struct gpujpeg_component* component, int16_t* d_data)
     cudaMallocHost((void**)&data, data_size * sizeof(int16_t));
     cudaMemcpy(data, d_data, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
 
-    printf("Print Data\n");
+    PRINTF("Print Data\n");
     for ( int y = 0; y < component->data_height; y++ ) {
         for ( int x = 0; x < component->data_width; x++ ) {
-            printf("%3d ", data[y * component->data_width + x]);
+            PRINTF("%3d ", data[y * component->data_width + x]);
         }
-        printf("\n");
+        PRINTF("\n");
     }
     cudaFreeHost(data);
 }
@@ -836,17 +836,17 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
         total_size += coder->data_compressed_size;  // for Huffman coding output
         total_size += coder->data_compressed_size;  // for Hiffman coding temp buffer
 
-        printf("\nAllocation Info:\n");
-        printf("    Segment Count:            %d\n", coder->segment_count);
-        printf("    Allocated Data Size:      %dx%d\n", coder->data_width, coder->data_height);
-        printf("    Raw Buffer Size:          %0.1f MiB\n", (double)coder->data_raw_size / (1024.0 * 1024.0));
-        printf("    Preprocessor Buffer Size: %0.1f MiB\n", (double)coder->data_size / (1024.0 * 1024.0));
-        printf("    DCT Buffer Size:          %0.1f MiB\n", (double)2 * coder->data_size / (1024.0 * 1024.0));
-        printf("    Compressed Buffer Size:   %0.1f MiB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
-        printf("    Huffman Temp buffer Size: %0.1f MiB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
-        printf("    Structures Size:          %0.1f KiB\n", (double)structures_size / (1024.0));
-        printf("    Total GPU Memory Size:    %0.1f MiB\n", (double)total_size / (1024.0 * 1024.0));
-        printf("\n");
+        PRINTF("\nAllocation Info:\n");
+        PRINTF("    Segment Count:            %d\n", coder->segment_count);
+        PRINTF("    Allocated Data Size:      %dx%d\n", coder->data_width, coder->data_height);
+        PRINTF("    Raw Buffer Size:          %0.1f MiB\n", (double)coder->data_raw_size / (1024.0 * 1024.0));
+        PRINTF("    Preprocessor Buffer Size: %0.1f MiB\n", (double)coder->data_size / (1024.0 * 1024.0));
+        PRINTF("    DCT Buffer Size:          %0.1f MiB\n", (double)2 * coder->data_size / (1024.0 * 1024.0));
+        PRINTF("    Compressed Buffer Size:   %0.1f MiB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
+        PRINTF("    Huffman Temp buffer Size: %0.1f MiB\n", (double)coder->data_compressed_size / (1024.0 * 1024.0));
+        PRINTF("    Structures Size:          %0.1f KiB\n", (double)structures_size / (1024.0));
+        PRINTF("    Total GPU Memory Size:    %0.1f MiB\n", (double)total_size / (1024.0 * 1024.0));
+        PRINTF("\n");
     }
 
     // Allocate data buffers for all color components
@@ -1360,9 +1360,9 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
         return;
     }
 
-    printf("Image Samples Range:\n");
+    PRINTF("Image Samples Range:\n");
     for ( int c = 0; c < 3; c++ ) {
-        printf("Component %d: %d - %d\n", c + 1, c_min[c], c_max[c]);
+        PRINTF("Component %d: %d - %d\n", c + 1, c_min[c], c_max[c]);
     }
 
     // Destroy image
@@ -1881,8 +1881,8 @@ GPUJPEG_API gpujpeg_sampling_factor_t
 gpujpeg_subsampling_from_name(const char* subsampling) {
     enum { UNKNOWN = 0 };
     if ( strcmp(subsampling, "help") == 0 ) {
-        printf("Set subsampling in usual J:a:b[:alpha] format, eg. 4:2:2. Colons are optional.\n");
-        printf("Non-standard subsamplings 4:4:2 and 4:2:1 are allowed.\n");
+        PRINTF("Set subsampling in usual J:a:b[:alpha] format, eg. 4:2:2. Colons are optional.\n");
+        PRINTF("Non-standard subsamplings 4:4:2 and 4:2:1 are allowed.\n");
         return UNKNOWN;
     }
     int J = 0;
@@ -1972,7 +1972,7 @@ gpujpeg_pixel_format_by_name(const char *name)
 void
 gpujpeg_print_pixel_formats(void)
 {
-    printf("                          u8 (grayscale)          420-u8-p0p1p2 (planar 4:2:0)\n"
+    PRINTF("                          u8 (grayscale)          420-u8-p0p1p2 (planar 4:2:0)\n"
            "                          422-u8-p1020 (eg. UYVY) 422-u8-p0p1p2 (planar 4:2:2)\n"
            "                          444-u8-p012 (eg. RGB)   444-u8-p0p1p2 (planar 4:4:4)\n"
            "                          4444-u8-p0123 (RGBA)\n");
@@ -2000,7 +2000,7 @@ gpujpeg_color_space_by_name(const char* name)
         return GPUJPEG_YCBCR_BT709;
     }
     if ( strcmp(name, "help") == 0 ) {
-        printf("Available color spaces:\n"
+        PRINTF("Available color spaces:\n"
                "- rgb\n"
                "- yuv (deprecated)\n"
                "- ycbcr       - same as ycbcr-bt709\n"
@@ -2119,41 +2119,41 @@ coder_process_stats(struct gpujpeg_coder* coder)
 
     if ( coder->encoder ) {
         if ( coder->param.verbose >= GPUJPEG_LL_VERBOSE ) {
-            printf(" -(Re)initialization:%10.4f ms\n", duration_init_ms);
-            printf(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
+            PRINTF(" -(Re)initialization:%10.4f ms\n", duration_init_ms);
+            PRINTF(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
             if ( stats.duration_memory_map != 0.0 && stats.duration_memory_unmap != 0.0 ) {
-                printf(" -OpenGL Memory Map: %10.4f ms\n", stats.duration_memory_map);
-                printf(" -OpenGL Memory Unmap:%9.4f ms\n", stats.duration_memory_unmap);
+                PRINTF(" -OpenGL Memory Map: %10.4f ms\n", stats.duration_memory_map);
+                PRINTF(" -OpenGL Memory Unmap:%9.4f ms\n", stats.duration_memory_unmap);
             }
-            printf(" -Preprocessing:     %10.4f ms\n", stats.duration_preprocessor);
-            printf(" -DCT & Quantization:%10.4f ms\n", stats.duration_dct_quantization);
-            printf(" -Huffman Encoder:   %10.4f ms\n", stats.duration_huffman_coder);
-            printf(" -Copy From Device:  %10.4f ms\n", stats.duration_memory_from);
-            printf(" -Stream Formatter:  %10.4f ms\n", stats.duration_stream);
+            PRINTF(" -Preprocessing:     %10.4f ms\n", stats.duration_preprocessor);
+            PRINTF(" -DCT & Quantization:%10.4f ms\n", stats.duration_dct_quantization);
+            PRINTF(" -Huffman Encoder:   %10.4f ms\n", stats.duration_huffman_coder);
+            PRINTF(" -Copy From Device:  %10.4f ms\n", stats.duration_memory_from);
+            PRINTF(" -Stream Formatter:  %10.4f ms\n", stats.duration_stream);
         }
-        printf("Encode Image GPU:    %10.4f ms (only in-GPU processing)\n", stats.duration_in_gpu);
-        printf("Encode Image Bare:   %10.4f ms (without copy to/from GPU memory)\n",
+        PRINTF("Encode Image GPU:    %10.4f ms (only in-GPU processing)\n", stats.duration_in_gpu);
+        PRINTF("Encode Image Bare:   %10.4f ms (without copy to/from GPU memory)\n",
                duration_ms - stats.duration_memory_to - stats.duration_memory_from);
-        printf("Encode Image:        %10.4f ms\n", duration_ms);
+        PRINTF("Encode Image:        %10.4f ms\n", duration_ms);
     }
     else {
         if ( coder->param.verbose >= GPUJPEG_LL_VERBOSE ) {
-            printf(" -(Re)initialization:%10.4f ms\n", duration_init_ms);
-            printf(" -Stream Reader:     %10.4f ms\n", stats.duration_stream);
-            printf(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
-            printf(" -Huffman Decoder:   %10.4f ms\n", stats.duration_huffman_coder);
-            printf(" -DCT & Quantization:%10.4f ms\n", stats.duration_dct_quantization);
-            printf(" -Postprocessing:    %10.4f ms\n", stats.duration_preprocessor);
-            printf(" -Copy From Device:  %10.4f ms\n", stats.duration_memory_from);
+            PRINTF(" -(Re)initialization:%10.4f ms\n", duration_init_ms);
+            PRINTF(" -Stream Reader:     %10.4f ms\n", stats.duration_stream);
+            PRINTF(" -Copy To Device:    %10.4f ms\n", stats.duration_memory_to);
+            PRINTF(" -Huffman Decoder:   %10.4f ms\n", stats.duration_huffman_coder);
+            PRINTF(" -DCT & Quantization:%10.4f ms\n", stats.duration_dct_quantization);
+            PRINTF(" -Postprocessing:    %10.4f ms\n", stats.duration_preprocessor);
+            PRINTF(" -Copy From Device:  %10.4f ms\n", stats.duration_memory_from);
             if ( stats.duration_memory_map != 0.0 && stats.duration_memory_unmap != 0.0 ) {
-                printf(" -OpenGL Memory Map: %10.4f ms\n", stats.duration_memory_map);
-                printf(" -OpenGL Memory Unmap:%9.4f ms\n", stats.duration_memory_unmap);
+                PRINTF(" -OpenGL Memory Map: %10.4f ms\n", stats.duration_memory_map);
+                PRINTF(" -OpenGL Memory Unmap:%9.4f ms\n", stats.duration_memory_unmap);
             }
         }
-        printf("Decode Image GPU:    %10.4f ms (only in-GPU processing)\n", stats.duration_in_gpu);
-        printf("Decode Image Bare:   %10.4f ms (without copy to/from GPU memory)\n",
+        PRINTF("Decode Image GPU:    %10.4f ms (only in-GPU processing)\n", stats.duration_in_gpu);
+        PRINTF("Decode Image Bare:   %10.4f ms (without copy to/from GPU memory)\n",
                duration_ms - stats.duration_memory_to - stats.duration_memory_from);
-        printf("Decode Image:        %10.4f ms\n", duration_ms);
+        PRINTF("Decode Image:        %10.4f ms\n", duration_ms);
     }
 }
 
@@ -2171,14 +2171,14 @@ coder_process_stats_overall(struct gpujpeg_coder* coder) {
     if ( coder->param.verbose <= GPUJPEG_LL_QUIET ) {
         return;
     }
-    printf("\n");
-    printf("Avg %s Duration: %10.4f ms\n", coder->encoder ? "Encode" : "Decode",
+    PRINTF("\n");
+    PRINTF("Avg %s Duration: %10.4f ms\n", coder->encoder ? "Encode" : "Decode",
            coder->aggregate_duration / (double)coder->frames);
     if ( coder->param.verbose >= GPUJPEG_LL_VERBOSE ) {
-        printf("Avg w/o 1st Iter:    %10.4f ms\n",
+        PRINTF("Avg w/o 1st Iter:    %10.4f ms\n",
                (coder->aggregate_duration - coder->first_frame_duration) / ((double)coder->frames - 1));
     }
-    printf("\n");
+    PRINTF("\n");
 }
 
 char*
