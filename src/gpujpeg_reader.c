@@ -616,19 +616,6 @@ gpujpeg_reader_read_com(uint8_t** image, const uint8_t* image_end, bool ff_cs_it
     return 0;
 }
 
-static void
-quant_table_dump(int Pq, int Tq, const struct gpujpeg_table_quantization* table)
-{
-    printf("quantization table 0x%02x (%d-bit, dst: %d):", Pq << 4 | Tq, Pq == 0 ? 8 : 10, Tq);
-    for ( int i = 0; i < 64; ++i ) {
-        if ( i % 8 == 0 ) {
-            printf("\n");
-        }
-        printf("%hu\t", table->table[i]);
-    }
-    printf("\n\n");
-}
-
 /**
  * Read quantization table definition block from image
  *
@@ -681,7 +668,8 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image, const 
         gpujpeg_table_quantization_decoder_compute(table);
 
         if (decoder->coder.param.verbose >= GPUJPEG_LL_DEBUG2) {
-            quant_table_dump(Pq, Tq, table);
+            printf("Quantization table 0x%02x (%d-bit, dst: %d):\n", index, (Pq + 1) * 8, Tq);
+            gpujpeg_table_quantization_print(table);
         }
     }
     return 0;
