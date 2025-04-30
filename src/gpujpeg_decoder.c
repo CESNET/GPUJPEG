@@ -297,17 +297,10 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
         cudaMemsetAsync(coder->d_data_quantized, 0, coder->data_size * sizeof(int16_t), decoder->stream);
 
         // Copy scan data to device memory
-        cudaMemcpyAsync(coder->d_data_compressed, coder->data_compressed,
-                        MIN(decoder->data_compressed_size * sizeof(uint8_t), coder->data_compressed_pinned_sz),
-                        cudaMemcpyHostToDevice, decoder->stream);
-        gpujpeg_cuda_check_error("Decoder copy compressed data to pinned memory", return -1);
-        if ( decoder->data_compressed_size * sizeof(uint8_t) > coder->data_compressed_pinned_sz ) {
-            cudaMemcpyAsync(coder->d_data_compressed + coder->data_compressed_pinned_sz,
-                            coder->data_compressed + coder->data_compressed_pinned_sz,
-                            decoder->data_compressed_size - coder->data_compressed_pinned_sz, cudaMemcpyHostToDevice,
-                            decoder->stream);
-            gpujpeg_cuda_check_error("Decoder copy compressed data to pageable memory", return -1);
-        }
+        gpujpeg_cuda_memcpy_async_partially_pinned(coder->d_data_compressed, coder->data_compressed, decoder->data_compressed_size,
+                                                   cudaMemcpyHostToDevice, decoder->stream,
+                                                   coder->data_compressed_pinned_sz);
+        gpujpeg_cuda_check_error("Decoder copy compressed data to memory", return -1);
 
         // Copy segments to device memory
         cudaMemcpyAsync(coder->d_segment, coder->segment, decoder->segment_count * sizeof(struct gpujpeg_segment), cudaMemcpyHostToDevice, decoder->stream);

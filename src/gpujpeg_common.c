@@ -2204,4 +2204,31 @@ format_number_with_delim(size_t num, char* buf, size_t buflen)
     return ptr;
 }
 
+/**
+ * @brief tweaked cudaMemcpyAsync alternative  allowing partially-pinned buffers
+ *
+ * Some buffers are only partially pinned (currently gpujpeg_coder::data_compressed) for 2 reason:
+ * - to speed up the initialization - allcating huge pinned buffers (cudaHostMalloc) takes noticable amount of time
+ * - if not used, which is the vast majority of size, it still ocuppies the allocated amount of _physical_ memory
+ *
+ * This solution has an unfortunate drawback that cudaMemcpyAsync cannot be performend across the pinned and non-pinned
+ * boundary. So in the (perhaps rare) case when the size is higher than pinned_sz, 2x memcpy must be used.
+ *
+ * @sa gpujpeg_coder_init_image (cudaHostRegister)
+ * @sa gpujpeg_coder_deinit (cudaHostUnregister)
+ */
+cudaError_t
+gpujpeg_cuda_memcpy_async_partially_pinned(void* dst, const void* src, size_t count, enum cudaMemcpyKind kind,
+                                            cudaStream_t stream, size_t pinned_sz)
+{
+    cudaError_t err = cudaMemcpyAsync(dst, src, MIN(count, pinned_sz), kind, stream);
+    if ( err != cudaSuccess ) {
+        return err;
+    }
+    if ( count > pinned_sz ) {
+        err = cudaMemcpyAsync((uint8_t*)dst + pinned_sz, (uint8_t*)src + pinned_sz, count - pinned_sz, kind, stream);
+    }
+    return err;
+}
+
 /* vi: set expandtab sw=4 : */

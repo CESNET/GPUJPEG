@@ -373,7 +373,7 @@ struct gpujpeg_coder
     size_t data_allocated_size;
 
     /// Huffman coder data in host memory (output/input for encoder/decoder)
-    /// only **partially** pinned (needs special treatment - @sa data_compressed_pinned_sz occurrences)
+    /// only **partially** pinned (needs special treatment - @sa gpujpeg_cuda_memcpy_async_partially_pinned)
     uint8_t* data_compressed;
     size_t data_compressed_pinned_sz; ///< amount of pinned memory from data_compressed
     /// Huffman coder data in device memory (output/input for encoder/decoder)
@@ -516,6 +516,9 @@ gpujpeg_make_sampling_factor(int comp_count, int comp1_h, int comp1_v, int comp2
                                  (sampling_factor)[2].horizontal, (sampling_factor)[2].vertical,                       \
                                  (sampling_factor)[3].horizontal, (sampling_factor)[3].vertical)
 
+cudaError_t
+gpujpeg_cuda_memcpy_async_partially_pinned(void* dst, const void* src, size_t count, enum cudaMemcpyKind kind,
+                                           cudaStream_t stream, size_t pinned_sz);
 
 #ifdef __cplusplus
 } // extern "C"
