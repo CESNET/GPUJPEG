@@ -164,10 +164,10 @@ gpujpeg_encoder_allocate(struct gpujpeg_encoder* encoder, const struct gpujpeg_p
  * @param param  Parameters for coder
  * @param param_image  Parameters for image data
  * @param image  Source image data
- * @param image_compressed  Pointer to variable where compressed image data buffer will be placed
+ * @param image_compressed  Pointer to variable where compressed image data buffer will be placed.
+ *                          Buffer is owned by encoder and must not be freed by caller. Buffer
+ *                          is valid until next gpujpeg_encoder_encode() call.
  * @param image_compressed_size  Pointer to variable where compressed image size will be placed.
- *                               Buffer is owned by encoder and must not be freed by caller. Buffer
- *                               is valid until next gpujpeg_encoder_encode() call.
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
