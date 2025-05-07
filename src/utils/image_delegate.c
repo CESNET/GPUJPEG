@@ -440,9 +440,18 @@ image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_fo
         return y4m_load_delegate;
     case GPUJPEG_IMAGE_FILE_TST:
         return tst_image_load_delegate;
-    default:
+    case GPUJPEG_IMAGE_FILE_UNKNOWN:
+    case GPUJPEG_IMAGE_FILE_JPEG:
+    case GPUJPEG_IMAGE_FILE_RAW:
+    case GPUJPEG_IMAGE_FILE_GRAY:
+    case GPUJPEG_IMAGE_FILE_YUV:
+    case GPUJPEG_IMAGE_FILE_YUVA:
+    case GPUJPEG_IMAGE_FILE_I420:
+    case GPUJPEG_IMAGE_FILE_RGB:
+    case GPUJPEG_IMAGE_FILE_RGBA:
         return NULL;
     }
+    return NULL;
 }
 
 image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_format format)
@@ -457,9 +466,18 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
         return y4m_probe_delegate;
     case GPUJPEG_IMAGE_FILE_TST:
         return tst_image_probe_delegate;
-    default:
+    case GPUJPEG_IMAGE_FILE_UNKNOWN:
+    case GPUJPEG_IMAGE_FILE_JPEG:
+    case GPUJPEG_IMAGE_FILE_RAW:
+    case GPUJPEG_IMAGE_FILE_GRAY:
+    case GPUJPEG_IMAGE_FILE_YUV:
+    case GPUJPEG_IMAGE_FILE_YUVA:
+    case GPUJPEG_IMAGE_FILE_I420:
+    case GPUJPEG_IMAGE_FILE_RGB:
+    case GPUJPEG_IMAGE_FILE_RGBA:
         return NULL;
     }
+    return NULL;
 }
 
 image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_format format)
@@ -473,9 +491,19 @@ image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_fo
         return pnm_save_delegate;
     case GPUJPEG_IMAGE_FILE_Y4M:
         return y4m_save_delegate;
-    default:
+    case GPUJPEG_IMAGE_FILE_UNKNOWN:
+    case GPUJPEG_IMAGE_FILE_JPEG:
+    case GPUJPEG_IMAGE_FILE_RAW:
+    case GPUJPEG_IMAGE_FILE_GRAY:
+    case GPUJPEG_IMAGE_FILE_YUV:
+    case GPUJPEG_IMAGE_FILE_YUVA:
+    case GPUJPEG_IMAGE_FILE_I420:
+    case GPUJPEG_IMAGE_FILE_RGB:
+    case GPUJPEG_IMAGE_FILE_RGBA:
+    case GPUJPEG_IMAGE_FILE_TST:
         return NULL;
     }
+    return NULL;
 }
 
 /* vi: set expandtab sw=4 : */
