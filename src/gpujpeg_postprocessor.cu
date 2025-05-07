@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024, CESNET
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -404,7 +404,7 @@ static int gpujpeg_preprocessor_decode_no_transform(struct gpujpeg_coder * coder
 
 /* Documented at declaration */
 int
-gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder)
+gpujpeg_postprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
     coder->preprocessor = NULL;
 
@@ -480,7 +480,7 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
 
 /* Documented at declaration */
 int
-gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
+gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
     if (!coder->preprocessor) {
         return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);

@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -217,7 +217,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
     }
 
     // Init postprocessor
-    if ( gpujpeg_preprocessor_decoder_init(&decoder->coder) != 0 ) {
+    if ( gpujpeg_postprocessor_decoder_init(&decoder->coder) != 0 ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to init postprocessor!\n");
         return -1;
     }
@@ -366,9 +366,9 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
         coder->d_data_raw = coder->d_data_raw_allocated;
     }
 
-    // Preprocessing
+    // Postprocessing
     GPUJPEG_CUSTOM_TIMER_START(coder->duration_preprocessor, coder->param.perf_stats, decoder->stream, return -1);
-    rc = gpujpeg_preprocessor_decode(&decoder->coder, decoder->stream);
+    rc = gpujpeg_postprocessor_decode(&decoder->coder, decoder->stream);
     if (rc != GPUJPEG_NOERR) {
         return rc;
     }
