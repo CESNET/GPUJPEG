@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2024, CESNET
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -1131,7 +1131,7 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
 {
     int bpp = gpujpeg_pixel_format_get_unit_size(param->pixel_format);
     if (bpp != 0) {
-        return (size_t) param->width * param->height * bpp;
+        return ((size_t) param->width + param->width_padding) * param->height * bpp;
     }
     const int comp_count = gpujpeg_pixel_format_get_comp_count(param->pixel_format);
     switch ( param->pixel_format ) {

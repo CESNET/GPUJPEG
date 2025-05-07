@@ -194,6 +194,7 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
     // Check if (re)inialization is needed
     int change = 0;
     change |= coder->param_image.width != param_image->width;
+    change |= coder->param_image.width_padding != param_image->width_padding;
     change |= coder->param_image.height != param_image->height;
     change |= coder->param.comp_count != param->comp_count;
     change |= coder->param.restart_interval != param->restart_interval;

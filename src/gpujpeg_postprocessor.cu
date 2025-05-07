@@ -457,7 +457,8 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
     size_t data_raw_offset = 0;
     bool needs_stride = false; // true if width is not divisible by MCU width
     for ( int i = 0; i < coder->param.comp_count; ++i ) {
-        needs_stride = needs_stride || coder->component[i].width != coder->component[i].data_width;
+        int component_width = coder->component[i].width + coder->param_image.width_padding;
+        needs_stride = needs_stride || component_width != coder->component[i].data_width;
     }
     if (!needs_stride) {
             for ( int i = 0; i < coder->param.comp_count; ++i ) {
@@ -490,7 +491,7 @@ gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     gpujpeg_preprocessor_decode_kernel kernel = (gpujpeg_preprocessor_decode_kernel)coder->preprocessor;
     assert(kernel != NULL);
 
-    int image_width = coder->param_image.width;
+    int image_width = coder->param_image.width + coder->param_image.width_padding;
     int image_height = coder->param_image.height;
 
     // When saving 4:2:2 data of odd width, the data should have even width, so round it
