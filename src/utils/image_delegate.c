@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024, CESNET z.s.p.o
+ * Copyright (c) 2020-2025, CESNET
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,8 @@
 #include "../../libgpujpeg/gpujpeg_decoder.h" // ddecoder placeholders
 #include "image_delegate.h"
 #include "pam.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 #include "y4m.h"
 
 enum {
@@ -363,6 +365,31 @@ tst_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format fo
     return tst_image_parse_filename(filename, param_image, &unused_pattern, &unused_seed);
 }
 
+static int
+bmp_save_delegate(const char* filename, const struct gpujpeg_image_parameters* param_image, const char* data)
+{
+    if ( stbi_write_bmp(filename, param_image->width, param_image->height,
+                        gpujpeg_pixel_format_get_comp_count(param_image->pixel_format), data) ) {
+        return 0;
+    }
+    ERROR_MSG("[stbi] Cannot write output file %s: %s\n", filename, stbi_failure_reason());
+    return -1;
+}
+
+static int
+bmp_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
+                         struct gpujpeg_image_parameters* param_image, bool file_exists)
+{
+    (void)filename;
+    (void)format;
+    if ( !file_exists ) {
+        param_image->pixel_format = GPUJPEG_PIXFMT_AUTODETECT;
+        param_image->color_space = GPUJPEG_CS_DEFAULT;
+        return true;
+    }
+    abort(); ///< @todo implement
+}
+
 /// generates deterministic random pattern
 static void
 gen_pseudorandom(unsigned char* data, size_t len, int seed)
@@ -440,6 +467,7 @@ image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_fo
         return y4m_load_delegate;
     case GPUJPEG_IMAGE_FILE_TST:
         return tst_image_load_delegate;
+    case GPUJPEG_IMAGE_FILE_BMP: ///< @todo implement
     case GPUJPEG_IMAGE_FILE_UNKNOWN:
     case GPUJPEG_IMAGE_FILE_JPEG:
     case GPUJPEG_IMAGE_FILE_RAW:
@@ -457,6 +485,8 @@ image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_fo
 image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_format format)
 {
     switch (format) {
+    case GPUJPEG_IMAGE_FILE_BMP:
+        return bmp_image_probe_delegate;
     case GPUJPEG_IMAGE_FILE_PGM:
     case GPUJPEG_IMAGE_FILE_PPM:
     case GPUJPEG_IMAGE_FILE_PNM:
@@ -483,6 +513,8 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
 image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_format format)
 {
     switch (format) {
+    case GPUJPEG_IMAGE_FILE_BMP:
+        return bmp_save_delegate;
     case GPUJPEG_IMAGE_FILE_PAM:
         return pam_save_delegate;
     case GPUJPEG_IMAGE_FILE_PGM:

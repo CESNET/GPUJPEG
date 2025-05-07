@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2024, CESNET
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -324,6 +324,7 @@ enum gpujpeg_image_file_format {
     GPUJPEG_IMAGE_FILE_RGB,
     /// RGBA file format, simple data format without header [R G B A] [R G B A] ...
     GPUJPEG_IMAGE_FILE_RGBA,
+    GPUJPEG_IMAGE_FILE_BMP,
     /// PNM file format
     GPUJPEG_IMAGE_FILE_PGM,
     GPUJPEG_IMAGE_FILE_PPM,

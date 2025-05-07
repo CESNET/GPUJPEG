@@ -392,6 +392,7 @@ gpujpeg_image_get_file_format(const char* filename)
         { "jpg",  GPUJPEG_IMAGE_FILE_JPEG},
         { "jpeg", GPUJPEG_IMAGE_FILE_JPEG},
         { "jfif", GPUJPEG_IMAGE_FILE_JPEG},
+        { "bmp",  GPUJPEG_IMAGE_FILE_BMP},
         //{ "pbm",  GPUJPEG_IMAGE_FILE_PNM},
         { "pnm",  GPUJPEG_IMAGE_FILE_PNM},
         { "pgm",  GPUJPEG_IMAGE_FILE_PGM},
@@ -437,6 +438,7 @@ static enum { FF_CS_NONE, FF_CS_RGB, FF_CS_YCBCR } get_file_type_cs(enum gpujpeg
         return FF_CS_YCBCR;
     case GPUJPEG_IMAGE_FILE_RGB:
     case GPUJPEG_IMAGE_FILE_RGBA:
+    case GPUJPEG_IMAGE_FILE_BMP:
     case GPUJPEG_IMAGE_FILE_PGM:
     case GPUJPEG_IMAGE_FILE_PPM:
     case GPUJPEG_IMAGE_FILE_PNM:
@@ -1280,6 +1282,7 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
         case GPUJPEG_IMAGE_FILE_I420:
             param_image->pixel_format = GPUJPEG_420_U8_P0P1P2;
             break;
+        case GPUJPEG_IMAGE_FILE_BMP:
         case GPUJPEG_IMAGE_FILE_PAM:
         case GPUJPEG_IMAGE_FILE_PGM:
         case GPUJPEG_IMAGE_FILE_PNM:
