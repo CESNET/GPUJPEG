@@ -68,8 +68,8 @@ Encoding/Decoding of JPEG codestream is divided into following phases:
      Encoding:                       Decoding
      1) Input data loading           1) Input data loading
      2) Preprocessing                2) Parsing codestream
-     3) Forward DCT                  3) Huffman decoder
-     4) Huffman encoder              4) Inverse DCT
+     3) Forward DCT  + Quantization  3) Huffman decoder
+     4) Huffman encoder              4) Dequantization + Inverse DCT
      5) Formatting codestream        5) Postprocessing
 
 and they are implemented on CPU or/and GPU as follows:
@@ -82,6 +82,7 @@ and they are implemented on CPU or/and GPU as follows:
     - Preprocessing/Postprocessing (color component parsing,
       color transformation RGB <-> YCbCr)
     - Forward/Inverse DCT (discrete cosine transform)
+    - De/Quantization
     - Huffman encoder/decoder (when restart flags are enabled)
 
 Performance
