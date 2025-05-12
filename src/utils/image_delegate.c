@@ -58,7 +58,6 @@ static void*
 gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz);
 #define STBI_NO_JPEG
 #define STBI_NO_PSD
-#define STBI_NO_GIF
 #define STBI_NO_HDR
 #define STBI_NO_PIC
 #define STBI_NO_PNM
@@ -448,6 +447,10 @@ stbi_save_delegate(const char* filename, const struct gpujpeg_image_parameters* 
     if ( strcasecmp(ext, "bmp") == 0 ) {
         write.func = stbi_write_bmp;
     }
+    else if ( strcasecmp(ext, "gif") == 0 ) {
+        ERROR_MSG("[stbi] Only gif decoder is present, the encoder is not supported!\n");
+        return -1;
+    }
     else if ( strcasecmp(ext, "png") == 0 ) {
         write.func_stridden = stbi_write_png;
         stride_bytes = param_image->width * comp_count;
@@ -500,6 +503,10 @@ stbi_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format f
     else if ( comp == 3 ) {
         param_image->color_space = GPUJPEG_RGB;
         param_image->pixel_format = GPUJPEG_444_U8_P012;
+    }
+    else if ( comp == 4 ) {
+        param_image->color_space = GPUJPEG_RGB;
+        param_image->pixel_format = GPUJPEG_4444_U8_P0123;
     }
     else {
         ERROR_MSG("[stbi] Unsupported channel count %d for %s\n", comp, filename);
@@ -577,6 +584,7 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format) {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_BMP:
+    case GPUJPEG_IMAGE_FILE_GIF:
     case GPUJPEG_IMAGE_FILE_PNG:
     case GPUJPEG_IMAGE_FILE_TGA:
         return stbi_load_delegate;
@@ -607,6 +615,7 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
 {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_BMP:
+    case GPUJPEG_IMAGE_FILE_GIF:
     case GPUJPEG_IMAGE_FILE_PNG:
     case GPUJPEG_IMAGE_FILE_TGA:
         return stbi_image_probe_delegate;
@@ -637,6 +646,7 @@ image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_fo
 {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_BMP:
+    case GPUJPEG_IMAGE_FILE_GIF:
     case GPUJPEG_IMAGE_FILE_PNG:
     case GPUJPEG_IMAGE_FILE_TGA:
         return stbi_save_delegate;
