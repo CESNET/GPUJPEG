@@ -54,12 +54,17 @@
 
 static void
 gpujpeg_cuda_free_host(void* ptr);
-static void*
-gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz);
+#define STBI_NO_JPEG
+#define STBI_NO_PNG
+#define STBI_NO_PSD
+#define STBI_NO_GIF
+#define STBI_NO_HDR
+#define STBI_NO_PIC
+#define STBI_NO_PNM
 // we want use custom allocator but only way to do this in stbi is to define the below
 #define STBI_MALLOC gpujpeg_cuda_malloc_host
 #define STBI_FREE gpujpeg_cuda_free_host
-#define STBI_REALLOC_SIZED gpujpeg_cuda_realloc_sized_host
+#define STBI_REALLOC_SIZED unneeded_so_undefined
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -74,6 +79,7 @@ gpujpeg_cuda_free_host(void* ptr)
     GPUJPEG_CHECK_EX(cudaFreeHost(ptr), "Could not free host pointer", );
 }
 
+#if 0
 static void*
 gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz)
 {
@@ -85,6 +91,7 @@ gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz)
     gpujpeg_cuda_free_host(ptr);
     return nptr;
 }
+#endif
 
 static int
 stbi_load_delegate(const char* filename, size_t* image_size, void** image_data, allocator_t alloc)
