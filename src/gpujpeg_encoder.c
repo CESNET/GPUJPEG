@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2024, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -97,6 +97,7 @@ gpujpeg_encoder_input_texture(struct gpujpeg_opengl_texture* texture)
 struct gpujpeg_encoder*
 gpujpeg_encoder_create(cudaStream_t stream)
 {
+    gpujpeg_init_term_colors();
     struct gpujpeg_encoder* encoder = (struct gpujpeg_encoder*) calloc(1, sizeof(struct gpujpeg_encoder));
     if ( encoder == NULL ) {
         return NULL;

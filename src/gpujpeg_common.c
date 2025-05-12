@@ -41,10 +41,14 @@
 #include <stdbool.h>
 #include <string.h>                         // for strcmp, strerror, strlen, strrchr
 #if defined(_MSC_VER)
+  #include <io.h>                           // for _isatty
   #include <windows.h>
+  #define isatty _isatty
+  #define fileno _fileno
   #define strcasecmp _stricmp
 #else
   #include <strings.h>
+  #include <unistd.h>                       // for isatty
 #endif
 #ifdef GPUJPEG_USE_OPENGL
     #define GL_GLEXT_PROTOTYPES
@@ -2243,6 +2247,25 @@ gpujpeg_cuda_memcpy_async_partially_pinned(void* dst, const void* src, size_t co
         err = cudaMemcpyAsync((uint8_t*)dst + pinned_sz, (uint8_t*)src + pinned_sz, count - pinned_sz, kind, stream);
     }
     return err;
+}
+
+const char* gj_fg_red = "";
+const char* gj_fg_yellow = "";
+const char* gj_term_reset = "";
+void
+gpujpeg_init_term_colors()
+{
+    static bool init;
+    if ( init ) {
+        return;
+    }
+    if ( isatty(fileno(stderr)) ) {
+        // gj_fg_bold = "\033[1m";
+        gj_fg_red = "\033[31m";
+        gj_fg_yellow = "\033[33m";
+        gj_term_reset = "\033[0m";
+    }
+    init = true;
 }
 
 /* vi: set expandtab sw=4 : */

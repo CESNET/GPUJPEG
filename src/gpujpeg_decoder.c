@@ -95,6 +95,7 @@ gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, ui
 struct gpujpeg_decoder*
 gpujpeg_decoder_create(cudaStream_t stream)
 {
+    gpujpeg_init_term_colors();
     struct gpujpeg_decoder* decoder = (struct gpujpeg_decoder*) calloc(1, sizeof(struct gpujpeg_decoder));
     if ( decoder == NULL )
         return NULL;
