@@ -54,8 +54,9 @@
 
 static void
 gpujpeg_cuda_free_host(void* ptr);
+static void*
+gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz);
 #define STBI_NO_JPEG
-#define STBI_NO_PNG
 #define STBI_NO_PSD
 #define STBI_NO_GIF
 #define STBI_NO_HDR
@@ -64,7 +65,7 @@ gpujpeg_cuda_free_host(void* ptr);
 // we want use custom allocator but only way to do this in stbi is to define the below
 #define STBI_MALLOC gpujpeg_cuda_malloc_host
 #define STBI_FREE gpujpeg_cuda_free_host
-#define STBI_REALLOC_SIZED unneeded_so_undefined
+#define STBI_REALLOC_SIZED gpujpeg_cuda_realloc_sized_host
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -79,7 +80,6 @@ gpujpeg_cuda_free_host(void* ptr)
     GPUJPEG_CHECK_EX(cudaFreeHost(ptr), "Could not free host pointer", );
 }
 
-#if 0
 static void*
 gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz)
 {
@@ -91,7 +91,6 @@ gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz)
     gpujpeg_cuda_free_host(ptr);
     return nptr;
 }
-#endif
 
 static int
 stbi_load_delegate(const char* filename, size_t* image_size, void** image_data, allocator_t alloc)
@@ -435,24 +434,35 @@ tst_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format fo
 static int
 stbi_save_delegate(const char* filename, const struct gpujpeg_image_parameters* param_image, const char* data)
 {
-    int (*write_func)(char const* filename, int x, int y, int comp, const void* data) = NULL;
+    union {
+        int (*func)(char const* filename, int x, int y, int comp, const void* data);
+        int (*func_stridden)(char const* filename, int x, int y, int comp, const void* data, int stride_bytes);
+    } write = {NULL};
+    const int comp_count = gpujpeg_pixel_format_get_comp_count(param_image->pixel_format);
+    int stride_bytes = 0;
     const char* ext = strrchr(filename, '.');
     if ( ext == NULL ) {
         ERROR_MSG("[stbi] Output file %s doesn't contain extension!\n", filename);
     }
     ext += 1;
     if ( strcasecmp(ext, "bmp") == 0 ) {
-        write_func = stbi_write_bmp;
+        write.func = stbi_write_bmp;
+    }
+    else if ( strcasecmp(ext, "png") == 0 ) {
+        write.func_stridden = stbi_write_png;
+        stride_bytes = param_image->width * comp_count;
     }
     else if ( strcasecmp(ext, "tga") == 0 ) {
-        write_func = stbi_write_tga;
+        write.func = stbi_write_tga;
     }
     else {
         ERROR_MSG("[stbi] Unhandled file %s extension!\n", filename);
         return -1;
     }
-    if ( write_func(filename, param_image->width, param_image->height,
-                    gpujpeg_pixel_format_get_comp_count(param_image->pixel_format), data) ) {
+    const int rc = stride_bytes == 0 ? write.func(filename, param_image->width, param_image->height, comp_count, data)
+                                     : write.func_stridden(filename, param_image->width, param_image->height,
+                                                           comp_count, data, stride_bytes);
+    if ( rc ) {
         return 0;
     }
     ERROR_MSG("[stbi] Cannot write output file %s: %s\n", filename, stbi_failure_reason());
@@ -567,6 +577,7 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format) {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_BMP:
+    case GPUJPEG_IMAGE_FILE_PNG:
     case GPUJPEG_IMAGE_FILE_TGA:
         return stbi_load_delegate;
     case GPUJPEG_IMAGE_FILE_PGM:
@@ -596,6 +607,7 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
 {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_BMP:
+    case GPUJPEG_IMAGE_FILE_PNG:
     case GPUJPEG_IMAGE_FILE_TGA:
         return stbi_image_probe_delegate;
     case GPUJPEG_IMAGE_FILE_PGM:
@@ -625,6 +637,7 @@ image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_fo
 {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_BMP:
+    case GPUJPEG_IMAGE_FILE_PNG:
     case GPUJPEG_IMAGE_FILE_TGA:
         return stbi_save_delegate;
     case GPUJPEG_IMAGE_FILE_PAM:
