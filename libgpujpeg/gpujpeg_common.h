@@ -325,6 +325,7 @@ enum gpujpeg_image_file_format {
     /// RGBA file format, simple data format without header [R G B A] [R G B A] ...
     GPUJPEG_IMAGE_FILE_RGBA,
     GPUJPEG_IMAGE_FILE_BMP,
+    GPUJPEG_IMAGE_FILE_TGA,
     /// PNM file format
     GPUJPEG_IMAGE_FILE_PGM,
     GPUJPEG_IMAGE_FILE_PPM,

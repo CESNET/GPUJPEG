@@ -34,8 +34,10 @@
 #ifdef _WIN32
 #include <windows.h>
 #define PATH_MAX MAX_PATH
+#define strcasecmp _stricmp
 #else
 #include <limits.h>
+#include <strings.h>           // for strcasecmp
 #endif
 
 #ifdef __linux__
@@ -85,7 +87,7 @@ gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz)
 }
 
 static int
-bmp_load_delegate(const char* filename, size_t* image_size, void** image_data, allocator_t alloc)
+stbi_load_delegate(const char* filename, size_t* image_size, void** image_data, allocator_t alloc)
 {
     int x = 0;
     int y = 0;
@@ -424,10 +426,26 @@ tst_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format fo
 }
 
 static int
-bmp_save_delegate(const char* filename, const struct gpujpeg_image_parameters* param_image, const char* data)
+stbi_save_delegate(const char* filename, const struct gpujpeg_image_parameters* param_image, const char* data)
 {
-    if ( stbi_write_bmp(filename, param_image->width, param_image->height,
-                        gpujpeg_pixel_format_get_comp_count(param_image->pixel_format), data) ) {
+    int (*write_func)(char const* filename, int x, int y, int comp, const void* data) = NULL;
+    const char* ext = strrchr(filename, '.');
+    if ( ext == NULL ) {
+        ERROR_MSG("[stbi] Output file %s doesn't contain extension!\n", filename);
+    }
+    ext += 1;
+    if ( strcasecmp(ext, "bmp") == 0 ) {
+        write_func = stbi_write_bmp;
+    }
+    else if ( strcasecmp(ext, "tga") == 0 ) {
+        write_func = stbi_write_tga;
+    }
+    else {
+        ERROR_MSG("[stbi] Unhandled file %s extension!\n", filename);
+        return -1;
+    }
+    if ( write_func(filename, param_image->width, param_image->height,
+                    gpujpeg_pixel_format_get_comp_count(param_image->pixel_format), data) ) {
         return 0;
     }
     ERROR_MSG("[stbi] Cannot write output file %s: %s\n", filename, stbi_failure_reason());
@@ -435,7 +453,7 @@ bmp_save_delegate(const char* filename, const struct gpujpeg_image_parameters* p
 }
 
 static int
-bmp_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
+stbi_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
                          struct gpujpeg_image_parameters* param_image, bool file_exists)
 {
     (void)filename;
@@ -450,6 +468,12 @@ bmp_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format fo
         ERROR_MSG("[stbi] Cannot obtain metadata from file %s: %s\n", filename, stbi_failure_reason());
         return -1;
     }
+
+    const char* fname_dot = strrchr(filename, '.');
+    if ( fname_dot != NULL && strcasecmp(fname_dot + 1, "tga") == 0 && stbi_is_16_bit(filename) ) {
+        ERROR_MSG("[stbi] 16-bit TGA %s is not supported!\n", filename);
+    }
+
     if ( comp == 1) {
         // presumably sRGB, so not entirely correct (transfer, BT.709 primaries) but BT601_256LVLS chosen because is the
         // only one full-range
@@ -536,7 +560,8 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format) {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_BMP:
-        return bmp_load_delegate;
+    case GPUJPEG_IMAGE_FILE_TGA:
+        return stbi_load_delegate;
     case GPUJPEG_IMAGE_FILE_PGM:
     case GPUJPEG_IMAGE_FILE_PPM:
     case GPUJPEG_IMAGE_FILE_PNM:
@@ -564,7 +589,8 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
 {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_BMP:
-        return bmp_image_probe_delegate;
+    case GPUJPEG_IMAGE_FILE_TGA:
+        return stbi_image_probe_delegate;
     case GPUJPEG_IMAGE_FILE_PGM:
     case GPUJPEG_IMAGE_FILE_PPM:
     case GPUJPEG_IMAGE_FILE_PNM:
@@ -592,7 +618,8 @@ image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_fo
 {
     switch (format) {
     case GPUJPEG_IMAGE_FILE_BMP:
-        return bmp_save_delegate;
+    case GPUJPEG_IMAGE_FILE_TGA:
+        return stbi_save_delegate;
     case GPUJPEG_IMAGE_FILE_PAM:
         return pam_save_delegate;
     case GPUJPEG_IMAGE_FILE_PGM:
