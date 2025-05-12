@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -41,6 +41,7 @@
 #include "../libgpujpeg/gpujpeg.h"
 #include "../libgpujpeg/gpujpeg_common.h"
 
+#define RAW_EXTS "*.rgb, *.yuv, *.r, *.bmp, *.pnm, *.y4m..."
 #define USE_IF_NOT_NULL_ELSE(cond, alt_val) (cond) ? (cond) : (alt_val)
 
 static void
@@ -563,7 +564,7 @@ main(int argc, char *argv[])
             enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
             enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
             if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(input_format) ) {
-                fprintf(stderr, "[Warning] Encoder input file [%s] should be raw image (*.rgb, *.yuv, *.r, *.pnm)!\n", input);
+                fprintf(stderr, "[Warning] Encoder input file [%s] should be raw image (" RAW_EXTS ")!\n", input);
                 if ( input_format & GPUJPEG_IMAGE_FILE_JPEG ) {
                     return -1;
                 }
@@ -709,7 +710,7 @@ main(int argc, char *argv[])
                 fprintf(stderr, "[Warning] Decoder input file [%s] should be JPEG image (*.jpg)!\n", input);
             }
             if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(output_format) ) {
-                fprintf(stderr, "[Warning] Decoder output file [%s] should be raw image (*.rgb, *.yuv, *.r, *.pnm)!\n", output);
+                fprintf(stderr, "[Warning] Decoder output file [%s] should be raw image (" RAW_EXTS ")!\n", output);
                 if ( output_format & GPUJPEG_IMAGE_FILE_JPEG ) {
                     ret = EXIT_FAILURE; continue;
                 }
