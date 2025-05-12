@@ -1,3 +1,12 @@
+2025-05-12 - 0.27.0
+----------
+
+- bug fixes (including build)
+- pin lesser amount of RAM - improves performance if small amount of
+images given in a batch; also reduces the physical memory used
+- do not allocate pinned memory for quantizied data if Huffman is on GPU
+- support reading/writing BMP and TGA (thanks to notings/stb)
+
 2025-01-17 - 0.26.0
 ----------
 
