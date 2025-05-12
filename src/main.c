@@ -784,10 +784,11 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Failed to save image [%s]!\n", output);
                 ret = EXIT_FAILURE;
             }
-
-            duration = gpujpeg_get_time() - duration;
-            printf("Save Image:          %10.2f ms\n", duration * 1000.0);
-            printf("Image Name:          %10s\n", output);
+            else {
+                duration = gpujpeg_get_time() - duration;
+                printf("Save Image:          %10.2f ms\n", duration * 1000.0);
+                printf("Image Name:          %10s\n", output);
+            }
 
             if ( use_opengl ) {
                 free(data);
