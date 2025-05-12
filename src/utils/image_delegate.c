@@ -50,10 +50,68 @@
 #include "stb_image_write.h"
 #include "y4m.h"
 
+static void
+gpujpeg_cuda_free_host(void* ptr);
+static void*
+gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz);
+// we want use custom allocator but only way to do this in stbi is to define the below
+#define STBI_MALLOC gpujpeg_cuda_malloc_host
+#define STBI_FREE gpujpeg_cuda_free_host
+#define STBI_REALLOC_SIZED gpujpeg_cuda_realloc_sized_host
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 enum {
   DEPTH_8B = 8,
   MAXVAL_8B = 255,
 };
+
+static void
+gpujpeg_cuda_free_host(void* ptr)
+{
+    GPUJPEG_CHECK_EX(cudaFreeHost(ptr), "Could not free host pointer", );
+}
+
+static void*
+gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz)
+{
+    char *nptr = gpujpeg_cuda_malloc_host(newsz);
+    if (nptr == NULL) {
+        return NULL;
+    }
+    memcpy(nptr, ptr, MIN(oldsz, newsz));
+    gpujpeg_cuda_free_host(ptr);
+    return nptr;
+}
+
+static int
+bmp_load_delegate(const char* filename, size_t* image_size, void** image_data, allocator_t alloc)
+{
+    int x = 0;
+    int y = 0;
+    int ch = 0;
+    stbi_uc* out = stbi_load(filename, &x, &y, &ch, 0);
+    if ( out == NULL ) {
+        ERROR_MSG("[stbi] Cannot load input file file %s: %s\n", filename, stbi_failure_reason());
+        return -1;
+    }
+    *image_size = (size_t) x * y * ch;
+    if (alloc == gpujpeg_cuda_malloc_host) {
+        *image_data =  out;
+        return 0;
+    }
+    WARN_MSG("Allocator is not gpujpeg_cuda_malloc_host. Will memcpy, which will be slower, please report!\n");
+    *image_data = alloc(*image_size);
+    if (*image_data != NULL) {
+        memcpy(*image_data, out, *image_size);
+    }
+    else {
+        ERROR_MSG("Cannot allocate output buffer!\n");
+        return -1;
+    }
+    gpujpeg_cuda_free_host(out);
+    return *image_data == NULL ? -1 : 0;
+}
 
 static int pam_load_delegate(const char *filename, size_t *image_size, void **image_data, allocator_t alloc) {
     struct pam_metadata info;
@@ -387,7 +445,26 @@ bmp_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format fo
         param_image->color_space = GPUJPEG_CS_DEFAULT;
         return true;
     }
-    abort(); ///< @todo implement
+    int comp = 0;
+    if ( !stbi_info(filename, &param_image->width, &param_image->height, &comp) ) {
+        ERROR_MSG("[stbi] Cannot obtain metadata from file %s: %s\n", filename, stbi_failure_reason());
+        return -1;
+    }
+    if ( comp == 1) {
+        // presumably sRGB, so not entirely correct (transfer, BT.709 primaries) but BT601_256LVLS chosen because is the
+        // only one full-range
+        param_image->color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+        param_image->pixel_format = GPUJPEG_U8;
+    }
+    else if ( comp == 3 ) {
+        param_image->color_space = GPUJPEG_RGB;
+        param_image->pixel_format = GPUJPEG_444_U8_P012;
+    }
+    else {
+        ERROR_MSG("[stbi] Unsupported channel count %d for %s\n", comp, filename);
+        return -1;
+    }
+    return 0;
 }
 
 /// generates deterministic random pattern
@@ -458,6 +535,8 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
 
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format) {
     switch (format) {
+    case GPUJPEG_IMAGE_FILE_BMP:
+        return bmp_load_delegate;
     case GPUJPEG_IMAGE_FILE_PGM:
     case GPUJPEG_IMAGE_FILE_PPM:
     case GPUJPEG_IMAGE_FILE_PNM:
@@ -467,7 +546,6 @@ image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_fo
         return y4m_load_delegate;
     case GPUJPEG_IMAGE_FILE_TST:
         return tst_image_load_delegate;
-    case GPUJPEG_IMAGE_FILE_BMP: ///< @todo implement
     case GPUJPEG_IMAGE_FILE_UNKNOWN:
     case GPUJPEG_IMAGE_FILE_JPEG:
     case GPUJPEG_IMAGE_FILE_RAW:

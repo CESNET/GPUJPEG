@@ -520,6 +520,9 @@ cudaError_t
 gpujpeg_cuda_memcpy_async_partially_pinned(void* dst, const void* src, size_t count, enum cudaMemcpyKind kind,
                                            cudaStream_t stream, size_t pinned_sz);
 
+void*
+gpujpeg_cuda_malloc_host(size_t size);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus

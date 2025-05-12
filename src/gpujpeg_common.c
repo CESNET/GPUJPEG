@@ -1152,7 +1152,9 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
     }
 }
 
-static void *gpujpeg_cuda_malloc_host(size_t size) {
+void*
+gpujpeg_cuda_malloc_host(size_t size)
+{
     void *ptr;
     GPUJPEG_CHECK_EX(cudaMallocHost(&ptr, size), "Could not alloc host pointer", return NULL);
     return ptr;
