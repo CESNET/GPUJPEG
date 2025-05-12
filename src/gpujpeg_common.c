@@ -425,7 +425,9 @@ gpujpeg_image_get_file_format(const char* filename)
             return extensions[i].format;
         }
     }
-    PRINTF("\nUse \"help.tst\" (eg. `gpujpegtool help.tst null.jpg`) for test image usage).\n");
+    if ( strcmp(ext, "help") == 0 ) {
+        PRINTF("\nUse \"help.tst\" (eg. `gpujpegtool help.tst null.jpg`) for test image usage).\n");
+    }
     return GPUJPEG_IMAGE_FILE_UNKNOWN;
 }
 
