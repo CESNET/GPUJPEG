@@ -325,9 +325,9 @@ tst_usage()
            "\t- c_<CS> - color space\n"
            "\t- p_<PF> - pixel format\n"
            "\tpatterns:\n"
-           "\t- blank  - use blank pattern\n"
-           "\t- gradient - use gradient pattern (default)\n"
-           "\t- noise  - use white noise\n"
+           "\t- blank[_<val>]   - use blank pattern (or fill with given <val>)\n"
+           "\t- gradient        - use gradient pattern (default)\n"
+           "\t- noise           - use white noise\n"
            "\t- random[_<seed>] - same as noise, but use deterministic pattern (seed is int)\n"
             );
     PRINTF("\nExamples:\n"
@@ -350,6 +350,8 @@ enum tst_pattern {
 struct tst_image_parameters
 {
     enum tst_pattern pattern;
+
+    long blank_val;
     int random_seed;
 };
 
@@ -409,8 +411,11 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
                 tst_params->random_seed = atoi(strchr(item, '_') + 1);
             }
         }
-        else if ( strcmp(item, "blank") == 0) {
+        else if ( strstr(item, "blank") == item ) {
             tst_params->pattern = TST_BLANK;
+            if ( strchr(item, '_') != NULL ) {
+                tst_params->blank_val = strtol(strchr(item, '_') + 1, NULL, 0);
+            }
         }
         else if ( strcmp(item, "gradient") == 0) {
             tst_params->pattern = TST_GRADIENT;
@@ -578,7 +583,8 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
             break;
         }
         case TST_BLANK: {
-            memset(*image_data, 0, *image_size);
+            assert(tst_params.blank_val >= 0 && tst_params.blank_val <= 255);
+            memset(*image_data, (int)tst_params.blank_val, *image_size);
             break;
         }
     }
