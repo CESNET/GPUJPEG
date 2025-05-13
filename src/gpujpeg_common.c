@@ -413,7 +413,9 @@ gpujpeg_image_get_file_format(const char* filename)
     if ( strcmp(filename, "help") == 0 ) {
         PRINTF("Recognized extensions:\n");
         for ( unsigned i = 0; i < sizeof extensions / sizeof extensions[0]; i++ ) {
-            PRINTF("\t- %s\n", extensions[i].ext);
+            if (extensions[i].format != GPUJPEG_IMAGE_FILE_RAW ) {
+                PRINTF("\t- %s\n", extensions[i].ext);
+            }
         }
         PRINTF("\nUse \"help.tst\" (eg. `gpujpegtool help.tst null.jpg`) for test image usage).\n");
         return GPUJPEG_IMAGE_FILE_UNKNOWN;
