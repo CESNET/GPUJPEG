@@ -420,6 +420,16 @@ gpujpeg_image_get_file_format(const char* filename)
         PRINTF("\nUse \"help.tst\" (eg. `gpujpegtool help.tst null.jpg`) for test image usage).\n");
         return GPUJPEG_IMAGE_FILE_UNKNOWN;
     }
+    if ( strcmp(filename, "rawhelp") == 0 ) {
+        PRINTF("Recognized raw extensions:");
+        for ( unsigned i = 0; i < sizeof extensions / sizeof extensions[0]; i++ ) {
+            if ( extensions[i].format > GPUJPEG_IMAGE_FILE_RAW ) {
+                PRINTF(" %s", extensions[i].ext);
+            }
+        }
+        PRINTF("\n");
+        return GPUJPEG_IMAGE_FILE_UNKNOWN;
+    }
 
     const char * ext = strrchr(filename, '.');
     if ( ext == NULL )

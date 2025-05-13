@@ -565,6 +565,7 @@ main(int argc, char *argv[])
             enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
             if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(input_format) ) {
                 fprintf(stderr, "[Warning] Encoder input file [%s] should be raw image (" RAW_EXTS ")!\n", input);
+                gpujpeg_image_get_file_format("rawhelp");
                 if ( input_format & GPUJPEG_IMAGE_FILE_JPEG ) {
                     return -1;
                 }
@@ -711,6 +712,7 @@ main(int argc, char *argv[])
             }
             if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(output_format) ) {
                 fprintf(stderr, "[Warning] Decoder output file [%s] should be raw image (" RAW_EXTS ")!\n", output);
+                gpujpeg_image_get_file_format("rawhelp");
                 if ( output_format & GPUJPEG_IMAGE_FILE_JPEG ) {
                     ret = EXIT_FAILURE; continue;
                 }
