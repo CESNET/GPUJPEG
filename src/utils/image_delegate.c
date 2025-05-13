@@ -347,9 +347,15 @@ enum tst_pattern {
     TST_RANDOM,
 };
 
+struct tst_image_parameters
+{
+    enum tst_pattern pattern;
+    int random_seed;
+};
+
 static int
-tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* param_image, enum tst_pattern* pattern,
-                         int* seed)
+tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* param_image,
+                         struct tst_image_parameters* tst_params)
 {
     char fname[PATH_MAX];
     snprintf(fname, sizeof fname, "%s", filename);
@@ -374,7 +380,7 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
     // defaults
     param_image->color_space = GPUJPEG_RGB;
     param_image->pixel_format = GPUJPEG_444_U8_P012;
-    *pattern  = TST_GRADIENT;
+    tst_params->pattern  = TST_GRADIENT;
 
     char *item = NULL;
     char *saveptr = NULL;
@@ -395,19 +401,19 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
             }
         }
         else if ( strcmp(item, "noise") == 0) {
-            *pattern = TST_NOISE;
+            tst_params->pattern = TST_NOISE;
         }
         else if ( strstr(item, "random") == item ) {
-            *pattern = TST_RANDOM;
+            tst_params->pattern = TST_RANDOM;
             if ( strstr(item, "random_") == item ) {
-                *seed = atoi(strchr(item, '_') + 1);
+                tst_params->random_seed = atoi(strchr(item, '_') + 1);
             }
         }
         else if ( strcmp(item, "blank") == 0) {
-            *pattern = TST_BLANK;
+            tst_params->pattern = TST_BLANK;
         }
         else if ( strcmp(item, "gradient") == 0) {
-            *pattern = TST_GRADIENT;
+            tst_params->pattern = TST_GRADIENT;
         }
         else {
             fprintf(stderr, "unknown test image option: %s!\n", item);
@@ -425,10 +431,9 @@ tst_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format fo
 {
     (void)format;
     (void)file_exists;
-    enum tst_pattern unused_pattern = {0};
-    int unused_seed = 0;
+    struct tst_image_parameters unused = {0};
 
-    return tst_image_parse_filename(filename, param_image, &unused_pattern, &unused_seed);
+    return tst_image_parse_filename(filename, param_image, &unused);
 }
 
 static int
@@ -543,16 +548,15 @@ static int
 tst_image_load_delegate(const char* filename, size_t* image_size, void** image_data, allocator_t alloc)
 {
     struct gpujpeg_image_parameters param_image;
-    enum tst_pattern pattern = {0};
-    int random_seed = 12345;
-    if ( tst_image_parse_filename(filename, &param_image, &pattern, &random_seed) != 0 ) {
+    struct tst_image_parameters tst_params = {.random_seed = 12345};
+    if ( tst_image_parse_filename(filename, &param_image, &tst_params) != 0 ) {
         return -1;
     }
     *image_size = gpujpeg_image_calculate_size(&param_image);
     *image_data = alloc(*image_size);
 
     // fill some data
-    switch (pattern) {
+    switch (tst_params.pattern) {
         case TST_GRADIENT: {
             struct gpujpeg_image_parameters param_oneline = param_image;
             param_oneline.height = 1;
@@ -570,7 +574,7 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
             break;
         }
         case TST_RANDOM: {
-            gen_pseudorandom((unsigned char*)*image_data, *image_size, random_seed);
+            gen_pseudorandom((unsigned char*)*image_data, *image_size, tst_params.random_seed);
             break;
         }
         case TST_BLANK: {
