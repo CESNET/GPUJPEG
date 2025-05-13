@@ -1,0 +1,7 @@
+*.c linguist-language=C
+*.h linguist-language=C
+*.cpp linguist-language=C++
+*.hpp linguist-language=C++
+*.cu linguist-language=CUDA
+*.cuh linguist-language=CUDA
+src/gpujpeg_colorspace.h linguist-language=CUDA
