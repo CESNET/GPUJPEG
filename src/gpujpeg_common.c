@@ -410,23 +410,23 @@ gpujpeg_image_get_file_format(const char* filename)
         { "XXX",  GPUJPEG_IMAGE_FILE_RAW},
     };
 
+    if ( strcmp(filename, "help") == 0 ) {
+        PRINTF("Recognized extensions:\n");
+        for ( unsigned i = 0; i < sizeof extensions / sizeof extensions[0]; i++ ) {
+            PRINTF("\t- %s\n", extensions[i].ext);
+        }
+        PRINTF("\nUse \"help.tst\" (eg. `gpujpegtool help.tst null.jpg`) for test image usage).\n");
+        return GPUJPEG_IMAGE_FILE_UNKNOWN;
+    }
+
     const char * ext = strrchr(filename, '.');
     if ( ext == NULL )
         return GPUJPEG_IMAGE_FILE_UNKNOWN;
     ext++;
-    if ( strcmp(ext, "help") == 0 ) {
-        PRINTF("Recognized extensions:\n");
-    }
     for ( unsigned i = 0; i < sizeof extensions / sizeof extensions[0]; i++ ) {
-        if ( strcmp(ext, "help") == 0 ) {
-            PRINTF("\t- %s\n", extensions[i].ext);
-        }
         if ( strcasecmp(ext, extensions[i].ext) == 0 ) {
             return extensions[i].format;
         }
-    }
-    if ( strcmp(ext, "help") == 0 ) {
-        PRINTF("\nUse \"help.tst\" (eg. `gpujpegtool help.tst null.jpg`) for test image usage).\n");
     }
     return GPUJPEG_IMAGE_FILE_UNKNOWN;
 }

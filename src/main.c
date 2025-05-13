@@ -480,7 +480,7 @@ main(int argc, char *argv[])
     }
 
     if ( argv[0] != NULL && strcmp(argv[0], "exts") == 0 ) {
-        gpujpeg_image_get_file_format(".help");
+        gpujpeg_image_get_file_format("help");
         return 0;
     }
 
