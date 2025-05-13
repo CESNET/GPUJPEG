@@ -1155,6 +1155,10 @@ gpujpeg_coder_deinit(struct gpujpeg_coder* coder)
 size_t
 gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
 {
+    assert(param->width > 0 && param->height > 0);
+    assert(param->width <= 65535 && param->height <= 65535);
+    assert(param->width_padding >= 0);
+    assert(param->width_padding < 100000); // safety check - 100k chosen arbitrarily
     int bpp = gpujpeg_pixel_format_get_unit_size(param->pixel_format);
     if (bpp != 0) {
         return ((size_t) param->width + param->width_padding) * param->height * bpp;
