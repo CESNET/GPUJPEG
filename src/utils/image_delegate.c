@@ -547,7 +547,7 @@ gen_pseudorandom(unsigned char* data, size_t len, int seed)
 static int
 tst_image_load_delegate(const char* filename, size_t* image_size, void** image_data, allocator_t alloc)
 {
-    struct gpujpeg_image_parameters param_image;
+    struct gpujpeg_image_parameters param_image = gpujpeg_default_image_parameters();
     struct tst_image_parameters tst_params = {.random_seed = 12345};
     if ( tst_image_parse_filename(filename, &param_image, &tst_params) != 0 ) {
         return -1;
