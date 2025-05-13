@@ -50,6 +50,7 @@ print_help(void)
     printf("gpujpegtool [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
            "   -h, --help             print help\n"
            "   -v, --verbose          verbose output (multiply to increase verbosity - max 3) \n"
+           "   -b, --debug            debug helpers (reset GPU for leakcheck, dump infile if not regular)\n"
            "   -D, --device           set cuda device id (default 0)\n"
            "   -L, --device-list      list cuda devices\n"
            "\n");
