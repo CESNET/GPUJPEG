@@ -324,10 +324,11 @@ tst_usage()
     PRINTF("\nOptions:\n"
            "\t- c_<CS> - color space\n"
            "\t- p_<PF> - pixel format\n"
+           "\tpatterns:\n"
            "\t- blank  - use blank pattern\n"
            "\t- gradient - use gradient pattern (default)\n"
            "\t- noise  - use white noise\n"
-           "\t- random[=seed] - same as noise, but use deterministic pattern\n"
+           "\t- random[_<seed>] - same as noise, but use deterministic pattern (seed is int)\n"
             );
     PRINTF("\nExamples:\n"
            "\t- 1920x1080.tst              - use FullHD image\n"
