@@ -52,7 +52,9 @@ for n in `seq $(($i-1))`; do
         `dirname $0`/test_common.sh "$@"
         RC=$?
         if [ $RC -ne 0 ]; then
+                tput setaf 1 2>/dev/null || true # red
                 echo "Test $NAME failed!!!"
+                tput sgr0 # reset
                 RET=$RC
         fi
 done
