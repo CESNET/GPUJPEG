@@ -1246,12 +1246,13 @@ set_file_extension(char *filename,
 
 /* Documented at declaration */
 int
-gpujpeg_image_save_to_file(char* filename, const uint8_t* image, size_t image_size,
+gpujpeg_image_save_to_file(const char* filename, const uint8_t* image, size_t image_size,
                            const struct gpujpeg_image_parameters* param_image)
 {
     if (strrchr(filename, '.') != NULL &&
         strcmp(strrchr(filename, '.'), ".XXX") == 0) {
-        set_file_extension(filename, param_image);
+        // caller must ensure the filename to be mutable if ext is .XXX
+        set_file_extension((char *) filename, param_image);
     }
 
     enum gpujpeg_image_file_format format = gpujpeg_image_get_file_format(filename);

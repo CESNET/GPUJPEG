@@ -414,7 +414,8 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* imag
  * Use the extension "XXX" (eg. "image.XXX") to automatically select the
  * extension according to param_image. PNM is used for grayscale or RGB, PAM for
  * RGBA, Y4M ottherwise. "XXX" placeholder in filename is replaced with used
- * extension.
+ * extension. It is user responsibility to ensure that @ref filename is writable
+ * in this case.
  *
  * @param filaname  Image filename
  * @param image  Image data buffer
@@ -423,7 +424,7 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* imag
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_image_save_to_file(char* filename, const uint8_t* image, size_t image_size,
+gpujpeg_image_save_to_file(const char* filename, const uint8_t* image, size_t image_size,
                            const struct gpujpeg_image_parameters* param_image);
 
 /**

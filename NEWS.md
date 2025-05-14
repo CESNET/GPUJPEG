@@ -1,3 +1,9 @@
+2025-05-14 - 0.27.1
+----------
+
+- gpujpeg_image_save_to_file() - take (const char *) for filename instead
+of (char *)
+
 2025-05-12 - 0.27.0
 ----------
 
