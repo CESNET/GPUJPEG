@@ -5,3 +5,4 @@
 *.cu linguist-language=CUDA
 *.cuh linguist-language=CUDA
 src/gpujpeg_colorspace.h linguist-language=CUDA
+package_specs/_service.tpl linguist-language=XML
