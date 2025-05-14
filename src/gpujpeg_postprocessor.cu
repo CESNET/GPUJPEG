@@ -377,14 +377,15 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
     return NULL;
 }
 
-static int gpujpeg_preprocessor_decode_no_transform(struct gpujpeg_coder * coder)
+static bool
+gpujpeg_preprocessor_decode_no_transform(struct gpujpeg_coder* coder)
 {
     if ( coder->param.comp_count >= 3 && coder->param_image.color_space != coder->param.color_space_internal ) {
             /*fprintf(stderr, "Decoding JPEG to a planar pixel format is supported only when no color transformation is required. "
                             "JPEG internal color space is set to \"%s\", image is \"%s\".\n",
                             gpujpeg_color_space_get_name(coder->param.color_space_internal),
                             gpujpeg_color_space_get_name(coder->param_image.color_space));*/
-            return 0;
+            return false;
     }
 
     const struct gpujpeg_component_sampling_factor* sampling_factors =
@@ -396,10 +397,10 @@ static int gpujpeg_preprocessor_decode_no_transform(struct gpujpeg_coder * coder
             /*fprintf(stderr, "Decoding JPEG to a planar pixel format cannot change subsampling (%s to %s).\n",
                     gpujpeg_subsampling_get_name(coder->param.comp_count, coder->component),
                     gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));*/
-            return 0;
+            return false;
         }
     }
-    return 1;
+    return true;
 }
 
 /* Documented at declaration */
