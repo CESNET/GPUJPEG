@@ -2,7 +2,6 @@
 
 declare -A TESTS
 i=1
-RET=0
 
 TESTS[$i,NAME]="image_yuv_444p_subsampled"
 TESTS[$i,EXTENSION]="yuv"
@@ -55,9 +54,7 @@ for n in `seq $(($i-1))`; do
                 tput setaf 1 2>/dev/null || true # red
                 echo "Test $NAME failed!!!"
                 tput sgr0 # reset
-                RET=$RC
+                exit $RC
         fi
 done
-
-exit $RET
 
