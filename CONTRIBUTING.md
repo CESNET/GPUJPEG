@@ -51,9 +51,23 @@ Please follow these rules when reporting the issue:
    1. compilation options
    1. GPUJPEG parameters
    1. console output of the library/application
-   1. image for which the problem occurs
+   1. image for which the problem occurs (test pattern can be used, see below)
 
 Also please look into [FAQ.md](FAQ.md) to see if the the issue isn't already solved.
+
+### Test image pattern
+
+_gpujpegtool_ application (in API implemented through
+`gpujpeg_image_load_from_file()`) has capability to generate testing
+input. If applicable, it is advised to report bugs against that
+pattern (point 6 above). Usage is eg.:
+```
+gpujpegtool -e 1920x1080.tst out.jpg  # generates Full-HD RGB image gradient
+gpujpegtool -e help.tst out.jpg       # to show usage (out.jpg not written)
+```
+
+Different patterns and/or properties like pixel format or color-space avaiable.
+
 
 Development
 -----------
