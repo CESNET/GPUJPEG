@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
+#define _CRT_RAND_S
 #include <stdlib.h>
 #include <string.h>
 
@@ -572,9 +573,15 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
             break;
         }
         case TST_NOISE: {
-            char* data = *image_data;
+            unsigned char* data = *image_data;
             for ( unsigned i = 0; i < *image_size; ++i ) {
-                data[i] = rand();
+                unsigned val = 0;
+#ifdef WIN32
+                rand_s(&val);
+#else
+                val = rand();
+#endif
+                data[i] = val % 256;
             }
             break;
         }
