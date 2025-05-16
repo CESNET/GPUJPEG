@@ -39,6 +39,7 @@
 #else
 #include <limits.h>
 #include <strings.h>           // for strcasecmp
+#include <time.h>              // for time
 #endif
 
 #ifdef __linux__
@@ -574,6 +575,9 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
         }
         case TST_NOISE: {
             unsigned char* data = *image_data;
+#ifndef WIN32
+            srand(time(NULL));
+#endif
             for ( unsigned i = 0; i < *image_size; ++i ) {
                 unsigned val = 0;
 #ifdef WIN32
