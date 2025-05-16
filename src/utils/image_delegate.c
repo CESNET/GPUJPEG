@@ -46,13 +46,23 @@
 #define strtok_s strtok_r
 #endif
 
+
 #include "../gpujpeg_common_internal.h"
 #include "../../libgpujpeg/gpujpeg_decoder.h" // ddecoder placeholders
 #include "image_delegate.h"
 #include "pam.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
 #include "y4m.h"
+
+enum {
+  DEPTH_8B = 8,
+  MAXVAL_8B = 255,
+};
+
+// stbi_image and stbi_image_write include
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 static void
 gpujpeg_cuda_free_host(void* ptr);
@@ -68,12 +78,16 @@ gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz);
 #define STBI_FREE gpujpeg_cuda_free_host
 #define STBI_REALLOC_SIZED gpujpeg_cuda_realloc_sized_host
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_STATIC
 #include "stb_image.h"
 
-enum {
-  DEPTH_8B = 8,
-  MAXVAL_8B = 255,
-};
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_STATIC
+#include "stb_image_write.h"
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 static void
 gpujpeg_cuda_free_host(void* ptr)

@@ -1066,7 +1066,6 @@ static void *stbi__malloc_mad4(int a, int b, int c, int d, int add)
 }
 #endif
 
-#ifndef STBI_NO_JPEG
 // returns 1 if the sum of two signed ints is valid (between -2^31 and 2^31-1 inclusive), 0 on overflow.
 static int stbi__addints_valid(int a, int b)
 {
@@ -1083,7 +1082,6 @@ static int stbi__mul2shorts_valid(int a, int b)
    if (b < 0) return a <= SHRT_MIN / b; // same as a * b >= SHRT_MIN
    return a >= SHRT_MIN / b;
 }
-#endif
 
 // stbi__err - error
 // stbi__errpf - error returning pointer to float
@@ -7675,7 +7673,6 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 
 static int stbi__is_16_main(stbi__context *s)
 {
-   (void) s;
    #ifndef STBI_NO_PNG
    if (stbi__png_is16(s))  return 1;
    #endif
