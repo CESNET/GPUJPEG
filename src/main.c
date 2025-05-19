@@ -45,12 +45,11 @@
 #define USE_IF_NOT_NULL_ELSE(cond, alt_val) (cond) ? (cond) : (alt_val)
 
 static void
-print_help(void)
+print_help(bool full)
 {
     printf("gpujpegtool [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
            "   -h, --help             print help\n"
            "   -v, --verbose          verbose output (multiply to increase verbosity - max 3) \n"
-           "   -b, --debug            debug helpers (reset GPU for leakcheck, dump infile if not regular)\n"
            "   -D, --device           set cuda device id (default 0)\n"
            "   -L, --device-list      list cuda devices\n"
            "\n");
@@ -85,6 +84,12 @@ print_help(void)
            "                                              works also for decoding)\n"
            "   -V  --version          print GPUJPEG version\n"
            );
+    if ( full ) {
+        printf("   -b, --debug            debug helpers (reset GPU for leakcheck, dump infile if not regular)\n");
+    }
+    else {
+        printf("   -H, --fullhelp         print all options\n");
+    }
     printf("recognized raw input/output file extensions: rgb, yuv, pnm... (use`gpujpegtool exts` for the full list)\n");
 }
 
@@ -320,6 +325,7 @@ main(int argc, char *argv[])
         {"alpha",                   no_argument,       0, 'a'},
         {"debug",                   no_argument,       0, 'b'},
         {"help",                    no_argument,       0, 'h'},
+        {"fullhelp",                no_argument,       0, 'H'},
         {"verbose",                 optional_argument, 0, 'v'},
         {"device",                  required_argument, 0, 'D'},
         {"device-list",             no_argument,       0, 'L' },
@@ -345,13 +351,16 @@ main(int argc, char *argv[])
     int ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "CD:I:LNRS::Vabc:edf:ghin:oq:r:s:v", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "CD:HI:LNRS::Vabc:edf:ghin:oq:r:s:v", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'a':
             opts.keep_alpha = true;
             break;
         case 'h':
-            print_help();
+            print_help(false);
+            return 0;
+        case 'H':
+            print_help(true);
             return 0;
         case 'v':
             if (optarg) {
@@ -460,7 +469,7 @@ main(int argc, char *argv[])
             return -1;
         default:
             fprintf(stderr, "Unrecognized option '%c' (code 0%o)\n", ch, ch);
-            print_help();
+            print_help(false);
             return -1;
         }
     }
@@ -488,7 +497,7 @@ main(int argc, char *argv[])
     // Source image and target image must be presented
     if ( argc < 2 || argc % 2 != 0 ) {
         fprintf(stderr, "Please supply source and destination image filename(s)!\n");
-        print_help();
+        print_help(false);
         return -1;
     }
 
