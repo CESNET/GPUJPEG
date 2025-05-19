@@ -177,8 +177,8 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
         return GPUJPEG_ERROR;
     }
     if (info.maxval != MAXVAL_8B) {
-        fprintf(stderr,
-                "[GPUJPEG] [Error] PAM/PNM image %s reports %d levels but only 255 are "
+        ERROR_MSG(
+                "PAM/PNM image %s reports %d levels but only 255 are "
                 "currently supported!\n",
                 filename, info.maxval);
         return GPUJPEG_ERROR;
@@ -198,7 +198,7 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
         param_image->pixel_format = GPUJPEG_U8;
         break;
     default:
-        fprintf(stderr, "Unsupported PAM/PNM component count %d!\n", info.ch_count);
+        ERROR_MSG("Unsupported PAM/PNM component count %d!\n", info.ch_count);
         return GPUJPEG_ERROR;
     }
     return 0;
@@ -207,7 +207,7 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
 int pampnm_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data, bool pnm)
 {
     if (param_image->pixel_format != GPUJPEG_U8 && param_image->color_space != GPUJPEG_RGB) {
-        fprintf(stderr, "Wrong color space %s for PAM!\n", gpujpeg_color_space_get_name(param_image->color_space));
+        ERROR_MSG(stderr, "Wrong color space %s for PAM!\n", gpujpeg_color_space_get_name(param_image->color_space));
         return -1;
     }
     int depth;
@@ -222,7 +222,7 @@ int pampnm_save_delegate(const char *filename, const struct gpujpeg_image_parame
         depth = 4;
         break;
     default:
-        fprintf(stderr,
+        ERROR_MSG(
                 "Wrong pixel format %s for PAM/PNM! Only packed formats "
                 "without subsampling are supported.\n",
                 gpujpeg_pixel_format_get_name(param_image->pixel_format));
@@ -261,8 +261,8 @@ y4m_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
     param_image->width = info.width;
     param_image->height = info.height;
     if (info.bitdepth != DEPTH_8B) {
-        fprintf(stderr,
-                "[GPUJPEG] [Error] Currently only 8-bit Y4M pictures are "
+        ERROR_MSG(
+                "Currently only 8-bit Y4M pictures are "
                 "supported but %s has %d bits!\n",
                 filename, info.bitdepth);
         return GPUJPEG_ERROR;
@@ -281,10 +281,10 @@ y4m_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
             param_image->pixel_format = GPUJPEG_444_U8_P0P1P2;
             break;
         case Y4M_SUBS_YUVA:
-            fprintf(stderr, "Planar YCbCr with alpha is not currently supported!\n");
+            ERROR_MSG("Planar YCbCr with alpha is not currently supported!\n");
             return -1;
         default:
-            fprintf(stderr, "[GPUJPEG] [Error] Unknown subsamplig in Y4M!\n");
+            ERROR_MSG("Unknown subsamplig in Y4M!\n");
             return GPUJPEG_ERROR;
     }
     param_image->color_space = info.limited ? GPUJPEG_YCBCR_BT601 : GPUJPEG_YCBCR_BT601_256LVLS;
@@ -302,7 +302,7 @@ static int y4m_load_delegate(const char *filename, size_t *image_size, void **im
 int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data)
 {
     if (param_image->color_space == GPUJPEG_RGB) {
-        fprintf(stderr, "Y4M cannot use RGB colorspace!\n");
+        ERROR_MSG("Y4M cannot use RGB colorspace!\n");
         return -1;
     }
     int subsampling = 0;
@@ -320,7 +320,8 @@ int y4m_save_delegate(const char *filename, const struct gpujpeg_image_parameter
         subsampling = Y4M_SUBS_444;
         break;
     default:
-        fprintf(stderr, "Wrong pixel format %s for Y4M! Only planar formats are supported.\n", gpujpeg_pixel_format_get_name(param_image->pixel_format));
+        ERROR_MSG("Wrong pixel format %s for Y4M! Only planar formats are supported.\n",
+                  gpujpeg_pixel_format_get_name(param_image->pixel_format));
         return -1;
     }
 
@@ -407,14 +408,14 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
         if ( strstr(item, "c_") == item ) {
             param_image->color_space = gpujpeg_color_space_by_name(value);
             if ( param_image->color_space == GPUJPEG_NONE ) {
-                fprintf(stderr, "Unknown color space: %s\n", value);
+                ERROR_MSG("Unknown color space: %s\n", value);
                 return -1;
             }
         }
         else if ( strstr(item, "p_") == item ) {
             param_image->pixel_format = gpujpeg_pixel_format_by_name(value);
             if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
-                fprintf(stderr, "Unknown pixel format: %s\n", value);
+                ERROR_MSG("Unknown pixel format: %s\n", value);
                 return -1;
             }
         }
@@ -437,7 +438,7 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
             tst_params->pattern = TST_GRADIENT;
         }
         else {
-            fprintf(stderr, "unknown test image option: %s!\n", item);
+            ERROR_MSG("unknown test image option: %s!\n", item);
             return -1;
         }
         endptr = NULL;
