@@ -123,13 +123,13 @@ stbi_load_delegate(const char* filename, size_t* image_size, void** image_data, 
         *image_data =  out;
         return 0;
     }
-    WARN_MSG("Allocator is not gpujpeg_cuda_malloc_host. Will memcpy, which will be slower, please report!\n");
+    WARN_MSG("[stbi] Allocator is not gpujpeg_cuda_malloc_host. Will memcpy, which will be slower, please report!\n");
     *image_data = alloc(*image_size);
     if (*image_data != NULL) {
         memcpy(*image_data, out, *image_size);
     }
     else {
-        ERROR_MSG("Cannot allocate output buffer!\n");
+        ERROR_MSG("[stbi] Cannot allocate output buffer!\n");
         return -1;
     }
     gpujpeg_cuda_free_host(out);
@@ -177,8 +177,7 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
         return GPUJPEG_ERROR;
     }
     if (info.maxval != MAXVAL_8B) {
-        ERROR_MSG(
-                "PAM/PNM image %s reports %d levels but only 255 are "
+        ERROR_MSG("PAM/PNM image %s reports %d levels but only 255 are "
                 "currently supported!\n",
                 filename, info.maxval);
         return GPUJPEG_ERROR;
@@ -207,7 +206,7 @@ pampnm_probe_delegate(const char* filename, enum gpujpeg_image_file_format forma
 int pampnm_save_delegate(const char *filename, const struct gpujpeg_image_parameters *param_image, const char *data, bool pnm)
 {
     if (param_image->pixel_format != GPUJPEG_U8 && param_image->color_space != GPUJPEG_RGB) {
-        ERROR_MSG(stderr, "Wrong color space %s for PAM!\n", gpujpeg_color_space_get_name(param_image->color_space));
+        ERROR_MSG("Wrong color space %s for PAM!\n", gpujpeg_color_space_get_name(param_image->color_space));
         return -1;
     }
     int depth;
@@ -261,8 +260,7 @@ y4m_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
     param_image->width = info.width;
     param_image->height = info.height;
     if (info.bitdepth != DEPTH_8B) {
-        ERROR_MSG(
-                "Currently only 8-bit Y4M pictures are "
+        ERROR_MSG("Currently only 8-bit Y4M pictures are "
                 "supported but %s has %d bits!\n",
                 filename, info.bitdepth);
         return GPUJPEG_ERROR;
@@ -281,7 +279,7 @@ y4m_probe_delegate(const char* filename, enum gpujpeg_image_file_format format,
             param_image->pixel_format = GPUJPEG_444_U8_P0P1P2;
             break;
         case Y4M_SUBS_YUVA:
-            ERROR_MSG("Planar YCbCr with alpha is not currently supported!\n");
+            ERROR_MSG("[y4m] Planar YCbCr with alpha is not currently supported!\n");
             return -1;
         default:
             ERROR_MSG("Unknown subsamplig in Y4M!\n");
@@ -408,14 +406,14 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
         if ( strstr(item, "c_") == item ) {
             param_image->color_space = gpujpeg_color_space_by_name(value);
             if ( param_image->color_space == GPUJPEG_NONE ) {
-                ERROR_MSG("Unknown color space: %s\n", value);
+                ERROR_MSG("[tst] Unknown color space: %s\n", value);
                 return -1;
             }
         }
         else if ( strstr(item, "p_") == item ) {
             param_image->pixel_format = gpujpeg_pixel_format_by_name(value);
             if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
-                ERROR_MSG("Unknown pixel format: %s\n", value);
+                ERROR_MSG("[tst] Unknown pixel format: %s\n", value);
                 return -1;
             }
         }
@@ -438,7 +436,7 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
             tst_params->pattern = TST_GRADIENT;
         }
         else {
-            ERROR_MSG("unknown test image option: %s!\n", item);
+            ERROR_MSG("[tst] unknown test image option: %s!\n", item);
             return -1;
         }
         endptr = NULL;
