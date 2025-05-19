@@ -85,7 +85,8 @@ print_help(bool full)
            "   -V  --version          print GPUJPEG version\n"
            );
     if ( full ) {
-        printf("   -b, --debug            debug helpers (reset GPU for leakcheck, dump infile if not regular)\n");
+        printf("   -b, --debug            debug helpers (reset GPU for leakcheck, dump infile if not regular)\n"
+               "   -O dec_tga_rle=[0|1]   set decoder option\n");
     }
     else {
         printf("   -H, --fullhelp         print all options\n");
@@ -275,6 +276,46 @@ debug_dump_infile(const char* filename, const uint8_t* image_data, size_t image_
     }
 }
 
+enum { CODER_OPTS_COUNT = 10 };
+struct coder_opts
+{
+    char* opt;
+    char* val;
+};
+static bool
+assign_decoder_opt(struct coder_opts* opts, char *optarg)
+{
+    char *opt = optarg;
+    char *delim = strchr(optarg, '=');
+    if ( delim == NULL ) {
+        fprintf(stderr, "No value for %s!\n", optarg);
+        return false;
+    }
+    *delim = '\0';
+    char *val = delim + 1;
+    for ( int i = 0; i < CODER_OPTS_COUNT; ++i ) {
+        if ( opts[i].opt == NULL ) {
+            opts[i].opt = opt;
+            opts[i].val = val;
+            return true;
+        }
+    }
+    fprintf(stderr, "Too much optiosn!\n");
+    return false;
+}
+static bool
+set_decoder_opts(struct gpujpeg_decoder* decoder, const struct coder_opts* opts)
+{
+    while ( (*opts).opt != NULL ) {
+        if ( gpujpeg_decoder_set_option(decoder, (*opts).opt, (*opts).val) != 0 ) {
+            return false;
+        }
+        opts++;
+    }
+
+    return true;
+}
+
 #ifndef GIT_REV
 #define GIT_REV "unknown"
 #endif
@@ -308,6 +349,7 @@ main(int argc, char *argv[])
     int iterate = 1;
     _Bool use_opengl = 0;
     bool debug = false;
+    struct coder_opts decoder_options[CODER_OPTS_COUNT + 1] = {0};
 
     // Flags
     struct options opts = {.subsampling = GPUJPEG_SUBSAMPLING_UNKNOWN,
@@ -351,7 +393,7 @@ main(int argc, char *argv[])
     int ch = '\0';
     int optindex = 0;
     char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "CD:HI:LNRS::Vabc:edf:ghin:oq:r:s:v", longopts, &optindex)) != -1 ) {
+    while ( (ch = getopt_long(argc, argv, "CD:HI:LNO:RS::Vabc:edf:ghin:oq:r:s:v", longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'a':
             opts.keep_alpha = true;
@@ -464,6 +506,11 @@ main(int argc, char *argv[])
             return 0; // already printed, just exit
         case 'b':
             debug = true;
+            break;
+        case 'O':
+            if ( !assign_decoder_opt(decoder_options, optarg) ) {
+                return 1;
+            }
             break;
         case '?':
             return -1;
@@ -684,7 +731,7 @@ main(int argc, char *argv[])
 
         // Create decoder
         struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(NULL);
-        if ( decoder == NULL ) {
+        if ( decoder == NULL || !set_decoder_opts(decoder, decoder_options) ) {
             fprintf(stderr, "Failed to create decoder!\n");
             return -1;
         }

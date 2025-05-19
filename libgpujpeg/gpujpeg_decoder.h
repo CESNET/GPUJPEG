@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2024, CESNET
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -266,6 +266,18 @@ gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
  */
 GPUJPEG_API int
 gpujpeg_decoder_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count);
+
+/// use RLE when writing TGA with gpujpeg_image_save_to_file (default is true), 0 or 1 please note that the option is
+/// global so it affects all decoder instances
+#define GPUJPEG_DECODER_OPT_TGA_RLE "dec_tga_rle"
+/**
+ * sets decoder option
+ * @retval GPUJPEG_NOERR  option was sucessfully set
+ * @retval GPUJPEG_ERROR  invalid argument passed
+ */
+GPUJPEG_API int
+gpujpeg_decoder_set_option(struct gpujpeg_decoder* decoder, const char *opt, const char* val);
+
 
 #ifdef __cplusplus
 }

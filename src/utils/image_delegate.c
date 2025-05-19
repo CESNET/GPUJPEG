@@ -456,6 +456,13 @@ tst_image_probe_delegate(const char* filename, enum gpujpeg_image_file_format fo
     return tst_image_parse_filename(filename, param_image, &unused);
 }
 
+// for stbi_save_delegate
+void
+image_delegate_stbi_tga_set_rle(bool enabled)
+{
+    stbi_write_tga_with_rle = enabled;
+}
+
 static int
 stbi_save_delegate(const char* filename, const struct gpujpeg_image_parameters* param_image, const char* data)
 {

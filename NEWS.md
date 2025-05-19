@@ -1,3 +1,10 @@
+2025-05-19 - 0.27.2
+----------
+
+- gpujpegtool: add -H/--fullhelp for addtional opts
+- added gpujpeg_endoder_set_option with GPUJPEG_ENCODER_OPT_TGA_RLE
+- added gpujpegtool option -O for the options
+
 2025-05-14 - 0.27.1
 ----------
 

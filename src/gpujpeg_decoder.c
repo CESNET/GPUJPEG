@@ -39,6 +39,7 @@
 #include "gpujpeg_postprocessor.h"
 #include "gpujpeg_reader.h"
 #include "gpujpeg_util.h"
+#include "utils/image_delegate.h" //  for image_delegate_stbi_tga_set_rle
 
 /* Documented at declaration */
 void
@@ -474,6 +475,24 @@ gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder, enum gpujpeg_
 {
     decoder->req_color_space = color_space;
     decoder->req_pixel_format = pixel_format;
+}
+
+GPUJPEG_API int
+gpujpeg_decoder_set_option(struct gpujpeg_decoder* decoder, const char *opt, const char* val)
+{
+    if ( decoder == NULL || opt == NULL || val == NULL ) {
+        return GPUJPEG_ERROR;
+    }
+    if ( strcmp(opt, GPUJPEG_DECODER_OPT_TGA_RLE) == 0 ) {
+        if ( val[0] != '0' && val[0] != '1' ) {
+            ERROR_MSG("Unexpeceted value %s for " GPUJPEG_DECODER_OPT_TGA_RLE "\n", val);
+            return GPUJPEG_ERROR;
+        }
+        image_delegate_stbi_tga_set_rle(val[0] == '1');
+        return GPUJPEG_NOERR;
+    }
+    ERROR_MSG("Invalid decoder option: %s!\n", opt);
+    return GPUJPEG_ERROR;
 }
 
 /* Documented at declaration */

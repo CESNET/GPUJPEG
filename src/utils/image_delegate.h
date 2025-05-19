@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, CESNET z.s.p.o
+ * Copyright (c) 2020-2025, CESNET
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -69,6 +69,9 @@ typedef int (*image_save_delegate_t)(const char *filename, const struct gpujpeg_
 image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_format format);
 image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_format format);
 image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_format format);
+
+void
+image_delegate_stbi_tga_set_rle(bool enabled);
 
 #ifdef __cplusplus
 } // extern "C"
