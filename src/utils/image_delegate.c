@@ -645,6 +645,7 @@ image_load_delegate_t gpujpeg_get_image_load_delegate(enum gpujpeg_image_file_fo
     case GPUJPEG_IMAGE_FILE_GRAY:
     case GPUJPEG_IMAGE_FILE_YUV:
     case GPUJPEG_IMAGE_FILE_YUVA:
+    case GPUJPEG_IMAGE_FILE_UYVY:
     case GPUJPEG_IMAGE_FILE_I420:
     case GPUJPEG_IMAGE_FILE_RGB:
     case GPUJPEG_IMAGE_FILE_RGBA:
@@ -676,6 +677,7 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
     case GPUJPEG_IMAGE_FILE_GRAY:
     case GPUJPEG_IMAGE_FILE_YUV:
     case GPUJPEG_IMAGE_FILE_YUVA:
+    case GPUJPEG_IMAGE_FILE_UYVY:
     case GPUJPEG_IMAGE_FILE_I420:
     case GPUJPEG_IMAGE_FILE_RGB:
     case GPUJPEG_IMAGE_FILE_RGBA:
@@ -706,6 +708,7 @@ image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_fo
     case GPUJPEG_IMAGE_FILE_GRAY:
     case GPUJPEG_IMAGE_FILE_YUV:
     case GPUJPEG_IMAGE_FILE_YUVA:
+    case GPUJPEG_IMAGE_FILE_UYVY:
     case GPUJPEG_IMAGE_FILE_I420:
     case GPUJPEG_IMAGE_FILE_RGB:
     case GPUJPEG_IMAGE_FILE_RGBA:

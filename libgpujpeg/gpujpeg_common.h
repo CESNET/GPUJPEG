@@ -340,6 +340,8 @@ enum gpujpeg_image_file_format {
     GPUJPEG_IMAGE_FILE_YUV,
     /// YUV file format with alpha channel [Y U V A] [Y U V A] ...
     GPUJPEG_IMAGE_FILE_YUVA,
+    /// UYVY - packed YUV 4:2:2 with pattern U Y0 V Y1
+    GPUJPEG_IMAGE_FILE_UYVY,
     /// i420 file format
     GPUJPEG_IMAGE_FILE_I420,
     /// testing (empty) image, that is SW generated

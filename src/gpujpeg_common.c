@@ -391,6 +391,7 @@ gpujpeg_image_get_file_format(const char* filename)
         { "rgba", GPUJPEG_IMAGE_FILE_RGBA},
         { "yuv",  GPUJPEG_IMAGE_FILE_YUV},
         { "yuva", GPUJPEG_IMAGE_FILE_YUVA},
+        { "uyvy", GPUJPEG_IMAGE_FILE_UYVY},
         { "i420", GPUJPEG_IMAGE_FILE_I420},
         { "r",    GPUJPEG_IMAGE_FILE_GRAY},
         { "jpg",  GPUJPEG_IMAGE_FILE_JPEG},
@@ -455,6 +456,7 @@ static enum { FF_CS_NONE, FF_CS_RGB, FF_CS_YCBCR } get_file_type_cs(enum gpujpeg
     case GPUJPEG_IMAGE_FILE_Y4M:
     case GPUJPEG_IMAGE_FILE_YUV:
     case GPUJPEG_IMAGE_FILE_YUVA:
+    case GPUJPEG_IMAGE_FILE_UYVY:
     case GPUJPEG_IMAGE_FILE_I420:
         return FF_CS_YCBCR;
     case GPUJPEG_IMAGE_FILE_RGB:
@@ -1309,6 +1311,9 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
         case GPUJPEG_IMAGE_FILE_RGBA:
         case GPUJPEG_IMAGE_FILE_YUVA:
             param_image->pixel_format = GPUJPEG_4444_U8_P0123;
+            break;
+        case GPUJPEG_IMAGE_FILE_UYVY:
+            param_image->pixel_format = GPUJPEG_422_U8_P1020;
             break;
         case GPUJPEG_IMAGE_FILE_I420:
             param_image->pixel_format = GPUJPEG_420_U8_P0P1P2;

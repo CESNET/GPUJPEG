@@ -1,3 +1,8 @@
+2025-05-19 - 0.27.3
+----------
+
+- added support for UYVY files (.uyvy extension)
+
 2025-05-19 - 0.27.2
 ----------
 
