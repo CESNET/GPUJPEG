@@ -1,3 +1,8 @@
+2025-05-23 - 0.27.4
+----------
+
+- added encoder option to provide the encoded JPEG in a pinned buffer
+
 2025-05-19 - 0.27.3
 ----------
 

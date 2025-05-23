@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -213,6 +213,16 @@ gpujpeg_encoder_set_jpeg_header(struct gpujpeg_encoder *encoder, enum gpujpeg_he
 GPUJPEG_API int
 gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* param_image,
                                          gpujpeg_sampling_factor_t subsampling, bool interleaved, int verbose);
+
+/// buffer returned from gpujpeg_encoder_encode() should be in pinned memory
+#define GPUJPEG_ENCODER_OPT_OUT_PINNED  "enc_out_pinned"
+/**
+ * sets encoder option
+ * @retval GPUJPEG_NOERR  option was sucessfully set
+ * @retval GPUJPEG_ERROR  invalid argument passed
+ */
+GPUJPEG_API int
+gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char* opt, const char* val);
 
 /**
  * Destory JPEG encoder

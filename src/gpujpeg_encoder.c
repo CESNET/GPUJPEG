@@ -646,6 +646,24 @@ gpujpeg_encoder_set_jpeg_header(struct gpujpeg_encoder *encoder, enum gpujpeg_he
     encoder->header_type = header_type;
 }
 
+GPUJPEG_API int
+gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, const char* val)
+{
+    if ( encoder == NULL || opt == NULL || val == NULL ) {
+        return GPUJPEG_ERROR;
+    }
+    if ( strcmp(opt, GPUJPEG_ENCODER_OPT_OUT_PINNED) == 0 ) {
+        if ( val[0] != '0' && val[0] != '1' ) {
+            ERROR_MSG("Unexpeceted value %s for " GPUJPEG_ENCODER_OPT_OUT_PINNED "\n", val);
+            return GPUJPEG_ERROR;
+        }
+        encoder->writer->buffer_pinned = val[0] == '1';
+        return GPUJPEG_NOERR;
+    }
+    ERROR_MSG("Invalid encoder option: %s!\n", opt);
+    return GPUJPEG_ERROR;
+}
+
 /* Documented at declaration */
 int
 gpujpeg_encoder_destroy(struct gpujpeg_encoder* encoder)

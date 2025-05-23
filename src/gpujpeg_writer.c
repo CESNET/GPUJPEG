@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -53,6 +53,19 @@ gpujpeg_writer_create(void)
     return writer;
 }
 
+static void free_buffer(struct gpujpeg_writer *writer) {
+    if ( writer->buffer == NULL ) {
+        return;
+    }
+    if ( writer->buffer_pinned ) {
+        cudaFreeHost(writer->buffer);
+    }
+    else {
+        free(writer->buffer);
+    }
+    writer->buffer = NULL;
+}
+
 /* Documented at declaration */
 int
 gpujpeg_writer_init(struct gpujpeg_writer* writer, int comp_count, struct gpujpeg_image_parameters* param_image)
@@ -63,10 +76,13 @@ gpujpeg_writer_init(struct gpujpeg_writer* writer, int comp_count, struct gpujpe
 
     if (buffer_size > writer->buffer_allocated_size) {
         writer->buffer_allocated_size = 0;
-        if (writer->buffer != NULL) {
-            free(writer->buffer);
+        free_buffer(writer);
+        if ( writer->buffer_pinned ) {
+            cudaMallocHost((void**)&writer->buffer, buffer_size * sizeof(uint8_t));
         }
-        writer->buffer = (uint8_t *) malloc(buffer_size * sizeof(uint8_t));
+        else {
+            writer->buffer = (uint8_t*)malloc(buffer_size * sizeof(uint8_t));
+        }
         if (writer->buffer == NULL) {
             return -1;
         }
@@ -84,9 +100,7 @@ int
 gpujpeg_writer_destroy(struct gpujpeg_writer* writer)
 {
     assert(writer != NULL);
-    if (writer->buffer != NULL) {
-        free(writer->buffer);
-    }
+    free_buffer(writer);
     free(writer);
     return 0;
 }

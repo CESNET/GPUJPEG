@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -31,6 +31,7 @@
 #ifndef GPUJPEG_WRITER_H
 #define GPUJPEG_WRITER_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include "../libgpujpeg/gpujpeg_type.h"
 
@@ -51,6 +52,7 @@ struct gpujpeg_writer
     uint8_t* buffer_current;
     // Allocate size of output buffer.
     size_t buffer_allocated_size;
+    bool buffer_pinned; ///< buffer should be allocated in pinned memory
 
     // Segment info buffers (every buffer is placed inside another header)
     uint8_t* segment_info[GPUJPEG_MAX_SEGMENT_INFO_HEADER_COUNT];

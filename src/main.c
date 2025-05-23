@@ -283,16 +283,21 @@ struct coder_opts
     char* val;
 };
 static bool
-assign_decoder_opt(struct coder_opts* opts, char *optarg)
+assign_coder_opt(struct coder_opts* encoder_opts, struct coder_opts* decoder_opts, char* optarg)
 {
-    char *opt = optarg;
-    char *delim = strchr(optarg, '=');
+    char* opt = optarg;
+    char* delim = strchr(optarg, '=');
     if ( delim == NULL ) {
         fprintf(stderr, "No value for %s!\n", optarg);
         return false;
     }
+    if ( strncmp(optarg, "enc_", 4) != 0 && strncmp(optarg, "dec_", 4) != 0 ) {
+        fprintf(stderr, "Option should start with either enc_ or dec_, given %s!\n", optarg);
+        return false;
+    }
     *delim = '\0';
     char *val = delim + 1;
+    struct coder_opts* opts = strncmp(optarg, "enc_", 4) == 0 ? encoder_opts : decoder_opts;
     for ( int i = 0; i < CODER_OPTS_COUNT; ++i ) {
         if ( opts[i].opt == NULL ) {
             opts[i].opt = opt;
@@ -302,6 +307,18 @@ assign_decoder_opt(struct coder_opts* opts, char *optarg)
     }
     fprintf(stderr, "Too much optiosn!\n");
     return false;
+}
+static bool
+set_encoder_opts(struct gpujpeg_encoder* encoder, const struct coder_opts* opts)
+{
+    while ( (*opts).opt != NULL ) {
+        if ( gpujpeg_encoder_set_option(encoder, (*opts).opt, (*opts).val) != 0 ) {
+            return false;
+        }
+        opts++;
+    }
+
+    return true;
 }
 static bool
 set_decoder_opts(struct gpujpeg_decoder* decoder, const struct coder_opts* opts)
@@ -350,6 +367,7 @@ main(int argc, char *argv[])
     _Bool use_opengl = 0;
     bool debug = false;
     struct coder_opts decoder_options[CODER_OPTS_COUNT + 1] = {0};
+    struct coder_opts encoder_options[CODER_OPTS_COUNT + 1] = {0};
 
     // Flags
     struct options opts = {.subsampling = GPUJPEG_SUBSAMPLING_UNKNOWN,
@@ -508,7 +526,7 @@ main(int argc, char *argv[])
             debug = true;
             break;
         case 'O':
-            if ( !assign_decoder_opt(decoder_options, optarg) ) {
+            if ( !assign_coder_opt(encoder_options, decoder_options, optarg) ) {
                 return 1;
             }
             break;
@@ -608,7 +626,7 @@ main(int argc, char *argv[])
 
         // Create encoder
         struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(NULL);
-        if ( encoder == NULL ) {
+        if ( encoder == NULL || !set_encoder_opts(encoder, encoder_options) ) {
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
         }
