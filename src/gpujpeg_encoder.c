@@ -653,7 +653,7 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
         return GPUJPEG_ERROR;
     }
     if ( strcmp(opt, GPUJPEG_ENCODER_OPT_OUT_PINNED) == 0 ) {
-        if ( val[0] != '0' && val[0] != '1' ) {
+        if ( (val[0] != '0' && val[0] != '1') || val[1] != '\0' ) {
             ERROR_MSG("Unexpeceted value %s for " GPUJPEG_ENCODER_OPT_OUT_PINNED "\n", val);
             return GPUJPEG_ERROR;
         }
