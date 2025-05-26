@@ -336,7 +336,9 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
         coder->data_raw_allocated_size = 0;
 
         // (Re)allocate raw data in host memory
-        cudaFreeHost(coder->data_raw);
+        if ( coder->data_raw != NULL ) {
+            cudaFreeHost(coder->data_raw);
+        }
         coder->data_raw = NULL;
         cudaMallocHost((void**)&coder->data_raw, coder->data_raw_size * sizeof(uint8_t));
         // (Re)allocate raw data in device memory

@@ -92,6 +92,9 @@ gpujpeg_cuda_realloc_sized_host(void* ptr, int oldsz, int newsz);
 static void
 gpujpeg_cuda_free_host(void* ptr)
 {
+    if ( ptr == NULL ) {
+        return;
+    }
     GPUJPEG_CHECK_EX(cudaFreeHost(ptr), "Could not free host pointer", );
 }
 
