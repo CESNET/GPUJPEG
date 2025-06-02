@@ -86,7 +86,8 @@ print_help(bool full)
            );
     if ( full ) {
         printf("   -b, --debug            debug helpers (reset GPU for leakcheck, dump infile if not regular)\n"
-               "   -O dec_tga_rle=[0|1]   set decoder option\n");
+               "   -O " GPUJPEG_DEC_OPT_TGA_RLE_BOOL "=[" GPUJPEG_VAL_FALSE "|" GPUJPEG_VAL_TRUE
+               "]   set decoder option (not) to output RLE TGA; other options exist\n");
     }
     else {
         printf("   -H, --fullhelp         print all options\n");
