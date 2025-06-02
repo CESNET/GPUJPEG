@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2024, CESNET
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -75,6 +75,9 @@ extern "C" {
 #define GPUJPEG_ERROR                           (-1)
 #define GPUJPEG_ERR_RESTART_CHANGE              (-2)
 /// @}
+
+#define GPUJPEG_VAL_TRUE  "1"
+#define GPUJPEG_VAL_FALSE "0"
 
 /**
  * Color spaces for JPEG codec

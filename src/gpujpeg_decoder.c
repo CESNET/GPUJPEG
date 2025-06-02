@@ -485,12 +485,12 @@ gpujpeg_decoder_set_option(struct gpujpeg_decoder* decoder, const char *opt, con
     if ( decoder == NULL || opt == NULL || val == NULL ) {
         return GPUJPEG_ERROR;
     }
-    if ( strcmp(opt, GPUJPEG_DECODER_OPT_TGA_RLE) == 0 ) {
-        if ( (val[0] != '0' && val[0] != '1') || val[1] != '\0' ) {
-            ERROR_MSG("Unexpeceted value %s for " GPUJPEG_DECODER_OPT_TGA_RLE "\n", val);
+    if ( strcmp(opt, GPUJPEG_DEC_OPT_TGA_RLE_BOOL) == 0 ) {
+        if ( strcmp(val, GPUJPEG_VAL_TRUE) != 0 && strcmp(val, GPUJPEG_VAL_FALSE) != 0 ) {
+            ERROR_MSG("Unexpeceted value %s for " GPUJPEG_DEC_OPT_TGA_RLE_BOOL "\n", val);
             return GPUJPEG_ERROR;
         }
-        image_delegate_stbi_tga_set_rle(val[0] == '1');
+        image_delegate_stbi_tga_set_rle(strcmp(val, GPUJPEG_VAL_TRUE) == 0);
         return GPUJPEG_NOERR;
     }
     ERROR_MSG("Invalid decoder option: %s!\n", opt);

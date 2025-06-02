@@ -269,7 +269,7 @@ gpujpeg_decoder_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg
 
 /// use RLE when writing TGA with gpujpeg_image_save_to_file (default is true), 0 or 1 please note that the option is
 /// global so it affects all decoder instances
-#define GPUJPEG_DECODER_OPT_TGA_RLE "dec_tga_rle"
+#define GPUJPEG_DEC_OPT_TGA_RLE_BOOL "dec_opt_tga_rle" ///< GPUJPEG_VAL_TRUE or GPUJPEG_VAL_FALSE
 /**
  * sets decoder option
  * @retval GPUJPEG_NOERR  option was sucessfully set

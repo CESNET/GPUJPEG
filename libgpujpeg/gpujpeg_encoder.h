@@ -214,8 +214,12 @@ GPUJPEG_API int
 gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* param_image,
                                          gpujpeg_sampling_factor_t subsampling, bool interleaved, int verbose);
 
-/// buffer returned from gpujpeg_encoder_encode() should be in pinned memory
-#define GPUJPEG_ENCODER_OPT_OUT_PINNED  "enc_out_pinned"
+#define GPUJPEG_ENCODER_OPT_OUT_PINNED  "enc_out_pinned" ///< deprecated - use GPUJPEG_ENC_OPT_OUT
+/// location of buffer returned from gpujpeg_encoder_encode()
+#define GPUJPEG_ENC_OPT_OUT          "enc_opt_out"
+#define GPUJPEG_ENC_OUT_VAL_PAGEABLE "enc_out_val_pageable"  ///< default
+#define GPUJPEG_ENC_OUT_VAL_PINNED   "enc_out_val_pinned"
+
 /**
  * sets encoder option
  * @retval GPUJPEG_NOERR  option was sucessfully set

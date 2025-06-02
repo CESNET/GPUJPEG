@@ -652,12 +652,21 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
     if ( encoder == NULL || opt == NULL || val == NULL ) {
         return GPUJPEG_ERROR;
     }
+    if ( strcmp(opt, GPUJPEG_ENC_OPT_OUT) == 0 ) {
+        if ( strcmp(val, GPUJPEG_ENC_OUT_VAL_PAGEABLE) != 0 && strcmp(val, GPUJPEG_ENC_OUT_VAL_PINNED) != 0 ) {
+            ERROR_MSG("Unexpeceted value %s for " GPUJPEG_ENC_OPT_OUT "\n", val);
+            return GPUJPEG_ERROR;
+        }
+        encoder->writer->buffer_pinned = strcmp(val, GPUJPEG_ENC_OUT_VAL_PINNED) == 0;
+        return GPUJPEG_NOERR;
+    }
     if ( strcmp(opt, GPUJPEG_ENCODER_OPT_OUT_PINNED) == 0 ) {
-        if ( (val[0] != '0' && val[0] != '1') || val[1] != '\0' ) {
+        WARN_MSG("deprecated, use GPUJPEG_ENC_OUT_VAL_PAGEABLE (" GPUJPEG_ENC_OUT_VAL_PAGEABLE ") instead!\n");
+        if ( strcmp(val, GPUJPEG_VAL_TRUE) != 0 && strcmp(val, GPUJPEG_VAL_FALSE) != 0 ) {
             ERROR_MSG("Unexpeceted value %s for " GPUJPEG_ENCODER_OPT_OUT_PINNED "\n", val);
             return GPUJPEG_ERROR;
         }
-        encoder->writer->buffer_pinned = val[0] == '1';
+        encoder->writer->buffer_pinned = strcmp(val, GPUJPEG_VAL_TRUE) == 0;
         return GPUJPEG_NOERR;
     }
     ERROR_MSG("Invalid encoder option: %s!\n", opt);
