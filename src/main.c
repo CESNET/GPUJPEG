@@ -305,7 +305,7 @@ assign_coder_opt(struct coder_opts* encoder_opts, struct coder_opts* decoder_opt
             return true;
         }
     }
-    fprintf(stderr, "Too much optiosn!\n");
+    fprintf(stderr, "Too much options!\n");
     return false;
 }
 static bool
