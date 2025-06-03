@@ -432,11 +432,11 @@ gpujpeg_image_save_to_file(const char* filename, const uint8_t* image, size_t im
 /**
  * Reads/obtains properties from uncompressed file (PNM etc.)
  *
- * For files without header (.rgb, .yuv...) it obtains only color space pixel format deduced from file extension.
+ * For files without header (.rgb, .yuv...) it obtains only color space and pixel format deduced from file extension.
  *
- * @retval 0 on success; != 0 on error
+ * @retval  0 if sucessfully obtrained width, height, color space and pixel format
+ * @retval  1 only color space and pixel format was deduced from file extension (see above)
  * @retval -1 on error
- * @retval 1 only color space and  pixel format was deduced from file extension (see above)
  */
 GPUJPEG_API int
 gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_parameters *param_image, int file_exists);
