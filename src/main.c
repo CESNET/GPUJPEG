@@ -33,16 +33,76 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+
 #if defined(_MSC_VER)
-    #include "gpujpeg_getopt_mingw.h"
+    #include "utils/getopt.h"
 #else
     #include <getopt.h>
 #endif
+
+// WIN32 wchar support
+#if defined(_UNICODE)
+    #include <windows.h> // WideCharToMultiByte
+    #include <tchar.h>
+    #define option _toption
+    #define optarg _toptarg
+    #define getopt_long _tgetopt_long
+    #define atoi _tstoi
+#else
+    #define _T(...) __VA_ARGS__
+    #define TCHAR char
+    #define _tfopen fopen
+    #define _tcscmp strcmp
+    #define _tcsstr strstr
+#endif
+
 #include "../libgpujpeg/gpujpeg.h"
 #include "../libgpujpeg/gpujpeg_common.h"
 
 #define RAW_EXTS "*.rgb, *.yuv, *.r, *.bmp, *.pnm, *.y4m..."
 #define USE_IF_NOT_NULL_ELSE(cond, alt_val) (cond) ? (cond) : (alt_val)
+
+static char*
+tstr_to_mbs_helper(const TCHAR* tstr, char* mbs_buf, size_t mbs_len)
+{
+#if _UNICODE
+    const int size_needed = WideCharToMultiByte(CP_UTF8, 0, tstr, -1, NULL, 0, NULL, NULL);
+    if (size_needed <= 0) {
+        fprintf(stderr, "MultiByteToWideChar returned: %d (0x%x)!\n", size_needed, size_needed);
+        return NULL;
+    }
+    if (size_needed > (int) mbs_len) {
+        fprintf(stderr, "buffer provided to %s too short - needed %d, got %zu!\n", __func__, size_needed, mbs_len);
+        return NULL;
+    }
+    WideCharToMultiByte(CP_UTF8, 0, tstr, -1, mbs_buf, size_needed, NULL, NULL);
+    return mbs_buf;
+#else
+    (void) mbs_buf, (void) mbs_len;
+    return (char *) tstr;
+#endif
+}
+#define tstr_to_mbs(tstr) tstr_to_mbs_helper(tstr, (char[1024]){0}, 1024)
+
+#ifdef _UNICODE
+static wchar_t*
+mbs_to_wstr_helper(const char* mbstr, wchar_t* wstr_buf, size_t wstr_len)
+{
+    const int size_needed = MultiByteToWideChar(CP_UTF8, 0, mbstr, -1, NULL, 0);
+    if (size_needed <= 0) {
+        fprintf(stderr, "MultiByteToWideChar returned: %d (0x%x)!\n", size_needed, size_needed);
+        return NULL;
+    }
+    if (size_needed > (int) wstr_len) {
+        fprintf(stderr, "buffer provided to %s too short - needed %d, got %zu!\n", __func__, size_needed, wstr_len);
+        return NULL;
+    }
+    MultiByteToWideChar(CP_UTF8, 0, mbstr, -1, wstr_buf, size_needed);
+    return wstr_buf;
+}
+#define mbs_to_wstr(tstr) mbs_to_wstr_helper(tstr, (wchar_t[1024]){0}, 1024)
+#endif
 
 static void
 print_help(bool full)
@@ -122,7 +182,11 @@ print_gpujpeg_image_parameters(struct gpujpeg_image_parameters params_image, boo
 }
 
 static int print_image_info_jpeg(const char *filename, int verbose) {
+#ifdef _UNICODE
+    FILE* f = _wfopen(mbs_to_wstr(filename), L"rb");
+#else
     FILE *f = fopen(filename, "rb");
+#endif
     if (!f) {
         perror("Cannot open");
         return 1;
@@ -222,16 +286,17 @@ adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters*
 }
 
 static enum gpujpeg_pixel_format
-parse_pixel_format(const char *arg)
+parse_pixel_format(const TCHAR *arg)
 {
-    if (strcmp(arg, "help") == 0) {
+    const char* pf = tstr_to_mbs(arg);
+    if ( strcmp(pf, "help") == 0 ) {
         printf("Available pixel formats:\n");
         gpujpeg_print_pixel_formats();
         return GPUJPEG_PIXFMT_NONE;
     }
-    const enum gpujpeg_pixel_format ret = gpujpeg_pixel_format_by_name(arg);
+    const enum gpujpeg_pixel_format ret = gpujpeg_pixel_format_by_name(pf);
     if ( ret == GPUJPEG_PIXFMT_NONE ) {
-        fprintf(stderr, "Unknown pixel format '%s'!\n", arg);
+        fprintf(stderr, "Unknown pixel format '%s'!\n", pf);
     }
     return ret;
 }
@@ -241,7 +306,11 @@ static void
 debug_dump_infile(const char* filename, const uint8_t* image_data, size_t image_size,
                 const struct gpujpeg_image_parameters* param_image)
 {
+#ifdef _UNICODE
+    FILE* f = _wfopen(mbs_to_wstr(filename), L"rb");
+#else
     FILE* f = fopen(filename, "rb");
+#endif
     long file_sz = 0;
     if ( f != NULL ) {
         fseek(f, 0, SEEK_END);
@@ -334,12 +403,27 @@ set_decoder_opts(struct gpujpeg_decoder* decoder, const struct coder_opts* opts)
     return true;
 }
 
+static gpujpeg_sampling_factor_t
+gpujpeg_subsampling_from_name_from_tstr(const TCHAR* tsubsampling)
+{
+    const char* subsampling = tstr_to_mbs(tsubsampling);
+    const gpujpeg_sampling_factor_t ret = gpujpeg_subsampling_from_name(subsampling);
+    if ( ret == GPUJPEG_SUBSAMPLING_UNKNOWN ) {
+        fprintf(stderr, "Unknown subsampling '%s'!\n", subsampling);
+    }
+    return ret;
+}
+
 #ifndef GIT_REV
 #define GIT_REV "unknown"
 #endif
 
 int
+#ifdef _UNICODE
+wmain(int argc, wchar_t *argv[])
+#else
 main(int argc, char *argv[])
+#endif
 {
 
     printf("GPUJPEG rev %s built " __DATE__ " " __TIME__ " \n", GIT_REV);
@@ -383,36 +467,36 @@ main(int argc, char *argv[])
 
     // Parse command line
     struct option longopts[] = {
-        {"alpha",                   no_argument,       0, 'a'},
-        {"debug",                   no_argument,       0, 'b'},
-        {"help",                    no_argument,       0, 'h'},
-        {"fullhelp",                no_argument,       0, 'H'},
-        {"verbose",                 optional_argument, 0, 'v'},
-        {"device",                  required_argument, 0, 'D'},
-        {"device-list",             no_argument,       0, 'L' },
-        {"size",                    required_argument, 0, 's'},
-        {"pixel-format",         required_argument, 0, 'f'},
-        {"colorspace",              required_argument, 0, 'c'},
-        {"quality",                 required_argument, 0, 'q'},
-        {"restart",                 required_argument, 0, 'r'},
-        {"segment-info",            optional_argument, 0, 'g' },
-        {"subsampled",              optional_argument, 0, 'S' },
-        {"interleaved",             optional_argument, 0, 'i'},
-        {"encode",                  no_argument,       0, 'e'},
-        {"decode",                  no_argument,       0, 'd'},
-        {"convert",                 no_argument,       0, 'C' },
-        {"component-range",         no_argument,       0,  'R' },
-        {"iterate",                 required_argument, 0,  'n' },
-        {"use-opengl",              no_argument,       0,  'o' },
-        {"info",                    required_argument, 0,  'I' },
-        {"native",                  no_argument,       0,  'N' },
-        {"version",                 no_argument,       0,  'V' },
+        {_T("alpha"),                   no_argument,       0, 'a'},
+        {_T("debug"),                   no_argument,       0, 'b'},
+        {_T("help"),                    no_argument,       0, 'h'},
+        {_T("fullhelp"),                no_argument,       0, 'H'},
+        {_T("verbose"),                 optional_argument, 0, 'v'},
+        {_T("device"),                  required_argument, 0, 'D'},
+        {_T("device-list"),             no_argument,       0, 'L'},
+        {_T("size"),                    required_argument, 0, 's'},
+        {_T("pixel-format"),            required_argument, 0, 'f'},
+        {_T("colorspace"),              required_argument, 0, 'c'},
+        {_T("quality"),                 required_argument, 0, 'q'},
+        {_T("restart"),                 required_argument, 0, 'r'},
+        {_T("segment-info"),            optional_argument, 0, 'g'},
+        {_T("subsampled"),              optional_argument, 0, 'S'},
+        {_T("interleaved"),             optional_argument, 0, 'i'},
+        {_T("encode"),                  no_argument,       0, 'e'},
+        {_T("decode"),                  no_argument,       0, 'd'},
+        {_T("convert"),                 no_argument,       0, 'C'},
+        {_T("component-range"),         no_argument,       0, 'R'},
+        {_T("iterate"),                 required_argument, 0, 'n'},
+        {_T("use-opengl"),              no_argument,       0, 'o'},
+        {_T("info"),                    required_argument, 0, 'I'},
+        {_T("native"),                  no_argument,       0, 'N'},
+        {_T("version"),                 no_argument,       0, 'V'},
         {0}
     };
     int ch = '\0';
     int optindex = 0;
-    char* pos = 0;
-    while ( (ch = getopt_long(argc, argv, "CD:HI:LNO:RS::Vabc:edf:ghin:oq:r:s:v", longopts, &optindex)) != -1 ) {
+    TCHAR* pos = 0;
+    while ( (ch = getopt_long(argc, argv, _T("CD:HI:LNO:RS::Vabc:edf:ghin:oq:r:s:v"), longopts, &optindex)) != -1 ) {
         switch (ch) {
         case 'a':
             opts.keep_alpha = true;
@@ -431,21 +515,21 @@ main(int argc, char *argv[])
             }
             break;
         case 's':
-            pos = strstr(optarg, "x");
+            pos = _tcsstr(optarg, _T("x"));
             if ( pos == NULL || pos == optarg ) {
-                fprintf(stderr, "Incorrect image size '%s'! Use a format 'WxH'.\n", optarg);
+                fprintf(stderr, "Incorrect image size '%s'! Use a format 'WxH'.\n", tstr_to_mbs(optarg));
                 return -1;
             }
             param_image.width = atoi(optarg);
             param_image.height = atoi(pos + 1);
             break;
         case 'c':
-            param_image.color_space = gpujpeg_color_space_by_name(optarg);
+            param_image.color_space = gpujpeg_color_space_by_name(tstr_to_mbs(optarg));
             if ( param_image.color_space == GPUJPEG_NONE ) {
-                if ( strcmp(optarg, "help") == 0 ) {
+                if ( _tcscmp(optarg, _T("help")) == 0 ) {
                     return EXIT_SUCCESS;
                 }
-                fprintf(stderr, "Colorspace '%s' is not available!\n", optarg);
+                fprintf(stderr, "Colorspace '%s' is not available!\n", tstr_to_mbs(optarg));
                 return EXIT_FAILURE;
             }
             break;
@@ -465,12 +549,12 @@ main(int argc, char *argv[])
         case 'r':
             param.restart_interval = atoi(optarg);
             if ( param.restart_interval < RESTART_AUTO ) {
-                fprintf(stderr, "Wrong restart interval '%s'!\n", optarg);
+                fprintf(stderr, "Wrong restart interval '%s'!\n", tstr_to_mbs(optarg));
                 return 1;
             }
             break;
         case 'g':
-            if ( optarg == NULL || strcmp(optarg, "true") == 0 || atoi(optarg) )
+            if ( optarg == NULL || _tcscmp(optarg, _T("true")) == 0 || atoi(optarg) )
                 param.segment_info = 1;
             else
                 param.segment_info = 0;
@@ -480,16 +564,15 @@ main(int argc, char *argv[])
                 opts.subsampling = GPUJPEG_SUBSAMPLING_420;
                 break;
             }
-            opts.subsampling = gpujpeg_subsampling_from_name(optarg);
+            opts.subsampling = gpujpeg_subsampling_from_name_from_tstr(optarg);
             if ( opts.subsampling == GPUJPEG_SUBSAMPLING_UNKNOWN ) {
-                fprintf(stderr, "Unknown subsampling '%s'!\n", optarg);
                 return 1;
             }
             break;
         case 'L':
             return gpujpeg_print_devices_info() < 0 ? 1 : 0;
         case 'i':
-            if ( optarg == NULL || strcmp(optarg, "true") == 0 || atoi(optarg) )
+            if ( optarg == NULL || _tcscmp(optarg, _T("true")) == 0 || atoi(optarg) )
                 param.interleaved = 1;
             else
                 param.interleaved = 0;
@@ -517,7 +600,7 @@ main(int argc, char *argv[])
             use_opengl = 1;
             break;
         case 'I':
-            return print_image_info(optarg, param.verbose);
+            return print_image_info(tstr_to_mbs(optarg), param.verbose);
         case 'N':
             opts.native_file_format = true;
             break;
@@ -527,7 +610,7 @@ main(int argc, char *argv[])
             debug = true;
             break;
         case 'O':
-            if ( !assign_coder_opt(encoder_options, decoder_options, optarg) ) {
+            if ( !assign_coder_opt(encoder_options, decoder_options, tstr_to_mbs(optarg)) ) {
                 return 1;
             }
             break;
@@ -550,12 +633,13 @@ main(int argc, char *argv[])
     if ( component_range == 1 ) {
         // For each image
         for ( int index = 0; index < argc; index++ ) {
-            gpujpeg_image_range_info(argv[index], param_image.width, param_image.height, param_image.pixel_format);
+            gpujpeg_image_range_info(tstr_to_mbs(argv[index]), param_image.width, param_image.height,
+                                     param_image.pixel_format);
         }
         return 0;
     }
 
-    if ( argv[0] != NULL && strcmp(argv[0], "exts") == 0 ) {
+    if ( argv[0] != NULL && _tcscmp(argv[0], _T("exts")) == 0 ) {
         gpujpeg_image_get_file_format("help");
         return 0;
     }
@@ -585,8 +669,8 @@ main(int argc, char *argv[])
         // Encode images
         for ( int index = 0; index < argc; index += 2 ) {
             // Get input and output image
-            const char* input = argv[index];
-            const char* output = argv[index + 1];
+            const char* input = tstr_to_mbs(argv[index]);
+            const char* output = tstr_to_mbs(argv[index + 1]);
             // Perform conversion
             gpujpeg_image_convert(input, output, param_image_original, param_image);
         }
@@ -595,8 +679,8 @@ main(int argc, char *argv[])
 
     // Detect action if none is specified
     if ( encode == 0 && decode == 0 && argc == 2 ) {
-        enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(argv[0]);
-        enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(argv[1]);
+        enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(tstr_to_mbs(argv[0]));
+        enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(tstr_to_mbs(argv[1]));
         if ( GPUJPEG_IMAGE_FORMAT_IS_RAW(input_format) && output_format == GPUJPEG_IMAGE_FILE_JPEG ) {
             encode = 1;
         }
@@ -635,8 +719,8 @@ main(int argc, char *argv[])
         // Encode images
         for ( int index = 0; index < argc; index += 2 ) {
             // Get and check input and output image
-            const char* input = argv[index];
-            char* output = argv[index + 1];
+            const char* input = tstr_to_mbs(argv[index]);
+            const char* output = tstr_to_mbs(argv[index + 1]);
             enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
             enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
             if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(input_format) ) {
@@ -673,7 +757,7 @@ main(int argc, char *argv[])
             size_t image_size = gpujpeg_image_calculate_size(&param_image);
             uint8_t* image = NULL;
             if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
-                fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
+                fprintf(stderr, "Failed to load image [%s]!\n", input);
                 ret = EXIT_FAILURE; continue;
             }
 
@@ -703,7 +787,7 @@ main(int argc, char *argv[])
 
                 rc = gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size);
                 if ( rc != GPUJPEG_NOERR ) {
-                    fprintf(stderr, "Failed to encode image [%s]!\n", argv[index]);
+                    fprintf(stderr, "Failed to encode image [%s]!\n", input);
                     ret = EXIT_FAILURE; continue;
                 }
             }
@@ -713,7 +797,7 @@ main(int argc, char *argv[])
             // Save image
             if ( image_compressed == NULL ||
                  gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size, &param_image) != 0 ) {
-                fprintf(stderr, "Failed to save image [%s]!\n", argv[index]);
+                fprintf(stderr, "Failed to save image [%s]!\n", output);
                 ret = EXIT_FAILURE;
             } else {
                 duration = gpujpeg_get_time() - duration;
@@ -764,8 +848,8 @@ main(int argc, char *argv[])
         // Decode images
         for ( int index = 0; index < argc; index += 2 ) {
             // Get and check input and output image
-            const char* input = argv[index];
-            char* output = argv[index + 1];
+            const char * input = tstr_to_mbs(argv[index]);
+            char* output = tstr_to_mbs(argv[index + 1]);
             if ( encode == 1 ) {
                 static char buffer_output[255];
                 if ( param_image.color_space != GPUJPEG_RGB ) {
@@ -813,7 +897,7 @@ main(int argc, char *argv[])
             size_t image_size = 0;
             uint8_t* image = NULL;
             if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
-                fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
+                fprintf(stderr, "Failed to load image [%s]!\n", input);
                 ret = EXIT_FAILURE; continue;
             }
 
@@ -838,7 +922,7 @@ main(int argc, char *argv[])
                     if (rc == GPUJPEG_ERR_RESTART_CHANGE && param_image.width != 0 && param_image.height != 0) {
                         fprintf(stderr, "Hint: Do not enter image dimensions to avoid preinitialization or correctly specify restart interval.\n");
                     }
-                    fprintf(stderr, "Failed to decode image [%s]!\n", argv[index]);
+                    fprintf(stderr, "Failed to decode image [%s]!\n", input);
                     ret = EXIT_FAILURE; continue;
                 }
             }

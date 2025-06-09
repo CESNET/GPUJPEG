@@ -400,6 +400,8 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param);
  *
  * Allocated image must be freed by gpujpeg_image_load_from_file().
  *
+ * Non-ASCII symbols in filename should be UTF-8 encoded.
+ *
  * @param         filaname    Image filename
  * @param[out]    image       Image data buffer allocated as CUDA host buffer
  * @param[in,out] image_size  Image data buffer size (can be specified for verification or 0 for retrieval)
@@ -410,6 +412,8 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* imag
 
 /**
  * Save image to a file
+ *
+ * Non-ASCII symbols in filename should be UTF-8 encoded.
  *
  * File format is deduced from the filename extension (if any).
  *

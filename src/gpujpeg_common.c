@@ -108,6 +108,25 @@
             (name).started = 0;                                                                                        \
         } while ( 0 )
 
+#ifdef _WIN32
+static wchar_t*
+mbs_to_wstr_helper(const char* mbstr, wchar_t* wstr_buf, size_t wstr_len)
+{
+    const int size_needed = MultiByteToWideChar(CP_UTF8, 0, mbstr, -1, NULL, 0);
+    if (size_needed <= 0) {
+        ERROR_MSG("MultiByteToWideChar returned: %d (0x%x)!\n", size_needed, size_needed);
+        return NULL;
+    }
+    if (size_needed > (int) wstr_len) {
+        ERROR_MSG("buffer provided to %s too short - needed %d, got %zu!\n", __func__, size_needed, wstr_len);
+        return NULL;
+    }
+    MultiByteToWideChar(CP_UTF8, 0, mbstr, -1, wstr_buf, size_needed);
+    return wstr_buf;
+}
+#define mbs_to_wstr(tstr) mbs_to_wstr_helper(tstr, (wchar_t[1024]){0}, 1024)
+#endif
+
 #define PLANAR   1u
 static const struct {
     enum gpujpeg_pixel_format pixel_format;
@@ -1201,7 +1220,11 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* imag
     }
 
     FILE* file;
+#ifdef _WIN32
+    file = _wfopen(mbs_to_wstr(filename), L"rb");
+#else
     file = fopen(filename, "rb");
+#endif
     if ( !file ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed open %s for reading: %s\n", filename, strerror(errno));
         return -1;
@@ -1264,7 +1287,11 @@ gpujpeg_image_save_to_file(const char* filename, const uint8_t* image, size_t im
     }
 
     FILE* file;
+#ifdef _WIN32
+    file = _wfopen(mbs_to_wstr(filename), L"wb");
+#else
     file = fopen(filename, "wb");
+#endif
     if ( !file ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed open %s for writing: %s\n", filename, strerror(errno));
         return -1;

@@ -148,6 +148,7 @@ message(STATUS "Configured options: ${COMPILED_OPTIONS}")
 file(GLOB H_FILES libgpujpeg/*.h ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg/gpujpeg_version.h)
 file(GLOB_RECURSE C_FILES src/*.c src/*.cu)
 list(REMOVE_ITEM C_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c")
+list(REMOVE_ITEM C_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/getopt.c")
 add_library(gpujpeg ${H_FILES} ${C_FILES})
 target_include_directories(${PROJECT_NAME}
     PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
@@ -165,6 +166,10 @@ endif()
 
 # GPUJPEG commmand-line application
 add_executable(gpujpeg-bin src/main.c)
+if(NOT UNIX)
+    target_sources(gpujpeg-bin PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/getopt.c")
+    target_compile_options(gpujpeg-bin PRIVATE $<$<COMPILE_LANGUAGE:C>:/D_UNICODE>)
+endif()
 target_compile_features(gpujpeg-bin PRIVATE ${NEEDED_COMPILER_FEATURES})
 set_property(TARGET gpujpeg-bin PROPERTY C_STANDARD 99)
 target_link_libraries(gpujpeg-bin gpujpeg)

@@ -1,3 +1,8 @@
+next
+----------
+
+- support for non-ASCII characters in filename (tool+_load/_save)
+
 2025-05-23 - 0.27.4
 ----------
 
