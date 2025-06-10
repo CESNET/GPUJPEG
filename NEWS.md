@@ -1,4 +1,4 @@
-next
+2025-06-10 - 0.27.5
 ----------
 
 - support for non-ASCII characters in filename (tool+_load/_save)
