@@ -52,7 +52,6 @@
 #else
     #define _T(...) __VA_ARGS__
     #define TCHAR char
-    #define _tfopen fopen
     #define _tcscmp strcmp
     #define _tcsstr strstr
 #endif

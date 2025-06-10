@@ -64,6 +64,10 @@ enum {
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
+#ifdef _WIN32
+#define STBI_WINDOWS_UTF8
+#define STBIW_WINDOWS_UTF8
+#endif
 static void
 gpujpeg_cuda_free_host(void* ptr);
 static void*
