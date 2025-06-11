@@ -11,7 +11,7 @@ RELEASE_ID=$(jq -r '.id' "$JSON")
 rm "$JSON"
 JSON=$(fetch_json "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" "$GITHUB_TOKEN" array)
 LEN=$(jq length "$JSON")
-for n in $(seq 0 $((LEN-1))); do
+n=-1; while n=$((n + 1)); [ "$n" -lt "$LEN" ]; do
         NAME=$(jq -r ".[$n].name" "$JSON")
         if expr "$NAME" : "$PATTERN$"; then
                 ID=$(jq ".[$n].id" "$JSON")
