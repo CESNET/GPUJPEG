@@ -113,12 +113,12 @@ jobs:
             cuda_installer: "https://developer.download.nvidia.com/compute/\
               cuda/11.8.0/network_installers/cuda_11.8.0_windows_network.exe"
             name_prefix: Windows
-          # - conf: all
-          #   build_filename: GPUJPEG-Windows-all
-          #   cuda_arch: all
-          #   cuda_installer: "https://developer.download.nvidia.com/compute/\
-          #     cuda/12.8.0/network_installers/cuda_12.8.0_windows_network.exe"
-          #   name_prefix: Windows (all CUDA architectures)
+          - conf: all
+            build_filename: GPUJPEG-Windows-all
+            cuda_arch: all
+            cuda_installer: "https://developer.download.nvidia.com/compute/\
+              cuda/12.9.1/network_installers/cuda_12.9.1_windows_network.exe"
+            name_prefix: Windows (all CUDA architectures)
 
     steps:
     - uses: actions/checkout@main
