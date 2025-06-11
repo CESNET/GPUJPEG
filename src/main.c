@@ -352,21 +352,21 @@ struct coder_opts
     char* val;
 };
 static bool
-assign_coder_opt(struct coder_opts* encoder_opts, struct coder_opts* decoder_opts, char* optarg)
+assign_coder_opt(struct coder_opts* encoder_opts, struct coder_opts* decoder_opts, char* optval)
 {
-    char* opt = optarg;
-    char* delim = strchr(optarg, '=');
+    char* opt = optval;
+    char* delim = strchr(optval, '=');
     if ( delim == NULL ) {
-        fprintf(stderr, "No value for %s!\n", optarg);
+        fprintf(stderr, "No value for %s!\n", optval);
         return false;
     }
-    if ( strncmp(optarg, "enc_", 4) != 0 && strncmp(optarg, "dec_", 4) != 0 ) {
-        fprintf(stderr, "Option should start with either enc_ or dec_, given %s!\n", optarg);
+    if ( strncmp(optval, "enc_", 4) != 0 && strncmp(optval, "dec_", 4) != 0 ) {
+        fprintf(stderr, "Option should start with either enc_ or dec_, given %s!\n", optval);
         return false;
     }
     *delim = '\0';
     char *val = delim + 1;
-    struct coder_opts* opts = strncmp(optarg, "enc_", 4) == 0 ? encoder_opts : decoder_opts;
+    struct coder_opts* opts = strncmp(optval, "enc_", 4) == 0 ? encoder_opts : decoder_opts;
     for ( int i = 0; i < CODER_OPTS_COUNT; ++i ) {
         if ( opts[i].opt == NULL ) {
             opts[i].opt = opt;
