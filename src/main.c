@@ -66,16 +66,16 @@ static char*
 tstr_to_mbs_helper(const TCHAR* tstr, char* mbs_buf, size_t mbs_len)
 {
 #if _UNICODE
-    const int size_needed = WideCharToMultiByte(CP_UTF8, 0, tstr, -1, NULL, 0, NULL, NULL);
-    if (size_needed <= 0) {
-        fprintf(stderr, "MultiByteToWideChar returned: %d (0x%x)!\n", size_needed, size_needed);
+    const int size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, tstr, -1, NULL, 0, NULL, NULL);
+    if ( size_needed == 0 ) {
+        fprintf(stderr, "WideCharToMultiByte error: %d (0x%x)!\n", GetLastError(), GetLastError());
         return NULL;
     }
     if (size_needed > (int) mbs_len) {
         fprintf(stderr, "buffer provided to %s too short - needed %d, got %zu!\n", __func__, size_needed, mbs_len);
         return NULL;
     }
-    WideCharToMultiByte(CP_UTF8, 0, tstr, -1, mbs_buf, size_needed, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, tstr, -1, mbs_buf, size_needed, NULL, NULL);
     return mbs_buf;
 #else
     (void) mbs_buf, (void) mbs_len;
@@ -88,16 +88,16 @@ tstr_to_mbs_helper(const TCHAR* tstr, char* mbs_buf, size_t mbs_len)
 static wchar_t*
 mbs_to_wstr_helper(const char* mbstr, wchar_t* wstr_buf, size_t wstr_len)
 {
-    const int size_needed = MultiByteToWideChar(CP_UTF8, 0, mbstr, -1, NULL, 0);
-    if (size_needed <= 0) {
-        fprintf(stderr, "MultiByteToWideChar returned: %d (0x%x)!\n", size_needed, size_needed);
+    const int size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, mbstr, -1, NULL, 0);
+    if (size_needed == 0) {
+        fprintf(stderr, "MultiByteToWideChar error: %d (0x%x)!\n", GetLastError(), GetLastError());
         return NULL;
     }
     if (size_needed > (int) wstr_len) {
         fprintf(stderr, "buffer provided to %s too short - needed %d, got %zu!\n", __func__, size_needed, wstr_len);
         return NULL;
     }
-    MultiByteToWideChar(CP_UTF8, 0, mbstr, -1, wstr_buf, size_needed);
+    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, mbstr, -1, wstr_buf, size_needed);
     return wstr_buf;
 }
 #define mbs_to_wstr(tstr) mbs_to_wstr_helper(tstr, (wchar_t[1024]){0}, 1024)
