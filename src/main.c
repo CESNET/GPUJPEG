@@ -424,6 +424,9 @@ wmain(int argc, wchar_t *argv[])
 main(int argc, char *argv[])
 #endif
 {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8); // see also https://stackoverflow.com/questions/1660492/utf-8-output-on-windows-console
+#endif
 
     printf("GPUJPEG rev %s built " __DATE__ " " __TIME__ " \n", GIT_REV);
 
