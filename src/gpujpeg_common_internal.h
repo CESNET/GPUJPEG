@@ -120,7 +120,7 @@ extern const char *gj_fg_red;
 extern const char *gj_fg_yellow;
 extern const char *gj_term_reset;
 // check __VA_OPT__ presence
-#if __STDC_VERSION__ >= 202311L || __cplusplus >= 202002L || __GNUC__ >= 12 || \
+#if __STDC_VERSION__ >= 202311L || __cplusplus >= 202002L || __GNUC__ >= 8 || \
     __clang_major__ >= 9
         #define ERROR_MSG(fmt, ...)                                                                                    \
             (void)fprintf(stderr, "%s[GPUJPEG] [Error] " fmt "%s", gj_fg_red __VA_OPT__(, ) __VA_ARGS__, gj_term_reset)
