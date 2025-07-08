@@ -723,6 +723,8 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
     if ( strcmp(opt, GPUJPEG_ENC_OPT_HDR) == 0 ) {
         if (strcasecmp(val, GPUJPEG_ENC_HDR_VAL_JFIF) == 0) {
             encoder->header_type = GPUJPEG_HEADER_JFIF;
+        } else if (strcasecmp(val, GPUJPEG_ENC_HDR_VAL_EXIF) == 0) {
+            encoder->header_type = GPUJPEG_HEADER_EXIF;
         } else if (strcasecmp(val, GPUJPEG_ENC_HDR_VAL_ADOBE) == 0) {
             encoder->header_type = GPUJPEG_HEADER_ADOBE;
         } else if (strcasecmp(val, GPUJPEG_ENC_HDR_VAL_SPIFF) == 0) {
@@ -746,8 +748,8 @@ GPUJPEG_API void
 gpujpeg_encoder_print_options() {
     printf("\t" GPUJPEG_ENC_OPT_OUT "=[" GPUJPEG_ENC_OUT_VAL_PAGEABLE "|" GPUJPEG_ENC_OUT_VAL_PINNED
            "] - compressed data buffer allocation property\n");
-    printf("\t" GPUJPEG_ENC_OPT_HDR "=[" GPUJPEG_ENC_HDR_VAL_JFIF "|" GPUJPEG_ENC_HDR_VAL_ADOBE "|" GPUJPEG_ENC_HDR_VAL_SPIFF
-           "] - output JPEG header\n");
+    printf("\t" GPUJPEG_ENC_OPT_HDR "=[" GPUJPEG_ENC_HDR_VAL_JFIF "|" GPUJPEG_ENC_HDR_VAL_ADOBE
+           "|" GPUJPEG_ENC_HDR_VAL_EXIF "|" GPUJPEG_ENC_HDR_VAL_SPIFF "] - output JPEG header\n");
     printf("\t" GPUJPEG_ENC_OPT_FLIPPED_BOOL "=[" GPUJPEG_VAL_FALSE "|" GPUJPEG_VAL_TRUE
            "] - whether is the input image should be vertically flipped (prior encode)\n");
     printf("\t" GPUJPEG_ENC_OPT_CHANNEL_REMAP "=XYZ[W] - input channel mapping, eg. '210F' for GBRX,\n"

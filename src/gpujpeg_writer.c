@@ -30,6 +30,7 @@
 
 #include "../libgpujpeg/gpujpeg_encoder.h"
 #include "gpujpeg_encoder_internal.h"
+#include "gpujpeg_exif.h"
 #include "gpujpeg_marker.h"
 #include "gpujpeg_util.h"
 #include "gpujpeg_writer.h"
@@ -464,6 +465,9 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
         break;
     case GPUJPEG_HEADER_JFIF:
         gpujpeg_writer_write_app0(encoder->writer);
+        break;
+    case GPUJPEG_HEADER_EXIF:
+        gpujpeg_writer_write_exif(encoder);
         break;
     case GPUJPEG_HEADER_SPIFF:
         gpujpeg_writer_write_spiff(encoder);

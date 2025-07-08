@@ -195,6 +195,7 @@ enum gpujpeg_header_type {
         GPUJPEG_HEADER_JFIF    = 1<<0,
         GPUJPEG_HEADER_SPIFF   = 1<<1,
         GPUJPEG_HEADER_ADOBE   = 1<<2, ///< Adobe APP8 header
+        GPUJPEG_HEADER_EXIF    = 1<<3,
 };
 
 /**
@@ -227,6 +228,7 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
 /// @defgroup enc_hdr_types
 /// @{
 #define GPUJPEG_ENC_HDR_VAL_JFIF     "JFIF"
+#define GPUJPEG_ENC_HDR_VAL_EXIF     "Exif"
 #define GPUJPEG_ENC_HDR_VAL_ADOBE    "Adobe"
 #define GPUJPEG_ENC_HDR_VAL_SPIFF    "SPIFF"
 /// @}
