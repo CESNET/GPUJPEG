@@ -31,6 +31,12 @@
 #include <assert.h>
 #include <math.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#define strcasecmp _stricmp
+#endif
+
 #include "../libgpujpeg/gpujpeg_common.h"
 #include "../libgpujpeg/gpujpeg_encoder.h"
 #include "gpujpeg_common_internal.h"
@@ -667,6 +673,19 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
             return GPUJPEG_ERROR;
         }
         encoder->writer->buffer_pinned = strcmp(val, GPUJPEG_VAL_TRUE) == 0;
+        return GPUJPEG_NOERR;
+    }
+    if ( strcmp(opt, GPUJPEG_ENC_OPT_HDR) == 0 ) {
+        if (strcasecmp(val, GPUJPEG_ENC_HDR_VAL_JFIF) == 0) {
+            encoder->header_type = GPUJPEG_HEADER_JFIF;
+        } else if (strcasecmp(val, GPUJPEG_ENC_HDR_VAL_ADOBE) == 0) {
+            encoder->header_type = GPUJPEG_HEADER_ADOBE;
+        } else if (strcasecmp(val, GPUJPEG_ENC_HDR_VAL_SPIFF) == 0) {
+            encoder->header_type = GPUJPEG_HEADER_SPIFF;
+        } else {
+            ERROR_MSG("Unknown encoder header type: %s\n", val);
+            return GPUJPEG_ERROR;
+        }
         return GPUJPEG_NOERR;
     }
     ERROR_MSG("Invalid encoder option: %s!\n", opt);

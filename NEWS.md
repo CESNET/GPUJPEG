@@ -1,3 +1,9 @@
+2025-07-08 - 0.27.6
+----------
+
+- deprecate gpujpeg_encoder_set_jpeg_header() in favor of opt API
+- as the consequence, gpujpegtool is able to pass that opt (`-O enc_hdr=Adobe`)
+
 2025-06-10 - 0.27.5
 ----------
 

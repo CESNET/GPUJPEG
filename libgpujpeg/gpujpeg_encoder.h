@@ -188,6 +188,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
 GPUJPEG_DEPRECATED GPUJPEG_API int
 gpujpeg_encoder_get_stats(struct gpujpeg_encoder *encoder, struct gpujpeg_duration_stats *stats);
 
+/// do not use, use gpujpeg_encoder_set_option() with @ref GPUJPEG_ENC_OPT_HDR and @ref enc_hdr_types instead
 enum gpujpeg_header_type {
         GPUJPEG_HEADER_DEFAULT = 0, ///< for 1 or 3 channel @ref GPUJPEG_YCBCR_JPEG @ref GPUJPEG_HEADER_JFIF, for @ref
                                     ///< GPUJPEG_RGB @ref GPUJPEG_HEADER_ADOBE, @ref GPUJPEG_HEADER_SPIFF otherwise
@@ -201,8 +202,10 @@ enum gpujpeg_header_type {
  *
  * Header type should be capable of describing the resulting JPEG, eg. JFIF only for BT.601
  * full-scale YCbCr images. If not, resulting JPEG image may be incompatible with decoders.
+ *
+ * @deprecated use gpujpeg_encoder_set_option() with @ref GPUJPEG_ENC_OPT_HDR
  */
-GPUJPEG_API void
+GPUJPEG_DEPRECATED GPUJPEG_API void
 gpujpeg_encoder_set_jpeg_header(struct gpujpeg_encoder *encoder, enum gpujpeg_header_type header_type);
 
 /**
@@ -219,6 +222,14 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
 #define GPUJPEG_ENC_OPT_OUT          "enc_opt_out"
 #define GPUJPEG_ENC_OUT_VAL_PAGEABLE "enc_out_val_pageable"  ///< default
 #define GPUJPEG_ENC_OUT_VAL_PINNED   "enc_out_val_pinned"
+
+#define GPUJPEG_ENC_OPT_HDR          "enc_hdr"
+/// @defgroup enc_hdr_types
+/// @{
+#define GPUJPEG_ENC_HDR_VAL_JFIF     "JFIF"
+#define GPUJPEG_ENC_HDR_VAL_ADOBE    "Adobe"
+#define GPUJPEG_ENC_HDR_VAL_SPIFF    "SPIFF"
+/// @}
 
 /**
  * sets encoder option
