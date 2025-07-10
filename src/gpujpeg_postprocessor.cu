@@ -33,8 +33,10 @@
  * to raw image. It also does color space transformations.
  */
 
-#include "gpujpeg_colorspace.h"
+#define PREPROCESSOR_INTERNAL_API
 #include "gpujpeg_preprocessor_common.cuh"
+
+#include "gpujpeg_colorspace.h"
 #include "gpujpeg_postprocessor.h"
 #include "gpujpeg_util.h"
 
@@ -410,7 +412,18 @@ gpujpeg_preprocessor_decode_no_transform(struct gpujpeg_coder* coder)
 int
 gpujpeg_postprocessor_decoder_init(struct gpujpeg_coder* coder)
 {
-    coder->preprocessor = NULL;
+    coder->preprocessor.kernel = NULL;
+
+    struct gpujpeg_preprocessor_data *data = &coder->preprocessor.data;;
+    *data = {};
+    for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
+        assert(coder->sampling_factor.horizontal % coder->component[comp].sampling_factor.horizontal == 0);
+        assert(coder->sampling_factor.vertical % coder->component[comp].sampling_factor.vertical == 0);
+        data->comp[comp].d_data = coder->component[comp].d_data;
+        data->comp[comp].sampling_factor.horizontal = coder->sampling_factor.horizontal / coder->component[comp].sampling_factor.horizontal;
+        data->comp[comp].sampling_factor.vertical = coder->sampling_factor.vertical / coder->component[comp].sampling_factor.vertical;
+        data->comp[comp].data_width = coder->component[comp].data_width;
+    }
 
     if (!gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format) &&
             gpujpeg_preprocessor_decode_no_transform(coder)) {
@@ -421,24 +434,24 @@ gpujpeg_postprocessor_decoder_init(struct gpujpeg_coder* coder)
     // assert(coder->param.comp_count == 3 || coder->param.comp_count == 4);
 
     if (coder->param.color_space_internal == coder->param_image.color_space) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_NONE>(coder);
+        coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_NONE>(coder);
     }
     else if (coder->param.color_space_internal == GPUJPEG_RGB) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_RGB>(coder);
+        coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_RGB>(coder);
     }
     else if (coder->param.color_space_internal == GPUJPEG_YCBCR_BT601) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT601>(coder);
+        coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT601>(coder);
     }
     else if (coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
+        coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
     }
     else if (coder->param.color_space_internal == GPUJPEG_YCBCR_BT709) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT709>(coder);
+        coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_decode_kernel<GPUJPEG_YCBCR_BT709>(coder);
     }
     else {
         assert(false);
     }
-    if (coder->preprocessor == NULL) {
+    if (coder->preprocessor.kernel == NULL) {
         return -1;
     }
     return 0;
@@ -487,12 +500,12 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
 int
 gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
-    if (!coder->preprocessor) {
+    if (coder->preprocessor.kernel == nullptr) {
         return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);
     }
 
     // Select kernel
-    gpujpeg_preprocessor_decode_kernel kernel = (gpujpeg_preprocessor_decode_kernel)coder->preprocessor;
+    gpujpeg_preprocessor_decode_kernel kernel = (gpujpeg_preprocessor_decode_kernel)coder->preprocessor.kernel;
     assert(kernel != NULL);
 
     int image_width = coder->param_image.width + coder->param_image.width_padding;
@@ -521,17 +534,8 @@ gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     }
 
     // Run kernel
-    struct gpujpeg_preprocessor_data data = {};
-    for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
-        assert(coder->sampling_factor.horizontal % coder->component[comp].sampling_factor.horizontal == 0);
-        assert(coder->sampling_factor.vertical % coder->component[comp].sampling_factor.vertical == 0);
-        data.comp[comp].d_data = coder->component[comp].d_data;
-        data.comp[comp].sampling_factor.horizontal = coder->sampling_factor.horizontal / coder->component[comp].sampling_factor.horizontal;
-        data.comp[comp].sampling_factor.vertical = coder->sampling_factor.vertical / coder->component[comp].sampling_factor.vertical;
-        data.comp[comp].data_width = coder->component[comp].data_width;
-    }
     kernel<<<grid, threads, 0, stream>>>(
-        data,
+        coder->preprocessor.data,
         coder->d_data_raw,
         image_width,
         image_height

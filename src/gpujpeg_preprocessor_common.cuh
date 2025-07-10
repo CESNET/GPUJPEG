@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024, CESNET
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -27,12 +27,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef GPUJPEG_PREPROCESSOR_COMMON_CUH_DCC657E3_2EDF_47E2_90F4_F7CA26829E81
+#define GPUJPEG_PREPROCESSOR_COMMON_CUH_DCC657E3_2EDF_47E2_90F4_F7CA26829E81
+
 #include "../libgpujpeg/gpujpeg_common.h"
 #include "../libgpujpeg/gpujpeg_type.h"
-#include "gpujpeg_common_internal.h"
-
-#include <cassert>
-#include <cstdint>
 
 #define RGB_8BIT_THREADS 256
 
@@ -54,6 +53,15 @@ struct gpujpeg_preprocessor_data
     struct gpujpeg_preprocessor_data_component comp[GPUJPEG_MAX_COMPONENT_COUNT];
 };
 
+struct gpujpeg_preprocessor {
+    void* kernel; // function poitner
+    struct gpujpeg_preprocessor_data data;
+};
+
+#ifdef PREPROCESSOR_INTERNAL_API
+#include "gpujpeg_common_internal.h"
+#include <cassert>
+#include <cstdint>
 /** Value that means that sampling factor has dynamic value */
 #define GPUJPEG_DYNAMIC 16
 
@@ -122,5 +130,7 @@ gpujpeg_preprocessor_make_sampling_factor_i(int comp_count, int numerator_h, int
            coder->component[1].sampling_factor.horizontal, coder->component[1].sampling_factor.vertical,               \
            coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical,               \
            coder->component[3].sampling_factor.horizontal, coder->component[3].sampling_factor.vertical)
+#endif // defined PREPROCESSOR_INTERNAL_API
 
+#endif // defined GPUJPEG_PREPROCESSOR_COMMON_CUH_DCC657E3_2EDF_47E2_90F4_F7CA26829E81
 /* vi: set expandtab sw=4: */

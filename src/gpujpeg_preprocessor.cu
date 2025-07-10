@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024, CESNET
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -33,8 +33,10 @@
  * computational kernels. It also does color space transformations.
  */
 
-#include "gpujpeg_colorspace.h"
+#define PREPROCESSOR_INTERNAL_API
 #include "gpujpeg_preprocessor_common.cuh"
+
+#include "gpujpeg_colorspace.h"
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_util.h"
 
@@ -325,7 +327,16 @@ gpujpeg_preprocessor_encode_no_transform(struct gpujpeg_coder *coder)
 int
 gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
 {
-    coder->preprocessor = NULL;
+    coder->preprocessor.kernel = nullptr;
+    struct gpujpeg_preprocessor_data *data = &coder->preprocessor.data;
+    for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
+        assert(coder->sampling_factor.horizontal % coder->component[comp].sampling_factor.horizontal == 0);
+        assert(coder->sampling_factor.vertical % coder->component[comp].sampling_factor.vertical == 0);
+        data->comp[comp].d_data = coder->component[comp].d_data;
+        data->comp[comp].sampling_factor.horizontal = coder->sampling_factor.horizontal / coder->component[comp].sampling_factor.horizontal;
+        data->comp[comp].sampling_factor.vertical = coder->sampling_factor.vertical / coder->component[comp].sampling_factor.vertical;
+        data->comp[comp].data_width = coder->component[comp].data_width;
+    }
 
     if ( gpujpeg_preprocessor_encode_no_transform(coder) ) {
         DEBUG_MSG(coder->param.verbose, "Matching format detected - not using preprocessor, using memcpy instead.\n");
@@ -333,22 +344,22 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
     }
 
     if (coder->param.color_space_internal == GPUJPEG_NONE) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_NONE>(coder);
+        coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_NONE>(coder);
     }
     else if (coder->param.color_space_internal == GPUJPEG_RGB) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_RGB>(coder);
+        coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_RGB>(coder);
     }
     else if (coder->param.color_space_internal == GPUJPEG_YCBCR_BT601) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601>(coder);
+        coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601>(coder);
     }
     else if (coder->param.color_space_internal == GPUJPEG_YCBCR_BT601_256LVLS) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
+        coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT601_256LVLS>(coder);
     }
     else if (coder->param.color_space_internal == GPUJPEG_YCBCR_BT709) {
-        coder->preprocessor = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT709>(coder);
+        coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT709>(coder);
     }
 
-    if ( coder->preprocessor == NULL ) {
+    if ( coder->preprocessor.kernel == NULL ) {
         return -1;
     }
 
@@ -361,7 +372,7 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
     struct gpujpeg_coder* coder = &encoder->coder;
 
     // Select kernel
-    gpujpeg_preprocessor_encode_kernel kernel = (gpujpeg_preprocessor_encode_kernel) coder->preprocessor;
+    gpujpeg_preprocessor_encode_kernel kernel = (gpujpeg_preprocessor_encode_kernel) coder->preprocessor.kernel;
     assert(kernel != NULL);
 
     int image_width = coder->param_image.width;
@@ -395,17 +406,8 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
     gpujpeg_const_div_prepare(image_width, width_div_mul, width_div_shift);
 
     // Run kernel
-    struct gpujpeg_preprocessor_data data;
-    for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
-        assert(coder->sampling_factor.horizontal % coder->component[comp].sampling_factor.horizontal == 0);
-        assert(coder->sampling_factor.vertical % coder->component[comp].sampling_factor.vertical == 0);
-        data.comp[comp].d_data = coder->component[comp].d_data;
-        data.comp[comp].sampling_factor.horizontal = coder->sampling_factor.horizontal / coder->component[comp].sampling_factor.horizontal;
-        data.comp[comp].sampling_factor.vertical = coder->sampling_factor.vertical / coder->component[comp].sampling_factor.vertical;
-        data.comp[comp].data_width = coder->component[comp].data_width;
-    }
     kernel<<<grid, threads, 0, encoder->stream>>>(
-        data,
+        coder->preprocessor.data,
         coder->d_data_raw,
         coder->param_image.width_padding,
         image_width,
@@ -465,8 +467,10 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder * coder = &encoder->coder;
     /// @todo support padding for other formats
-    assert(!coder->param_image.width_padding || (coder->param_image.pixel_format == GPUJPEG_444_U8_P012 && coder->preprocessor));
-    if (coder->preprocessor) {
+    assert(!coder->param_image.width_padding ||
+           (coder->param_image.pixel_format == GPUJPEG_444_U8_P012 && coder->preprocessor.kernel != nullptr));
+
+    if (coder->preprocessor.kernel != nullptr) {
             return gpujpeg_preprocessor_encode_interlaced(encoder);
     } else {
         return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);

@@ -560,7 +560,6 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
     coder->param.segment_info = -1;
     coder->param.color_space_internal = GPUJPEG_NONE;
     coder->param_image.color_space = GPUJPEG_NONE;
-    coder->preprocessor = NULL;
     coder->component = NULL;
     coder->d_component = NULL;
     coder->component_allocated_size = 0;

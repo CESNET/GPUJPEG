@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include "../libgpujpeg/gpujpeg_common.h"
 #include "../libgpujpeg/gpujpeg_type.h"
+#include "gpujpeg_preprocessor_common.cuh"
 #include "gpujpeg_util.h"
 
 // static_assert compat
@@ -328,8 +329,8 @@ struct gpujpeg_coder
     /// Number of allocated segments
     int segment_allocated_size;
 
-    /// Preprocessor data (kernel function pointer)
-    void* preprocessor;
+    /// Preprocessor or postprocessor data
+    struct gpujpeg_preprocessor preprocessor;
 
     /// Maximum sampling factor from components
     struct gpujpeg_component_sampling_factor sampling_factor;
