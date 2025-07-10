@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2021, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -31,11 +31,47 @@
 #ifndef GPUJPEG_PREPROCESSOR_H
 #define GPUJPEG_PREPROCESSOR_H
 
-#include "gpujpeg_encoder_internal.h"
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
+#include "../libgpujpeg/gpujpeg_type.h"
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct gpujpeg_coder;
+struct gpujpeg_encoder;
+
+/**
+ * Preprocessor/postprocessor data for component
+ // */
+struct gpujpeg_preprocessor_data_component
+{
+    uint8_t* d_data;
+    int data_width;
+    struct gpujpeg_component_sampling_factor sampling_factor;
+};
+
+/**
+ * Preprocessor/postprocessor data
+ */
+struct gpujpeg_preprocessor_data
+{
+    struct gpujpeg_preprocessor_data_component comp[GPUJPEG_MAX_COMPONENT_COUNT];
+};
+
+/**
+ * Preprocessor/postprocessor state
+ */
+struct gpujpeg_preprocessor
+{
+    void* kernel;       // function poitner
+    bool input_flipped; // [preprocess only] input is flipped
+    struct gpujpeg_preprocessor_data data;
+};
 
 /**
  * Init preprocessor encoder

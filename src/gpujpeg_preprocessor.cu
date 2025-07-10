@@ -33,11 +33,11 @@
  * computational kernels. It also does color space transformations.
  */
 
-#define PREPROCESSOR_INTERNAL_API
-#include "gpujpeg_preprocessor_common.cuh"
+#include "gpujpeg_preprocessor.h"
 
 #include "gpujpeg_colorspace.h"
-#include "gpujpeg_preprocessor.h"
+#include "gpujpeg_encoder_internal.h"
+#include "gpujpeg_preprocessor_common.cuh"
 #include "gpujpeg_util.h"
 
 /**
@@ -359,7 +359,7 @@ gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder)
         coder->preprocessor.kernel = (void*)gpujpeg_preprocessor_select_encode_kernel<GPUJPEG_YCBCR_BT709>(coder);
     }
 
-    if ( coder->preprocessor.kernel == NULL ) {
+    if ( coder->preprocessor.kernel == nullptr ) {
         return -1;
     }
 

@@ -41,7 +41,7 @@
 #include <stdlib.h>
 #include "../libgpujpeg/gpujpeg_common.h"
 #include "../libgpujpeg/gpujpeg_type.h"
-#include "gpujpeg_preprocessor_common.cuh"
+#include "gpujpeg_preprocessor.h" // struct gpujpeg_preprocessor
 #include "gpujpeg_util.h"
 
 // static_assert compat

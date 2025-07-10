@@ -33,11 +33,11 @@
  * to raw image. It also does color space transformations.
  */
 
-#define PREPROCESSOR_INTERNAL_API
-#include "gpujpeg_preprocessor_common.cuh"
+#include "gpujpeg_postprocessor.h"
 
 #include "gpujpeg_colorspace.h"
-#include "gpujpeg_postprocessor.h"
+#include "gpujpeg_preprocessor.h" // common structs
+#include "gpujpeg_preprocessor_common.cuh" // utils
 #include "gpujpeg_util.h"
 
 /**
@@ -500,7 +500,7 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
 int
 gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
-    if (coder->preprocessor.kernel == nullptr) {
+    if ( coder->preprocessor.kernel == nullptr ) {
         return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);
     }
 
