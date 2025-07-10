@@ -33,6 +33,10 @@
 #include "../libgpujpeg/gpujpeg_common.h"
 #include "../libgpujpeg/gpujpeg_type.h"
 
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
 #define RGB_8BIT_THREADS 256
 
 /**
@@ -55,6 +59,7 @@ struct gpujpeg_preprocessor_data
 
 struct gpujpeg_preprocessor {
     void* kernel; // function poitner
+    bool input_flipped; // [preprocess only] input is flipped
     struct gpujpeg_preprocessor_data data;
 };
 

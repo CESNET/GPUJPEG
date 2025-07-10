@@ -1,3 +1,8 @@
+2025-07-10 - 0.27.7
+----------
+
+- add encoder option for vertically flipped images
+
 2025-07-08 - 0.27.6
 ----------
 

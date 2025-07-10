@@ -231,6 +231,9 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
 #define GPUJPEG_ENC_HDR_VAL_SPIFF    "SPIFF"
 /// @}
 
+/// input image is vertically flipped (bottom-up): values @ref GPUJPEG_VAL_TRUE or @ref GPUJPEG_VAL_FALSE
+#define GPUJPEG_ENC_OPT_FLIPPED_BOOL "enc_opt_flipped"
+
 /**
  * sets encoder option
  * @retval GPUJPEG_NOERR  option was sucessfully set

@@ -461,20 +461,57 @@ gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
     return 0;
 }
 
+static __global__ void
+vertical_flip_kernel(uint32_t* data,
+                     int width, // image linesize/4
+                     int height // image height in pixels
+)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x; // column index
+    int y = blockIdx.y * blockDim.y + threadIdx.y; // row index
+
+    if ( x < width ) {
+        // Flipped row index
+        int flipped_y = height - 1 - y;
+        uint32_t tmp = data[y * width + x];
+        data[y * width + x] = data[flipped_y * width + x];
+        data[flipped_y * width + x] = tmp;
+    }
+}
+
+static int
+flip_lines(struct gpujpeg_encoder* encoder)
+{
+    struct gpujpeg_coder* coder = &encoder->coder;
+    for ( int i = 0; i < coder->param.comp_count; ++i ) {
+        dim3 block(RGB_8BIT_THREADS, 1);
+        int width = coder->component[i].data_width / 4;
+        int height = coder->component[i].data_height;
+        dim3 grid((width + block.x - 1) / block.x, height / 2); // only half of height
+        vertical_flip_kernel<<<grid, block, 0, encoder->stream>>>((uint32_t*)coder->component[i].d_data, width, height);
+    }
+    gpujpeg_cuda_check_error("Preprocessor flip failed", return -1);
+    return 0;
+}
+
 /* Documented at declaration */
 int
 gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder * coder = &encoder->coder;
     /// @todo support padding for other formats
-    assert(!coder->param_image.width_padding ||
+    assert(coder->param_image.width_padding == 0 ||
            (coder->param_image.pixel_format == GPUJPEG_444_U8_P012 && coder->preprocessor.kernel != nullptr));
 
-    if (coder->preprocessor.kernel != nullptr) {
-            return gpujpeg_preprocessor_encode_interlaced(encoder);
-    } else {
-        return gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
+    int ret = coder->preprocessor.kernel != nullptr ? gpujpeg_preprocessor_encode_interlaced(encoder)
+                                                    : gpujpeg_preprocessor_encoder_copy_planar_data(encoder);
+    if (ret != 0) {
+        return ret;
     }
+    if (coder->preprocessor.input_flipped) {
+        return flip_lines(encoder);
+    }
+    return ret;
 }
 
 /* vi: set expandtab sw=4: */
