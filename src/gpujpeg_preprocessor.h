@@ -69,7 +69,8 @@ struct gpujpeg_preprocessor_data
 struct gpujpeg_preprocessor
 {
     void* kernel;       // function poitner
-    bool input_flipped; // [preprocess only] input is flipped
+    bool input_flipped;         ///< [preprocess only] input buf is flipped
+    unsigned int channel_remap; ///< remap input channels if != 0; currently preproecss only
     struct gpujpeg_preprocessor_data data;
 };
 

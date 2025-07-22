@@ -494,6 +494,47 @@ flip_lines(struct gpujpeg_encoder* encoder)
     return 0;
 }
 
+template <enum gpujpeg_pixel_format>
+__global__ void
+channel_remap_kernel(uint8_t* data, int width, int height, unsigned int byte_map);
+
+template <>
+__global__ void
+channel_remap_kernel<GPUJPEG_4444_U8_P0123>(uint8_t* data, int width, int height, unsigned int byte_map)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x; // column index
+    int y = blockIdx.y * blockDim.y + threadIdx.y; // row index
+
+    if ( x >= width || y >= height ) {
+        return;
+    }
+
+    uint32_t* data32 = (uint32_t*)data;
+    uint32_t val = data32[y * width + x];
+    data32[y * width + x] = __byte_perm(val, 0xFF, byte_map);
+}
+
+static int
+channel_remap(struct gpujpeg_encoder* encoder)
+{
+    struct gpujpeg_coder* coder = &encoder->coder;
+    if ( coder->param_image.pixel_format == GPUJPEG_4444_U8_P0123 ) {
+        dim3 block(16, 16);
+        int width = coder->param_image.width;
+        int height = coder->param_image.height;
+        dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
+        channel_remap_kernel<GPUJPEG_4444_U8_P0123><<<grid, block, 0, encoder->stream>>>(
+            encoder->coder.d_data_raw, width, height, coder->preprocessor.channel_remap);
+    }
+    else {
+        ERROR_MSG("Pixel format %s currently unsupported for channel remap!\n",
+                  gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));
+        return -1;
+    }
+    gpujpeg_cuda_check_error("channel_remap_kernel failed", return -1);
+    return 0;
+}
+
 /* Documented at declaration */
 int
 gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
@@ -502,6 +543,13 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
     /// @todo support padding for other formats
     assert(coder->param_image.width_padding == 0 ||
            (coder->param_image.pixel_format == GPUJPEG_444_U8_P012 && coder->preprocessor.kernel != nullptr));
+
+    if ( coder->preprocessor.channel_remap != 0 ) {
+        const int ret = channel_remap(encoder);
+        if ( ret != 0 ) {
+            return ret;
+        }
+    }
 
     int ret = coder->preprocessor.kernel != nullptr ? gpujpeg_preprocessor_encode_interlaced(encoder)
                                                     : gpujpeg_preprocessor_encoder_copy_planar_data(encoder);

@@ -652,6 +652,42 @@ gpujpeg_encoder_set_jpeg_header(struct gpujpeg_encoder *encoder, enum gpujpeg_he
     encoder->header_type = header_type;
 }
 
+static int
+enc_opt_set_channel_remap(struct gpujpeg_encoder* encoder, const char* val)
+{
+    if ( strcmp(val, "help") == 0 ) {
+        printf("syntax for " GPUJPEG_ENC_OPT_CHANNEL_REMAP ":\n");
+        printf("\t\"XYZ\" or \"XYZW\" where the letters are input channel indices\n");
+        printf("\tplaceholder 'Z' or 'F' can be used to set the channel to all-zeros or all-ones\n");
+        printf("\n");
+        printf("examples:\n");
+        printf("\t\"1230\" or \"123F\" to map ARGB to RGBA\n");
+        return GPUJPEG_ERROR;
+    }
+    if ( strlen(val) >= GPUJPEG_MAX_COMPONENT_COUNT ) {
+        ERROR_MSG("Mapping for more than %d channels specified!\n", GPUJPEG_MAX_COMPONENT_COUNT);
+        return GPUJPEG_ERROR;
+    }
+    encoder->coder.preprocessor.channel_remap = 0; // clear old
+    while ( *val != '\0' ) {
+        encoder->coder.preprocessor.channel_remap >>= 4;
+        int src_chan = *val - '0';
+        if ( *val == 'F' ) {
+            src_chan = 4;
+        }
+        else if ( *val == 'Z' ) {
+            src_chan = 5;
+        }
+        else if ( src_chan >= GPUJPEG_MAX_COMPONENT_COUNT ) {
+            ERROR_MSG("Invalid channel %c for " GPUJPEG_ENC_OPT_CHANNEL_REMAP "!\n", *val);
+            return GPUJPEG_ERROR;
+        }
+        encoder->coder.preprocessor.channel_remap |= src_chan << 12;
+        val++;
+    }
+    return GPUJPEG_NOERR;
+}
+
 GPUJPEG_API int
 gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, const char* val)
 {
@@ -700,6 +736,9 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
             return GPUJPEG_ERROR;
         }
         return GPUJPEG_NOERR;
+    }
+    if ( strcmp(opt, GPUJPEG_ENC_OPT_CHANNEL_REMAP) == 0 ) {
+        return enc_opt_set_channel_remap(encoder, val);
     }
     ERROR_MSG("Invalid encoder option: %s!\n", opt);
     return GPUJPEG_ERROR;
