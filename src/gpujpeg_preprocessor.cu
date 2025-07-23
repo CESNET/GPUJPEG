@@ -440,7 +440,8 @@ gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
     size_t data_raw_offset = 0;
     bool needs_stride = false; // true if width is not divisible by MCU width
     for ( int i = 0; i < coder->param.comp_count; ++i ) {
-        needs_stride = needs_stride || coder->component[i].width != coder->component[i].data_width;
+        int component_width = coder->component[i].width + coder->param_image.width_padding;
+        needs_stride = needs_stride || component_width != coder->component[i].data_width;
     }
     if (!needs_stride) {
             for ( int i = 0; i < coder->param.comp_count; ++i ) {
@@ -450,10 +451,12 @@ gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
             }
     } else {
            for ( int i = 0; i < coder->param.comp_count; ++i ) {
-                    int spitch = coder->component[i].width;
+                    int spitch = coder->component[i].width + coder->param_image.width_padding;
                     int dpitch = coder->component[i].data_width;
                     size_t component_size = spitch * coder->component[i].height;
-                    cudaMemcpy2DAsync(coder->component[i].d_data, dpitch, coder->d_data_raw + data_raw_offset, spitch, spitch, coder->component[i].height, cudaMemcpyDeviceToDevice, encoder->stream);
+                    cudaMemcpy2DAsync(coder->component[i].d_data, dpitch, coder->d_data_raw + data_raw_offset, spitch,
+                                      coder->component[i].width, coder->component[i].height, cudaMemcpyDeviceToDevice,
+                                      encoder->stream);
                     data_raw_offset += component_size;
             }
     }
@@ -540,9 +543,9 @@ int
 gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
 {
     struct gpujpeg_coder * coder = &encoder->coder;
-    /// @todo support padding for other formats
-    assert(coder->param_image.width_padding == 0 ||
-           (coder->param_image.pixel_format == GPUJPEG_444_U8_P012 && coder->preprocessor.kernel != nullptr));
+    /// @todo ensure that all combinations work so the assert is really unneeded
+    // assert(coder->param_image.width_padding == 0 ||
+    //        (coder->param_image.pixel_format == GPUJPEG_444_U8_P012 && coder->preprocessor.kernel != nullptr));
 
     if ( coder->preprocessor.channel_remap != 0 ) {
         const int ret = channel_remap(encoder);
