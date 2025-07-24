@@ -664,7 +664,7 @@ enc_opt_set_channel_remap(struct gpujpeg_encoder* encoder, const char* val)
         printf("\t\"1230\" or \"123F\" to map ARGB to RGBA\n");
         return GPUJPEG_ERROR;
     }
-    if ( strlen(val) >= GPUJPEG_MAX_COMPONENT_COUNT ) {
+    if ( strlen(val) > GPUJPEG_MAX_COMPONENT_COUNT ) {
         ERROR_MSG("Mapping for more than %d channels specified!\n", GPUJPEG_MAX_COMPONENT_COUNT);
         return GPUJPEG_ERROR;
     }
