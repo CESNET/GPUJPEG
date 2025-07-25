@@ -235,11 +235,15 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
 #define GPUJPEG_ENC_OPT_FLIPPED_BOOL "enc_opt_flipped"
 
 /**
- * remaps input channel order, format "XYZ" or "XYZW" where the letters stand for input channel
- * indices (0-indexed) mapped to output position; so eg. remapping from ARGB to RGBA will be
- * "1230". If number of channes doesn't equal the length of the string, the characters are invalid
- * or out-of bound, the behavior is undefined. set to "" (empty string) to revert this setting.
- * Placeholder'Z' or 'F' can be used instead of numbers to fill out channel with zeros or all-ones.
+ * remap input channel order
+ *
+ * Format is "XYZ" or "XYZW" where the letters stand for input channel indices (0-indexed) mapped to output position;
+ * so eg. for remapping from ARGB to RGBA the option value will be "1230".
+ *
+ * The number of image channes must equal the length of the string. Set to "" (empty string) to revert this setting.
+ * Letters 'Z' or 'F' can be used instead of indices to fill given output channel with zeros or all-ones.
+ *
+ * Currently, the remapping is implemented for GPUJPEG_4444_U8_P0123 only.
  */
 #define GPUJPEG_ENC_OPT_CHANNEL_REMAP "enc_opt_channel_remap"
 

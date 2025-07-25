@@ -71,6 +71,7 @@ struct gpujpeg_preprocessor
     void* kernel;       // function poitner
     bool input_flipped;         ///< [preprocess only] input buf is flipped
     unsigned int channel_remap; ///< remap input channels if != 0; currently preproecss only
+                                ///< format: count_8b | 00000000 | idx0_4b | idx1_4b | idx2_4b | idx3_4b
     struct gpujpeg_preprocessor_data data;
 };
 

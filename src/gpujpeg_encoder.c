@@ -664,7 +664,8 @@ enc_opt_set_channel_remap(struct gpujpeg_encoder* encoder, const char* val)
         printf("\t\"1230\" or \"123F\" to map ARGB to RGBA\n");
         return GPUJPEG_ERROR;
     }
-    if ( strlen(val) > GPUJPEG_MAX_COMPONENT_COUNT ) {
+    const int mapped_count = strlen(val);
+    if ( mapped_count > GPUJPEG_MAX_COMPONENT_COUNT ) {
         ERROR_MSG("Mapping for more than %d channels specified!\n", GPUJPEG_MAX_COMPONENT_COUNT);
         return GPUJPEG_ERROR;
     }
@@ -678,13 +679,15 @@ enc_opt_set_channel_remap(struct gpujpeg_encoder* encoder, const char* val)
         else if ( *val == 'Z' ) {
             src_chan = 5;
         }
-        else if ( src_chan >= GPUJPEG_MAX_COMPONENT_COUNT ) {
-            ERROR_MSG("Invalid channel %c for " GPUJPEG_ENC_OPT_CHANNEL_REMAP "!\n", *val);
+        else if ( src_chan < 0 || src_chan >= mapped_count ) {
+            ERROR_MSG("Invalid channel index %c for " GPUJPEG_ENC_OPT_CHANNEL_REMAP " (mapping %d channels)!\n", *val,
+                      mapped_count);
             return GPUJPEG_ERROR;
         }
         encoder->coder.preprocessor.channel_remap |= src_chan << 12;
         val++;
     }
+    encoder->coder.preprocessor.channel_remap |= mapped_count << 24;
     return GPUJPEG_NOERR;
 }
 

@@ -521,13 +521,23 @@ static int
 channel_remap(struct gpujpeg_encoder* encoder)
 {
     struct gpujpeg_coder* coder = &encoder->coder;
+
+    const unsigned comp_count = gpujpeg_pixel_format_get_comp_count(coder->param_image.pixel_format);
+    const unsigned mapped_count = coder->preprocessor.channel_remap >> 24;
+    if (comp_count != mapped_count) {
+        ERROR_MSG("Wrong channel remapping given, given %u channels but pixel format has %u!\n", mapped_count,
+                  comp_count);
+        return -1;
+    }
+    const unsigned mapping = coder->preprocessor.channel_remap & 0xFFFF;
+
     if ( coder->param_image.pixel_format == GPUJPEG_4444_U8_P0123 ) {
         dim3 block(16, 16);
         int width = coder->param_image.width;
         int height = coder->param_image.height;
         dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
         channel_remap_kernel<GPUJPEG_4444_U8_P0123><<<grid, block, 0, encoder->stream>>>(
-            encoder->coder.d_data_raw, width, height, coder->preprocessor.channel_remap);
+            encoder->coder.d_data_raw, width, height, mapping);
     }
     else {
         ERROR_MSG("Pixel format %s currently unsupported for channel remap!\n",
