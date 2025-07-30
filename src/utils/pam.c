@@ -37,6 +37,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -227,7 +228,10 @@ bool pam_read(const char *filename, struct pam_metadata *info, unsigned char **d
         return true;
 }
 
-bool pam_write(const char *filename, unsigned int width, unsigned int height, int ch_count, int maxval, const unsigned char *data, bool pnm) {
+bool pam_write(const char *filename, unsigned int width, unsigned int pitch,
+               unsigned int height, int ch_count, int maxval,
+               const unsigned char *data, bool pnm)
+{
         errno = 0;
 #ifdef _WIN32
         FILE *file = _wfopen(mbs_to_wstr(filename), L"wb");
@@ -267,9 +271,19 @@ bool pam_write(const char *filename, unsigned int width, unsigned int height, in
                         "ENDHDR\n",
                         width, height, ch_count, maxval, tuple_type);
         }
-        size_t len = (size_t) width * height * ch_count * (maxval <= 255 ? 1 : 2);
+        const size_t linesize = (size_t)  height * ch_count * (maxval <= 255 ? 1 : 2);
+        const size_t len = width * linesize;
         errno = 0;
-        size_t bytes_written = fwrite((const char *) data, 1, len, file);
+        size_t bytes_written = 0;
+        if (pitch == PAM_PITCH_CONTINUOUS || width == pitch) {
+                bytes_written = fwrite((const char *) data, 1, len, file);
+        } else {
+                for (unsigned y = 0; y < height; ++y) {
+                        bytes_written += fwrite((const char *)data +
+                                                    ((size_t)y * pitch),
+                                                1, linesize, file);
+                }
+        }
         if (bytes_written != len) {
                 fprintf(stderr, "Unable to write PAM/PNM data - length %zd, written %zd: %s\n",
                         len, bytes_written, strerror(errno));

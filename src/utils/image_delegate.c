@@ -235,7 +235,8 @@ int pampnm_save_delegate(const char *filename, const struct gpujpeg_image_parame
         return -1;
     }
 
-    bool ret = pam_write(filename, param_image->width, param_image->height, depth, 255, (const unsigned char *) data, pnm);
+    const bool ret = pam_write(filename, param_image->width, param_image->width, param_image->height, depth, 255,
+                               (const unsigned char*)data, pnm);
     return ret ? 0 : -1;
 }
 
