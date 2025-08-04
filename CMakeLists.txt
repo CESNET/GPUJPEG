@@ -23,6 +23,12 @@ if (CMAKE_CUDA_ARCHITECTURES MATCHES OFF)
     message(NOTICE "You may want to set CUDA architecture, suggested `-DCMAKE_CUDA_ARCHITECTURES=native`")
 endif()
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(NOTICE "Suggesting setting build type expicitly (eg. "
+        "\"-DCMAKE_BUILD_TYPE=Release\" or \"Debug\") for single-config "
+        "generators.")
+endif()
+
 cmake_policy(SET CMP0010 NEW) # error on undefined variable
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "gpujpeg") # may be removed when version will be explicitly defined
