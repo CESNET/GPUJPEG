@@ -497,13 +497,9 @@ flip_lines(struct gpujpeg_encoder* encoder)
     return 0;
 }
 
-template <enum gpujpeg_pixel_format>
+template<bool aligned>
 __global__ void
-channel_remap_kernel(uint8_t* data, int width, int height, unsigned int byte_map);
-
-template <>
-__global__ void
-channel_remap_kernel<GPUJPEG_4444_U8_P0123>(uint8_t* data, int width, int height, unsigned int byte_map)
+channel_remap_kernel_4444_u8_p0123(uint8_t* data, int width, int pitch, int height, unsigned int byte_map)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x; // column index
     int y = blockIdx.y * blockDim.y + threadIdx.y; // row index
@@ -512,9 +508,19 @@ channel_remap_kernel<GPUJPEG_4444_U8_P0123>(uint8_t* data, int width, int height
         return;
     }
 
-    uint32_t* data32 = (uint32_t*)data;
-    uint32_t val = data32[y * width + x];
-    data32[y * width + x] = __byte_perm(val, 0xFF, byte_map);
+    if (aligned) {
+        uint32_t* data32 = (uint32_t*)(data + y * pitch + x * sizeof(uint32_t));
+        uint32_t val = *data32;
+        *data32 = __byte_perm(val, 0xFF, byte_map);
+    } else {
+        data += y * pitch + x * sizeof(uint32_t);
+        uint32_t val = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+        val = __byte_perm(val, 0xFF, byte_map);
+        data[0] = val & 0xFF;
+        data[1] = (val >> 8) & 0xFF;
+        data[2] = (val >> 16) & 0xFF;
+        data[3] = val >> 24;
+    }
 }
 
 static int
@@ -536,8 +542,15 @@ channel_remap(struct gpujpeg_encoder* encoder)
         int width = coder->param_image.width;
         int height = coder->param_image.height;
         dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
-        channel_remap_kernel<GPUJPEG_4444_U8_P0123><<<grid, block, 0, encoder->stream>>>(
-            encoder->coder.d_data_raw, width, height, mapping);
+        int pitch = width * sizeof(uint32_t) + coder->param_image.width_padding;
+        bool aligned = coder->param_image.width_padding % sizeof(uint32_t) == 0;
+        if (aligned) {
+            channel_remap_kernel_4444_u8_p0123<true><<<grid, block, 0, encoder->stream>>>(encoder->coder.d_data_raw, width,
+                                                                                    pitch, height, mapping);
+        } else {
+            channel_remap_kernel_4444_u8_p0123<false><<<grid, block, 0, encoder->stream>>>(encoder->coder.d_data_raw, width,
+                                                                                    pitch, height, mapping);
+        }
     }
     else {
         ERROR_MSG("Pixel format %s currently unsupported for channel remap!\n",
