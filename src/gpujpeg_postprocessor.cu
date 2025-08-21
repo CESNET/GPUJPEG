@@ -122,22 +122,20 @@ inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_U8>(uint8_t *d_data_raw
 }
 
 template<>
-inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_444_U8_P012>(uint8_t *d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
+inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_444_U8_P012>(uint8_t *d_data_raw, int &image_width, int &image_height, int &offset, int &x, int &y, uchar4 &r)
 {
-    image_position = image_position * 3;
-    d_data_raw[image_position + 0] = r.x;
-    d_data_raw[image_position + 1] = r.y;
-    d_data_raw[image_position + 2] = r.z;
+    d_data_raw[offset + 0] = r.x;
+    d_data_raw[offset + 1] = r.y;
+    d_data_raw[offset + 2] = r.z;
 }
 
 template<>
-inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_4444_U8_P0123>(uint8_t *d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
+inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_4444_U8_P0123>(uint8_t *d_data_raw, int &image_width, int &image_height, int &offset, int &x, int &y, uchar4 &r)
 {
-    image_position = image_position * 4;
-    d_data_raw[image_position + 0] = r.x;
-    d_data_raw[image_position + 1] = r.y;
-    d_data_raw[image_position + 2] = r.z;
-    d_data_raw[image_position + 3] = r.w;
+    d_data_raw[offset + 0] = r.x;
+    d_data_raw[offset + 1] = r.y;
+    d_data_raw[offset + 2] = r.z;
+    d_data_raw[offset + 3] = r.w;
 }
 
 template<>
@@ -159,14 +157,13 @@ inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_422_U8_P0P1P2>(uint8_t 
 }
 
 template<>
-inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_422_U8_P1020>(uint8_t *d_data_raw, int &image_width, int &image_height, int &image_position, int &x, int &y, uchar4 &r)
+inline __device__ void gpujpeg_comp_to_raw_store<GPUJPEG_422_U8_P1020>(uint8_t *d_data_raw, int &image_width, int &image_height, int &offset, int &x, int &y, uchar4 &r)
 {
-    image_position = image_position * 2;
-    d_data_raw[image_position + 1] = r.x;
+    d_data_raw[offset + 1] = r.x;
     if ( (x % 2) == 0 )
-        d_data_raw[image_position + 0] = r.y;
+        d_data_raw[offset + 0] = r.y;
     else
-        d_data_raw[image_position + 0] = r.z;
+        d_data_raw[offset + 0] = r.z;
 }
 
 template<>
@@ -244,7 +241,8 @@ struct post_load<in_is_rgb, GPUJPEG_DYNAMIC>
  * @param pixel_count  Number of pixels to copy
  * @return void
  */
-typedef void (*gpujpeg_preprocessor_decode_kernel)(struct gpujpeg_preprocessor_data data, uint8_t* d_data_raw, int image_width, int image_height);
+typedef void (*gpujpeg_preprocessor_decode_kernel)(struct gpujpeg_preprocessor_data data, uint8_t* d_data_raw,
+                                                   int width_padding, int image_width, int image_height);
 
 template<
     enum gpujpeg_color_space color_space_internal,
@@ -256,7 +254,8 @@ template<
     uint8_t s_comp4_samp_factor_h, uint8_t s_comp4_samp_factor_v
 >
 __global__ void
-gpujpeg_preprocessor_comp_to_raw_kernel(struct gpujpeg_preprocessor_data data, uint8_t* d_data_raw, int image_width, int image_height)
+gpujpeg_preprocessor_comp_to_raw_kernel(struct gpujpeg_preprocessor_data data, uint8_t* d_data_raw,
+                                        int image_width_padding, int image_width, int image_height)
 {
     int x  = threadIdx.x;
     int gX = (blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x;
@@ -276,7 +275,8 @@ gpujpeg_preprocessor_comp_to_raw_kernel(struct gpujpeg_preprocessor_data data, u
     gpujpeg_color_transform<color_space_internal, color_space>::perform(r);
 
     // Save
-    gpujpeg_comp_to_raw_store<pixel_format>(d_data_raw, image_width, image_height, image_position, image_position_x, image_position_y, r);
+    int offset = image_position * unit_size<pixel_format>() + image_width_padding * image_position_y;
+    gpujpeg_comp_to_raw_store<pixel_format>(d_data_raw, image_width, image_height, offset, image_position_x, image_position_y, r);
 }
 
 /**
@@ -508,7 +508,7 @@ gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     gpujpeg_preprocessor_decode_kernel kernel = (gpujpeg_preprocessor_decode_kernel)coder->preprocessor.kernel;
     assert(kernel != NULL);
 
-    int image_width = coder->param_image.width + coder->param_image.width_padding;
+    int image_width = coder->param_image.width;
     int image_height = coder->param_image.height;
 
     // When saving 4:2:2 data of odd width, the data should have even width, so round it
@@ -537,6 +537,7 @@ gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     kernel<<<grid, threads, 0, stream>>>(
         coder->preprocessor.data,
         coder->d_data_raw,
+        coder->param_image.width_padding,
         image_width,
         image_height
     );

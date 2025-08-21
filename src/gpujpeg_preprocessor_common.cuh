@@ -108,5 +108,18 @@ gpujpeg_preprocessor_make_sampling_factor_i(int comp_count, int numerator_h, int
            coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical,               \
            coder->component[3].sampling_factor.horizontal, coder->component[3].sampling_factor.vertical)
 
+template<enum gpujpeg_pixel_format>
+inline __device__ int unit_size() { return 1; }
+
+template<>
+inline __device__ int unit_size<GPUJPEG_444_U8_P012>() { return 3; }
+
+template<>
+inline __device__ int unit_size<GPUJPEG_4444_U8_P0123>() { return 4; }
+
+template<>
+inline __device__ int unit_size<GPUJPEG_422_U8_P1020>() { return 2; }
+
+
 #endif // defined GPUJPEG_PREPROCESSOR_COMMON_CUH_DCC657E3_2EDF_47E2_90F4_F7CA26829E81
 /* vi: set expandtab sw=4: */
