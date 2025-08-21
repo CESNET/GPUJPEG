@@ -107,8 +107,11 @@ static void
 print_help(bool full)
 {
     printf("gpujpegtool [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
-           "   -h, --help             print help\n"
-           "   -v, --verbose          verbose output (multiply to increase verbosity - max 3) \n"
+           "   -h, --help             print help\n");
+    if (!full) {
+        printf("   -H, --fullhelp         print all options\n");
+    }
+    printf("   -v, --verbose          verbose output (multiply to increase verbosity - max 3) \n"
            "   -D, --device           set cuda device id (default 0)\n"
            "   -L, --device-list      list cuda devices\n"
            "\n");
@@ -145,11 +148,7 @@ print_help(bool full)
            );
     if ( full ) {
         printf("   -b, --debug            debug helpers (reset GPU for leakcheck, dump infile if not regular)\n"
-               "   -O " GPUJPEG_DEC_OPT_TGA_RLE_BOOL "=[" GPUJPEG_VAL_FALSE "|" GPUJPEG_VAL_TRUE
-               "]   set decoder option (not) to output RLE TGA; other options exist\n");
-    }
-    else {
-        printf("   -H, --fullhelp         print all options\n");
+               "   -O <key>=<value>|help  set encoder/decoder option, 'help' for list\n");
     }
     printf("recognized raw input/output file extensions: rgb, yuv, pnm... (use`gpujpegtool exts` for the full list)\n");
 }
@@ -351,18 +350,26 @@ struct coder_opts
     char* opt;
     char* val;
 };
-static bool
+static int
 assign_coder_opt(struct coder_opts* encoder_opts, struct coder_opts* decoder_opts, char* optval)
 {
+    if (strcmp(optval, "help") == 0) {
+        printf("Available options:\n");
+        printf("decoder:\n");
+        gpujpeg_decoder_print_options();
+        printf("\nencoder:\n");
+        gpujpeg_encoder_print_options();
+        return 1;
+    }
     char* opt = optval;
     char* delim = strchr(optval, '=');
     if ( delim == NULL ) {
         fprintf(stderr, "No value for %s!\n", optval);
-        return false;
+        return -1;
     }
     if ( strncmp(optval, "enc_", 4) != 0 && strncmp(optval, "dec_", 4) != 0 ) {
         fprintf(stderr, "Option should start with either enc_ or dec_, given %s!\n", optval);
-        return false;
+        return -1;
     }
     *delim = '\0';
     char *val = delim + 1;
@@ -371,11 +378,11 @@ assign_coder_opt(struct coder_opts* encoder_opts, struct coder_opts* decoder_opt
         if ( opts[i].opt == NULL ) {
             opts[i].opt = opt;
             opts[i].val = val;
-            return true;
+            return 0;
         }
     }
     fprintf(stderr, "Too much options!\n");
-    return false;
+    return -1;
 }
 static bool
 set_encoder_opts(struct gpujpeg_encoder* encoder, const struct coder_opts* opts)
@@ -612,8 +619,9 @@ main(int argc, char *argv[])
             debug = true;
             break;
         case 'O':
-            if ( !assign_coder_opt(encoder_options, decoder_options, tstr_to_mbs(optarg)) ) {
-                return 1;
+            rc = assign_coder_opt(encoder_options, decoder_options, tstr_to_mbs(optarg));
+            if (rc != 0) {
+                return rc < 0 ? 1 : 0;
             }
             break;
         case '?':

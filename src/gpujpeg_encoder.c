@@ -746,6 +746,17 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
     ERROR_MSG("Invalid encoder option: %s!\n", opt);
     return GPUJPEG_ERROR;
 }
+GPUJPEG_API void
+gpujpeg_encoder_print_options() {
+    printf("\t" GPUJPEG_ENC_OPT_OUT "=[" GPUJPEG_ENC_OUT_VAL_PAGEABLE "|" GPUJPEG_ENC_OUT_VAL_PINNED
+           "] - compressed data buffer allocation property\n");
+    printf("\t" GPUJPEG_ENC_OPT_HDR "=[" GPUJPEG_ENC_HDR_VAL_JFIF "|" GPUJPEG_ENC_HDR_VAL_ADOBE "|" GPUJPEG_ENC_HDR_VAL_SPIFF
+           "] - output JPEG header\n");
+    printf("\t" GPUJPEG_ENC_OPT_FLIPPED_BOOL "=[" GPUJPEG_VAL_FALSE "|" GPUJPEG_VAL_TRUE
+           "] - whether is the input image should be vertically flipped (prior encode)\n");
+    printf("\t" GPUJPEG_ENC_OPT_CHANNEL_REMAP "=XYZ[W] - input channel mapping, eg. '210F' for GBRX,\n"
+        "\t\t'210' for GBR; special placeholders 'F' and 'Z' to set a channel to all-ones or all-zeros\n");
+}
 
 /* Documented at declaration */
 int

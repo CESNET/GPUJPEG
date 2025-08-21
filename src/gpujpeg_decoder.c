@@ -497,6 +497,13 @@ gpujpeg_decoder_set_option(struct gpujpeg_decoder* decoder, const char *opt, con
     return GPUJPEG_ERROR;
 }
 
+GPUJPEG_API void
+gpujpeg_decoder_print_options()
+{
+    printf("\t" GPUJPEG_DEC_OPT_TGA_RLE_BOOL "=[" GPUJPEG_VAL_FALSE "|" GPUJPEG_VAL_TRUE
+           "] - set decoder option (not) to output RLE TGA\n");
+}
+
 /* Documented at declaration */
 int
 gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)

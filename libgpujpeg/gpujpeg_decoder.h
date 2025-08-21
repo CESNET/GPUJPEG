@@ -277,7 +277,8 @@ gpujpeg_decoder_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg
  */
 GPUJPEG_API int
 gpujpeg_decoder_set_option(struct gpujpeg_decoder* decoder, const char *opt, const char* val);
-
+GPUJPEG_API void
+gpujpeg_decoder_print_options();
 
 #ifdef __cplusplus
 }

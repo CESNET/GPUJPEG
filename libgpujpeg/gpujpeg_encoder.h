@@ -254,6 +254,8 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
  */
 GPUJPEG_API int
 gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char* opt, const char* val);
+GPUJPEG_API void
+gpujpeg_encoder_print_options();
 
 /**
  * Destory JPEG encoder
