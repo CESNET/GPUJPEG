@@ -242,8 +242,6 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
  *
  * The number of image channes must equal the length of the string. Set to "" (empty string) to revert this setting.
  * Letters 'Z' or 'F' can be used instead of indices to fill given output channel with zeros or all-ones.
- *
- * Currently, the remapping is implemented for GPUJPEG_4444_U8_P0123 and GPUJPEG_444_U8_P012.
  */
 #define GPUJPEG_ENC_OPT_CHANNEL_REMAP "enc_opt_channel_remap"
 

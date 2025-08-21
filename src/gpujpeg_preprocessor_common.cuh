@@ -120,6 +120,86 @@ inline __device__ int unit_size<GPUJPEG_4444_U8_P0123>() { return 4; }
 template<>
 inline __device__ int unit_size<GPUJPEG_422_U8_P1020>() { return 2; }
 
+template <enum gpujpeg_pixel_format pixel_format>
+inline __device__ void
+gpujpeg_comp_to_raw_store(uint8_t* d_data_raw, int& image_width, int& image_height, int& image_position, int& x, int& y,
+                          uchar4& r);
+
+template <>
+inline __device__ void
+gpujpeg_comp_to_raw_store<GPUJPEG_U8>(uint8_t* d_data_raw, int& image_width, int& image_height, int& image_position,
+                                      int& x, int& y, uchar4& r)
+{
+    d_data_raw[image_position] = r.x;
+}
+
+template <>
+inline __device__ void
+gpujpeg_comp_to_raw_store<GPUJPEG_444_U8_P012>(uint8_t* d_data_raw, int& image_width, int& image_height, int& offset,
+                                               int& x, int& y, uchar4& r)
+{
+    d_data_raw[offset + 0] = r.x;
+    d_data_raw[offset + 1] = r.y;
+    d_data_raw[offset + 2] = r.z;
+}
+
+template <>
+inline __device__ void
+gpujpeg_comp_to_raw_store<GPUJPEG_4444_U8_P0123>(uint8_t* d_data_raw, int& image_width, int& image_height, int& offset,
+                                                 int& x, int& y, uchar4& r)
+{
+    d_data_raw[offset + 0] = r.x;
+    d_data_raw[offset + 1] = r.y;
+    d_data_raw[offset + 2] = r.z;
+    d_data_raw[offset + 3] = r.w;
+}
+
+template <>
+inline __device__ void
+gpujpeg_comp_to_raw_store<GPUJPEG_444_U8_P0P1P2>(uint8_t* d_data_raw, int& image_width, int& image_height,
+                                                 int& image_position, int& x, int& y, uchar4& r)
+{
+    d_data_raw[image_position] = r.x;
+    d_data_raw[image_width * image_height + image_position] = r.y;
+    d_data_raw[2 * image_width * image_height + image_position] = r.z;
+}
+
+template <>
+inline __device__ void
+gpujpeg_comp_to_raw_store<GPUJPEG_422_U8_P0P1P2>(uint8_t* d_data_raw, int& image_width, int& image_height,
+                                                 int& image_position, int& x, int& y, uchar4& r)
+{
+    d_data_raw[image_position] = r.x;
+    if ( (x % 2) == 0 ) {
+        d_data_raw[image_width * image_height + image_position / 2] = r.y;
+        d_data_raw[image_width * image_height + image_height * ((image_width + 1) / 2) + image_position / 2] = r.z;
+    }
+}
+
+template <>
+inline __device__ void
+gpujpeg_comp_to_raw_store<GPUJPEG_422_U8_P1020>(uint8_t* d_data_raw, int& image_width, int& image_height, int& offset,
+                                                int& x, int& y, uchar4& r)
+{
+    d_data_raw[offset + 1] = r.x;
+    if ( (x % 2) == 0 )
+        d_data_raw[offset + 0] = r.y;
+    else
+        d_data_raw[offset + 0] = r.z;
+}
+
+template <>
+inline __device__ void
+gpujpeg_comp_to_raw_store<GPUJPEG_420_U8_P0P1P2>(uint8_t* d_data_raw, int& image_width, int& image_height,
+                                                 int& image_position, int& x, int& y, uchar4& r)
+{
+    d_data_raw[image_position] = r.x;
+    if ( (image_position % 2) == 0 && (y % 2) == 0 ) {
+        d_data_raw[image_width * image_height + y / 2 * ((image_width + 1) / 2) + x / 2] = r.y;
+        d_data_raw[image_width * image_height + ((image_height + 1) / 2 + y / 2) * ((image_width + 1) / 2) + x / 2] =
+            r.z;
+    }
+}
 
 #endif // defined GPUJPEG_PREPROCESSOR_COMMON_CUH_DCC657E3_2EDF_47E2_90F4_F7CA26829E81
 /* vi: set expandtab sw=4: */
