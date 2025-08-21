@@ -670,22 +670,23 @@ enc_opt_set_channel_remap(struct gpujpeg_encoder* encoder, const char* val)
         return GPUJPEG_ERROR;
     }
     encoder->coder.preprocessor.channel_remap = 0; // clear old
-    while ( *val != '\0' ) {
-        encoder->coder.preprocessor.channel_remap >>= 4;
-        int src_chan = *val - '0';
-        if ( *val == 'F' ) {
+    const char *ptr = val + strlen(val) - 1;
+    while ( ptr >= val ) {
+        int src_chan = *ptr - '0';
+        if ( *ptr == 'F' ) {
             src_chan = 4;
         }
-        else if ( *val == 'Z' ) {
+        else if ( *ptr == 'Z' ) {
             src_chan = 5;
         }
         else if ( src_chan < 0 || src_chan >= mapped_count ) {
-            ERROR_MSG("Invalid channel index %c for " GPUJPEG_ENC_OPT_CHANNEL_REMAP " (mapping %d channels)!\n", *val,
+            ERROR_MSG("Invalid channel index %c for " GPUJPEG_ENC_OPT_CHANNEL_REMAP " (mapping %d channels)!\n", *ptr,
                       mapped_count);
             return GPUJPEG_ERROR;
         }
-        encoder->coder.preprocessor.channel_remap |= src_chan << 12;
-        val++;
+        encoder->coder.preprocessor.channel_remap <<= 4;
+        encoder->coder.preprocessor.channel_remap |= src_chan;
+        ptr--;
     }
     encoder->coder.preprocessor.channel_remap |= mapped_count << 24;
     return GPUJPEG_NOERR;

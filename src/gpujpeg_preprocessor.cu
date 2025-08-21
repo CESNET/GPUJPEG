@@ -523,6 +523,24 @@ channel_remap_kernel_4444_u8_p0123(uint8_t* data, int width, int pitch, int heig
     }
 }
 
+__global__ void
+channel_remap_kernel_444_u8_p012(uint8_t* data, int width, int pitch, int height, unsigned int byte_map)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x; // column index
+    int y = blockIdx.y * blockDim.y + threadIdx.y; // row index
+
+    if ( x >= width || y >= height ) {
+        return;
+    }
+
+    data += y * pitch + x * 3;
+    uint32_t val = data[2] << 16 | data[1] << 8 | data[0];
+    val = __byte_perm(val, 0xFF, byte_map);
+    data[0] = val & 0xFF;
+    data[1] = (val >> 8) & 0xFF;
+    data[2] = val >> 16;
+}
+
 static int
 channel_remap(struct gpujpeg_encoder* encoder)
 {
@@ -537,12 +555,13 @@ channel_remap(struct gpujpeg_encoder* encoder)
     }
     const unsigned mapping = coder->preprocessor.channel_remap & 0xFFFF;
 
+    dim3 block(16, 16);
+    int width = coder->param_image.width;
+    int height = coder->param_image.height;
+    int pitch = (width * gpujpeg_pixel_format_get_comp_count(coder->param_image.pixel_format)) +
+                coder->param_image.width_padding;
+    dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
     if ( coder->param_image.pixel_format == GPUJPEG_4444_U8_P0123 ) {
-        dim3 block(16, 16);
-        int width = coder->param_image.width;
-        int height = coder->param_image.height;
-        dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
-        int pitch = width * sizeof(uint32_t) + coder->param_image.width_padding;
         bool aligned = coder->param_image.width_padding % sizeof(uint32_t) == 0;
         if (aligned) {
             channel_remap_kernel_4444_u8_p0123<true><<<grid, block, 0, encoder->stream>>>(encoder->coder.d_data_raw, width,
@@ -552,8 +571,13 @@ channel_remap(struct gpujpeg_encoder* encoder)
                                                                                     pitch, height, mapping);
         }
     }
+    else if ( coder->param_image.pixel_format == GPUJPEG_444_U8_P012 ) {
+        channel_remap_kernel_444_u8_p012<<<grid, block, 0, encoder->stream>>>(encoder->coder.d_data_raw, width, pitch,
+                                                                              height, mapping);
+    }
     else {
-        ERROR_MSG("Pixel format %s currently unsupported for channel remap!\n",
+        ERROR_MSG("Pixel format %s currently not supported for channel remap!\n"
+                  "444-u8-p012 and 4444-u8-p0123 are currently supported.\n",
                   gpujpeg_pixel_format_get_name(coder->param_image.pixel_format));
         return -1;
     }
