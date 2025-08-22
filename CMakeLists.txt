@@ -231,7 +231,9 @@ add_custom_target(cscope cscope -bv ${ALL_SOURCES})
 add_custom_target(ctags ctags ${ALL_SOURCES})
 add_custom_target(universal-ctags ctags-universal ${ALL_SOURCES})
 
-add_test(NAME unittests COMMAND make -C test/unit LIBDIR=${CMAKE_BINARY_DIR} CPATH=${CMAKE_CUDA_COMPILER_TOOLKIT_ROOT}/include LIBRARY_PATH=${CMAKE_CUDA_COMPILER_TOOLKIT_ROOT}/lib64
+add_test(NAME unittests COMMAND make -C test/unit BUILD_DIR=${CMAKE_BINARY_DIR}
+        LIBDIR=${CMAKE_BINARY_DIR} CPATH=${CMAKE_CUDA_COMPILER_TOOLKIT_ROOT}/include
+        LIBRARY_PATH=${CMAKE_CUDA_COMPILER_TOOLKIT_ROOT}/lib64
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 add_test(NAME test-colors COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/colors/run_tests.sh ${CMAKE_CURRENT_BINARY_DIR}/${GPUJPEG_BIN_OUTPUT_NAME})
 add_test(NAME regression COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/regression/run_tests.sh ${CMAKE_CURRENT_BINARY_DIR}/${GPUJPEG_BIN_OUTPUT_NAME})
