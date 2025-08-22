@@ -6,6 +6,7 @@
 - [Encoding different color spaces than full-range YCbCr BT.601](#encoding-different-color-spaces-than-full-range-ycbcr-bt601)
 - [Optimizing encoding/decoding performance](#optimizing-encodingdecoding-performance)
 - [Decoding (foreign) JPEG fails](#decoding-foreign-jpeg-fails)
+- [Channel remapping - ARGB etc. encode/decode](#channel-remapping---argb-etc-encodedecode)
 - [Encoding/decoding alpha channel](#encodingdecoding-alpha-channel)
    - [Alpha support in command-line application](#alpha-support-in-command-line-application)
    - [API for alpha](#api-for-alpha)
@@ -119,6 +120,18 @@ much options, including _progressive encoding_, _arithmetic coding_ etc., not al
 are supported. Basically a **baseline** **DCT-based** **Huffman-encoded** JPEGs are supported.
 Few features of **extended** process are supported as well (4 Huffman tables). If the decoder
 is incapable of decoding the above mentioned JPEG, you are encouraged to fill a bug report.
+
+## Channel remapping - ARGB etc. encode/decode
+
+Pixel formats with different channel order can be pre/postprocessed with
+encoder or decoder option, eg.:
+
+    gpujpegtool -s 1920x1080 -c rgb -f 4444-u8-p0123 -e in.gbra -O enc_opt_channel_remap=2103 out.jpg
+    gpujpegtool -O dec_opt_channel_remap=210 in.jpg out.pnm
+
+or in code:
+
+    gpujpeg_encoder_set_option(encoder, GPUJPEG_ENC_OPT_CHANNEL_REMAP, "1230");
 
 ## Encoding/decoding alpha channel
 Encoding is currently supported only for a single packed pixel format

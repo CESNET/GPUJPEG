@@ -513,11 +513,9 @@ channel_remap_kernel(uint8_t* data, int width, int pitch, int height, unsigned i
     gpujpeg_comp_to_raw_store<pixel_format>(data, width, height, offset, x, y, r);
 }
 
-static int
-channel_remap(struct gpujpeg_encoder* encoder)
+int
+gpujpeg_preprocessor_channel_remap(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
-    struct gpujpeg_coder* coder = &encoder->coder;
-
     const unsigned comp_count = gpujpeg_pixel_format_get_comp_count(coder->param_image.pixel_format);
     const unsigned mapped_count = coder->preprocessor.channel_remap >> 24;
     if (comp_count != mapped_count) {
@@ -551,7 +549,7 @@ channel_remap(struct gpujpeg_encoder* encoder)
         GPUJPEG_ASSERT(0 && "Preprocess from GPUJPEG_PIXFMT_NONE not allowed");
     }
 #undef SWITDH_KERNEL
-    kernel<<<grid, block, 0, encoder->stream>>>(encoder->coder.d_data_raw, width, pitch, height, mapping);
+    kernel<<<grid, block, 0, stream>>>(coder->d_data_raw, width, pitch, height, mapping);
     gpujpeg_cuda_check_error("channel_remap_kernel failed", return -1);
     return 0;
 }
@@ -566,7 +564,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
     //        (coder->param_image.pixel_format == GPUJPEG_444_U8_P012 && coder->preprocessor.kernel != nullptr));
 
     if ( coder->preprocessor.channel_remap != 0 ) {
-        const int ret = channel_remap(encoder);
+        const int ret = gpujpeg_preprocessor_channel_remap(coder, encoder->stream);
         if ( ret != 0 ) {
             return ret;
         }

@@ -1,3 +1,8 @@
+2025-08-22 - 0.27.8
+----------
+
+- implement channel remapping via option in pre/postprocessor
+
 2025-07-10 - 0.27.7
 ----------
 

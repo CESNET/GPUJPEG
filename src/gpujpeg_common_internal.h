@@ -539,6 +539,9 @@ gpujpeg_cuda_malloc_host(size_t size);
 void
 gpujpeg_init_term_colors();
 
+int
+gpujpeg_opt_set_channel_remap(struct gpujpeg_coder* coder, const char* val, const char* optname);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus

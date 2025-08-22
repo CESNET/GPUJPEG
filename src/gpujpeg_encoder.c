@@ -652,11 +652,11 @@ gpujpeg_encoder_set_jpeg_header(struct gpujpeg_encoder *encoder, enum gpujpeg_he
     encoder->header_type = header_type;
 }
 
-static int
-enc_opt_set_channel_remap(struct gpujpeg_encoder* encoder, const char* val)
+int
+gpujpeg_opt_set_channel_remap(struct gpujpeg_coder* coder, const char* val, const char *optname)
 {
     if ( strcmp(val, "help") == 0 ) {
-        printf("syntax for " GPUJPEG_ENC_OPT_CHANNEL_REMAP ":\n");
+        printf("syntax for %s:\n", optname);
         printf("\t\"XYZ\" or \"XYZW\" where the letters are input channel indices\n");
         printf("\tplaceholder 'Z' or 'F' can be used to set the channel to all-zeros or all-ones\n");
         printf("\n");
@@ -669,7 +669,7 @@ enc_opt_set_channel_remap(struct gpujpeg_encoder* encoder, const char* val)
         ERROR_MSG("Mapping for more than %d channels specified!\n", GPUJPEG_MAX_COMPONENT_COUNT);
         return GPUJPEG_ERROR;
     }
-    encoder->coder.preprocessor.channel_remap = 0; // clear old
+    coder->preprocessor.channel_remap = 0; // clear old
     const char *ptr = val + strlen(val) - 1;
     while ( ptr >= val ) {
         int src_chan = *ptr - '0';
@@ -680,15 +680,15 @@ enc_opt_set_channel_remap(struct gpujpeg_encoder* encoder, const char* val)
             src_chan = 5;
         }
         else if ( src_chan < 0 || src_chan >= mapped_count ) {
-            ERROR_MSG("Invalid channel index %c for " GPUJPEG_ENC_OPT_CHANNEL_REMAP " (mapping %d channels)!\n", *ptr,
-                      mapped_count);
+            ERROR_MSG("Invalid channel index %c for %s (mapping %d channels)!\n", *ptr,
+                      optname, mapped_count);
             return GPUJPEG_ERROR;
         }
-        encoder->coder.preprocessor.channel_remap <<= 4;
-        encoder->coder.preprocessor.channel_remap |= src_chan;
+        coder->preprocessor.channel_remap <<= 4;
+        coder->preprocessor.channel_remap |= src_chan;
         ptr--;
     }
-    encoder->coder.preprocessor.channel_remap |= mapped_count << 24;
+    coder->preprocessor.channel_remap |= mapped_count << 24;
     return GPUJPEG_NOERR;
 }
 
@@ -742,7 +742,7 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
         return GPUJPEG_NOERR;
     }
     if ( strcmp(opt, GPUJPEG_ENC_OPT_CHANNEL_REMAP) == 0 ) {
-        return enc_opt_set_channel_remap(encoder, val);
+        return gpujpeg_opt_set_channel_remap(&encoder->coder, val, GPUJPEG_ENC_OPT_CHANNEL_REMAP);
     }
     ERROR_MSG("Invalid encoder option: %s!\n", opt);
     return GPUJPEG_ERROR;

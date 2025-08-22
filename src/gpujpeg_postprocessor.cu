@@ -479,6 +479,13 @@ gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     );
     gpujpeg_cuda_check_error("Preprocessor encoding failed", return -1);
 
+    if ( coder->preprocessor.channel_remap != 0 ) {
+        const int ret = gpujpeg_preprocessor_channel_remap(coder, stream);
+        if ( ret != 0 ) {
+            return ret;
+        }
+    }
+
     return 0;
 }
 
