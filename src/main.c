@@ -251,7 +251,10 @@ adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters*
     // if possible, read properties from file
     struct gpujpeg_image_parameters file_param_image = gpujpeg_default_image_parameters();
     const char *raw_file = encode ? in : out;
-    gpujpeg_image_get_properties(raw_file, &file_param_image, encode);
+    if ( param_image->width == 0 || param_image->height == 0 || param_image->pixel_format == GPUJPEG_PIXFMT_NONE ||
+         param_image->color_space == GPUJPEG_NONE ) {
+        gpujpeg_image_get_properties(raw_file, &file_param_image, encode);
+    }
     param_image->width = USE_IF_NOT_NULL_ELSE(param_image->width, file_param_image.width);
     param_image->height = USE_IF_NOT_NULL_ELSE(param_image->height, file_param_image.height);
     if ( param_image->color_space == GPUJPEG_NONE ) {
