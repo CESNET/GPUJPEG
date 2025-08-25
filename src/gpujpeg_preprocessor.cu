@@ -470,16 +470,15 @@ vertical_flip_kernel(uint32_t* data,
     }
 }
 
-static int
-flip_lines(struct gpujpeg_encoder* encoder)
+int
+gpujpeg_preprocessor_flip_lines(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
-    struct gpujpeg_coder* coder = &encoder->coder;
     for ( int i = 0; i < coder->param.comp_count; ++i ) {
         dim3 block(RGB_8BIT_THREADS, 1);
         int width = coder->component[i].data_width / 4;
         int height = coder->component[i].data_height;
         dim3 grid((width + block.x - 1) / block.x, height / 2); // only half of height
-        vertical_flip_kernel<<<grid, block, 0, encoder->stream>>>((uint32_t*)coder->component[i].d_data, width, height);
+        vertical_flip_kernel<<<grid, block, 0, stream>>>((uint32_t*)coder->component[i].d_data, width, height);
     }
     gpujpeg_cuda_check_error("Preprocessor flip failed", return -1);
     return 0;
@@ -579,8 +578,8 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
     if (ret != 0) {
         return ret;
     }
-    if (coder->preprocessor.input_flipped) {
-        return flip_lines(encoder);
+    if ( coder->preprocessor.flipped ) {
+        return gpujpeg_preprocessor_flip_lines(coder, encoder->stream);
     }
     return ret;
 }

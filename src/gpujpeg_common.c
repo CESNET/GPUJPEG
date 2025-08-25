@@ -2318,4 +2318,19 @@ gpujpeg_init_term_colors()
     init = true;
 }
 
+int
+gpujpeg_parse_bool_opt(bool* out_var, const char* val, const char* opt)
+{
+    if ( strcasecmp(val, GPUJPEG_VAL_TRUE) == 0 ) {
+        *out_var = true;
+        return GPUJPEG_NOERR;
+    }
+    else if ( strcasecmp(val, GPUJPEG_VAL_FALSE) == 0 ) {
+        *out_var = false;
+        return GPUJPEG_NOERR;
+    }
+    ERROR_MSG("Unknown option %s for %s\n", val, opt);
+    return GPUJPEG_ERROR;
+}
+
 /* vi: set expandtab sw=4 : */

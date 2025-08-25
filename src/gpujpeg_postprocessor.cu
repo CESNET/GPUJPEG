@@ -436,6 +436,13 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
 int
 gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
+    if ( coder->preprocessor.flipped ) {
+        int ret = gpujpeg_preprocessor_flip_lines(coder, stream);
+        if ( ret != 0 ) {
+            return ret;
+        }
+    }
+
     if ( coder->preprocessor.kernel == nullptr ) {
         return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);
     }

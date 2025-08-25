@@ -271,6 +271,9 @@ gpujpeg_decoder_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg
 /// global so it affects all decoder instances
 #define GPUJPEG_DEC_OPT_TGA_RLE_BOOL "dec_opt_tga_rle" ///< GPUJPEG_VAL_TRUE or GPUJPEG_VAL_FALSE
 
+/// output image should be vertically flipped (bottom-up): values @ref GPUJPEG_VAL_TRUE or @ref GPUJPEG_VAL_FALSE
+#define GPUJPEG_DEC_OPT_FLIPPED_BOOL "dec_opt_flipped"
+
 /// @copydoc GPUJPEG_ENC_OPT_CHANNEL_REMAP
 #define GPUJPEG_DEC_OPT_CHANNEL_REMAP "dec_opt_channel_remap"
 

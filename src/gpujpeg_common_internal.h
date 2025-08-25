@@ -542,6 +542,9 @@ gpujpeg_init_term_colors();
 int
 gpujpeg_opt_set_channel_remap(struct gpujpeg_coder* coder, const char* val, const char* optname);
 
+int
+gpujpeg_parse_bool_opt(bool* out_var, const char* val, const char* opt);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus

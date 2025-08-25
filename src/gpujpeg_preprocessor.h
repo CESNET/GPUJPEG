@@ -69,7 +69,7 @@ struct gpujpeg_preprocessor_data
 struct gpujpeg_preprocessor
 {
     void* kernel;       // function poitner
-    bool input_flipped;         ///< [preprocess only] input buf is flipped
+    bool flipped;               ///< flip image before encode or after decode
     unsigned int channel_remap; ///< remap channels if != 0
                                 ///< format: count_8b | 00000000 | idx0_4b | idx1_4b | idx2_4b | idx3_4b
     struct gpujpeg_preprocessor_data data;
@@ -100,6 +100,9 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder);
 // shared with postprocess
 int
 gpujpeg_preprocessor_channel_remap(struct gpujpeg_coder* coder, cudaStream_t stream);
+
+int
+gpujpeg_preprocessor_flip_lines(struct gpujpeg_coder* coder, cudaStream_t stream);
  
 #ifdef __cplusplus
 }

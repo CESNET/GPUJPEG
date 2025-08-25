@@ -729,17 +729,7 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
         return GPUJPEG_NOERR;
     }
     if ( strcmp(opt, GPUJPEG_ENC_OPT_FLIPPED_BOOL) == 0 ) {
-        if ( strcasecmp(val, GPUJPEG_VAL_TRUE) == 0 ) {
-            encoder->coder.preprocessor.input_flipped = true;
-        }
-        else if ( strcasecmp(val, GPUJPEG_VAL_FALSE) == 0 ) {
-            encoder->coder.preprocessor.input_flipped = false;
-        }
-        else {
-            ERROR_MSG("Unknown option %s for " GPUJPEG_ENC_OPT_FLIPPED_BOOL "\n", val);
-            return GPUJPEG_ERROR;
-        }
-        return GPUJPEG_NOERR;
+        return gpujpeg_parse_bool_opt(&encoder->coder.preprocessor.flipped, val, GPUJPEG_ENC_OPT_FLIPPED_BOOL);
     }
     if ( strcmp(opt, GPUJPEG_ENC_OPT_CHANNEL_REMAP) == 0 ) {
         return gpujpeg_opt_set_channel_remap(&encoder->coder, val, GPUJPEG_ENC_OPT_CHANNEL_REMAP);

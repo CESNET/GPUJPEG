@@ -493,6 +493,9 @@ gpujpeg_decoder_set_option(struct gpujpeg_decoder* decoder, const char *opt, con
         image_delegate_stbi_tga_set_rle(strcmp(val, GPUJPEG_VAL_TRUE) == 0);
         return GPUJPEG_NOERR;
     }
+    if ( strcmp(opt, GPUJPEG_DEC_OPT_FLIPPED_BOOL) == 0 ) {
+        return gpujpeg_parse_bool_opt(&decoder->coder.preprocessor.flipped, val, GPUJPEG_DEC_OPT_FLIPPED_BOOL);
+    }
     if ( strcmp(opt, GPUJPEG_DEC_OPT_CHANNEL_REMAP) == 0 ) {
         return gpujpeg_opt_set_channel_remap(&decoder->coder, val, GPUJPEG_DEC_OPT_CHANNEL_REMAP);
     }
@@ -505,6 +508,8 @@ gpujpeg_decoder_print_options()
 {
     printf("\t" GPUJPEG_DEC_OPT_TGA_RLE_BOOL "=[" GPUJPEG_VAL_FALSE "|" GPUJPEG_VAL_TRUE
            "] - set decoder option (not) to output RLE TGA\n");
+    printf("\t" GPUJPEG_DEC_OPT_FLIPPED_BOOL "=[" GPUJPEG_VAL_FALSE "|" GPUJPEG_VAL_TRUE
+           "] - vertically flip the output image\n");
     printf("\t" GPUJPEG_DEC_OPT_CHANNEL_REMAP "=XYZ[W] - input channel mapping, eg. '210F' for GBRX,\n"
         "\t\t'210' for GBR; special placeholders 'F' and 'Z' to set a channel to all-ones or all-zeros\n");
 }
