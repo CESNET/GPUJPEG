@@ -513,6 +513,10 @@ channel_remap_kernel(uint8_t* data, int width, int pitch, int height, unsigned i
     gpujpeg_comp_to_raw_store<pixel_format>(data, width, height, offset, x, y, r);
 }
 
+/**
+ * remaps color channels according to coder->preprocessor.channel_remap
+ * if requested by user (with an option)
+ */
 int
 gpujpeg_preprocessor_channel_remap(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
@@ -532,7 +536,7 @@ gpujpeg_preprocessor_channel_remap(struct gpujpeg_coder* coder, cudaStream_t str
                 coder->param_image.width_padding;
     dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
-    decltype(channel_remap_kernel<GPUJPEG_U8>)* kernel = nullptr;
+    auto* kernel = channel_remap_kernel<GPUJPEG_U8>;
 #define SWITCH_KERNEL(pf)                                                                                              \
     case pf:                                                                                                           \
         kernel = channel_remap_kernel<pf>;                                                                             \
