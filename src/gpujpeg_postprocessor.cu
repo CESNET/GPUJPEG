@@ -432,18 +432,23 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
     return 0;
 }
 
+#define PERFORM_IF_ENABLED_CHECK(cond, command)                                                                        \
+    if ( cond ) {                                                                                                      \
+        const int ret = command;                                                                                       \
+        if ( ret != 0 ) {                                                                                              \
+            return ret;                                                                                                \
+        }                                                                                                              \
+    }
+
 /* Documented at declaration */
 int
 gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
-    if ( coder->preprocessor.flipped ) {
-        int ret = gpujpeg_preprocessor_flip_lines(coder, stream);
-        if ( ret != 0 ) {
-            return ret;
-        }
-    }
+    PERFORM_IF_ENABLED_CHECK(coder->preprocessor.flipped, gpujpeg_preprocessor_flip_lines(coder, stream));
 
     if ( coder->preprocessor.kernel == nullptr ) {
+        PERFORM_IF_ENABLED_CHECK(coder->preprocessor.channel_remap != 0,
+                                 gpujpeg_preprocessor_channel_remap(coder, stream));
         return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);
     }
 
@@ -486,12 +491,7 @@ gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     );
     gpujpeg_cuda_check_error("Preprocessor encoding failed", return -1);
 
-    if ( coder->preprocessor.channel_remap != 0 ) {
-        const int ret = gpujpeg_preprocessor_channel_remap(coder, stream);
-        if ( ret != 0 ) {
-            return ret;
-        }
-    }
+    PERFORM_IF_ENABLED_CHECK(coder->preprocessor.channel_remap != 0, gpujpeg_preprocessor_channel_remap(coder, stream));
 
     return 0;
 }
