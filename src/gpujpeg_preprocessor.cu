@@ -394,7 +394,7 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
     gpujpeg_const_div_prepare(image_width, width_div_mul, width_div_shift);
 
     // Run kernel
-    kernel<<<grid, threads, 0, encoder->stream>>>(
+    kernel<<<grid, threads, 0, coder->stream>>>(
         coder->preprocessor.data,
         coder->d_data_raw,
         coder->param_image.width_padding,
@@ -434,7 +434,8 @@ gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
     if (!needs_stride) {
             for ( int i = 0; i < coder->param.comp_count; ++i ) {
                     size_t component_size = coder->component[i].width * coder->component[i].height;
-                    cudaMemcpyAsync(coder->component[i].d_data, coder->d_data_raw + data_raw_offset, component_size, cudaMemcpyDeviceToDevice, encoder->stream);
+                    cudaMemcpyAsync(coder->component[i].d_data, coder->d_data_raw + data_raw_offset, component_size,
+                                    cudaMemcpyDeviceToDevice, coder->stream);
                     data_raw_offset += component_size;
             }
     } else {
@@ -444,7 +445,7 @@ gpujpeg_preprocessor_encoder_copy_planar_data(struct gpujpeg_encoder * encoder)
                     size_t component_size = spitch * coder->component[i].height;
                     cudaMemcpy2DAsync(coder->component[i].d_data, dpitch, coder->d_data_raw + data_raw_offset, spitch,
                                       coder->component[i].width, coder->component[i].height, cudaMemcpyDeviceToDevice,
-                                      encoder->stream);
+                                      coder->stream);
                     data_raw_offset += component_size;
             }
     }
@@ -471,14 +472,14 @@ vertical_flip_kernel(uint32_t* data,
 }
 
 int
-gpujpeg_preprocessor_flip_lines(struct gpujpeg_coder* coder, cudaStream_t stream)
+gpujpeg_preprocessor_flip_lines(struct gpujpeg_coder* coder)
 {
     for ( int i = 0; i < coder->param.comp_count; ++i ) {
         dim3 block(RGB_8BIT_THREADS, 1);
         int width = coder->component[i].data_width / 4;
         int height = coder->component[i].data_height;
         dim3 grid((width + block.x - 1) / block.x, height / 2); // only half of height
-        vertical_flip_kernel<<<grid, block, 0, stream>>>((uint32_t*)coder->component[i].d_data, width, height);
+        vertical_flip_kernel<<<grid, block, 0, coder->stream>>>((uint32_t*)coder->component[i].d_data, width, height);
     }
     gpujpeg_cuda_check_error("Preprocessor flip failed", return -1);
     return 0;
@@ -517,7 +518,7 @@ channel_remap_kernel(uint8_t* data, int width, int pitch, int height, unsigned i
  * if requested by user (with an option)
  */
 int
-gpujpeg_preprocessor_channel_remap(struct gpujpeg_coder* coder, cudaStream_t stream)
+gpujpeg_preprocessor_channel_remap(struct gpujpeg_coder* coder)
 {
     const unsigned comp_count = gpujpeg_pixel_format_get_comp_count(coder->param_image.pixel_format);
     const unsigned mapped_count = coder->preprocessor.channel_remap >> 24;
@@ -552,7 +553,7 @@ gpujpeg_preprocessor_channel_remap(struct gpujpeg_coder* coder, cudaStream_t str
         GPUJPEG_ASSERT(0 && "Preprocess from GPUJPEG_PIXFMT_NONE not allowed");
     }
 #undef SWITDH_KERNEL
-    kernel<<<grid, block, 0, stream>>>(coder->d_data_raw, width, pitch, height, mapping);
+    kernel<<<grid, block, 0, coder->stream>>>(coder->d_data_raw, width, pitch, height, mapping);
     gpujpeg_cuda_check_error("channel_remap_kernel failed", return -1);
     return 0;
 }
@@ -567,7 +568,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
     //        (coder->param_image.pixel_format == GPUJPEG_444_U8_P012 && coder->preprocessor.kernel != nullptr));
 
     if ( coder->preprocessor.channel_remap != 0 ) {
-        const int ret = gpujpeg_preprocessor_channel_remap(coder, encoder->stream);
+        const int ret = gpujpeg_preprocessor_channel_remap(coder);
         if ( ret != 0 ) {
             return ret;
         }
@@ -579,7 +580,7 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder)
         return ret;
     }
     if ( coder->preprocessor.flipped ) {
-        return gpujpeg_preprocessor_flip_lines(coder, encoder->stream);
+        return gpujpeg_preprocessor_flip_lines(coder);
     }
     return ret;
 }

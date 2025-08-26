@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -683,7 +683,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
     cudaFuncSetCacheConfig(gpujpeg_huffman_decoder_decode_kernel<false, THREADS_PER_TBLOCK>, cudaFuncCachePreferShared);
     
     // Setup GPU tables (one thread for each of 65536 entries)
-    gpujpeg_huffman_decoder_table_kernel<<<256, 256, 0, decoder->stream>>>(
+    gpujpeg_huffman_decoder_table_kernel<<<256, 256, 0, coder->stream>>>(
         *decoder->huffman_gpu_decoder,
         decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC],
         decoder->d_table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_AC],
@@ -700,7 +700,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
         sizeof(*decoder->huffman_gpu_decoder->d_tables_quick) * QUICK_TABLE_ITEMS,
         0,
         cudaMemcpyDeviceToDevice,
-        decoder->stream
+        coder->stream
     );
     gpujpeg_cuda_check_error("Huffman decoder table copy failed", return -1);
 #endif
@@ -710,14 +710,15 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
         coder->component[comp].ac_huff_idx = decoder->comp_table_huffman_map[comp][GPUJPEG_HUFFMAN_AC];
     }
     // Copy updated components to device memory
-    cudaMemcpyAsync(coder->d_component, coder->component, coder->param.comp_count * sizeof(struct gpujpeg_component), cudaMemcpyHostToDevice, decoder->stream);
+    cudaMemcpyAsync(coder->d_component, coder->component, coder->param.comp_count * sizeof(struct gpujpeg_component),
+                    cudaMemcpyHostToDevice, coder->stream);
     gpujpeg_cuda_check_error("Coder component copy", return 0);
     
     // Run decoding kernel
     dim3 thread(THREADS_PER_TBLOCK);
     dim3 grid(gpujpeg_div_and_round_up(decoder->segment_count, THREADS_PER_TBLOCK));
     if(comp_count == 1) {
-        gpujpeg_huffman_decoder_decode_kernel<true, THREADS_PER_TBLOCK><<<grid, thread, 0, decoder->stream>>>(
+        gpujpeg_huffman_decoder_decode_kernel<true, THREADS_PER_TBLOCK><<<grid, thread, 0, coder->stream>>>(
             *decoder->huffman_gpu_decoder,
             coder->d_component, 
             coder->d_segment, 
@@ -728,7 +729,7 @@ gpujpeg_huffman_gpu_decoder_decode(struct gpujpeg_decoder* decoder)
             coder->d_data_quantized
         );
     } else {
-        gpujpeg_huffman_decoder_decode_kernel<false, THREADS_PER_TBLOCK><<<grid, thread, 0, decoder->stream>>>(
+        gpujpeg_huffman_decoder_decode_kernel<false, THREADS_PER_TBLOCK><<<grid, thread, 0, coder->stream>>>(
             *decoder->huffman_gpu_decoder,
             coder->d_component, 
             coder->d_segment, 

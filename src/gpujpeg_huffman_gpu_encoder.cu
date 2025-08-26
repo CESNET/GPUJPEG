@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -972,6 +972,7 @@ gpujpeg_huffman_gpu_add_packed_table(uint32_t * const dest, const struct gpujpeg
 struct gpujpeg_huffman_gpu_encoder *
 gpujpeg_huffman_gpu_encoder_create(const struct gpujpeg_encoder * encoder)
 {
+    const struct gpujpeg_coder* coder = &encoder->coder;
     struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder = (struct gpujpeg_huffman_gpu_encoder *) malloc(sizeof(struct gpujpeg_huffman_gpu_encoder));
     if ( huffman_gpu_encoder == NULL ) {
         return NULL;
@@ -984,8 +985,8 @@ gpujpeg_huffman_gpu_encoder_create(const struct gpujpeg_encoder * encoder)
 
     // Initialize decomposition lookup table
     cudaFuncSetCacheConfig(gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel, cudaFuncCachePreferShared);
-    gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel<<<32, 256, 0, encoder->stream>>>();  // 8192 threads total
-    cudaStreamSynchronize(encoder->stream);
+    gpujpeg_huffman_gpu_encoder_value_decomposition_init_kernel<<<32, 256, 0, coder->stream>>>();  // 8192 threads total
+    cudaStreamSynchronize(coder->stream);
     gpujpeg_cuda_check_error("Decomposition LUT initialization failed", return NULL);
 
     // compose GPU version of the huffman LUT and copy it into GPU memory (for CC >= 2.0)
@@ -1086,7 +1087,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujp
         // Run kernel
         dim3 thread(THREAD_BLOCK_SIZE);
         dim3 grid(gpujpeg_div_and_round_up(coder->segment_count, thread.x));
-        gpujpeg_huffman_encoder_encode_kernel<<<grid, thread, 0, encoder->stream>>>(
+        gpujpeg_huffman_encoder_encode_kernel<<<grid, thread, 0, coder->stream>>>(
             coder->d_component,
             coder->d_segment,
             comp_count,
@@ -1100,7 +1101,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujp
         dim3 thread(32 * WARPS_NUM);
         dim3 grid = gpujpeg_huffman_gpu_encoder_grid_size(gpujpeg_div_and_round_up(coder->segment_count, (thread.x / 32)));
         if(comp_count == 1) {
-            gpujpeg_huffman_encoder_encode_kernel_warp<true><<<grid, thread, 0, encoder->stream>>>(
+            gpujpeg_huffman_encoder_encode_kernel_warp<true><<<grid, thread, 0, coder->stream>>>(
                 coder->d_segment,
                 coder->segment_count,
                 coder->d_data_compressed,
@@ -1112,7 +1113,7 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujp
             );
             gpujpeg_cuda_check_error("Huffman encoding failed", return -1);
         } else {
-            gpujpeg_huffman_encoder_encode_kernel_warp<false><<<grid, thread, 0, encoder->stream>>>(
+            gpujpeg_huffman_encoder_encode_kernel_warp<false><<<grid, thread, 0, coder->stream>>>(
                 coder->d_segment,
                 coder->segment_count,
                 coder->d_data_compressed,
@@ -1127,7 +1128,8 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujp
 
         // Run codeword serialization kernel
         const int num_serialization_tblocks = gpujpeg_div_and_round_up(coder->segment_count, SERIALIZATION_THREADS_PER_TBLOCK);
-        gpujpeg_huffman_encoder_serialization_kernel<<<num_serialization_tblocks, SERIALIZATION_THREADS_PER_TBLOCK, 0, encoder->stream>>>(
+        gpujpeg_huffman_encoder_serialization_kernel<<<num_serialization_tblocks, SERIALIZATION_THREADS_PER_TBLOCK, 0,
+                                                       coder->stream>>>(
             coder->d_segment,
             coder->segment_count,
             coder->d_data_compressed,
@@ -1138,14 +1140,15 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujp
 
     // No atomic operations in CC 1.0 => run output size computation kernel to allocate the output buffer space
     if ( encoder->coder.cuda_cc_major == 1 && encoder->coder.cuda_cc_minor == 0 ) {
-        gpujpeg_huffman_encoder_allocation_kernel<<<1, 512, 0, encoder->stream>>>(coder->d_segment, coder->segment_count, huffman_gpu_encoder->d_gpujpeg_huffman_output_byte_count);
+        gpujpeg_huffman_encoder_allocation_kernel<<<1, 512, 0, coder->stream>>>(
+            coder->d_segment, coder->segment_count, huffman_gpu_encoder->d_gpujpeg_huffman_output_byte_count);
         gpujpeg_cuda_check_error("Huffman encoder output allocation failed", return -1);
     }
 
     // Run output compaction kernel (one warp per segment)
     const dim3 compaction_thread(32, WARPS_NUM);
     const dim3 compaction_grid = gpujpeg_huffman_gpu_encoder_grid_size(gpujpeg_div_and_round_up(coder->segment_count, WARPS_NUM));
-    gpujpeg_huffman_encoder_compaction_kernel<<<compaction_grid, compaction_thread, 0, encoder->stream>>>(
+    gpujpeg_huffman_encoder_compaction_kernel<<<compaction_grid, compaction_thread, 0, coder->stream>>>(
         coder->d_segment,
         coder->segment_count,
         coder->d_temp_huffman,
@@ -1155,7 +1158,8 @@ gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujp
     gpujpeg_cuda_check_error("Huffman output compaction failed", return -1);
 
     // Read and return number of occupied bytes
-    cudaMemcpyAsync(output_byte_count, huffman_gpu_encoder->d_gpujpeg_huffman_output_byte_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, encoder->stream);
+    cudaMemcpyAsync(output_byte_count, huffman_gpu_encoder->d_gpujpeg_huffman_output_byte_count, sizeof(unsigned int),
+                    cudaMemcpyDeviceToHost, coder->stream);
     gpujpeg_cuda_check_error("Huffman output size getting failed", return -1);
 
     // indicate success

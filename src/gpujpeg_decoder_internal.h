@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -64,9 +64,6 @@ struct gpujpeg_decoder
     
     /// Current data compressed size for decoded image
     size_t data_compressed_size;
-
-    // Stream
-    cudaStream_t stream;
 
     enum gpujpeg_pixel_format req_pixel_format;
     enum gpujpeg_color_space req_color_space;

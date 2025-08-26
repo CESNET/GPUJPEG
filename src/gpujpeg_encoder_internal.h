@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -62,9 +62,6 @@ struct gpujpeg_encoder
 
     /// JPEG header to be emitted
     enum gpujpeg_header_type header_type;
-
-    // Stream
-    cudaStream_t stream;
 };
 
 #ifdef __cplusplus

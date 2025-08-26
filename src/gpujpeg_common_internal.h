@@ -421,6 +421,9 @@ struct gpujpeg_coder
     size_t allocated_gpu_memory_size; ///< for gpujpeg_encoder_max_pixels() only (remove?)
 
     int encoder; ///< 1 if we are encoder, 0 decoder
+
+    // Stream
+    cudaStream_t stream;
 };
 
 /**

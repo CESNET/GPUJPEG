@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2020, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -641,7 +641,7 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
                 sizeof(gpujpeg_dct_gpu_quantization_table_const),
                 0,
                 cudaMemcpyDeviceToDevice,
-                encoder->stream
+                coder->stream
             );
             gpujpeg_cuda_check_error("Quantization table memcpy failed", return -1);
         }
@@ -662,7 +662,7 @@ gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder)
             1
         );
         dim3 dct_block(4 * 8, WARP_COUNT);
-        gpujpeg_dct_gpu_kernel<WARP_COUNT><<<dct_grid, dct_block, 0, encoder->stream>>>(
+        gpujpeg_dct_gpu_kernel<WARP_COUNT><<<dct_grid, dct_block, 0, coder->stream>>>(
             block_count_x,
             block_count_y,
             component->d_data,
@@ -706,7 +706,7 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
             64 * sizeof(uint16_t),
             0,
             cudaMemcpyDeviceToDevice,
-            decoder->stream
+            coder->stream
         );
         gpujpeg_cuda_check_error("Copy IDCT quantization table to constant memory", return -1);
 
@@ -714,7 +714,7 @@ gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder)
 				(GPUJPEG_IDCT_BLOCK_X * GPUJPEG_IDCT_BLOCK_Y * GPUJPEG_IDCT_BLOCK_Z) / GPUJPEG_BLOCK_SIZE), 1);
         dim3 dct_block(GPUJPEG_IDCT_BLOCK_X, GPUJPEG_IDCT_BLOCK_Y, GPUJPEG_IDCT_BLOCK_Z);
  
-        gpujpeg_idct_gpu_kernel<<<dct_grid, dct_block, 0, decoder->stream>>>(
+        gpujpeg_idct_gpu_kernel<<<dct_grid, dct_block, 0, coder->stream>>>(
             component->d_data_quantized,
             component->d_data,
             component->data_width,

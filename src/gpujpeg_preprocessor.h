@@ -99,10 +99,10 @@ gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder);
 
 // shared with postprocess
 int
-gpujpeg_preprocessor_channel_remap(struct gpujpeg_coder* coder, cudaStream_t stream);
+gpujpeg_preprocessor_channel_remap(struct gpujpeg_coder* coder);
 
 int
-gpujpeg_preprocessor_flip_lines(struct gpujpeg_coder* coder, cudaStream_t stream);
+gpujpeg_preprocessor_flip_lines(struct gpujpeg_coder* coder);
  
 #ifdef __cplusplus
 }

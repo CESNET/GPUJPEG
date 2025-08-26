@@ -444,11 +444,10 @@ gpujpeg_preprocessor_decoder_copy_planar_data(struct gpujpeg_coder * coder, cuda
 int
 gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
 {
-    PERFORM_IF_ENABLED_CHECK(coder->preprocessor.flipped, gpujpeg_preprocessor_flip_lines(coder, stream));
+    PERFORM_IF_ENABLED_CHECK(coder->preprocessor.flipped, gpujpeg_preprocessor_flip_lines(coder));
 
     if ( coder->preprocessor.kernel == nullptr ) {
-        PERFORM_IF_ENABLED_CHECK(coder->preprocessor.channel_remap != 0,
-                                 gpujpeg_preprocessor_channel_remap(coder, stream));
+        PERFORM_IF_ENABLED_CHECK(coder->preprocessor.channel_remap != 0, gpujpeg_preprocessor_channel_remap(coder));
         return gpujpeg_preprocessor_decoder_copy_planar_data(coder, stream);
     }
 
@@ -491,7 +490,7 @@ gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     );
     gpujpeg_cuda_check_error("Preprocessor encoding failed", return -1);
 
-    PERFORM_IF_ENABLED_CHECK(coder->preprocessor.channel_remap != 0, gpujpeg_preprocessor_channel_remap(coder, stream));
+    PERFORM_IF_ENABLED_CHECK(coder->preprocessor.channel_remap != 0, gpujpeg_preprocessor_channel_remap(coder));
 
     return 0;
 }
