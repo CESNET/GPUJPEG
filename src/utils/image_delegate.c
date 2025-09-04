@@ -42,7 +42,7 @@
 #include <time.h>              // for time
 #endif
 
-#ifdef __linux__
+#ifndef _WIN32
 #define strtok_s strtok_r
 #endif
 
