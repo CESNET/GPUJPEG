@@ -657,6 +657,11 @@ main(int argc, char *argv[])
         return 0;
     }
 
+    if (iterate <= 0) {
+        fprintf(stderr, "Number of iterations must be greater than zero, got: %d\n", iterate);
+        return -1;
+    }
+
     // Source image and target image must be presented
     if ( argc < 2 || argc % 2 != 0 ) {
         fprintf(stderr, "Please supply source and destination image filename(s)!\n");
