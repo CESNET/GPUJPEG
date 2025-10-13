@@ -197,15 +197,41 @@ write_exif_tag(struct gpujpeg_writer* writer, enum exif_tiff_tag tag, union valu
     write_exif_emit_lt_4b_tag(writer, t->id, t->type, size, val, start, end);
 }
 
+struct tag_value
+{
+    enum exif_tiff_tag tag;
+    union value_u value;
+};
+
+/**
+ * @param tags  array of tags, should be ordered awcending according to exif_tiff_tag_info_t.id
+ */
+static void
+gpujpeg_write_ifd(struct gpujpeg_writer* writer, const uint8_t* start, size_t count,
+                  const struct tag_value tags[])
+{
+    enum {
+        EXIF_IFD_NUM_SZ = 2,
+    };
+    uint8_t *end = writer->buffer_current + EXIF_IFD_NUM_SZ + (count * IFD_ITEM_SZ) + NEXT_IFD_PTR_SZ;
+    gpujpeg_writer_emit_2byte(writer, count); // IFD Item Count
+
+    for ( unsigned i = 0; i < count; ++i ) {
+        const struct tag_value* info = &tags[i];
+        union value_u value = info->value;
+        if ( info->tag == ETIFF_EXIF_IFD_POINTER ) {
+            value.uvalue = end - start;
+        }
+        write_exif_tag(writer, info->tag, value, start, &end);
+    }
+    gpujpeg_writer_emit_4byte(writer, 0); // Next IFD Offset (none)
+    writer->buffer_current = end;         // jump after the section Value longer than 4Byte of 0th IFD
+}
+
 static void
 gpujpeg_write_0th(struct gpujpeg_encoder* encoder, const uint8_t* start)
 {
-    struct gpujpeg_writer *writer = encoder->writer;
-    const struct tag_info
-    {
-        enum exif_tiff_tag tag;
-        union value_u value;
-    } tags[] = {
+    const struct tag_value tags[] = {
         {ETIFF_XRESOLUTION,       {.urational = {72, 1}}  },
         {ETIFF_YRESOLUTION,       {.urational = {72, 1}}  },
         {ETIFF_RESOLUTION_UNIT,   {.uvalue = ETIFF_INCHES}},
@@ -213,34 +239,13 @@ gpujpeg_write_0th(struct gpujpeg_encoder* encoder, const uint8_t* start)
         {ETIFF_YCBCR_POSITIONING, {.uvalue = ETIFF_CENTER}}, // center
         {ETIFF_EXIF_IFD_POINTER,  {0}                     }, // value later; should be last
     };
-    enum {
-        NB_OF_INTEROP_SZ = 2,
-        SIZE_0TH_IFD = NB_OF_INTEROP_SZ + (ARR_SIZE(tags) * IFD_ITEM_SZ) + NEXT_IFD_PTR_SZ,
-    };
 
-    uint8_t *end = writer->buffer_current + SIZE_0TH_IFD;
-
-    gpujpeg_writer_emit_2byte(writer, ARR_SIZE(tags)); // Number of Interoperability
-    for (unsigned i = 0; i < ARR_SIZE(tags); ++i) {
-        const struct tag_info* info = &tags[i];
-        union value_u value = info->value;
-        if (info->tag == ETIFF_EXIF_IFD_POINTER) {
-            value.uvalue = end - start;
-        }
-        write_exif_tag(writer, info->tag, value, start, &end);
-    }
-    gpujpeg_writer_emit_4byte(writer, 0); // Next IFD Offset (none)
-    writer->buffer_current = end; // jump after the section Value longer than 4Byte of 0th IFD
+    gpujpeg_write_ifd(encoder->writer, start, ARR_SIZE(tags), tags);
 }
 
 static void gpujpeg_write_exif_ifd(struct gpujpeg_encoder* encoder, const uint8_t *start)
 {
-    struct gpujpeg_writer *writer = encoder->writer;
-    const struct tag_info
-    {
-        enum exif_tiff_tag tag;
-        union value_u value;
-    } tags[] = {
+    const struct tag_value tags[] = {
         {EEXIF_EXIF_VERSION,             {.csvalue = "0230"}                }, // 2.30
         {EEXIF_COMPONENTS_CONFIGURATION, {.csvalue = "\1\2\3\0"}            }, // YCbCr
         {EEXIF_FLASHPIX_VERSION,         {.csvalue = "0100"}                }, // "0100"
@@ -248,25 +253,7 @@ static void gpujpeg_write_exif_ifd(struct gpujpeg_encoder* encoder, const uint8_
         {EEXIF_PIXEL_X_DIMENSION,        {encoder->coder.param_image.width} },
         {EEXIF_PIXEL_Y_DIMENSION,        {encoder->coder.param_image.height}},
     };
-    enum {
-        EXIF_IFD_NUM_SZ = 2,
-        SIZE_EXIF_IFD = EXIF_IFD_NUM_SZ + (ARR_SIZE(tags) * IFD_ITEM_SZ) + NEXT_IFD_PTR_SZ,
-    };
-
-    uint8_t *end = writer->buffer_current + SIZE_EXIF_IFD;
-
-    gpujpeg_writer_emit_2byte(writer, ARR_SIZE(tags)); // Exif IFD Number
-
-    for (unsigned i = 0; i < ARR_SIZE(tags); ++i) {
-        const struct tag_info* info = &tags[i];
-        union value_u value = info->value;
-        if (info->tag == ETIFF_EXIF_IFD_POINTER) {
-            value.uvalue = end - start;
-        }
-        write_exif_tag(writer, info->tag, value, start, &end);
-    }
-    gpujpeg_writer_emit_4byte(writer, 0); // Next IFD Offset (none)
-    writer->buffer_current = end; // jump after the section Value longer than 4Byte of 0th IFD
+    gpujpeg_write_ifd(encoder->writer, start, ARR_SIZE(tags), tags);
 }
 
 
