@@ -94,6 +94,7 @@ gpujpeg_writer_destroy(struct gpujpeg_writer* writer)
 {
     assert(writer != NULL);
     free_buffer(writer);
+    gpujpeg_exif_tags_destroy(writer->exif_tags);
     free(writer);
     return 0;
 }

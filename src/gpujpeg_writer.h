@@ -41,6 +41,7 @@ extern "C" {
 
 /** JPEG encoder structure predeclaration */
 struct gpujpeg_encoder;
+struct gpujpeg_exif_tags;
 struct gpujpeg_image_parameters;
 
 /** JPEG writer structure */
@@ -62,6 +63,8 @@ struct gpujpeg_writer
     uint8_t* segment_info_position;
     // Segment info current segment index
     int segment_info_index;
+
+    struct gpujpeg_exif_tags *exif_tags;
 };
 
 /**

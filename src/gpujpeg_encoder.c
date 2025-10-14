@@ -43,6 +43,7 @@
 #include "gpujpeg_preprocessor.h"
 #include "gpujpeg_dct_cpu.h"
 #include "gpujpeg_dct_gpu.h"
+#include "gpujpeg_exif.h"
 #include "gpujpeg_huffman_cpu_encoder.h"
 #include "gpujpeg_huffman_gpu_encoder.h"
 #include "gpujpeg_marker.h"
@@ -741,6 +742,11 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
     if ( strcmp(opt, GPUJPEG_ENC_OPT_CHANNEL_REMAP) == 0 ) {
         return gpujpeg_opt_set_channel_remap(&encoder->coder, val, GPUJPEG_ENC_OPT_CHANNEL_REMAP);
     }
+    if ( strcmp(opt, GPUJPEG_ENC_OPT_EXIF_TAG) == 0 ) {
+        encoder->header_type = GPUJPEG_HEADER_EXIF;
+        return gpujpeg_exif_add_tag(&encoder->writer->exif_tags, val) ? GPUJPEG_NOERR : GPUJPEG_ERROR;
+
+    }
     ERROR_MSG("Invalid encoder option: %s!\n", opt);
     return GPUJPEG_ERROR;
 }
@@ -754,6 +760,7 @@ gpujpeg_encoder_print_options() {
            "] - whether is the input image should be vertically flipped (prior encode)\n");
     printf("\t" GPUJPEG_ENC_OPT_CHANNEL_REMAP "=XYZ[W] - input channel mapping, eg. '210F' for GBRX,\n"
         "\t\t'210' for GBR; special placeholders 'F' and 'Z' to set a channel to all-ones or all-zeros\n");
+    printf("\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<ID>:<type>=<value> - custom EXIF tag\n");
 }
 
 /* Documented at declaration */

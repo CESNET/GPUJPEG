@@ -30,8 +30,19 @@
 #ifndef GPUJPEG_EXIF_H_6755D546_2A90_46DF_9ECA_22F575C3E7E3
 #define GPUJPEG_EXIF_H_6755D546_2A90_46DF_9ECA_22F575C3E7E3
 
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif // not defined __cplusplus
+
+struct gpujpeg_exif_tags;
+
 struct gpujpeg_encoder;
 void
 gpujpeg_writer_write_exif(struct gpujpeg_encoder* encoder);
+
+bool
+gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char *cfg);
+void
+gpujpeg_exif_tags_destroy(struct gpujpeg_exif_tags* exif_tags);
 
 #endif // defined GPUJPEG_EXIF_H_6755D546_2A90_46DF_9ECA_22F575C3E7E3
