@@ -42,15 +42,7 @@
 struct gpujpeg_writer*
 gpujpeg_writer_create(void)
 {
-    struct gpujpeg_writer* writer = (struct gpujpeg_writer*) malloc(sizeof(struct gpujpeg_writer));
-    if (writer == NULL) {
-        return NULL;
-    }
-
-    writer->buffer_allocated_size = 0;
-    writer->buffer = NULL;
-
-    return writer;
+    return (struct gpujpeg_writer*) calloc(1, sizeof(struct gpujpeg_writer));
 }
 
 static void free_buffer(struct gpujpeg_writer *writer) {
