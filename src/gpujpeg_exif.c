@@ -29,22 +29,32 @@
 
 #include "gpujpeg_exif.h"
 
-#include <assert.h>
-#include <ctype.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>    // for strftime
+#include <assert.h>                    // for assert
+#include <ctype.h>                     // for isdigit
+#include <stdint.h>                    // for uint8_t, uint32_t, uint16_t
+#include <stdio.h>                     // for printf
+#include <stdlib.h>                    // for size_t, NULL, free, abort, calloc
+#include <string.h>                    // for memcpy, strlen, memmove, strcmp
+#include <time.h>                      // for strftime, time, time_t
+// IWYU pragma: no_include <endian.h> # via compat/endian.h.
 
+// for strncasecmp
 #ifdef _WIN32
 #define strncasecmp _strnicmp
+#else
+#include <strings.h>
 #endif
 
-#include "compat/endian.h"
-#include "gpujpeg_common_internal.h"
-#include "gpujpeg_encoder_internal.h"
-#include "gpujpeg_marker.h"
-#include "gpujpeg_writer.h"
+#include "../libgpujpeg/gpujpeg_common.h"  // for gpujpeg_image_parameters, gpuj...
+#include "../libgpujpeg/gpujpeg_encoder.h" // for GPUJPEG_ENC_OPT_EXIF_TAG
+#include "../libgpujpeg/gpujpeg_type.h"    // for gpujpeg_color_space
+#include "compat/endian.h"                 // IWYU pragma: keep for htobe32
+#include "compat/time.h"                   // IWYU pragma: keep for localtime_s
+#include "gpujpeg_common_internal.h"       // for gpujpeg_coder, ERROR_MSG, WARN...
+#include "gpujpeg_encoder_internal.h"      // for gpujpeg_encoder
+#include "gpujpeg_marker.h"                // for gpujpeg_marker_code
+#include "gpujpeg_util.h"                  // for ARR_SIZE
+#include "gpujpeg_writer.h"                // for gpujpeg_writer, gpujpeg_writer...
 
 enum exif_tag_type {
     ET_NONE = 0,
@@ -129,6 +139,7 @@ enum {
     ETIFF_INCHES = 2,
     NEXT_IFD_PTR_SZ = 4,
     IFD_ITEM_SZ = 12,
+    DPI_DEFAULT = 72,
     EEXIF_FIRST = 0x827A, // (Exposure time) first tag id of Exif Private Tags
 };
 
@@ -321,11 +332,12 @@ gpujpeg_write_0th(struct gpujpeg_encoder* encoder, const uint8_t* start)
 {
     char date_time[] = "    :  :     :  :  "; // unknown val by Exif 2.3
     time_t now = time(NULL);
-    (void) strftime(date_time, sizeof date_time, "%Y:%m:%d %H:%M:%S", localtime(&now));
+    struct tm buf;
+    (void) strftime(date_time, sizeof date_time, "%Y:%m:%d %H:%M:%S", localtime_s(&now, &buf));
     struct tag_value tags[] = {
         {ETIFF_ORIENTATION,       {.uvalue = ETIFF_ORIENT_HORIZONTAL}},
-        {ETIFF_XRESOLUTION,       {.urational = {72, 1}}             },
-        {ETIFF_YRESOLUTION,       {.urational = {72, 1}}             },
+        {ETIFF_XRESOLUTION,       {.urational = {DPI_DEFAULT, 1}}    },
+        {ETIFF_YRESOLUTION,       {.urational = {DPI_DEFAULT, 1}}    },
         {ETIFF_RESOLUTION_UNIT,   {.uvalue = ETIFF_INCHES}           },
         {ETIFF_SOFTWARE,          {.csvalue = "GPUJPEG"}             },
         {ETIFF_DATE_TIME ,        {.csvalue = date_time}             },
