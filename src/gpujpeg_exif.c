@@ -31,6 +31,7 @@
 
 #include <assert.h>                    // for assert
 #include <ctype.h>                     // for isdigit
+#include <stddef.h>
 #include <stdint.h>                    // for uint8_t, uint32_t, uint16_t
 #include <stdio.h>                     // for printf
 #include <stdlib.h>                    // for size_t, NULL, free, abort, calloc
@@ -70,24 +71,26 @@ enum exif_tag_type {
 };
 
 enum {
-    T_NUMERIC = 1 << 0,
-    T_UNSIGNED = 1 << 1,
+    T_NUMERIC = 1 << 0,    // single number in .uvalue
+    T_UNSIGNED = 1 << 1,   // number (or pair if rational) is unsigned
+    T_BYTE_ARRAY = 1 << 2, // data stored in .csvalue
+    T_RATIONAL = 1 << 3,   // 2 items of .uvalue
 };
 
-static const struct exif_tag_type_info_t
+static const struct
 {
     unsigned size;
     const char* name;
     unsigned type_flags;
 } exif_tag_type_info[] = {
-      [ET_BYTE] =      {1, "BYTE",      T_NUMERIC|T_UNSIGNED},
-      [ET_ASCII] =     {0, "ASCII",     0                   },
-      [ET_SHORT] =     {2, "SHORT",     T_NUMERIC|T_UNSIGNED},
-      [ET_LONG] =      {4, "LONG",      T_NUMERIC|T_UNSIGNED},
-      [ET_RATIONAL] =  {8, "RATIONAL",  T_UNSIGNED},
-      [ET_UNDEFINED] = {4, "UNDEFINED", },
-      [ET_SLONG] =     {4, "SLONG"    , T_NUMERIC},
-      [ET_SRATIONAL] = {8, "SRATIONAL", 0}
+      [ET_BYTE] =      {1, "BYTE",      T_NUMERIC|T_UNSIGNED },
+      [ET_ASCII] =     {1, "ASCII",     T_BYTE_ARRAY         },
+      [ET_SHORT] =     {2, "SHORT",     T_NUMERIC|T_UNSIGNED },
+      [ET_LONG] =      {4, "LONG",      T_NUMERIC|T_UNSIGNED },
+      [ET_RATIONAL] =  {8, "RATIONAL",  T_UNSIGNED|T_RATIONAL},
+      [ET_UNDEFINED] = {1, "UNDEFINED", T_BYTE_ARRAY         },
+      [ET_SLONG] =     {4, "SLONG"    , T_NUMERIC            },
+      [ET_SRATIONAL] = {8, "SRATIONAL", T_RATIONAL           },
 };
 
 enum exif_tiff_tag {
@@ -112,23 +115,24 @@ enum exif_tiff_tag {
 const struct exif_tiff_tag_info_t {
     uint16_t id;
     enum exif_tag_type type;
+    unsigned count;
     const char *name;
 } exif_tiff_tag_info[] = {
-    [ETIFF_ORIENTATION]       = {0x112,  ET_SHORT,    "Orientation"      },
-    [ETIFF_XRESOLUTION]       = {0x11A,  ET_RATIONAL, "XResolution"      },
-    [ETIFF_YRESOLUTION]       = {0x11B,  ET_RATIONAL, "YResolution"      },
-    [ETIFF_RESOLUTION_UNIT]   = {0x128,  ET_SHORT,    "ResolutionUnit"   },
-    [ETIFF_SOFTWARE]          = {0x131,  ET_ASCII,    "Sofware"          },
-    [ETIFF_DATE_TIME]         = {0x132,  ET_ASCII,    "DateTime"         },
-    [ETIFF_YCBCR_POSITIONING] = {0x213,  ET_SHORT,    "YCbCrPositioning" },
-    [ETIFF_EXIF_IFD_POINTER]  = {0x8769, ET_LONG,     "Exif IFD Pointer"},
+    [ETIFF_ORIENTATION]       = {0x112,  ET_SHORT,    1,  "Orientation"     },
+    [ETIFF_XRESOLUTION]       = {0x11A,  ET_RATIONAL, 1,  "XResolution"     },
+    [ETIFF_YRESOLUTION]       = {0x11B,  ET_RATIONAL, 1,  "YResolution"     },
+    [ETIFF_RESOLUTION_UNIT]   = {0x128,  ET_SHORT,    1,  "ResolutionUnit"  },
+    [ETIFF_SOFTWARE]          = {0x131,  ET_ASCII,    0,  "Sofware"         },
+    [ETIFF_DATE_TIME]         = {0x132,  ET_ASCII,    20, "DateTime"        },
+    [ETIFF_YCBCR_POSITIONING] = {0x213,  ET_SHORT,    1,  "YCbCrPositioning"},
+    [ETIFF_EXIF_IFD_POINTER]  = {0x8769, ET_LONG,     1,  "Exif IFD Pointer"},
     // Exif SubIFD
-    [EEXIF_EXIF_VERSION]             = {0x9000, ET_UNDEFINED, "ExifVersion"           },
-    [EEXIF_COMPONENTS_CONFIGURATION] = {0x9101, ET_UNDEFINED, "ComponentConfiguration"},
-    [EEXIF_FLASHPIX_VERSION]         = {0xA000, ET_UNDEFINED, "FlashPixVersion"       },
-    [EEXIF_COLOR_SPACE]              = {0xA001, ET_SHORT,     "ColorSpace"            },
-    [EEXIF_PIXEL_X_DIMENSION]        = {0xA002, ET_SHORT,     "PixelXDimension"       }, // type can be also LONG
-    [EEXIF_PIXEL_Y_DIMENSION]        = {0xA003, ET_SHORT,     "PixelYDimension"       }, // ditto
+    [EEXIF_EXIF_VERSION]             = {0x9000, ET_UNDEFINED, 4, "ExifVersion"           },
+    [EEXIF_COMPONENTS_CONFIGURATION] = {0x9101, ET_UNDEFINED, 4, "ComponentConfiguration"},
+    [EEXIF_FLASHPIX_VERSION]         = {0xA000, ET_UNDEFINED, 4, "FlashPixVersion"       },
+    [EEXIF_COLOR_SPACE]              = {0xA001, ET_SHORT,     1, "ColorSpace"            },
+    [EEXIF_PIXEL_X_DIMENSION]        = {0xA002, ET_SHORT,     1, "PixelXDimension"       }, // type can be also LONG
+    [EEXIF_PIXEL_Y_DIMENSION]        = {0xA003, ET_SHORT,     1, "PixelYDimension"       }, // ditto
 };
 
 // misc constants
@@ -144,97 +148,70 @@ enum {
 };
 
 union value_u {
-    uint32_t uvalue;
-    const char* csvalue; // ET_STRING or ET_UNKNOWN
-    struct
-    {
-        uint32_t uvalue_num;
-        uint32_t uvalue_den;
-    } urational;
+    const uint32_t *uvalue;
+    const char* csvalue; // ET_STRING (must be 0-terminated) or ET_UNDEFINED
 };
 
 static void
-write_exif_emit_string_tag(struct gpujpeg_writer* writer, uint16_t tag, const char* str, const uint8_t* start,
-                           uint8_t** end)
-{
-    const size_t count = strlen(str) + 1;
-    gpujpeg_writer_emit_2byte(writer, tag);
-    gpujpeg_writer_emit_2byte(writer, ET_ASCII);
-    gpujpeg_writer_emit_4byte(writer, count);
-    gpujpeg_writer_emit_4byte(writer, *end - start);;
-    memcpy(*end, str, count);
-    *end += count;
-}
-
-static void
-write_exif_emit_4bytes_tag(struct gpujpeg_writer* writer, uint16_t tag, enum exif_tag_type type, uint32_t size,
-                           uint32_t val)
-{
-    assert(size <= 4);
-    gpujpeg_writer_emit_2byte(writer, tag);
-    gpujpeg_writer_emit_2byte(writer, type);
-    gpujpeg_writer_emit_4byte(writer, 1);
-
-    for (unsigned i = size; i > 0; --i) { // Exif 4.6.2 - left aligned value; we use big endian
-        gpujpeg_writer_emit_byte(writer, (val >> 8 * (i - 1)) & 0xFFU);
-    }
-    for (unsigned i = size; i < 4; ++i) {
-        gpujpeg_writer_emit_byte(writer, 0);
-    }
-}
-
-static void
-write_exif_emit_lt_4b_tag(struct gpujpeg_writer* writer, uint16_t tag, enum exif_tag_type type, uint32_t size,
-                           union value_u val, const uint8_t* start,
-                           uint8_t** end)
-{
-    gpujpeg_writer_emit_2byte(writer, tag);
-    gpujpeg_writer_emit_2byte(writer, type);
-    gpujpeg_writer_emit_4byte(writer, 1);
-    gpujpeg_writer_emit_4byte(writer, *end - start);;
-
-    if (type == ET_RATIONAL) {
-        assert(size == 8);
-        uint32_t num = htobe32(val.urational.uvalue_num);
-        uint32_t den = htobe32(val.urational.uvalue_den);
-        memcpy(*end, &num, sizeof num);
-        memcpy(*end + 4, &den, sizeof den);
-    }
-    else {
-        abort();
-    }
-
-    *end += size;
-}
-
-static void
-write_exif_tag(struct gpujpeg_writer* writer, enum exif_tag_type type, uint16_t tag_id, union value_u val,
-               const uint8_t* start, uint8_t** end)
+write_exif_tag(struct gpujpeg_writer* writer, enum exif_tag_type type, uint16_t tag_id, unsigned count,
+               union value_u val, const uint8_t* start, uint8_t** end)
 {
     assert(type < ET_END);
-    const unsigned size = exif_tag_type_info[type].size;
-
-    // size for string is computed
-    assert(size > 0 || type == ET_ASCII);
+    unsigned size = exif_tag_type_info[type].size;
 
     if ( type == ET_ASCII ) {
-        write_exif_emit_string_tag(writer, tag_id, val.csvalue, start, end);
-        return;
+        if ( count == 0 ) {
+            count = strlen(val.csvalue) + 1;
+        }
+        else {
+            assert(count == strlen(val.csvalue) + 1);
+        }
     }
-    if ( type == ET_UNDEFINED ) {
-        assert(size == 4);
-        gpujpeg_writer_emit_2byte(writer, tag_id);
-        gpujpeg_writer_emit_2byte(writer, type);
-        gpujpeg_writer_emit_4byte(writer, 4); // count - we have all 4 B, unsure if defined otherwise for other
-        memcpy(writer->buffer_current, val.csvalue, 4);
-        writer->buffer_current += 4;
-        return;
+    assert(count > 0);
+    assert(size > 0);
+
+    gpujpeg_writer_emit_2byte(writer, tag_id);
+    gpujpeg_writer_emit_2byte(writer, type);
+    gpujpeg_writer_emit_4byte(writer, count);
+
+    // we actually store rational numbers as a pair
+    if ( (exif_tag_type_info[type].type_flags & T_RATIONAL) != 0 ) {
+        count *= 2;
+        size /= 2;
     }
-    if (size <= 4) {
-        write_exif_emit_4bytes_tag(writer, tag_id, type, size, val.uvalue);
-        return;
+
+    const bool val_longer_than_4b = size * count > 4;
+    uint8_t* return_pos = NULL;
+    if ( val_longer_than_4b ) {
+        gpujpeg_writer_emit_4byte(writer, *end - start);
+        return_pos = writer->buffer_current;
+        writer->buffer_current = *end;
     }
-    write_exif_emit_lt_4b_tag(writer, tag_id, type, size, val, start, end);
+
+    if ( (exif_tag_type_info[type].type_flags & T_BYTE_ARRAY) != 0 ) {
+        assert(size == 1);
+        for ( unsigned i = 0; i < count; ++i ) {
+            gpujpeg_writer_emit_byte(writer, val.csvalue[i]);
+        }
+    }
+    else {
+        for ( unsigned c = 0; c < count; ++c ) {
+            for ( unsigned i = 0; i < size; ++i ) { // Exif 4.6.2 - left aligned value; we use big endian
+                gpujpeg_writer_emit_byte(writer, (val.uvalue[c] >> 8 * (size - i - 1)) & 0xFFU);
+            }
+        }
+    }
+
+    if ( val_longer_than_4b ) {
+        *end += (size_t)size * count;
+        writer->buffer_current = return_pos;
+    }
+    else {
+        // padding
+        for ( unsigned i = size * count; i < 4; ++i ) {
+            gpujpeg_writer_emit_byte(writer, 0);
+        }
+    }
 }
 
 struct tag_value
@@ -290,17 +267,17 @@ gpujpeg_write_ifd(struct gpujpeg_writer* writer, const uint8_t* start, size_t co
         const struct tag_value* info = &tags[i];
         union value_u value = info->value;
         if ( info->tag == ETIFF_EXIF_IFD_POINTER ) {
-            value.uvalue = end - start;
+            value.uvalue = (uint32_t[]) {end - start};
         }
         const struct exif_tiff_tag_info_t* t = &exif_tiff_tag_info[info->tag];
         assert(t->id >= last_tag_id);
         last_tag_id = t->id;
-        write_exif_tag(writer, t->type, t->id, value, start, &end);
+        write_exif_tag(writer, t->type, t->id, exif_tiff_tag_info[info->tag].count, value, start, &end);
     }
     if ( custom_tags != NULL ) { // add user custom tags
         for ( unsigned i = 0; i < custom_tags->count; ++i ) {
-            write_exif_tag(writer, custom_tags->vals[i].type, custom_tags->vals[i].tag_id, custom_tags->vals[i].value,
-                           start, &end);
+            write_exif_tag(writer, custom_tags->vals[i].type, custom_tags->vals[i].tag_id, 1,
+                           custom_tags->vals[i].value, start, &end);
         }
         // ensure custom_tags are in-ordered
         qsort(first_rec, (writer->buffer_current - first_rec) / IFD_ITEM_SZ, IFD_ITEM_SZ, ifd_sort);
@@ -335,13 +312,13 @@ gpujpeg_write_0th(struct gpujpeg_encoder* encoder, const uint8_t* start)
     struct tm buf;
     (void) strftime(date_time, sizeof date_time, "%Y:%m:%d %H:%M:%S", localtime_s(&now, &buf));
     struct tag_value tags[] = {
-        {ETIFF_ORIENTATION,       {.uvalue = ETIFF_ORIENT_HORIZONTAL}},
-        {ETIFF_XRESOLUTION,       {.urational = {DPI_DEFAULT, 1}}    },
-        {ETIFF_YRESOLUTION,       {.urational = {DPI_DEFAULT, 1}}    },
-        {ETIFF_RESOLUTION_UNIT,   {.uvalue = ETIFF_INCHES}           },
-        {ETIFF_SOFTWARE,          {.csvalue = "GPUJPEG"}             },
-        {ETIFF_DATE_TIME ,        {.csvalue = date_time}             },
-        {ETIFF_YCBCR_POSITIONING, {.uvalue = ETIFF_CENTER}           },
+        {ETIFF_ORIENTATION,       {.uvalue = (uint32_t[]){ETIFF_ORIENT_HORIZONTAL}}},
+        {ETIFF_XRESOLUTION,       {.uvalue = (uint32_t[]){DPI_DEFAULT, 1}}         },
+        {ETIFF_YRESOLUTION,       {.uvalue = (uint32_t[]){DPI_DEFAULT, 1}}         },
+        {ETIFF_RESOLUTION_UNIT,   {.uvalue = (uint32_t[]){ETIFF_INCHES}}           },
+        {ETIFF_SOFTWARE,          {.csvalue = "GPUJPEG"}                           },
+        {ETIFF_DATE_TIME ,        {.csvalue = date_time}                           },
+        {ETIFF_YCBCR_POSITIONING, {.uvalue = (uint32_t[]){ETIFF_CENTER}}           },
         {ETIFF_EXIF_IFD_POINTER,  {0}                                }, // value will be set later
     };
     size_t tag_count = ARR_SIZE(tags);
@@ -357,12 +334,12 @@ gpujpeg_write_0th(struct gpujpeg_encoder* encoder, const uint8_t* start)
 static void gpujpeg_write_exif_ifd(struct gpujpeg_encoder* encoder, const uint8_t *start)
 {
     struct tag_value tags[] = {
-        {EEXIF_EXIF_VERSION,             {.csvalue = "0230"}                }, // 2.30
-        {EEXIF_COMPONENTS_CONFIGURATION, {.csvalue = "\1\2\3\0"}            }, // YCbCr
-        {EEXIF_FLASHPIX_VERSION,         {.csvalue = "0100"}                }, // "0100"
-        {EEXIF_COLOR_SPACE,              {.uvalue = ETIFF_SRGB}             },
-        {EEXIF_PIXEL_X_DIMENSION,        {encoder->coder.param_image.width} },
-        {EEXIF_PIXEL_Y_DIMENSION,        {encoder->coder.param_image.height}},
+        {EEXIF_EXIF_VERSION,             {.csvalue = "0230"}                                        }, // 2.30
+        {EEXIF_COMPONENTS_CONFIGURATION, {.csvalue = "\1\2\3\0"}                                    }, // YCbCr
+        {EEXIF_FLASHPIX_VERSION,         {.csvalue = "0100"}                                        },
+        {EEXIF_COLOR_SPACE,              {.uvalue = (uint32_t[]){ETIFF_SRGB}}                       },
+        {EEXIF_PIXEL_X_DIMENSION,        {.uvalue = (uint32_t[]){encoder->coder.param_image.width}} },
+        {EEXIF_PIXEL_Y_DIMENSION,        {.uvalue = (uint32_t[]){encoder->coder.param_image.height}}},
     };
     size_t tag_count = ARR_SIZE(tags);
     const struct custom_exif_tags* custom_tags = NULL;
@@ -518,7 +495,9 @@ gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char* cfg)
             new_size * sizeof (*exif_tags)->tags[table_idx].vals[0]);
     (*exif_tags)->tags[table_idx].vals[new_size - 1].tag_id = tag_id;
     (*exif_tags)->tags[table_idx].vals[new_size - 1].type = type;
-    (*exif_tags)->tags[table_idx].vals[new_size - 1].value.uvalue = val;
+    uint32_t *val_a = malloc(sizeof *val_a);
+    *val_a = val;
+    (*exif_tags)->tags[table_idx].vals[new_size - 1].value.uvalue = val_a;
 
     return true;
 }
@@ -526,9 +505,14 @@ gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char* cfg)
 void
 gpujpeg_exif_tags_destroy(struct gpujpeg_exif_tags* exif_tags)
 {
-    if (exif_tags == NULL) {
+    if ( exif_tags == NULL ) {
         return;
     }
-    free(exif_tags->tags[0].vals);
-    free(exif_tags->tags[1].vals);
+    for ( unsigned i = 0; i < CT_NUM; ++i ) {
+        for (unsigned j = 0; i < exif_tags->tags[i].count; ++i) {
+            free((void *) exif_tags->tags[i].vals[j].value.uvalue);
+        }
+        free(exif_tags->tags[i].vals);
+    }
+    free(exif_tags);
 }
