@@ -34,6 +34,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>    // for strftime
 
 #ifdef _WIN32
 #define strncasecmp _strnicmp
@@ -86,6 +87,7 @@ enum exif_tiff_tag {
     ETIFF_YRESOLUTION,       ///< Image resolution in height direction (mandatory)
     ETIFF_RESOLUTION_UNIT,   ///< Unit of X and Y resolution (mandatory)
     ETIFF_SOFTWARE,          ///< Software used (optional)
+    ETIFF_DATE_TIME,         ///< File change date and time (recommeneded)
     ETIFF_YCBCR_POSITIONING, ///< Y and C positioning (mandatory)
     ETIFF_EXIF_IFD_POINTER,  ///< EXIF tag (mandatory)
     // 0th SubIFD Exif Private Tags
@@ -107,6 +109,7 @@ const struct exif_tiff_tag_info_t {
     [ETIFF_YRESOLUTION]       = {0x11B,  ET_RATIONAL, "YResolution"      },
     [ETIFF_RESOLUTION_UNIT]   = {0x128,  ET_SHORT,    "ResolutionUnit"   },
     [ETIFF_SOFTWARE]          = {0x131,  ET_ASCII,    "Sofware"          },
+    [ETIFF_DATE_TIME]         = {0x132,  ET_ASCII,    "DateTime"         },
     [ETIFF_YCBCR_POSITIONING] = {0x213,  ET_SHORT,    "YCbCrPositioning" },
     [ETIFF_EXIF_IFD_POINTER]  = {0x8769, ET_LONG,     "Exif IFD Pointer"},
     // Exif SubIFD
@@ -120,6 +123,7 @@ const struct exif_tiff_tag_info_t {
 
 // misc constants
 enum {
+    ETIFF_ORIENT_HORIZONTAL = 1, // normal
     ETIFF_CENTER = 1,
     ETIFF_SRGB = 1,
     ETIFF_INCHES = 2,
@@ -294,26 +298,53 @@ gpujpeg_write_ifd(struct gpujpeg_writer* writer, const uint8_t* start, size_t co
     writer->buffer_current = end;         // jump after the section Value longer than 4Byte of 0th IFD
 }
 
+/**
+ * from tags remove the items that are overriden by custom_tags
+ */
+static size_t
+remove_overriden(size_t count, struct tag_value tags[], const struct custom_exif_tags* custom_tags)
+{
+    for ( unsigned i = 0; i < custom_tags->count; ++i ) {
+        for ( unsigned j = 0; j < count; ++j ) {
+            if ( custom_tags->vals[i].tag_id == exif_tiff_tag_info[tags[j].tag].id ) {
+                memmove(tags + j, tags + j + 1, (count - j - 1) * sizeof(tags[0]));
+                count -= 1;
+                break;
+            }
+        }
+    }
+    return count;
+}
+
 static void
 gpujpeg_write_0th(struct gpujpeg_encoder* encoder, const uint8_t* start)
 {
-    const struct tag_value tags[] = {
-        {ETIFF_XRESOLUTION,       {.urational = {72, 1}}  },
-        {ETIFF_YRESOLUTION,       {.urational = {72, 1}}  },
-        {ETIFF_RESOLUTION_UNIT,   {.uvalue = ETIFF_INCHES}},
-        {ETIFF_SOFTWARE,          {.csvalue = "GPUJPEG"}  },
-        {ETIFF_YCBCR_POSITIONING, {.uvalue = ETIFF_CENTER}}, // center
-        {ETIFF_EXIF_IFD_POINTER,  {0}                     }, // value later; should be last
+    char date_time[] = "    :  :     :  :  "; // unknown val by Exif 2.3
+    time_t now = time(NULL);
+    (void) strftime(date_time, sizeof date_time, "%Y:%m:%d %H:%M:%S", localtime(&now));
+    struct tag_value tags[] = {
+        {ETIFF_ORIENTATION,       {.uvalue = ETIFF_ORIENT_HORIZONTAL}},
+        {ETIFF_XRESOLUTION,       {.urational = {72, 1}}             },
+        {ETIFF_YRESOLUTION,       {.urational = {72, 1}}             },
+        {ETIFF_RESOLUTION_UNIT,   {.uvalue = ETIFF_INCHES}           },
+        {ETIFF_SOFTWARE,          {.csvalue = "GPUJPEG"}             },
+        {ETIFF_DATE_TIME ,        {.csvalue = date_time}             },
+        {ETIFF_YCBCR_POSITIONING, {.uvalue = ETIFF_CENTER}           },
+        {ETIFF_EXIF_IFD_POINTER,  {0}                                }, // value will be set later
     };
-    const struct custom_exif_tags* custom_tags =
-        encoder->writer->exif_tags != NULL ? &encoder->writer->exif_tags->tags[CT_TIFF] : NULL;
+    size_t tag_count = ARR_SIZE(tags);
+    const struct custom_exif_tags* custom_tags = NULL;
+    if (encoder->writer->exif_tags != NULL) {
+        custom_tags = &encoder->writer->exif_tags->tags[CT_TIFF];
+        tag_count = remove_overriden(tag_count, tags, custom_tags);
+    }
 
-    gpujpeg_write_ifd(encoder->writer, start, ARR_SIZE(tags), tags, custom_tags);
+    gpujpeg_write_ifd(encoder->writer, start, tag_count, tags, custom_tags);
 }
 
 static void gpujpeg_write_exif_ifd(struct gpujpeg_encoder* encoder, const uint8_t *start)
 {
-    const struct tag_value tags[] = {
+    struct tag_value tags[] = {
         {EEXIF_EXIF_VERSION,             {.csvalue = "0230"}                }, // 2.30
         {EEXIF_COMPONENTS_CONFIGURATION, {.csvalue = "\1\2\3\0"}            }, // YCbCr
         {EEXIF_FLASHPIX_VERSION,         {.csvalue = "0100"}                }, // "0100"
@@ -321,8 +352,12 @@ static void gpujpeg_write_exif_ifd(struct gpujpeg_encoder* encoder, const uint8_
         {EEXIF_PIXEL_X_DIMENSION,        {encoder->coder.param_image.width} },
         {EEXIF_PIXEL_Y_DIMENSION,        {encoder->coder.param_image.height}},
     };
-    const struct custom_exif_tags* custom_tags =
-        encoder->writer->exif_tags != NULL ? &encoder->writer->exif_tags->tags[CT_EXIF] : NULL;
+    size_t tag_count = ARR_SIZE(tags);
+    const struct custom_exif_tags* custom_tags = NULL;
+    if (encoder->writer->exif_tags != NULL) {
+        custom_tags = &encoder->writer->exif_tags->tags[CT_EXIF];
+        tag_count = remove_overriden(tag_count, tags, custom_tags);
+    }
 
     gpujpeg_write_ifd(encoder->writer, start, ARR_SIZE(tags), tags, custom_tags);
 }
