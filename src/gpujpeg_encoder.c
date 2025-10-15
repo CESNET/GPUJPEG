@@ -760,7 +760,7 @@ gpujpeg_encoder_print_options() {
            "] - whether is the input image should be vertically flipped (prior encode)\n");
     printf("\t" GPUJPEG_ENC_OPT_CHANNEL_REMAP "=XYZ[W] - input channel mapping, eg. '210F' for GBRX,\n"
         "\t\t'210' for GBR; special placeholders 'F' and 'Z' to set a channel to all-ones or all-zeros\n");
-    printf("\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<ID>:<type>=<value> - custom EXIF tag\n");
+    printf("\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<key>=<value>|help - custom EXIF tag (use help for syntax)\n");
 }
 
 /* Documented at declaration */

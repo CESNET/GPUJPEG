@@ -30,6 +30,7 @@
 #include "gpujpeg_exif.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -98,20 +99,21 @@ enum exif_tiff_tag {
 const struct exif_tiff_tag_info_t {
     uint16_t id;
     enum exif_tag_type type;
+    const char *name;
 } exif_tiff_tag_info[] = {
-    [ETIFF_XRESOLUTION]       = {0x11A,  ET_RATIONAL},
-    [ETIFF_YRESOLUTION]       = {0x11B,  ET_RATIONAL},
-    [ETIFF_RESOLUTION_UNIT]   = {0x128,  ET_SHORT   },
-    [ETIFF_SOFTWARE]          = {0x131,  ET_ASCII   },
-    [ETIFF_YCBCR_POSITIONING] = {0x213,  ET_SHORT   },
-    [ETIFF_EXIF_IFD_POINTER]  = {0x8769, ET_LONG    },
+    [ETIFF_XRESOLUTION]       = {0x11A,  ET_RATIONAL, "XResolution"      },
+    [ETIFF_YRESOLUTION]       = {0x11B,  ET_RATIONAL, "YResolution"      },
+    [ETIFF_RESOLUTION_UNIT]   = {0x128,  ET_SHORT,    "ResolutionUnit"   },
+    [ETIFF_SOFTWARE]          = {0x131,  ET_ASCII,    "Sofware"          },
+    [ETIFF_YCBCR_POSITIONING] = {0x213,  ET_SHORT,    "YCbCrPositioning" },
+    [ETIFF_EXIF_IFD_POINTER]  = {0x8769, ET_LONG,     "Exif IFD Pointer"},
     // Exif SubIFD
-    [EEXIF_EXIF_VERSION]             = {0x9000, ET_UNDEFINED },
-    [EEXIF_COMPONENTS_CONFIGURATION] = {0x9101, ET_UNDEFINED },
-    [EEXIF_FLASHPIX_VERSION]         = {0xA000, ET_UNDEFINED },
-    [EEXIF_COLOR_SPACE]              = {0xA001, ET_SHORT },
-    [EEXIF_PIXEL_X_DIMENSION]        = {0xA002, ET_SHORT }, // type can be also LONG
-    [EEXIF_PIXEL_Y_DIMENSION]        = {0xA003, ET_SHORT }, // ditto
+    [EEXIF_EXIF_VERSION]             = {0x9000, ET_UNDEFINED, "ExifVersion"           },
+    [EEXIF_COMPONENTS_CONFIGURATION] = {0x9101, ET_UNDEFINED, "ComponentConfiguration"},
+    [EEXIF_FLASHPIX_VERSION]         = {0xA000, ET_UNDEFINED, "FlashPixVersion"       },
+    [EEXIF_COLOR_SPACE]              = {0xA001, ET_SHORT,     "ColorSpace"            },
+    [EEXIF_PIXEL_X_DIMENSION]        = {0xA002, ET_SHORT,     "PixelXDimension"       }, // type can be also LONG
+    [EEXIF_PIXEL_Y_DIMENSION]        = {0xA003, ET_SHORT,     "PixelYDimension"       }, // ditto
 };
 
 // misc constants
@@ -367,42 +369,76 @@ gpujpeg_writer_write_exif(struct gpujpeg_encoder* encoder)
     length_p[1] = length;
 }
 
+static bool
+get_numeric_tag_type(char** endptr, long* tag_id, enum exif_tag_type* type)
+{
+    *tag_id = strtol(*endptr, endptr, 0);
+    if ( **endptr != ':' ) {
+        ERROR_MSG("Error parsing Exif tag ID or missing type!\n");
+        return false;
+    }
+    *endptr += 1;
+    for ( unsigned i = ET_NONE + 1; i < ET_END; ++i ) {
+        if ( exif_tag_type_info[i].name == NULL ) { // unset/invalid type
+            continue;
+        }
+        size_t len = strlen(exif_tag_type_info[i].name);
+        if ( strncasecmp(*endptr, exif_tag_type_info[i].name, len) == 0 ) {
+            *type = i;
+            *endptr += len;
+            break;
+        }
+    }
+    if ( type == ET_NONE ) {
+        ERROR_MSG("Error parsing Exif tag type!\n");
+        return false;
+    }
+    if ( **endptr != '=' ) {
+        ERROR_MSG("Error parsing Exif - missing value!\n");
+        return false;
+    }
+    return true;
+}
+
 /**
  * add user-provided Exif tag
  */
 bool
 gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char* cfg)
 {
-    char *endptr = (char *) cfg;
-    long tag_id = strtol(cfg, &endptr, 0);
-    if (*endptr != ':') {
-        ERROR_MSG("Error parsing Exif tag ID or missing type!\n");
+    if (strcmp(cfg, "help") == 0) {
+        printf("Exif value syntax:\n"
+               "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<ID>:<type>=<value>\n"
+               "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<name>=<value>\n"
+               "\t\tname must be a tag name known to GPUJPEG\n");
         return false;
     }
-    endptr += 1;
 
+    char *endptr = (char *) cfg;
+    long tag_id = 0;
     enum exif_tag_type type = ET_NONE;
-    for (unsigned i = ET_NONE + 1; i < ET_END; ++i) {
-        if ( exif_tag_type_info[i].name == NULL) { // unset/invalid type
-            continue;
+
+    if (isdigit(*endptr)) {
+        if ( !get_numeric_tag_type(&endptr, &tag_id, &type) ) {
+            return false;
         }
-        size_t len = strlen(exif_tag_type_info[i].name);
-         if (strncasecmp(endptr, exif_tag_type_info[i].name, len) == 0 ) {
-            type = i;
-            endptr += len;
-            break;
+    } else {
+        for (unsigned i = 0; i < ARR_SIZE(exif_tiff_tag_info); ++i) {
+            size_t len = strlen(exif_tiff_tag_info[i].name);
+            if ( strncasecmp(endptr, exif_tiff_tag_info[i].name, len) == 0 ) {
+                tag_id = exif_tiff_tag_info[i].id;
+                type = exif_tiff_tag_info[i].type;
+                endptr += len;
+            }
+        }
+        if (*endptr != '=') {
+            ERROR_MSG("[Exif] Wrong tag name or missing value!\n");
+            return false;
         }
     }
-    if (type == ET_NONE) {
-        ERROR_MSG("Error parsing Exif tag type!\n");
-        return false;
-    }
-    if (*endptr != '=') {
-        ERROR_MSG("Error parsing Exif - missing value!\n");
-        return false;
-    }
+
     unsigned numeric_unsigned = T_NUMERIC | T_UNSIGNED;
-    if ((exif_tag_type_info[type].type_flags & numeric_unsigned) != numeric_unsigned) {
+    if ( (exif_tag_type_info[type].type_flags & numeric_unsigned) != numeric_unsigned ) {
         ERROR_MSG("Only unsigned integers currently supported!\n");
         return false;
     }
