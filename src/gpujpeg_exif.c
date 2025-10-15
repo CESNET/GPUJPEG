@@ -101,6 +101,7 @@ enum exif_tiff_tag {
     ETIFF_RESOLUTION_UNIT,   ///< Unit of X and Y resolution (mandatory)
     ETIFF_SOFTWARE,          ///< Software used (optional)
     ETIFF_DATE_TIME,         ///< File change date and time (recommeneded)
+    ETIFF_WHITE_POINT,       ///< White Point
     ETIFF_YCBCR_POSITIONING, ///< Y and C positioning (mandatory)
     ETIFF_EXIF_IFD_POINTER,  ///< EXIF tag (mandatory)
     // 0th SubIFD Exif Private Tags
@@ -124,6 +125,7 @@ const struct exif_tiff_tag_info_t {
     [ETIFF_RESOLUTION_UNIT]   = {0x128,  ET_SHORT,    1,  "ResolutionUnit"  },
     [ETIFF_SOFTWARE]          = {0x131,  ET_ASCII,    0,  "Sofware"         },
     [ETIFF_DATE_TIME]         = {0x132,  ET_ASCII,    20, "DateTime"        },
+    [ETIFF_WHITE_POINT]       = {0x13E,  ET_RATIONAL, 2,  "WhitePoint"      },
     [ETIFF_YCBCR_POSITIONING] = {0x213,  ET_SHORT,    1,  "YCbCrPositioning"},
     [ETIFF_EXIF_IFD_POINTER]  = {0x8769, ET_LONG,     1,  "Exif IFD Pointer"},
     // Exif SubIFD
@@ -226,6 +228,7 @@ struct custom_tag_value
     uint16_t tag_id;
     enum exif_tag_type type;
     union value_u value;
+    size_t val_count;
 };
 enum { CT_TIFF, CT_EXIF, CT_NUM };
 /// custom exif tags given by user
@@ -276,8 +279,8 @@ gpujpeg_write_ifd(struct gpujpeg_writer* writer, const uint8_t* start, size_t co
     }
     if ( custom_tags != NULL ) { // add user custom tags
         for ( unsigned i = 0; i < custom_tags->count; ++i ) {
-            write_exif_tag(writer, custom_tags->vals[i].type, custom_tags->vals[i].tag_id, 1,
-                           custom_tags->vals[i].value, start, &end);
+            write_exif_tag(writer, custom_tags->vals[i].type, custom_tags->vals[i].tag_id,
+                           custom_tags->vals[i].val_count, custom_tags->vals[i].value, start, &end);
         }
         // ensure custom_tags are in-ordered
         qsort(first_rec, (writer->buffer_current - first_rec) / IFD_ITEM_SZ, IFD_ITEM_SZ, ifd_sort);
@@ -433,9 +436,13 @@ usage()
            "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<ID>:<type>=<value>\n"
            "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<name>=<value>\n"
            "\t\tname must be a tag name known to GPUJPEG\n");
-    printf("\nrecognized tag name (type):\n");
+    printf("\n");
+    printf("If multple values required, separate with a comma; rationals are in format num/den.\n");
+    printf("\n");
+    printf("recognized tag name (type, count):\n");
     for ( unsigned i = 0; i < ARR_SIZE(exif_tiff_tag_info); ++i ) {
-        printf("\t- %s (%s)\n", exif_tiff_tag_info[i].name, exif_tag_type_info[exif_tiff_tag_info[i].type].name);
+        printf("\t- %s (%s, %u)\n", exif_tiff_tag_info[i].name, exif_tag_type_info[exif_tiff_tag_info[i].type].name,
+               exif_tiff_tag_info[i].count);
     }
 }
 
@@ -473,15 +480,42 @@ gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char* cfg)
         }
     }
 
-    unsigned numeric_unsigned = T_NUMERIC | T_UNSIGNED;
-    if ( (exif_tag_type_info[type].type_flags & numeric_unsigned) != numeric_unsigned ) {
-        ERROR_MSG("Only unsigned integers currently supported!\n");
-        return false;
-    }
     endptr += 1;
-    unsigned long long val = strtoull(endptr, &endptr, 0);
-    if (*endptr != '\0') {
-        ERROR_MSG("Trainling data in Exif value!\n");
+    void* val_alloc = NULL;
+    size_t val_count = 0;
+    do {
+        if ( *endptr == ',' ) {
+            endptr += 1;
+        }
+        if ( (exif_tag_type_info[type].type_flags & T_NUMERIC) != 0U ) {
+            unsigned long long val = strtoull(endptr, &endptr, 0);
+            val_count += 1;
+            uint32_t* val_a = realloc(val_alloc, val_count * sizeof *val_a);
+            val_a[val_count - 1] = val;
+            val_alloc = val_a;
+        }
+        else if ( (exif_tag_type_info[type].type_flags & T_RATIONAL) != 0U ) {
+            unsigned long long num = strtoull(endptr, &endptr, 0);
+            if ( *endptr != '/' ) {
+                ERROR_MSG("[Exif] Malformed rational, expected '/', got '%c'!\n", *endptr);
+            }
+            endptr += 1;
+            unsigned long long den = strtoull(endptr, &endptr, 0);
+            val_count += 1;
+            uint32_t* val_a = realloc(val_alloc, val_count * 2 * sizeof *val_a);
+            val_a[2 * (val_count - 1)] = num;
+            val_a[(2 * (val_count - 1)) + 1] = den;
+            val_alloc = val_a;
+        }
+        else {
+            ERROR_MSG("Only integer or rational values are currently supported!\n");
+            return false;
+        }
+    } while ( *endptr == ',' );
+
+    if ( *endptr != '\0' ) {
+        free(val_alloc);
+        ERROR_MSG("Trainling data in Exif value: %s\n", endptr);
         return false;
     }
 
@@ -495,9 +529,9 @@ gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char* cfg)
             new_size * sizeof (*exif_tags)->tags[table_idx].vals[0]);
     (*exif_tags)->tags[table_idx].vals[new_size - 1].tag_id = tag_id;
     (*exif_tags)->tags[table_idx].vals[new_size - 1].type = type;
-    uint32_t *val_a = malloc(sizeof *val_a);
-    *val_a = val;
-    (*exif_tags)->tags[table_idx].vals[new_size - 1].value.uvalue = val_a;
+    assert(val_alloc != NULL);
+    (*exif_tags)->tags[table_idx].vals[new_size - 1].value.uvalue = val_alloc;
+    (*exif_tags)->tags[table_idx].vals[new_size - 1].val_count = val_count;
 
     return true;
 }
