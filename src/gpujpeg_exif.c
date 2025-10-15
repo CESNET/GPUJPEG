@@ -437,7 +437,8 @@ usage()
            "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<name>=<value>\n"
            "\t\tname must be a tag name known to GPUJPEG\n");
     printf("\n");
-    printf("If multple values required, separate with a comma; rationals are in format num/den.\n");
+    printf("If mulitple numeric values required, separate with a comma; rationals are in format num/den.\n");
+    printf("UNDEFINED and ASCII should be raw strings.\n");
     printf("\n");
     printf("recognized tag name (type, count):\n");
     for ( unsigned i = 0; i < ARR_SIZE(exif_tiff_tag_info); ++i ) {
@@ -483,35 +484,42 @@ gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char* cfg)
     endptr += 1;
     void* val_alloc = NULL;
     size_t val_count = 0;
-    do {
-        if ( *endptr == ',' ) {
-            endptr += 1;
+    if ( (exif_tag_type_info[type].type_flags & T_BYTE_ARRAY) != 0 ) {
+        char* val_str = strdup(endptr);
+        val_alloc = val_str;
+        val_count = strlen(val_str);
+        endptr += val_count;
+        if (type == ET_ASCII) {
+            val_count += 1; // include '\0'
         }
-        if ( (exif_tag_type_info[type].type_flags & T_NUMERIC) != 0U ) {
-            unsigned long long val = strtoull(endptr, &endptr, 0);
-            val_count += 1;
-            uint32_t* val_a = realloc(val_alloc, val_count * sizeof *val_a);
-            val_a[val_count - 1] = val;
-            val_alloc = val_a;
-        }
-        else if ( (exif_tag_type_info[type].type_flags & T_RATIONAL) != 0U ) {
-            unsigned long long num = strtoull(endptr, &endptr, 0);
-            if ( *endptr != '/' ) {
-                ERROR_MSG("[Exif] Malformed rational, expected '/', got '%c'!\n", *endptr);
+    }
+    else {
+        do {
+            if ( *endptr == ',' ) {
+                endptr += 1;
             }
-            endptr += 1;
-            unsigned long long den = strtoull(endptr, &endptr, 0);
-            val_count += 1;
-            uint32_t* val_a = realloc(val_alloc, val_count * 2 * sizeof *val_a);
-            val_a[2 * (val_count - 1)] = num;
-            val_a[(2 * (val_count - 1)) + 1] = den;
-            val_alloc = val_a;
-        }
-        else {
-            ERROR_MSG("Only integer or rational values are currently supported!\n");
-            return false;
-        }
-    } while ( *endptr == ',' );
+            if ( (exif_tag_type_info[type].type_flags & T_NUMERIC) != 0U ) {
+                unsigned long long val = strtoull(endptr, &endptr, 0);
+                val_count += 1;
+                uint32_t* val_a = realloc(val_alloc, val_count * sizeof *val_a);
+                val_a[val_count - 1] = val;
+                val_alloc = val_a;
+            }
+            else if ( (exif_tag_type_info[type].type_flags & T_RATIONAL) != 0U ) {
+                unsigned long long num = strtoull(endptr, &endptr, 0);
+                if ( *endptr != '/' ) {
+                    ERROR_MSG("[Exif] Malformed rational, expected '/', got '%c'!\n", *endptr);
+                }
+                endptr += 1;
+                unsigned long long den = strtoull(endptr, &endptr, 0);
+                val_count += 1;
+                uint32_t* val_a = realloc(val_alloc, val_count * 2 * sizeof *val_a);
+                val_a[2 * (val_count - 1)] = num;
+                val_a[(2 * (val_count - 1)) + 1] = den;
+                val_alloc = val_a;
+            }
+        } while ( *endptr == ',' );
+    }
 
     if ( *endptr != '\0' ) {
         free(val_alloc);
