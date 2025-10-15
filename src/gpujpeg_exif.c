@@ -81,6 +81,7 @@ static const struct exif_tag_type_info_t
 
 enum exif_tiff_tag {
     // 0th IFD TIFF Tags
+    ETIFF_ORIENTATION,       ///< Image resolution in width direction (recommended)
     ETIFF_XRESOLUTION,       ///< Image resolution in width direction (mandatory)
     ETIFF_YRESOLUTION,       ///< Image resolution in height direction (mandatory)
     ETIFF_RESOLUTION_UNIT,   ///< Unit of X and Y resolution (mandatory)
@@ -101,6 +102,7 @@ const struct exif_tiff_tag_info_t {
     enum exif_tag_type type;
     const char *name;
 } exif_tiff_tag_info[] = {
+    [ETIFF_ORIENTATION]       = {0x112,  ET_SHORT,    "Orientation"      },
     [ETIFF_XRESOLUTION]       = {0x11A,  ET_RATIONAL, "XResolution"      },
     [ETIFF_YRESOLUTION]       = {0x11B,  ET_RATIONAL, "YResolution"      },
     [ETIFF_RESOLUTION_UNIT]   = {0x128,  ET_SHORT,    "ResolutionUnit"   },
