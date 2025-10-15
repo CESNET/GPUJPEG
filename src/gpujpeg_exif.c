@@ -449,6 +449,19 @@ get_numeric_tag_type(char** endptr, long* tag_id, enum exif_tag_type* type)
     return true;
 }
 
+static void
+usage()
+{
+    printf("Exif value syntax:\n"
+           "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<ID>:<type>=<value>\n"
+           "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<name>=<value>\n"
+           "\t\tname must be a tag name known to GPUJPEG\n");
+    printf("\nrecognized tag name (type):\n");
+    for ( unsigned i = 0; i < ARR_SIZE(exif_tiff_tag_info); ++i ) {
+        printf("\t- %s (%s)\n", exif_tiff_tag_info[i].name, exif_tag_type_info[exif_tiff_tag_info[i].type].name);
+    }
+}
+
 /**
  * add user-provided Exif tag
  */
@@ -456,10 +469,7 @@ bool
 gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char* cfg)
 {
     if (strcmp(cfg, "help") == 0) {
-        printf("Exif value syntax:\n"
-               "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<ID>:<type>=<value>\n"
-               "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<name>=<value>\n"
-               "\t\tname must be a tag name known to GPUJPEG\n");
+        usage();
         return false;
     }
 
