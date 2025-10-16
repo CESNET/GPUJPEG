@@ -37,6 +37,7 @@
 #include "../libgpujpeg/gpujpeg_decoder.h"
 #include "../libgpujpeg/gpujpeg_encoder.h"  // for enum gpujpeg_header_type
 #include "gpujpeg_decoder_internal.h"
+#include "gpujpeg_exif.h"
 #include "gpujpeg_marker.h"
 #include "gpujpeg_reader.h"
 #include "gpujpeg_util.h"
@@ -297,6 +298,32 @@ gpujpeg_reader_read_app0(uint8_t** image, const uint8_t* image_end, enum gpujpeg
     // Something else - skip contents
     *image += length - 2 - 5;
     return -1;
+}
+
+static void
+gpujpeg_reader_read_app1(uint8_t** image, const uint8_t* image_end, enum gpujpeg_header_type* header_type,
+                         enum gpujpeg_color_space* color_space, int verbose)
+{
+    if ( image_end - *image < 2 ) {
+        ERROR_MSG("Unexpected end of APP1 marker!\n");
+        return;
+    }
+
+    uint8_t type_tag[50];
+    unsigned i = 0;
+    const uint8_t* ptr = *image + 2;
+    while ( *ptr != '\0' && ptr < image_end && i < sizeof type_tag  - 1 ) {
+        type_tag[i++] = *ptr++;
+    }
+    type_tag[i] = '\0';
+    if ( strcmp((char *) type_tag, "Exif") == 0 ) {
+        *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+        *header_type = GPUJPEG_HEADER_EXIF;
+        gpujpeg_exif_parse(image, image_end, verbose);
+        return;
+    }
+    WARN_MSG("Skipping unsupported APP1 marker \"%s\"!\n", type_tag);
+    gpujpeg_reader_skip_marker_content(image, image_end);
 }
 
 /**
@@ -1346,6 +1373,9 @@ gpujpeg_reader_read_common_markers(uint8_t** image, const uint8_t* image_end, in
                 *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
             }
             break;
+        case GPUJPEG_MARKER_APP1:
+            gpujpeg_reader_read_app1(image, image_end, header_type, color_space, log_level);
+            break;
         case GPUJPEG_MARKER_APP8:
             if ( gpujpeg_reader_read_app8(image, image_end, color_space, header_type, log_level, in_spiff) != 0 ) {
                 return -1;
@@ -1356,7 +1386,6 @@ gpujpeg_reader_read_common_markers(uint8_t** image, const uint8_t* image_end, in
                 return -1;
             }
             break;
-        case GPUJPEG_MARKER_APP1:
         case GPUJPEG_MARKER_APP2:
         case GPUJPEG_MARKER_APP3:
         case GPUJPEG_MARKER_APP4:

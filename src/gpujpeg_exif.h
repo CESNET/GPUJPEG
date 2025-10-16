@@ -32,6 +32,7 @@
 
 #ifndef __cplusplus
 #include <stdbool.h>
+#include <stdint.h>
 #endif // not defined __cplusplus
 
 struct gpujpeg_exif_tags;
@@ -44,5 +45,8 @@ bool
 gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char *cfg);
 void
 gpujpeg_exif_tags_destroy(struct gpujpeg_exif_tags* exif_tags);
+
+void
+gpujpeg_exif_parse(uint8_t** image, const uint8_t* image_end, int verbose);
 
 #endif // defined GPUJPEG_EXIF_H_6755D546_2A90_46DF_9ECA_22F575C3E7E3

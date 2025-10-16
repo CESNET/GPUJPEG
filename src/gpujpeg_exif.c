@@ -57,6 +57,8 @@
 #include "gpujpeg_util.h"                  // for ARR_SIZE
 #include "gpujpeg_writer.h"                // for gpujpeg_writer, gpujpeg_writer...
 
+#define MOD_NAME "[Exif] "
+
 enum exif_tag_type {
     ET_NONE = 0,
     ET_BYTE = 1,       ///< 8-bit unsigned integer
@@ -77,7 +79,7 @@ enum {
     T_RATIONAL = 1 << 3,   // 2 items of .uvalue
 };
 
-static const struct
+static const struct exif_tag_type_info_t
 {
     unsigned size;
     const char* name;
@@ -94,6 +96,7 @@ static const struct
 };
 
 enum exif_tiff_tag {
+    TAG_NONE,
     // 0th IFD TIFF Tags
     ETIFF_ORIENTATION,       ///< Image resolution in width direction (recommended)
     ETIFF_XRESOLUTION,       ///< Image resolution in width direction (mandatory)
@@ -111,6 +114,7 @@ enum exif_tiff_tag {
     EEXIF_COLOR_SPACE,              ///< Color space information (mandatory)
     EEXIF_PIXEL_X_DIMENSION,        ///< Valid image width (mandatory)
     EEXIF_PIXEL_Y_DIMENSION,        ///< Valid image height (mandatory)
+    NUM_TAGS
 };
 
 const struct exif_tiff_tag_info_t {
@@ -119,6 +123,7 @@ const struct exif_tiff_tag_info_t {
     unsigned count;
     const char *name;
 } exif_tiff_tag_info[] = {
+    [TAG_NONE]                = {0,      0,           0,  "Unknown"         },
     [ETIFF_ORIENTATION]       = {0x112,  ET_SHORT,    1,  "Orientation"     },
     [ETIFF_XRESOLUTION]       = {0x11A,  ET_RATIONAL, 1,  "XResolution"     },
     [ETIFF_YRESOLUTION]       = {0x11B,  ET_RATIONAL, 1,  "YResolution"     },
@@ -147,8 +152,12 @@ enum {
     IFD_ITEM_SZ = 12,
     DPI_DEFAULT = 72,
     EEXIF_FIRST = 0x827A, // (Exposure time) first tag id of Exif Private Tags
+    TIFF_HDR_TAG = 0x002a,
 };
 
+////////////////////////////////////////////////////////////////////////////////
+//                                   WRITER                                   //
+////////////////////////////////////////////////////////////////////////////////
 union value_u {
     const uint32_t *uvalue;
     const char* csvalue; // ET_STRING (must be 0-terminated) or ET_UNDEFINED
@@ -386,7 +395,7 @@ gpujpeg_writer_write_exif(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_emit_byte(writer, 'M');
     gpujpeg_writer_emit_byte(writer, 'M');
 
-    gpujpeg_writer_emit_2byte(writer, 0x002a); // TIFF header
+    gpujpeg_writer_emit_2byte(writer, TIFF_HDR_TAG); // TIFF header
     gpujpeg_writer_emit_4byte(writer, 0x08); // IFD offset - follows immediately
 
     gpujpeg_write_0th(encoder, start);
@@ -557,4 +566,156 @@ gpujpeg_exif_tags_destroy(struct gpujpeg_exif_tags* exif_tags)
         free(exif_tags->tags[i].vals);
     }
     free(exif_tags);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//                                   READER                                   //
+////////////////////////////////////////////////////////////////////////////////
+static enum exif_tiff_tag
+get_tag_from_id(uint16_t tag_id)
+{
+    for ( unsigned i = TAG_NONE + 1; i < NUM_TAGS; ++i ) {
+        if ( exif_tiff_tag_info[i].id == tag_id ) {
+            return i;
+        }
+    }
+    return TAG_NONE;
+}
+
+static uint8_t
+read_byte(uint8_t** image)
+{
+    return *(*image)++;
+}
+static uint16_t
+read_2byte_be(uint8_t** image) {
+    uint16_t ret = (*image)[0] << 8 | (*image)[1];
+    *image += 2;
+    return ret;
+}
+static uint32_t
+read_4byte_be(uint8_t** image) {
+    uint32_t ret = (*image)[0] << 24 | (*image)[1] << 16 | (*image)[2] << 8 | (*image)[3];
+    *image += 4;
+    return ret;
+}
+static uint16_t
+read_2byte_le(uint8_t** image) {
+    uint16_t ret = (*image)[1] << 8 | (*image)[0];
+    *image += 2;
+    return ret;
+}
+static uint32_t
+read_4byte_le(uint8_t** image) {
+    uint32_t ret = (*image)[3] << 24 | (*image)[2] << 16 | (*image)[1] << 8 | (*image)[0];
+    *image += 4;
+    return ret;
+}
+
+static void
+read_0th_ifd(uint8_t** image, const uint8_t* image_end, int verbose, uint16_t (*read_2byte)(uint8_t**),
+             uint32_t (*read_4byte)(uint8_t**))
+{
+    if ( *image + 2 > image_end ) {
+        WARN_MSG("Unexpected end of file!\n");
+        return;
+    }
+    size_t num_interop = read_2byte(image);
+    if ( *image + num_interop * IFD_ITEM_SZ > image_end ) {
+        WARN_MSG(MOD_NAME "Insufficient space to hold %zu IFD0 items!\n", num_interop);
+        return;
+    }
+    DEBUG_MSG(verbose, "Found %zu IFD0 items.\n", num_interop);
+
+    for ( unsigned i = 0; i < num_interop; ++i ) {
+        uint16_t tag_id = read_2byte(image);
+        uint16_t type = read_2byte(image);
+        uint32_t count = read_4byte(image);
+        uint32_t val = read_4byte(image);
+        unsigned size = 0;
+        enum exif_tiff_tag tag = get_tag_from_id(tag_id);
+        const char* type_name = "WRONG";
+        if ( type < ET_END && exif_tag_type_info[type].name != NULL ) {
+            type_name = exif_tag_type_info[type].name;
+            if ( (exif_tag_type_info[type].type_flags & T_NUMERIC) != 0 ) {
+                if (read_2byte == read_2byte_be) {
+                    val >>= 8 * exif_tag_type_info[type].size;
+                }
+            }
+            size = exif_tag_type_info[type].size;
+        }
+        DEBUG_MSG(verbose, MOD_NAME "Found IFD0 tag %s (%#x) type %s: count=%u, %s=%#x\n", exif_tiff_tag_info[tag].name,
+                  tag_id, type_name, count, count * size <= 4 ? "value" : "offset", val);
+        if ( tag == ETIFF_ORIENTATION && val != ETIFF_ORIENT_HORIZONTAL ) {
+            WARN_MSG(MOD_NAME "Orientation %d not handled!\n", val);
+        }
+    }
+
+    DEBUG_MSG(verbose, MOD_NAME "Skipping data after IFD0 marker (eg. Exif SubIFD)\n");
+    // TODO: Exif Private Tags SubIFD
+}
+
+/**
+ * parse the header
+ *
+ * Currently only the basic validity is cheecked. If verbosity is set to higher value,
+ * the basic tags from 0th IFD are printed out (not Exif SubIFD).
+ *
+ * JPEG Orientation is checked and of not horizontal, warning is issued.
+ */
+void
+gpujpeg_exif_parse(uint8_t** image, const uint8_t* image_end, int verbose)
+{
+#define HANDLE_ERROR(...)                                                                                              \
+    WARN_MSG(__VA_ARGS__);                                                                                             \
+    *image = image_start + length;                                                                                     \
+    return
+
+    enum {
+        EXIF_HDR_MIN_LEN = 18, // with empty 0th IFD
+    };
+    assert(image_end - *image > 2);
+    uint8_t *image_start = *image;
+    uint16_t length = read_2byte_be(image);
+    if (length > image_end - *image - 2) {
+        HANDLE_ERROR("Unexpected end of file!\n");
+    }
+    if (length < EXIF_HDR_MIN_LEN) {
+        HANDLE_ERROR("Insufficient Exif header length %u!\n", (unsigned)length);
+    }
+    uint8_t exif[5];
+    for (int i = 0; i < 5; ++i) {
+        exif[i] = read_byte(image);
+    }
+    assert(strncmp((char *) exif, "Exif", sizeof exif) == 0); // otherwise fn shouldn't be called
+    read_byte(image); // drop (padding)
+
+    uint8_t* const base = *image;
+
+    uint16_t endian_tag = read_2byte_be(image);
+    uint16_t (*read_2byte)(uint8_t **) = read_2byte_be;
+    uint32_t (*read_4byte)(uint8_t **) = read_4byte_be;
+
+    if ( endian_tag == ('I' << 8 | 'I') ) {
+        DEBUG_MSG(verbose, "Little endian Exif detected.\n");
+        read_2byte = read_2byte_le;
+        read_4byte = read_4byte_le;
+    }
+    else if ( endian_tag == ('M' << 8 | 'M') ) {
+        DEBUG_MSG(verbose, "Big endian Exif detected.\n");
+    }
+    else {
+        HANDLE_ERROR("Unexpected endianity!\n");
+    }
+    uint16_t tiff_hdr = read_2byte(image);
+    if (tiff_hdr != TIFF_HDR_TAG) {
+        HANDLE_ERROR("Wrong TIFF tag, expected 0x%04x!\n", TIFF_HDR_TAG);
+    }
+
+    uint32_t offset = read_4byte(image); // 0th IFD offset
+    *image = base + offset;
+    read_0th_ifd(image, image_end, verbose, read_2byte, read_4byte);
+
+    *image = image_start + length;
+#undef HANDLE_ERROR
 }
