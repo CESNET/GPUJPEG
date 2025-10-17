@@ -71,6 +71,13 @@
 #define __func__ ""
 #endif // VS <=2015
 
+// MSVC doesnt support `foo(int a[static 3])` syntax
+#if defined _MSC_VER
+#define STAT_ARR_DCL(c)
+#else
+#define STAT_ARR_DCL(c) static c
+#endif
+
 /** Contants */
 #define GPUJPEG_BLOCK_SIZE                      8
 #define GPUJPEG_BLOCK_SQUARED_SIZE              64

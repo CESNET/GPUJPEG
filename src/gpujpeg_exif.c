@@ -301,7 +301,8 @@ gpujpeg_write_ifd(struct gpujpeg_writer* writer, const uint8_t* start, size_t co
  * from tags remove the items that are overriden by custom_tags
  */
 static size_t
-remove_overriden(size_t count, struct tag_value tags[static count], const struct custom_exif_tags custom_tags[static 1])
+remove_overriden(size_t count, struct tag_value tags[STAT_ARR_DCL(count)],
+                 const struct custom_exif_tags custom_tags[STAT_ARR_DCL(1)])
 {
     for ( unsigned i = 0; i < custom_tags->count; ++i ) {
         for ( unsigned j = 0; j < count; ++j ) {
