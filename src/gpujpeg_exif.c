@@ -302,7 +302,7 @@ gpujpeg_write_ifd(struct gpujpeg_writer* writer, const uint8_t* start, size_t co
  * from tags remove the items that are overriden by custom_tags
  */
 static size_t
-remove_overriden(size_t count, struct tag_value tags[], const struct custom_exif_tags* custom_tags)
+remove_overriden(size_t count, struct tag_value tags[static count], const struct custom_exif_tags custom_tags[static 1])
 {
     for ( unsigned i = 0; i < custom_tags->count; ++i ) {
         for ( unsigned j = 0; j < count; ++j ) {
@@ -334,7 +334,7 @@ gpujpeg_write_0th(struct gpujpeg_encoder* encoder, const uint8_t* start)
         {ETIFF_EXIF_IFD_POINTER,  {0}                                }, // value will be set later
     };
     size_t tag_count = ARR_SIZE(tags);
-    const struct custom_exif_tags* custom_tags = NULL;
+    const struct custom_exif_tags* custom_tags = &(struct custom_exif_tags){0};
     if (encoder->writer->exif_tags != NULL) {
         custom_tags = &encoder->writer->exif_tags->tags[CT_TIFF];
         tag_count = remove_overriden(tag_count, tags, custom_tags);
@@ -354,7 +354,7 @@ static void gpujpeg_write_exif_ifd(struct gpujpeg_encoder* encoder, const uint8_
         {EEXIF_PIXEL_Y_DIMENSION,        {.uvalue = (uint32_t[]){encoder->coder.param_image.height}}},
     };
     size_t tag_count = ARR_SIZE(tags);
-    const struct custom_exif_tags* custom_tags = NULL;
+    const struct custom_exif_tags* custom_tags = &(struct custom_exif_tags){0};
     if (encoder->writer->exif_tags != NULL) {
         custom_tags = &encoder->writer->exif_tags->tags[CT_EXIF];
         tag_count = remove_overriden(tag_count, tags, custom_tags);
