@@ -302,7 +302,8 @@ gpujpeg_reader_read_app0(uint8_t** image, const uint8_t* image_end, enum gpujpeg
 
 static void
 gpujpeg_reader_read_app1(uint8_t** image, const uint8_t* image_end, enum gpujpeg_header_type* header_type,
-                         enum gpujpeg_color_space* color_space, int verbose)
+                         enum gpujpeg_color_space* color_space, int verbose,
+                         struct gpujpeg_exif_parameters* exif_metadata)
 {
     if ( image_end - *image < 2 ) {
         ERROR_MSG("Unexpected end of APP1 marker!\n");
@@ -319,7 +320,8 @@ gpujpeg_reader_read_app1(uint8_t** image, const uint8_t* image_end, enum gpujpeg
     if ( strcmp((char *) type_tag, "Exif") == 0 ) {
         *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
         *header_type = GPUJPEG_HEADER_EXIF;
-        gpujpeg_exif_parse(image, image_end, verbose);
+        memset(exif_metadata, 0, sizeof *exif_metadata);
+        gpujpeg_exif_parse(image, image_end, verbose, exif_metadata);
         return;
     }
     WARN_MSG("Skipping unsupported APP1 marker \"%s\"!\n", type_tag);
@@ -1362,8 +1364,8 @@ gpujpeg_reader_read_sos(struct gpujpeg_decoder* decoder, struct gpujpeg_reader* 
 static int
 gpujpeg_reader_read_common_markers(uint8_t** image, const uint8_t* image_end, int marker, int log_level,
                                    bool ff_cs_itu601_is_709, enum gpujpeg_color_space* color_space,
-                                   enum gpujpeg_header_type *header_type,
-                                   int* restart_interval, bool* in_spiff)
+                                   enum gpujpeg_header_type* header_type, int* restart_interval, bool* in_spiff,
+                                   struct gpujpeg_exif_parameters* exif_metadata)
 {
     int rc = 0;
     switch (marker)
@@ -1374,7 +1376,7 @@ gpujpeg_reader_read_common_markers(uint8_t** image, const uint8_t* image_end, in
             }
             break;
         case GPUJPEG_MARKER_APP1:
-            gpujpeg_reader_read_app1(image, image_end, header_type, color_space, log_level);
+            gpujpeg_reader_read_app1(image, image_end, header_type, color_space, log_level, exif_metadata);
             break;
         case GPUJPEG_MARKER_APP8:
             if ( gpujpeg_reader_read_app8(image, image_end, color_space, header_type, log_level, in_spiff) != 0 ) {
@@ -1534,6 +1536,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
     reader.segment_info_size = 0;
     enum gpujpeg_color_space header_color_space = GPUJPEG_NONE;
     enum gpujpeg_header_type header_type = GPUJPEG_HEADER_DEFAULT;
+    struct gpujpeg_exif_parameters exif_metadata;
 
     // Get image end
     uint8_t* image_end = image + image_size;
@@ -1557,7 +1560,7 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
         // Read more info according to the marker
         int rc = gpujpeg_reader_read_common_markers(&image, image_end, marker, decoder->coder.param.verbose,
                                                     decoder->ff_cs_itu601_is_709, &header_color_space, &header_type,
-                                                    &reader.param.restart_interval, &in_spiff);
+                                                    &reader.param.restart_interval, &in_spiff, &exif_metadata);
         if ( rc < 0 ) {
             return rc;
         }
@@ -1638,6 +1641,10 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
         return -1;
     }
 
+    if ( header_type == GPUJPEG_HEADER_EXIF && exif_metadata.orientation != EXIF_ORIENTATION_HORIZONTAL ) {
+        WARN_MSG("Exif %d not handled!\n", exif_metadata.orientation);
+    }
+
     return 0;
 }
 
@@ -1665,6 +1672,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
     enum gpujpeg_color_space header_color_space = GPUJPEG_NONE;
     enum gpujpeg_header_type header_type = GPUJPEG_HEADER_DEFAULT;
     uint8_t *image_end = image + image_size;
+    struct gpujpeg_exif_parameters exif_metadata;
 
     param->interleaved = 0;
     param->restart_interval = 0;
@@ -1688,7 +1696,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
         // Read more info according to the marker
         int rc =
             gpujpeg_reader_read_common_markers(&image, image_end, marker, param->verbose, false, &header_color_space,
-                                               &header_type, &param->restart_interval, &in_spiff);
+                                               &header_type, &param->restart_interval, &in_spiff, &exif_metadata);
         if ( rc < 0 ) {
             return rc;
         }
