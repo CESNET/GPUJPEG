@@ -468,7 +468,8 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
         gpujpeg_writer_write_app0(encoder->writer);
         break;
     case GPUJPEG_HEADER_EXIF:
-        gpujpeg_writer_write_exif(encoder);
+        gpujpeg_writer_write_exif(encoder->writer, &encoder->coder.param, &encoder->coder.param_image,
+                                  encoder->writer->exif_tags);
         break;
     case GPUJPEG_HEADER_SPIFF:
         gpujpeg_writer_write_spiff(encoder);

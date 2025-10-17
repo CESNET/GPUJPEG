@@ -52,7 +52,6 @@
 #include "compat/endian.h"                 // IWYU pragma: keep for htobe32
 #include "compat/time.h"                   // IWYU pragma: keep for localtime_s
 #include "gpujpeg_common_internal.h"       // for gpujpeg_coder, ERROR_MSG, WARN...
-#include "gpujpeg_encoder_internal.h"      // for gpujpeg_encoder
 #include "gpujpeg_marker.h"                // for gpujpeg_marker_code
 #include "gpujpeg_util.h"                  // for ARR_SIZE
 #include "gpujpeg_writer.h"                // for gpujpeg_writer, gpujpeg_writer...
@@ -317,7 +316,8 @@ remove_overriden(size_t count, struct tag_value tags[static count], const struct
 }
 
 static void
-gpujpeg_write_0th(struct gpujpeg_encoder* encoder, const uint8_t* start)
+gpujpeg_write_0th(struct gpujpeg_writer* writer, const uint8_t* start,
+                   const struct custom_exif_tags* custom_tags)
 {
     char date_time[] = "    :  :     :  :  "; // unknown val by Exif 2.3
     time_t now = time(NULL);
@@ -334,46 +334,38 @@ gpujpeg_write_0th(struct gpujpeg_encoder* encoder, const uint8_t* start)
         {ETIFF_EXIF_IFD_POINTER,  {0}                                }, // value will be set later
     };
     size_t tag_count = ARR_SIZE(tags);
-    const struct custom_exif_tags* custom_tags = &(struct custom_exif_tags){0};
-    if (encoder->writer->exif_tags != NULL) {
-        custom_tags = &encoder->writer->exif_tags->tags[CT_TIFF];
-        tag_count = remove_overriden(tag_count, tags, custom_tags);
-    }
-
-    gpujpeg_write_ifd(encoder->writer, start, tag_count, tags, custom_tags);
+    tag_count = remove_overriden(tag_count, tags, custom_tags);
+    gpujpeg_write_ifd(writer, start, tag_count, tags, custom_tags);
 }
 
-static void gpujpeg_write_exif_ifd(struct gpujpeg_encoder* encoder, const uint8_t *start)
+static void
+gpujpeg_write_exif_ifd(struct gpujpeg_writer* writer, const uint8_t* start,
+                       const struct gpujpeg_image_parameters* param_image, const struct custom_exif_tags* custom_tags)
 {
     struct tag_value tags[] = {
         {EEXIF_EXIF_VERSION,             {.csvalue = "0230"}                                        }, // 2.30
         {EEXIF_COMPONENTS_CONFIGURATION, {.csvalue = "\1\2\3\0"}                                    }, // YCbCr
         {EEXIF_FLASHPIX_VERSION,         {.csvalue = "0100"}                                        },
         {EEXIF_COLOR_SPACE,              {.uvalue = (uint32_t[]){ETIFF_SRGB}}                       },
-        {EEXIF_PIXEL_X_DIMENSION,        {.uvalue = (uint32_t[]){encoder->coder.param_image.width}} },
-        {EEXIF_PIXEL_Y_DIMENSION,        {.uvalue = (uint32_t[]){encoder->coder.param_image.height}}},
+        {EEXIF_PIXEL_X_DIMENSION,        {.uvalue = (uint32_t[]){param_image->width}} },
+        {EEXIF_PIXEL_Y_DIMENSION,        {.uvalue = (uint32_t[]){param_image->height}}},
     };
     size_t tag_count = ARR_SIZE(tags);
-    const struct custom_exif_tags* custom_tags = &(struct custom_exif_tags){0};
-    if (encoder->writer->exif_tags != NULL) {
-        custom_tags = &encoder->writer->exif_tags->tags[CT_EXIF];
-        tag_count = remove_overriden(tag_count, tags, custom_tags);
-    }
-
-    gpujpeg_write_ifd(encoder->writer, start, ARR_SIZE(tags), tags, custom_tags);
+    tag_count = remove_overriden(tag_count, tags, custom_tags);
+    gpujpeg_write_ifd(writer, start, ARR_SIZE(tags), tags, custom_tags);
 }
-
 
 /// writes EXIF APP1 marker
 void
-gpujpeg_writer_write_exif(struct gpujpeg_encoder* encoder)
+gpujpeg_writer_write_exif(struct gpujpeg_writer* writer, const struct gpujpeg_parameters* param,
+                          const struct gpujpeg_image_parameters* param_image,
+                          const struct gpujpeg_exif_tags* custom_tags)
 {
-    if ( encoder->coder.param.color_space_internal != GPUJPEG_YCBCR_BT601_256LVLS ) {
+    if ( param->color_space_internal != GPUJPEG_YCBCR_BT601_256LVLS ) {
         WARN_MSG("[Exif] Color space %s currently not recorded, assumed %s (report)\n",
-                 gpujpeg_color_space_get_name(encoder->coder.param.color_space_internal),
+                 gpujpeg_color_space_get_name(param->color_space_internal),
                  gpujpeg_color_space_get_name(GPUJPEG_YCBCR_BT601_256LVLS));
     }
-    struct gpujpeg_writer* writer = encoder->writer;
     gpujpeg_writer_emit_marker(writer, GPUJPEG_MARKER_APP1);
 
     // Length - will be written later
@@ -398,8 +390,15 @@ gpujpeg_writer_write_exif(struct gpujpeg_encoder* encoder)
     gpujpeg_writer_emit_2byte(writer, TIFF_HDR_TAG); // TIFF header
     gpujpeg_writer_emit_4byte(writer, 0x08); // IFD offset - follows immediately
 
-    gpujpeg_write_0th(encoder, start);
-    gpujpeg_write_exif_ifd(encoder, start);
+    const struct custom_exif_tags* tiff_tags = &(const struct custom_exif_tags){.count = 0};
+    const struct custom_exif_tags* exif_tags = &(const struct custom_exif_tags){.count = 0};
+    if ( custom_tags != NULL ) {
+        tiff_tags = &custom_tags->tags[CT_TIFF];
+        exif_tags = &custom_tags->tags[CT_EXIF];
+    }
+
+    gpujpeg_write_0th(writer, start, tiff_tags);
+    gpujpeg_write_exif_ifd(writer, start, param_image, exif_tags);
 
     // set the marker length
     size_t length = writer->buffer_current - length_p;

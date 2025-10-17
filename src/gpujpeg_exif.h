@@ -37,9 +37,14 @@
 
 struct gpujpeg_exif_tags;
 
-struct gpujpeg_encoder;
+struct gpujpeg_writer;
+struct gpujpeg_image_parameters;
+struct gpujpeg_parameters;
+
 void
-gpujpeg_writer_write_exif(struct gpujpeg_encoder* encoder);
+gpujpeg_writer_write_exif(struct gpujpeg_writer* writer, const struct gpujpeg_parameters* param,
+                          const struct gpujpeg_image_parameters* param_image,
+                          const struct gpujpeg_exif_tags* custom_tags);
 
 bool
 gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char *cfg);
