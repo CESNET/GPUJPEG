@@ -261,9 +261,26 @@ gpujpeg_decoder_set_output_format(struct gpujpeg_decoder* decoder,
                 enum gpujpeg_color_space color_space,
                 enum gpujpeg_pixel_format pixel_format);
 
+enum {
+    GPUJPEG_COUNT_SEG_COUNT_REQ = 1 << 0, ///< count up segment_count
+};
+struct gpujpeg_image_info {
+    union {
+        struct
+        {
+            struct gpujpeg_image_parameters param_image;
+            struct gpujpeg_parameters param;
+            int segment_count;
+        };
+        char reserved[512]; // for further extensions
+    };
+};
 /**
  * @copydoc gpujpeg_reader_get_image_info
  */
+GPUJPEG_API int
+gpujpeg_decoder_get_image_info2(uint8_t *image, size_t image_size, struct gpujpeg_image_info *info, int verbose, unsigned flags);
+/// prefer using extensible gpujpeg_decoder_get_image_info2()
 GPUJPEG_API int
 gpujpeg_decoder_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count);
 

@@ -551,7 +551,27 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder)
 
 int
 gpujpeg_decoder_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count) {
-    return gpujpeg_reader_get_image_info(image, image_size, param_image, param, segment_count);
+    struct gpujpeg_image_info info = { 0 };
+    const unsigned flags = segment_count == NULL ? 0 : GPUJPEG_COUNT_SEG_COUNT_REQ;
+    const int verbose = param->verbose;
+    const int rc = gpujpeg_reader_get_image_info(image, image_size, &info, verbose, flags);
+    if ( rc != GPUJPEG_NOERR ) {
+        return rc;
+    };
+    memcpy(param_image, &info.param_image, sizeof *param_image);
+    memcpy(param, &info.param, sizeof *param);
+    param->verbose = verbose;
+    if ( segment_count != NULL ) {
+        *segment_count = info.segment_count;
+    }
+    return GPUJPEG_NOERR;
+}
+
+GPUJPEG_API int
+gpujpeg_decoder_get_image_info2(uint8_t* image, size_t image_size, struct gpujpeg_image_info* info, int verbose,
+                                unsigned flags)
+{
+    return gpujpeg_reader_get_image_info(image, image_size, info, verbose, flags);
 }
 
 /* vi: set expandtab sw=4 : */

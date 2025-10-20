@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2023, CESNET z.s.p.o
+ * Copyright (c) 2011-2025, CESNET zájmové sdružení právnických osob
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -31,7 +31,8 @@
 #ifndef GPUJPEG_READER_H
 #define GPUJPEG_READER_H
 
-#include "../libgpujpeg/gpujpeg_common.h"
+#include <stddef.h>  // for size_t
+#include <stdint.h>  // for uint8_t
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +40,7 @@ extern "C" {
 
 /** JPEG decoder structure predeclaration */
 struct gpujpeg_decoder;
+struct gpujpeg_image_info; // declared in libgpujpeg/gpujpeg_decoder.h
 
 /**
  * Read JPEG image from data buffer
@@ -60,15 +62,14 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
  *
  * @param image  Image data
  * @param image_size  Image data size
- * @param[out]    param_image   parameters obtained from image, must not be NULL
- * @param[in,out] param         parameters obtained from image (verbose parameter is used as an input param), non-NULL
- * @param[out]    segment_count number of segments (may be NULL if parameter segment_count is not needed)
+ * @param[out]    info parameters obtained from image, must not be NULL
+ * @param[in]     flags - 0 or GPUJPEG_COUNT_SEG_COUNT
  * @return 0 if succeeds, otherwise nonzero
  *
  * @todo refactorize common code with gpujpeg_reader_read_image()
  */
 int
-gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_parameters *param_image, struct gpujpeg_parameters *param, int *segment_count);
+gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_info *info, int verbose, unsigned flags);
 
 #ifdef __cplusplus
 }

@@ -1,3 +1,9 @@
+2025-10-20 - 0.27.9
+----------
+
+- add gpujpeg_decoder_get_image_info2 as a extensible replacement for
+gpujpeg_decoder_get_image_info
+
 2025-08-22 - 0.27.8
 ----------
 
