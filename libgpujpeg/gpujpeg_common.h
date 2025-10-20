@@ -142,6 +142,10 @@ gpujpeg_print_devices_info(void);
 /**
  * Init CUDA device
  *
+ * This call is not mandatory if you do not want to use other than default CUDA
+ * device (if not set with cudaSetDevice()) or to specify flags. The advantage is
+ * that this will check CUDA device operability early.
+ *
  * @param device_id  CUDA device id (starting at 0)
  * @param flags  @ref Flags, e.g. if device info should be printed out (@ref GPUJPEG_INIT_DEV_VERBOSE) or
  *               enable OpenGL interoperability (@ref GPUJPEG_OPENGL_INTEROPERABILITY)
