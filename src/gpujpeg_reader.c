@@ -1672,7 +1672,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
     int unused[4];
     uint8_t unused2[4];
     enum gpujpeg_color_space header_color_space = GPUJPEG_NONE;
-    enum gpujpeg_header_type header_type = GPUJPEG_HEADER_DEFAULT;
+    info->header_type = GPUJPEG_HEADER_DEFAULT;
     uint8_t *image_end = image + image_size;
     struct gpujpeg_exif_parameters exif_metadata;
 
@@ -1696,9 +1696,9 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
         }
 
         // Read more info according to the marker
-        int rc =
-            gpujpeg_reader_read_common_markers(&image, image_end, marker, verbose, false, &header_color_space,
-                                               &header_type, &info->param.restart_interval, &in_spiff, &exif_metadata);
+        int rc = gpujpeg_reader_read_common_markers(&image, image_end, marker, verbose, false, &header_color_space,
+                                                    &info->header_type, &info->param.restart_interval, &in_spiff,
+                                                    &exif_metadata);
         if ( rc < 0 ) {
             return rc;
         }
@@ -1711,8 +1711,8 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
         case GPUJPEG_MARKER_SOF1: // Extended sequential with Huffman coder
         {
             info->param.color_space_internal = header_color_space;
-            if ( gpujpeg_reader_read_sof0(&info->param, &info->param_image, header_color_space, header_type, unused, unused2, &image,
-                                          image_end) != 0 ) {
+            if ( gpujpeg_reader_read_sof0(&info->param, &info->param_image, header_color_space, info->header_type,
+                                          unused, unused2, &image, image_end) != 0 ) {
                 return -1;
             }
             info->param_image.color_space = info->param.color_space_internal;

@@ -29,6 +29,7 @@
  */
 
 #include "../libgpujpeg/gpujpeg_common.h"
+#include "../libgpujpeg/gpujpeg_encoder.h" // HDR type
 #include "../libgpujpeg/gpujpeg_decoder.h" // decoder placeholders
 #include "gpujpeg_common_internal.h"
 #include "gpujpeg_util.h"
@@ -2331,6 +2332,40 @@ gpujpeg_parse_bool_opt(bool* out_var, const char* val, const char* opt)
     }
     ERROR_MSG("Unknown option %s for %s\n", val, opt);
     return GPUJPEG_ERROR;
+}
+
+GPUJPEG_API enum gpujpeg_header_type
+gpujpeg_header_type_by_name(const char *name) {
+    if ( strcasecmp(name, GPUJPEG_ENC_HDR_VAL_JFIF) == 0 ) {
+        return GPUJPEG_HEADER_JFIF;
+    }
+    if ( strcasecmp(name, GPUJPEG_ENC_HDR_VAL_EXIF) == 0 ) {
+        return GPUJPEG_HEADER_EXIF;
+    }
+    if ( strcasecmp(name, GPUJPEG_ENC_HDR_VAL_ADOBE) == 0 ) {
+        return GPUJPEG_HEADER_ADOBE;
+    }
+    if ( strcasecmp(name, GPUJPEG_ENC_HDR_VAL_SPIFF) == 0 ) {
+        return GPUJPEG_HEADER_SPIFF;
+    }
+    return GPUJPEG_HEADER_DEFAULT;
+}
+
+GPUJPEG_API const char *
+gpujpeg_header_type_get_name(enum gpujpeg_header_type header_type) {
+    switch ( header_type ) {
+    case GPUJPEG_HEADER_DEFAULT:
+        return "undefined";
+    case GPUJPEG_HEADER_JFIF:
+        return GPUJPEG_ENC_HDR_VAL_JFIF;
+    case GPUJPEG_HEADER_SPIFF:
+        return GPUJPEG_ENC_HDR_VAL_SPIFF;
+    case GPUJPEG_HEADER_ADOBE:
+        return GPUJPEG_ENC_HDR_VAL_ADOBE;
+    case GPUJPEG_HEADER_EXIF:
+        return GPUJPEG_ENC_HDR_VAL_EXIF;
+    };
+    abort();
 }
 
 /* vi: set expandtab sw=4 : */

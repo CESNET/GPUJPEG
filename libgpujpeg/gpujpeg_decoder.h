@@ -271,6 +271,7 @@ struct gpujpeg_image_info {
             struct gpujpeg_image_parameters param_image;
             struct gpujpeg_parameters param;
             int segment_count;
+            enum gpujpeg_header_type header_type;
         };
         char reserved[512]; // for further extensions
     };

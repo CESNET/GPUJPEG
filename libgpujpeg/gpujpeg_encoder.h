@@ -188,16 +188,6 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
 GPUJPEG_DEPRECATED GPUJPEG_API int
 gpujpeg_encoder_get_stats(struct gpujpeg_encoder *encoder, struct gpujpeg_duration_stats *stats);
 
-/// do not use, use gpujpeg_encoder_set_option() with @ref GPUJPEG_ENC_OPT_HDR and @ref enc_hdr_types instead
-enum gpujpeg_header_type {
-        GPUJPEG_HEADER_DEFAULT = 0, ///< for 1 or 3 channel @ref GPUJPEG_YCBCR_JPEG @ref GPUJPEG_HEADER_JFIF, for @ref
-                                    ///< GPUJPEG_RGB @ref GPUJPEG_HEADER_ADOBE, @ref GPUJPEG_HEADER_SPIFF otherwise
-        GPUJPEG_HEADER_JFIF    = 1<<0,
-        GPUJPEG_HEADER_SPIFF   = 1<<1,
-        GPUJPEG_HEADER_ADOBE   = 1<<2, ///< Adobe APP8 header
-        GPUJPEG_HEADER_EXIF    = 1<<3,
-};
-
 /**
  * Forces JPEG header to be emitted.
  *

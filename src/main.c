@@ -205,6 +205,7 @@ static int print_image_info_jpeg(const char *filename, int verbose) {
         print_gpujpeg_image_parameters(info.param_image, false,
                                        gpujpeg_subsampling_get_name(info.param.comp_count, info.param.sampling_factor));
         printf("interleaved: %d\n", info.param.interleaved);
+        printf("header type: %s\n", gpujpeg_header_type_get_name(info.header_type));
         if ( info.segment_count ) {
             printf("segment count: %d (DRI = %d)\n", info.segment_count, info.param.restart_interval);
         }
