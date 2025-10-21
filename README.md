@@ -319,17 +319,20 @@ a file):
     
     struct gpujpeg_decoder_output decoder_output;
     gpujpeg_decoder_output_set_default(&decoder_output);
-    if ( gpujpeg_decoder_decode(decoder, image, image_size,
-             &decoder_output) != 0 )
+    int dec_rc = gpujpeg_decoder_decode(decoder, image, image_size,
+             &decoder_output);
+    gpujpeg_image_destroy(image);
+    if ( dec_rc != 0 )
         return -1;
 
-Now we can save decoded raw image data to file and perform cleanup:
+Then you can process the decoded image, eg. save the raw data to a file:
 
     if ( gpujpeg_image_save_to_file("output_image.pnm", decoder_output.data,
              decoder_output.data_size, &decoder_output.param_image) != 0 )
         return -1;
+
+You can continue decoding more images. When done, perform the cleanup:
     
-    gpujpeg_image_destroy(image);
     gpujpeg_decoder_destroy(decoder);
 
 ### GPUJPEG console application
