@@ -2368,4 +2368,20 @@ gpujpeg_header_type_get_name(enum gpujpeg_header_type header_type) {
     abort();
 }
 
+GPUJPEG_API const char*
+gpujpeg_orientation_get_name(struct gpujpeg_orientation orientation)
+{
+    switch (orientation.rotation << 1 | orientation.flip) {
+        case 0<<1 | 0: return "normal";
+        case 0<<1 | 1: return "mirror horizontal";
+        case 1<<1 | 0: return "rotated CW 90 deg";
+        case 1<<1 | 1: return "rotated CW 90 and mirrored horizontal";
+        case 2<<1 | 0: return "rotated 180 deg";
+        case 2<<1 | 1: return "flipped vertical";
+        case 3<<1 | 0: return "rotated CW 270 deg";
+        case 3<<1 | 1: return "rotated CW 270 deg and mirrored horizontal";
+    }
+    abort();
+}
+
 /* vi: set expandtab sw=4 : */

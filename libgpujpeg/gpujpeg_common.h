@@ -686,6 +686,9 @@ gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format);
 GPUJPEG_API void
 gpujpeg_device_reset(void);
 
+GPUJPEG_API const char*
+gpujpeg_orientation_get_name(struct gpujpeg_orientation orientation);
+
 #ifdef __cplusplus
 }
 #endif

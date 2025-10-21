@@ -94,7 +94,7 @@ struct gpujpeg_reader
     enum gpujpeg_color_space header_color_space;
     enum gpujpeg_header_type header_type;
     bool in_spiff;
-    struct gpujpeg_exif_parameters exif_metadata;
+    struct gpujpeg_image_metadata metadata;
     const char *comment;
 };
 
@@ -309,11 +309,9 @@ gpujpeg_reader_read_app0(uint8_t** image, const uint8_t* image_end, enum gpujpeg
 }
 
 static void
-gpujpeg_reader_read_app1(uint8_t** image, const uint8_t* image_end, enum gpujpeg_header_type* header_type,
-                         enum gpujpeg_color_space* color_space, int verbose,
-                         struct gpujpeg_exif_parameters* exif_metadata)
+gpujpeg_reader_read_app1(uint8_t** image, struct gpujpeg_reader *reader)
 {
-    if ( image_end - *image < 2 ) {
+    if ( reader->image_end - *image < 2 ) {
         ERROR_MSG("Unexpected end of APP1 marker!\n");
         return;
     }
@@ -321,19 +319,18 @@ gpujpeg_reader_read_app1(uint8_t** image, const uint8_t* image_end, enum gpujpeg
     uint8_t type_tag[50];
     unsigned i = 0;
     const uint8_t* ptr = *image + 2;
-    while ( *ptr != '\0' && ptr < image_end && i < sizeof type_tag  - 1 ) {
+    while ( *ptr != '\0' && ptr < reader->image_end && i < sizeof type_tag  - 1 ) {
         type_tag[i++] = *ptr++;
     }
     type_tag[i] = '\0';
     if ( strcmp((char *) type_tag, "Exif") == 0 ) {
-        *color_space = GPUJPEG_YCBCR_BT601_256LVLS;
-        *header_type = GPUJPEG_HEADER_EXIF;
-        memset(exif_metadata, 0, sizeof *exif_metadata);
-        gpujpeg_exif_parse(image, image_end, verbose, exif_metadata);
+        reader->header_color_space = GPUJPEG_YCBCR_BT601_256LVLS;
+        reader->header_type = GPUJPEG_HEADER_EXIF;
+        gpujpeg_exif_parse(image, reader->image_end, reader->param.verbose, &reader->metadata);
         return;
     }
     WARN_MSG("Skipping unsupported APP1 marker \"%s\"!\n", type_tag);
-    gpujpeg_reader_skip_marker_content(image, image_end);
+    gpujpeg_reader_skip_marker_content(image, reader->image_end);
 }
 
 /**
@@ -1386,8 +1383,7 @@ gpujpeg_reader_read_common_markers(uint8_t** image, int marker, struct gpujpeg_r
             }
             break;
         case GPUJPEG_MARKER_APP1:
-            gpujpeg_reader_read_app1(image, reader->image_end, &reader->header_type, &reader->header_color_space,
-                                     reader->param.verbose, &reader->exif_metadata);
+            gpujpeg_reader_read_app1(image, reader);
             break;
         case GPUJPEG_MARKER_APP8:
             if ( gpujpeg_reader_read_app8(image, reader->image_end, &reader->header_color_space, &reader->header_type,
@@ -1642,9 +1638,8 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
         return -1;
     }
 
-    if ( reader.header_type == GPUJPEG_HEADER_EXIF &&
-         reader.exif_metadata.orientation != EXIF_ORIENTATION_HORIZONTAL ) {
-        WARN_MSG("Exif %d not handled!\n", reader.exif_metadata.orientation);
+    if ( reader.metadata.orientation.rotation != 0 || reader.metadata.orientation.flip != 0 ) {
+        WARN_MSG("Orientation %s not handled!\n", gpujpeg_orientation_get_name(reader.metadata.orientation));
     }
 
     return 0;
@@ -1793,6 +1788,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
     info->segment_count = segments;
     info->header_type = reader.header_type;
     info->comment = reader.comment;
+    info->metadata = reader.metadata;
 
     if ( info->param.comp_count == 1 ) {
         info->param_image.pixel_format = GPUJPEG_U8;

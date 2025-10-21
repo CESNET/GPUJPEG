@@ -34,13 +34,10 @@
 #include <stdint.h>
 
 struct gpujpeg_exif_tags;
+struct gpujpeg_image_metadata;
 struct gpujpeg_image_parameters;
 struct gpujpeg_parameters;
 struct gpujpeg_writer;
-
-enum {
-    EXIF_ORIENTATION_HORIZONTAL = 1, // normal
-};
 
 void
 gpujpeg_writer_write_exif(struct gpujpeg_writer* writer, const struct gpujpeg_parameters* param,
@@ -52,12 +49,7 @@ gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char *cfg);
 void
 gpujpeg_exif_tags_destroy(struct gpujpeg_exif_tags* exif_tags);
 
-struct gpujpeg_exif_parameters
-{
-    unsigned orientation; ///< EXIF_ORIENTATION_HORIZONTAL or a different value
-};
-
 void
-gpujpeg_exif_parse(uint8_t** image, const uint8_t* image_end, int verbose, struct gpujpeg_exif_parameters* parsed);
+gpujpeg_exif_parse(uint8_t** image, const uint8_t* image_end, int verbose, struct gpujpeg_image_metadata* metadata);
 
 #endif // defined GPUJPEG_EXIF_H_6755D546_2A90_46DF_9ECA_22F575C3E7E3

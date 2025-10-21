@@ -144,6 +144,7 @@ const struct exif_tiff_tag_info_t {
 // misc constants
 enum {
     ETIFF_CENTER = 1,
+    ETIFF_ORIENTATION_VERTICAL = 1,
     ETIFF_SRGB = 1,
     ETIFF_INCHES = 2,
     NEXT_IFD_PTR_SZ = 4,
@@ -324,7 +325,7 @@ gpujpeg_write_0th(struct gpujpeg_writer* writer, const uint8_t* start,
     struct tm buf;
     (void) strftime(date_time, sizeof date_time, "%Y:%m:%d %H:%M:%S", localtime_s(&now, &buf));
     struct tag_value tags[] = {
-        {ETIFF_ORIENTATION,       {.uvalue = (uint32_t[]){EXIF_ORIENTATION_HORIZONTAL}}},
+        {ETIFF_ORIENTATION,       {.uvalue = (uint32_t[]){ETIFF_ORIENTATION_VERTICAL}}},
         {ETIFF_XRESOLUTION,       {.uvalue = (uint32_t[]){DPI_DEFAULT, 1}}             },
         {ETIFF_YRESOLUTION,       {.uvalue = (uint32_t[]){DPI_DEFAULT, 1}}             },
         {ETIFF_RESOLUTION_UNIT,   {.uvalue = (uint32_t[]){ETIFF_INCHES}}               },
@@ -612,8 +613,30 @@ read_4byte_le(uint8_t** image) {
 }
 
 static void
+exif_orieintation_to_metadata(unsigned val, struct gpujpeg_image_metadata* parsed)
+{
+    if (val == 0 || val > 8) {
+        WARN_MSG(MOD_NAME "Flawed orientation value %d! Should be 1-8...\n", val);
+        return;
+    }
+    // clang-format off
+    struct gpujpeg_orientation map[] = {
+        {0, 0}, // 1 = The 0th row is at the visual top of the image, and the 0th column is the visual left-hand side.
+        {0, 1}, // 2 = The 0th row is at the visual top of the image, and the 0th column is the visual right-hand side.
+        {2, 0}, // 3 = The 0th row is at the visual bottom of the image, and the 0th column is the visual right-hand side.
+        {2, 1}, // 4 = The 0th row is at the visual bottom of the image, and the 0th column is the visual left-hand side.
+        {1, 1}, // 5 = The 0th row is the visual left-hand side of the image, and the 0th column is the visual top.
+        {1, 0}, // 6 = The 0th row is the visual right-hand side of the image, and the 0th column is the visual top.
+        {3, 1}, // 7 = The 0th row is the visual right-hand side of the image, and the 0th column is the visual bottom.
+        {3, 0}, // 8 = The 0th row is the visual left-hand side of the image, and the 0th column is the visual bottom.
+    };
+    // clang-format on
+    parsed->orientation = map[val - 1];
+}
+
+static void
 read_0th_ifd(uint8_t** image, const uint8_t* image_end, int verbose, uint16_t (*read_2byte)(uint8_t**),
-             uint32_t (*read_4byte)(uint8_t**), struct gpujpeg_exif_parameters* parsed)
+             uint32_t (*read_4byte)(uint8_t**), struct gpujpeg_image_metadata* parsed)
 {
     if ( *image + 2 > image_end ) {
         WARN_MSG("Unexpected end of file!\n");
@@ -646,7 +669,7 @@ read_0th_ifd(uint8_t** image, const uint8_t* image_end, int verbose, uint16_t (*
         DEBUG_MSG(verbose, MOD_NAME "Found IFD0 tag %s (%#x) type %s: count=%u, %s=%#x\n", exif_tiff_tag_info[tag].name,
                   tag_id, type_name, count, count * size <= 4 ? "value" : "offset", val);
         if ( tag == ETIFF_ORIENTATION ) {
-            parsed->orientation = val;
+            exif_orieintation_to_metadata(val, parsed);
         }
     }
 
@@ -663,7 +686,7 @@ read_0th_ifd(uint8_t** image, const uint8_t* image_end, int verbose, uint16_t (*
  * JPEG Orientation is checked and of not horizontal, warning is issued.
  */
 void
-gpujpeg_exif_parse(uint8_t** image, const uint8_t* image_end, int verbose, struct gpujpeg_exif_parameters* parsed)
+gpujpeg_exif_parse(uint8_t** image, const uint8_t* image_end, int verbose, struct gpujpeg_image_metadata* metadata)
 {
 #define HANDLE_ERROR(...)                                                                                              \
     WARN_MSG(__VA_ARGS__);                                                                                             \
@@ -713,7 +736,7 @@ gpujpeg_exif_parse(uint8_t** image, const uint8_t* image_end, int verbose, struc
 
     uint32_t offset = read_4byte(image); // 0th IFD offset
     *image = base + offset;
-    read_0th_ifd(image, image_end, verbose, read_2byte, read_4byte, parsed);
+    read_0th_ifd(image, image_end, verbose, read_2byte, read_4byte, metadata);
 
     *image = image_start + length;
 #undef HANDLE_ERROR

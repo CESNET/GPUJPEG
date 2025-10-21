@@ -142,6 +142,17 @@ struct gpujpeg_component_sampling_factor
     uint8_t vertical;
 };
 
+struct gpujpeg_orientation /// as defined in SPIFF
+{
+    unsigned rotation : 2; ///< in multiples of 90° clock-wise
+    unsigned flip : 1;     ///< 1 - left-to-right orientation flipped after rotation applied
+};
+
+struct gpujpeg_image_metadata
+{
+    struct gpujpeg_orientation orientation;
+};
+
 #ifdef __cplusplus
 }
 #endif
