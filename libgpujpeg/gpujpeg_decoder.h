@@ -253,7 +253,7 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder);
  *                        use @ref GPUJPEG_NONE to keep JPEG internal color space;
  *                        special value @ref GPUJPEG_CS_DEFAULT to decode RGB
  *                        (or luma for grayscale)
- * @param sampling_factor Requestd color sampling factor; special values
+ * @param sampling_factor Requestd pixel format; special values
  *                        @ref decoder_pixfmt_placeholders can be used
  */
 GPUJPEG_API void

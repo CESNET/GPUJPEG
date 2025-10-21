@@ -209,3 +209,20 @@ are known, the preinitialization may be performed immediately:
     
     // Pre initialize decoder before decoding
     gpujpeg_decoder_init(decoder, &param, &param_image);
+
+The `color_space` and `pixel_format` doesn't need to match the JPEG
+properties, you can set eg.:
+
+    param_image.color_space = GPUJPEG_YCBCR_JPEG;
+    param_image.pixel_format = GPUJPEG_422_U8_P1020;
+
+to enforce decoding to UYVY. Alternatively, you can set either color
+space or pixel format to an _automatic_ value:
+
+    param_image.color_space = GPUJPEG_NONE;
+    param_image.pixel_format = GPUJPEG_PIXFMT_AUTODETECT;
+
+In this case, the _color_space_ and/or _pixel_format_ will be set to
+a format that is closest to internal JPEG representation. For the color
+space this usually means _GPUJPEG_YCBCR_JPEG_ - 256 levels YCbCr BT.601.
+Pixel format will be used to match the JPEG subsampling.
