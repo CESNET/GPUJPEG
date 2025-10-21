@@ -272,6 +272,7 @@ struct gpujpeg_image_info {
             struct gpujpeg_parameters param;
             int segment_count;
             enum gpujpeg_header_type header_type;
+            const char* comment; ///< NULL-terminated COM marker, ptr to img buffer
         };
         char reserved[512]; // for further extensions
     };

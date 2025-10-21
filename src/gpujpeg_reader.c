@@ -95,6 +95,7 @@ struct gpujpeg_reader
     enum gpujpeg_header_type header_type;
     bool in_spiff;
     struct gpujpeg_exif_parameters exif_metadata;
+    const char *comment;
 };
 
 /**
@@ -625,17 +626,16 @@ gpujpeg_reader_read_app14(uint8_t** image, const uint8_t* image_end, enum gpujpe
 }
 
 static int
-gpujpeg_reader_read_com(uint8_t** image, const uint8_t* image_end, bool ff_cs_itu601_is_709,
-                        enum gpujpeg_color_space* color_space)
+gpujpeg_reader_read_com(uint8_t** image, struct gpujpeg_reader* reader)
 {
-    if(image_end - *image < 2) {
+    if ( reader->image_end - *image < 2 ) {
         fprintf(stderr, "[GPUJPEG] [Error] Could not read com length\n");
         return -1;
     }
 
     int length = (int)gpujpeg_reader_read_2byte(*image);
 
-    if(length - 2 > image_end - *image) {
+    if ( length - 2 > reader->image_end - *image ) {
         fprintf(stderr, "[GPUJPEG] [Error] COM goes beyond end of data\n");
         return -1;
     }
@@ -644,7 +644,13 @@ gpujpeg_reader_read_com(uint8_t** image, const uint8_t* image_end, bool ff_cs_it
     const size_t com_length = length - 2; // check both with '\0' and without:
     if ( (com_length == sizeof cs_itu601 || com_length == sizeof cs_itu601 - 1) &&
          strncmp((char*)*image, cs_itu601, com_length) == 0 ) {
-        *color_space = ff_cs_itu601_is_709 ? GPUJPEG_YCBCR_BT709 : GPUJPEG_YCBCR_BT601;
+        reader->header_color_space = reader->ff_cs_itu601_is_709 ? GPUJPEG_YCBCR_BT709 : GPUJPEG_YCBCR_BT601;
+    }
+
+    if ((*image)[com_length - 1] == '\0') {
+        reader->comment = (char*)*image;
+    } else {
+        DEBUG_MSG(reader->param.verbose, "Not storing non-NULL-terminated COM: %.*s", (int)com_length, *image);
     }
 
     *image += length - 2;
@@ -1452,8 +1458,7 @@ gpujpeg_reader_read_common_markers(uint8_t** image, int marker, struct gpujpeg_r
             return -1;
 
         case GPUJPEG_MARKER_COM:
-            if ( gpujpeg_reader_read_com(image, reader->image_end, reader->ff_cs_itu601_is_709,
-                                         &reader->header_color_space) != 0 ) {
+            if ( gpujpeg_reader_read_com(image, reader) != 0 ) {
                 return -1;
             }
             break;
@@ -1787,6 +1792,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
     info->param_image.pixel_format = GPUJPEG_PIXFMT_NONE;
     info->segment_count = segments;
     info->header_type = reader.header_type;
+    info->comment = reader.comment;
 
     if ( info->param.comp_count == 1 ) {
         info->param_image.pixel_format = GPUJPEG_U8;

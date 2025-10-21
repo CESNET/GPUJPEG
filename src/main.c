@@ -209,6 +209,9 @@ static int print_image_info_jpeg(const char *filename, int verbose) {
         if ( info.segment_count ) {
             printf("segment count: %d (DRI = %d)\n", info.segment_count, info.param.restart_interval);
         }
+        if ( info.comment != NULL) {
+            printf("comment: %s\n", info.comment);
+        }
     }
     free(jpeg);
 
