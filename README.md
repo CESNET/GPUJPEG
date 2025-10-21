@@ -199,7 +199,18 @@ sources and linked shared library object to your executable:
 
     #include <libgpujpeg/gpujpeg.h>
 
-For simple library usage examples you look into subdirectory [examples](examples).
+For both encoder and decoder, you can first explicitly initialize CUDA
+device by calling:
+
+    if ( gpujpeg_init_device(device_id, 0) )
+        return -1;
+
+where the first parameter is the CUDA device number (default `0`) and second
+parameter is flag if init should be verbose (`0` or `GPUJPEG_INIT_DEV_VERBOSE`).
+
+If not called, default CUDA device will be used.
+
+For simple library code examples you look into subdirectory [examples](examples).
 
 #### Encoding
 For encoding by libgpujpeg library you have to declare two structures
@@ -231,14 +242,6 @@ Or define sampling factors by hand:
     // User custom sampling factors
     gpujpeg_parameters_chroma_subsampling(&param, MK_SUBSAMPLING(4, 4, 1, 2, 2, 1, 0, 0));
 
-Next you can initialize CUDA device by calling (if not called, default CUDA
-device will be used):
-
-    if ( gpujpeg_init_device(device_id, 0) )
-        return -1;
-
-where first parameters is CUDA device (e.g. `device_id = 0`) id and second
-parameter is flag if init should be verbose (`0` or `GPUJPEG_INIT_DEV_VERBOSE`).
 Next step is to create encoder:
 
     struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(0);
@@ -285,42 +288,18 @@ the encoder.
     gpujpeg_encoder_destroy(encoder);
 
 #### Decoding
-For decoding we don't need to initialize two structures of parameters.
-We only have to initialize CUDA device if we haven't initialized it yet and
-create decoder:
-
-    if ( gpujpeg_init_device(device_id, 0) )
-        return -1;
+To create the decoder you have to call:
     
     struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(0);
     if ( decoder == NULL )
         return -1;
 
-Now we have **two options**. The first is to do nothing and decoder will
-postpone buffer allocations to decoding first image where it determines
-proper image size and all other parameters (recommended).  The second option
-is to provide input image size and other parameters (reset interval, interleaving)
-and the decoder will allocate all buffers and it is fully ready when encoding
-even the first image:
-
-    // you can skip this code below and let the decoder initialize automatically
-    struct gpujpeg_parameters param;
-    gpujpeg_set_default_parameters(&param);
-    param.restart_interval = 16;
-    param.interleaved = 1;
-    
-    struct gpujpeg_image_parameters param_image;
-    gpujpeg_image_set_default_parameters(&param_image);
-    param_image.width = 1920;
-    param_image.height = 1080;
-    param_image.color_space = GPUJPEG_RGB;
-    param_image.pixel_format = GPUJPEG_444_U8_P012;
-    
-    // Pre initialize decoder before decoding
-    gpujpeg_decoder_init(decoder, &param, &param_image);
+Then you can **optionally** call `gpujpeg_decoder_init()` to preinitialize
+the decoder (allocate all buffers) to be fully ready when decoding
+even the first image (see the [FAQ](FAQ.md#how-to-preinitialize-the-decoder)).
 
 If you didn't initialize the decoder by `gpujpeg_decoder_init` but want
-to specify output image color space and subsampling factor, you can use
+to specify output image color space and pixel format, you can use
 following code:
 
     gpujpeg_decoder_set_output_format(decoder, GPUJPEG_RGB,
@@ -329,8 +308,8 @@ following code:
 
 If not called, RGB or grayscale is output depending on JPEG channel count.
 
-Next we have to load JPEG image data from file and decoded it to raw
-image data:
+Then you can decode JPEG to raw image data (optionally loading it from
+a file):
 
     size_t image_size = 0;
     uint8_t* image = NULL;

@@ -11,6 +11,7 @@
    - [Alpha support in command-line application](#alpha-support-in-command-line-application)
    - [API for alpha](#api-for-alpha)
 - [What are memory requirements for encoding/decoding](#what-are-memory-requirements-for-encodingdecoding)
+- [How to preinitialize the decoder](#how-to-preinitialize-the-decoder)
 
 ## Encoding/decoding is slow in first iteration
 
@@ -185,3 +186,26 @@ image format and parameters according to your needs):
 The memory requirements may be excessive if dealing with really huge
 images - let us know if there is a problem with this.
 
+# How to preinitialize the decoder
+
+Usually the GPUJPEG decoder full initialization is postponed to decoding
+first image where it determines proper image size and all other parameters
+(recommended).
+
+If all image parameters (including restart interval and interleaving)
+are known, the preinitialization may be performed immediately:
+
+    struct gpujpeg_parameters param;
+    gpujpeg_set_default_parameters(&param);
+    param.restart_interval = 16;
+    param.interleaved = 1;
+    
+    struct gpujpeg_image_parameters param_image;
+    gpujpeg_image_set_default_parameters(&param_image);
+    param_image.width = 1920;
+    param_image.height = 1080;
+    param_image.color_space = GPUJPEG_RGB;
+    param_image.pixel_format = GPUJPEG_444_U8_P012;
+    
+    // Pre initialize decoder before decoding
+    gpujpeg_decoder_init(decoder, &param, &param_image);
