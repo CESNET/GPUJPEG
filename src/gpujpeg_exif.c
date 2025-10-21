@@ -329,7 +329,6 @@ gpujpeg_write_0th(struct gpujpeg_writer* writer, const uint8_t* start,
         {ETIFF_XRESOLUTION,       {.uvalue = (uint32_t[]){DPI_DEFAULT, 1}}             },
         {ETIFF_YRESOLUTION,       {.uvalue = (uint32_t[]){DPI_DEFAULT, 1}}             },
         {ETIFF_RESOLUTION_UNIT,   {.uvalue = (uint32_t[]){ETIFF_INCHES}}               },
-        {ETIFF_SOFTWARE,          {.csvalue = "GPUJPEG"}                               },
         {ETIFF_DATE_TIME ,        {.csvalue = date_time}                               },
         {ETIFF_YCBCR_POSITIONING, {.uvalue = (uint32_t[]){ETIFF_CENTER}}               },
         {ETIFF_EXIF_IFD_POINTER,  {0}                                }, // value will be set later
