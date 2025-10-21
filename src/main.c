@@ -204,7 +204,7 @@ static int print_image_info_jpeg(const char *filename, int verbose) {
     if (gpujpeg_decoder_get_image_info2(jpeg, len, &info, verbose, GPUJPEG_COUNT_SEG_COUNT_REQ) == 0) {
         print_gpujpeg_image_parameters(info.param_image, false,
                                        gpujpeg_subsampling_get_name(info.param.comp_count, info.param.sampling_factor));
-        printf("interleaved: %d\n", info.param.interleaved);
+        printf("interleaved: %s\n", info.param.interleaved ? "yes" : "no");
         printf("header type: %s\n", gpujpeg_header_type_get_name(info.header_type));
         printf("orientation: %s\n", gpujpeg_orientation_get_name(info.metadata.orientation));
         if ( info.segment_count ) {
