@@ -448,14 +448,14 @@ gpujpeg_reader_read_spiff_header(uint8_t** image, int verbose, enum gpujpeg_colo
 static int
 gpujpeg_reader_read_spiff_directory(uint8_t** image, const uint8_t* image_end, int verbose, int length, _Bool *in_spiff)
 {
-    if (length < 4) {
-        fprintf(stderr, "[GPUJPEG] [Error] APP8 SPIFF directory too short (%d bytes)\n", length + 2);
-        image += length;
+    if ( length < 8 ) { // ELEN at least 8
+        ERROR_MSG("APP8 SPIFF directory too short (%d bytes)\n", length);
+        image += length - 2;
         return -1;
     }
     uint32_t tag = gpujpeg_reader_read_4byte(*image);
-    DEBUG2_MSG(verbose, "Read SPIFF tag 0x%x with length %d.\n", tag, length + 2);
-    if (tag == SPIFF_ENTRY_TAG_EOD && length == SPIFF_ENTRY_TAG_EOD_LENGHT - 2) {
+    DEBUG2_MSG(verbose, "Read SPIFF tag 0x%x with length %d.\n", tag, length);
+    if ( tag == SPIFF_ENTRY_TAG_EOD && length == SPIFF_ENTRY_TAG_EOD_LENGHT ) {
         int marker_soi = gpujpeg_reader_read_marker(image, image_end, verbose);
         if ( marker_soi != GPUJPEG_MARKER_SOI ) {
             VERBOSE_MSG(verbose, "SPIFF entry 0x1 should be followed directly with SOI.\n");
@@ -463,11 +463,16 @@ gpujpeg_reader_read_spiff_directory(uint8_t** image, const uint8_t* image_end, i
         }
         DEBUG2_MSG(verbose, "SPIFF EOD presented.\n");
         *in_spiff = 0;
-    } else if (tag >> 24U != 0) {
-        VERBOSE_MSG(verbose, "Erroneous SPIFF tag 0x%x (first byte should be 0).", tag);
-    } else {
-        DEBUG2_MSG(verbose, "SPIFF tag 0x%x with length %d presented.\n", tag, length + 2);
+        return 0;
     }
+
+    if ( tag >> 24U != 0 ) { // given by the standard
+        VERBOSE_MSG(verbose, "Erroneous SPIFF tag 0x%x (first byte should be 0).", tag);
+        *image += length - 6;
+        return 0;
+    }
+    DEBUG2_MSG(verbose, "SPIFF tag 0x%x with length %d presented.\n", tag, length);
+    *image += length - 6;
     return 0;
 }
 
@@ -497,7 +502,7 @@ gpujpeg_reader_read_app8(uint8_t** image, const uint8_t* image_end, enum gpujpeg
     }
 
     if (*in_spiff) {
-        return gpujpeg_reader_read_spiff_directory(image, image_end, verbose, length, in_spiff);
+        return gpujpeg_reader_read_spiff_directory(image, image_end, verbose, length + 2, in_spiff);
     }
 
     if (length + 2 != SPIFF_MARKER_LEN) {
