@@ -698,6 +698,41 @@ gpujpeg_opt_set_channel_remap(struct gpujpeg_coder* coder, const char* val, cons
     return GPUJPEG_NOERR;
 }
 
+static int
+add_metadata(struct gpujpeg_image_metadata* metadata, const char* config)
+{
+    if ( strstr(config, "help") != NULL ) {
+        printf(GPUJPEG_ENC_OPT_METADATA " usage:\n");
+        printf("\t" GPUJPEG_ENC_OPT_METADATA "=orientation=<deg>[-]\n");
+        printf("\t\t<deg> - clockwise rotation - 0, 90, 180 or 270 degrees\n");
+        printf("\t\t'-'   - mirror the image horizontally after rotation applied\n");
+        return GPUJPEG_ERROR;
+    }
+    if ( strstr(config, "orientation=") != config ) {
+        printf("Wrong metadata item: %s\n", config);
+        return GPUJPEG_ERROR;
+    }
+
+    const char *val = strchr(config, '=') + 1;
+    char *endptr= NULL;
+    int deg = (int) strtol(val, &endptr, 10);
+    bool flip = false;
+    if ( *endptr == '-' ) {
+        flip = true;
+        endptr += 1;
+    }
+    if ( *endptr != '\0' || deg < 0 || deg > 270 || deg % 90 != 0 ) {
+        printf("Wrong orientation value: %s\n", config);
+        return GPUJPEG_ERROR;
+    }
+
+    metadata->vals[GPUJPEG_METADATA_ORIENTATION].set = 1;
+    metadata->vals[GPUJPEG_METADATA_ORIENTATION].orient.rotation = deg / 90;
+    metadata->vals[GPUJPEG_METADATA_ORIENTATION].orient.flip = flip;
+
+    return GPUJPEG_NOERR;
+}
+
 GPUJPEG_API int
 gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, const char* val)
 {
@@ -735,10 +770,8 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
     if ( strcmp(opt, GPUJPEG_ENC_OPT_CHANNEL_REMAP) == 0 ) {
         return gpujpeg_opt_set_channel_remap(&encoder->coder, val, GPUJPEG_ENC_OPT_CHANNEL_REMAP);
     }
-    if ( strcmp(opt, GPUJPEG_ENC_OPT_EXIF_TAG) == 0 ) {
-        encoder->header_type = GPUJPEG_HEADER_EXIF;
-        return gpujpeg_exif_add_tag(&encoder->writer->exif_tags, val) ? GPUJPEG_NOERR : GPUJPEG_ERROR;
-
+    if ( strcmp(opt, GPUJPEG_ENC_OPT_METADATA) == 0 ) {
+        return add_metadata(&encoder->writer->metadata, val);
     }
     ERROR_MSG("Invalid encoder option: %s!\n", opt);
     return GPUJPEG_ERROR;
@@ -753,7 +786,7 @@ gpujpeg_encoder_print_options() {
            "] - whether is the input image should be vertically flipped (prior encode)\n");
     printf("\t" GPUJPEG_ENC_OPT_CHANNEL_REMAP "=XYZ[W] - input channel mapping, eg. '210F' for GBRX,\n"
         "\t\t'210' for GBR; special placeholders 'F' and 'Z' to set a channel to all-ones or all-zeros\n");
-    printf("\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<key>=<value>|help - custom EXIF tag (use help for syntax)\n");
+    printf("\t" GPUJPEG_ENC_OPT_METADATA "=<key>=<value>|help - set image metadata\n");
 }
 
 /* Documented at declaration */
