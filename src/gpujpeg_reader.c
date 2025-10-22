@@ -1638,8 +1638,12 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
         return -1;
     }
 
-    if ( reader.metadata.orientation.rotation != 0 || reader.metadata.orientation.flip != 0 ) {
-        WARN_MSG("Orientation %s not handled!\n", gpujpeg_orientation_get_name(reader.metadata.orientation));
+    if ( reader.metadata.vals[GPUJPEG_METADATA_ORIENTATION].set ) {
+        if ( reader.metadata.vals[GPUJPEG_METADATA_ORIENTATION].orient.rotation != 0 ||
+             reader.metadata.vals[GPUJPEG_METADATA_ORIENTATION].orient.flip != 0 ) {
+            WARN_MSG("Orientation %s not handled!\n",
+                     gpujpeg_orientation_get_name(reader.metadata.vals[GPUJPEG_METADATA_ORIENTATION].orient));
+        }
     }
 
     return 0;

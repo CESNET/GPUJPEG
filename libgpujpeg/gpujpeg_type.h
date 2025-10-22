@@ -142,15 +142,24 @@ struct gpujpeg_component_sampling_factor
     uint8_t vertical;
 };
 
+enum {
+    GPUJPEG_METADATA_ORIENTATION,
+    GPUJPEG_METADATA_COUNT,
+};
 struct gpujpeg_orientation /// as defined in SPIFF
 {
     unsigned rotation : 2; ///< in multiples of 90° clock-wise
     unsigned flip : 1;     ///< 1 - left-to-right orientation flipped after rotation applied
 };
-
 struct gpujpeg_image_metadata
 {
-    struct gpujpeg_orientation orientation;
+    struct
+    {
+        union {
+            struct gpujpeg_orientation orient;
+        };
+        unsigned set : 1; ///< item is set, otherwise the union value is undefined
+    } vals[GPUJPEG_METADATA_COUNT];
 };
 
 #ifdef __cplusplus

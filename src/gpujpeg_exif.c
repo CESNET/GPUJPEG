@@ -630,7 +630,8 @@ exif_orieintation_to_metadata(unsigned val, struct gpujpeg_image_metadata* parse
         {3, 0}, // 8 = The 0th row is the visual left-hand side of the image, and the 0th column is the visual bottom.
     };
     // clang-format on
-    parsed->orientation = map[val - 1];
+    parsed->vals[GPUJPEG_METADATA_ORIENTATION].orient = map[val - 1];
+    parsed->vals[GPUJPEG_METADATA_ORIENTATION].set = 1;
 }
 
 static void
