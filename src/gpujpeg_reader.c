@@ -94,7 +94,7 @@ struct gpujpeg_reader
     enum gpujpeg_color_space header_color_space;
     enum gpujpeg_header_type header_type;
     bool in_spiff;
-    struct gpujpeg_image_metadata metadata;
+    struct gpujpeg_image_metadata *metadata;
     const char *comment;
 };
 
@@ -326,7 +326,7 @@ gpujpeg_reader_read_app1(uint8_t** image, struct gpujpeg_reader *reader)
     if ( strcmp((char *) type_tag, "Exif") == 0 ) {
         reader->header_color_space = GPUJPEG_YCBCR_BT601_256LVLS;
         reader->header_type = GPUJPEG_HEADER_EXIF;
-        gpujpeg_exif_parse(image, reader->image_end, reader->param.verbose, &reader->metadata);
+        gpujpeg_exif_parse(image, reader->image_end, reader->param.verbose, reader->metadata);
         return;
     }
     WARN_MSG("Skipping unsupported APP1 marker \"%s\"!\n", type_tag);
@@ -474,9 +474,9 @@ gpujpeg_reader_read_spiff_directory(uint8_t** image, struct gpujpeg_reader *read
     if ( tag == SPIFF_ENTRY_TAG_ORIENATAION ) {
         int rotation = gpujpeg_reader_read_byte(*image);
         bool flip = gpujpeg_reader_read_byte(*image);
-        reader->metadata.vals[GPUJPEG_METADATA_ORIENTATION].orient.rotation = rotation;
-        reader->metadata.vals[GPUJPEG_METADATA_ORIENTATION].orient.flip = flip;
-        reader->metadata.vals[GPUJPEG_METADATA_ORIENTATION].set = 1;
+        reader->metadata->vals[GPUJPEG_METADATA_ORIENTATION].orient.rotation = rotation;
+        reader->metadata->vals[GPUJPEG_METADATA_ORIENTATION].orient.flip = flip;
+        reader->metadata->vals[GPUJPEG_METADATA_ORIENTATION].set = 1;
         DEBUG_MSG(reader->param.verbose, "SPIFF CW rotation: %d deg%s\n", rotation * 90, flip ? ", mirrored" : "");
         *image += 2; // 2 bytes reserved
         return 0;
@@ -1551,10 +1551,14 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
         .param_image = decoder->coder.param_image,
         .image_end = image + image_size,
         .ff_cs_itu601_is_709 = decoder->ff_cs_itu601_is_709,
+        .metadata = &decoder->metadata,
     };
     reader.param.restart_interval = 0;
     reader.param_image.pixel_format = decoder->req_pixel_format;
     reader.param_image.color_space = decoder->req_color_space;
+    for (unsigned i = 0; i < GPUJPEG_METADATA_COUNT; ++i) {
+        decoder->metadata.vals[i].set = false;
+    }
 
     // Check first SOI marker
     int marker_soi = gpujpeg_reader_read_marker(&image, reader.image_end, decoder->coder.param.verbose);
@@ -1653,14 +1657,6 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
         return -1;
     }
 
-    if ( reader.metadata.vals[GPUJPEG_METADATA_ORIENTATION].set ) {
-        if ( reader.metadata.vals[GPUJPEG_METADATA_ORIENTATION].orient.rotation != 0 ||
-             reader.metadata.vals[GPUJPEG_METADATA_ORIENTATION].orient.flip != 0 ) {
-            WARN_MSG("Orientation %s not handled!\n",
-                     gpujpeg_orientation_get_name(reader.metadata.vals[GPUJPEG_METADATA_ORIENTATION].orient));
-        }
-    }
-
     return 0;
 }
 
@@ -1678,6 +1674,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
         .param.verbose = verbose,
         .param_image.pixel_format = GPUJPEG_PIXFMT_AUTODETECT,
         .image_end = image + image_size,
+        .metadata = &info->metadata,
     };
 
     // Check first SOI marker
@@ -1793,7 +1790,6 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
     info->segment_count = segments;
     info->header_type = reader.header_type;
     info->comment = reader.comment;
-    info->metadata = reader.metadata;
 
     return 0;
 }

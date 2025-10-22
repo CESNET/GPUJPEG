@@ -79,6 +79,8 @@ struct gpujpeg_decoder_output
 
     /// OpenGL texture
     struct gpujpeg_opengl_texture* texture;
+
+    const struct gpujpeg_image_metadata *metadata;
 };
 
 /**

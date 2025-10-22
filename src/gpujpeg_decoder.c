@@ -463,6 +463,7 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
                output->param_image.height, gpujpeg_pixel_format_get_name(output->param_image.pixel_format),
                gpujpeg_color_space_get_name(output->param_image.color_space));
     }
+    output->metadata = &decoder->metadata;
 
     return 0;
 }

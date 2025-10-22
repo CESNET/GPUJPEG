@@ -1,3 +1,10 @@
+2025-10-22 - 0.27.10
+----------
+
+- provide orientation metadata by decoder
+- SPIFF: read/write the orientation
+- Exif: remove custom tag storing API
+
 2025-10-20 - 0.27.9
 ----------
 

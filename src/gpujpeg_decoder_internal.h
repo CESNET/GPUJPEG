@@ -69,6 +69,9 @@ struct gpujpeg_decoder
     enum gpujpeg_color_space req_color_space;
     bool ff_cs_itu601_is_709; ///< if FFmpeg specific COM marker "CS=ITU601" present, interpret the data as
                               ///< limited-range BT.709 not BT.601
+
+    /// metadata associated with last decoded image
+    struct gpujpeg_image_metadata metadata;
 };
 
 #endif // GPUJPEG_DECODER_INTERNAL_H
