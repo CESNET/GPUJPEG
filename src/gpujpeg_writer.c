@@ -225,6 +225,14 @@ static void gpujpeg_writer_write_spiff_directory_eod(struct gpujpeg_writer* writ
 static void gpujpeg_writer_write_spiff_directory(struct gpujpeg_encoder* encoder)
 {
     struct gpujpeg_writer* writer = encoder->writer;
+    if ( encoder->writer->metadata.vals[GPUJPEG_METADATA_ORIENTATION].set ) {
+        gpujpeg_writer_write_app8(writer);
+        gpujpeg_writer_emit_2byte(writer, 10);
+        gpujpeg_writer_emit_4byte(writer, SPIFF_ENTRY_TAG_ORIENATAION);
+        gpujpeg_writer_emit_byte(writer, encoder->writer->metadata.vals[GPUJPEG_METADATA_ORIENTATION].orient.rotation);
+        gpujpeg_writer_emit_byte(writer, encoder->writer->metadata.vals[GPUJPEG_METADATA_ORIENTATION].orient.flip);
+        gpujpeg_writer_emit_2byte(writer, 0); // reserved
+    }
     gpujpeg_writer_write_spiff_directory_eod(writer); // this must be last directory entry
 }
 
@@ -446,7 +454,8 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
 
     switch (encoder->header_type) {
     case GPUJPEG_HEADER_DEFAULT:
-        if ( encoder->coder.param.comp_count == 4 ) {
+        if ( encoder->coder.param.comp_count == 4 ||
+             encoder->writer->metadata.vals[GPUJPEG_METADATA_ORIENTATION].set ) {
             gpujpeg_writer_write_spiff(encoder);
         } else {
             switch (encoder->coder.param.color_space_internal) {

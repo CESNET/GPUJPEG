@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2024, CESNET
+ * Copyright (c) 2011-2025, CESNET, zájmové sdružení právnických osob
  * Copyright (c) 2011, Silicon Genome, LLC.
  */
 /*
@@ -111,6 +111,7 @@ enum gpujpeg_marker_code {
 #define SPIFF_VERSION 0x100 // Version 1.00
 #define SPIFF_COMPRESSION_JPEG 5
 #define SPIFF_ENTRY_TAG_EOD 0x1
+#define SPIFF_ENTRY_TAG_ORIENATAION 0x4
 #define SPIFF_ENTRY_TAG_EOD_LENGHT 8 // length is 2 bytes longer for EOD to contain also following SOI
 #define SPIFF_MARKER_LEN 32 ///< including length field
 
