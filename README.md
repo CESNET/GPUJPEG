@@ -50,8 +50,9 @@ Features
 
 - uses NVIDIA CUDA platform
 - baseline Huffman 8-bit coding
-- use of **JFIF** file format by default, **Adobe** and **SPIFF** is supported as well (used by encoder
-  if JPEG internal color space is not representable by JFIF - eg. limited range **YCbCr BT.709** or **RGB**)
+- uses  **JFIF** file format by default, **Adobe** or **SPIFF** is used
+by encoder if JPEG internal color space is not representable by JFIF -
+eg. limited range **YCbCr BT.709** or **RGB**, **Exif** also supported
 - use of _restart markers_ that allow fast parallel encoding/decoding
 - Encoder by default creates _non-interleaved_ stream, optionally it can produce
   an _interleaved_ stream (all components in one scan) or/and subsampled stream.

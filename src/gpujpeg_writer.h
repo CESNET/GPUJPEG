@@ -65,6 +65,7 @@ struct gpujpeg_writer
     int segment_info_index;
 
     struct gpujpeg_image_metadata metadata;
+    struct gpujpeg_exif_tags *exif_tags;
 };
 
 /**

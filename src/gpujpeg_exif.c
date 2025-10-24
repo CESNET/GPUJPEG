@@ -244,18 +244,49 @@ struct tag_value
     union value_u value;
 };
 
+/// custom exif tag values
+struct custom_tag_value
+{
+    uint16_t tag_id;
+    enum exif_tag_type type;
+    union value_u value;
+    size_t val_count;
+};
+enum { CT_TIFF, CT_EXIF, CT_NUM };
+/// custom exif tags given by user
+struct gpujpeg_exif_tags {
+    struct custom_exif_tags
+    {
+        struct custom_tag_value *vals;
+        size_t count;
+    } tags[CT_NUM];
+};
+
+static int
+ifd_sort(const void* a, const void* b)
+{
+    const uint8_t* aa = a;
+    const uint8_t *bb = b;
+    int a_tag_id = aa[0] << 8 | aa[1];
+    int b_tag_id = bb[0] << 8 | bb[1];
+    return a_tag_id - b_tag_id;
+}
+
 /**
  * @param tags  array of tags, should be ordered awcending according to exif_tiff_tag_info_t.id
  */
 static void
-gpujpeg_write_ifd(struct gpujpeg_writer* writer, const uint8_t* start, size_t count, const struct tag_value tags[])
+gpujpeg_write_ifd(struct gpujpeg_writer* writer, const uint8_t* start, size_t count,
+                  const struct tag_value tags[], const struct custom_exif_tags *custom_tags)
 {
     enum {
         EXIF_IFD_NUM_SZ = 2,
     };
-    uint8_t* end = writer->buffer_current + EXIF_IFD_NUM_SZ + (count * IFD_ITEM_SZ) + NEXT_IFD_PTR_SZ;
-    gpujpeg_writer_emit_2byte(writer, count); // IFD Item Count
+    size_t count_all = count + custom_tags->count;
+    uint8_t* end = writer->buffer_current + EXIF_IFD_NUM_SZ + (count_all * IFD_ITEM_SZ) + NEXT_IFD_PTR_SZ;
+    gpujpeg_writer_emit_2byte(writer, count_all); // IFD Item Count
 
+    uint8_t *first_rec = writer->buffer_current;
     unsigned last_tag_id = 0;
     for ( unsigned i = 0; i < count; ++i ) {
         const struct tag_value* info = &tags[i];
@@ -268,8 +299,35 @@ gpujpeg_write_ifd(struct gpujpeg_writer* writer, const uint8_t* start, size_t co
         last_tag_id = t->id;
         write_exif_tag(writer, t->type, t->id, exif_tiff_tag_info[info->tag].count, value, start, &end);
     }
+    if ( custom_tags != NULL ) { // add user custom tags
+        for ( unsigned i = 0; i < custom_tags->count; ++i ) {
+            write_exif_tag(writer, custom_tags->vals[i].type, custom_tags->vals[i].tag_id,
+                           custom_tags->vals[i].val_count, custom_tags->vals[i].value, start, &end);
+        }
+        // ensure custom_tags are in-ordered
+        qsort(first_rec, (writer->buffer_current - first_rec) / IFD_ITEM_SZ, IFD_ITEM_SZ, ifd_sort);
+    }
     gpujpeg_writer_emit_4byte(writer, 0); // Next IFD Offset (none)
     writer->buffer_current = end;         // jump after the section Value longer than 4Byte of 0th IFD
+}
+
+/**
+ * from tags remove the items that are overriden by custom_tags
+ */
+static size_t
+remove_overriden(size_t count, struct tag_value tags[STAT_ARR_DCL(count)],
+                 const struct custom_exif_tags custom_tags[STAT_ARR_DCL(1)])
+{
+    for ( unsigned i = 0; i < custom_tags->count; ++i ) {
+        for ( unsigned j = 0; j < count; ++j ) {
+            if ( custom_tags->vals[i].tag_id == exif_tiff_tag_info[tags[j].tag].id ) {
+                memmove(tags + j, tags + j + 1, (count - j - 1) * sizeof(tags[0]));
+                count -= 1;
+                break;
+            }
+        }
+    }
+    return count;
 }
 
 unsigned
@@ -285,7 +343,8 @@ get_exif_orientation(const struct gpujpeg_orientation* orientation)
 }
 
 static void
-gpujpeg_write_0th(struct gpujpeg_writer* writer, const uint8_t* start, const struct gpujpeg_image_metadata* metadata)
+gpujpeg_write_0th(struct gpujpeg_writer* writer, const uint8_t* start, const struct gpujpeg_image_metadata* metadata,
+                  const struct custom_exif_tags* custom_tags)
 {
     char date_time[] = "    :  :     :  :  "; // unknown val by Exif 2.3
     time_t now = time(NULL);
@@ -304,12 +363,15 @@ gpujpeg_write_0th(struct gpujpeg_writer* writer, const uint8_t* start, const str
     if ( metadata->vals[GPUJPEG_METADATA_ORIENTATION].set ) {
         orientation = get_exif_orientation(&metadata->vals[GPUJPEG_METADATA_ORIENTATION].orient);
     }
-    gpujpeg_write_ifd(writer, start, ARR_SIZE(tags), tags);
+    size_t tag_count = ARR_SIZE(tags);
+    tag_count = remove_overriden(tag_count, tags, custom_tags);
+    gpujpeg_write_ifd(writer, start, tag_count, tags, custom_tags);
 }
 
 static void
 gpujpeg_write_exif_ifd(struct gpujpeg_writer* writer, const uint8_t* start,
-                       const struct gpujpeg_image_parameters* param_image)
+                       const struct gpujpeg_image_parameters* param_image,
+                       const struct custom_exif_tags* custom_tags)
 {
     struct tag_value tags[] = {
         {EEXIF_EXIF_VERSION,             {.csvalue = "0230"}                                        }, // 2.30
@@ -319,14 +381,16 @@ gpujpeg_write_exif_ifd(struct gpujpeg_writer* writer, const uint8_t* start,
         {EEXIF_PIXEL_X_DIMENSION,        {.uvalue = (uint32_t[]){param_image->width}} },
         {EEXIF_PIXEL_Y_DIMENSION,        {.uvalue = (uint32_t[]){param_image->height}}},
     };
-    gpujpeg_write_ifd(writer, start, ARR_SIZE(tags), tags);
+    size_t tag_count = ARR_SIZE(tags);
+    tag_count = remove_overriden(tag_count, tags, custom_tags);
+    gpujpeg_write_ifd(writer, start, ARR_SIZE(tags), tags, custom_tags);
 }
 
 /// writes EXIF APP1 marker
 void
 gpujpeg_writer_write_exif(struct gpujpeg_writer* writer, const struct gpujpeg_parameters* param,
                           const struct gpujpeg_image_parameters* param_image,
-                          const struct gpujpeg_image_metadata* metadata)
+                          const struct gpujpeg_image_metadata* metadata, const struct gpujpeg_exif_tags* custom_tags)
 {
     if ( param->color_space_internal != GPUJPEG_YCBCR_BT601_256LVLS ) {
         WARN_MSG("[Exif] Color space %s currently not recorded, assumed %s (report)\n",
@@ -357,13 +421,181 @@ gpujpeg_writer_write_exif(struct gpujpeg_writer* writer, const struct gpujpeg_pa
     gpujpeg_writer_emit_2byte(writer, TIFF_HDR_TAG); // TIFF header
     gpujpeg_writer_emit_4byte(writer, 0x08); // IFD offset - follows immediately
 
-    gpujpeg_write_0th(writer, start, metadata);
-    gpujpeg_write_exif_ifd(writer, start, param_image);
+    const struct custom_exif_tags* tiff_tags = &(const struct custom_exif_tags){.count = 0};
+    const struct custom_exif_tags* exif_tags = &(const struct custom_exif_tags){.count = 0};
+    if ( custom_tags != NULL ) {
+        tiff_tags = &custom_tags->tags[CT_TIFF];
+        exif_tags = &custom_tags->tags[CT_EXIF];
+    }
+
+    gpujpeg_write_0th(writer, start, metadata, tiff_tags);
+    gpujpeg_write_exif_ifd(writer, start, param_image, exif_tags);
 
     // set the marker length
     size_t length = writer->buffer_current - length_p;
     length_p[0] = length >> 8;
     length_p[1] = length;
+}
+
+static bool
+get_numeric_tag_type(char** endptr, long* tag_id, enum exif_tag_type* type)
+{
+    *tag_id = strtol(*endptr, endptr, 0);
+    if ( **endptr != ':' ) {
+        ERROR_MSG("Error parsing Exif tag ID or missing type!\n");
+        return false;
+    }
+    *endptr += 1;
+    for ( unsigned i = ET_NONE + 1; i < ET_END; ++i ) {
+        if ( exif_tag_type_info[i].name == NULL ) { // unset/invalid type
+            continue;
+        }
+        size_t len = strlen(exif_tag_type_info[i].name);
+        if ( strncasecmp(*endptr, exif_tag_type_info[i].name, len) == 0 ) {
+            *type = i;
+            *endptr += len;
+            break;
+        }
+    }
+    if ( type == ET_NONE ) {
+        ERROR_MSG("Error parsing Exif tag type!\n");
+        return false;
+    }
+    if ( **endptr != '=' ) {
+        ERROR_MSG("Error parsing Exif - missing value!\n");
+        return false;
+    }
+    return true;
+}
+
+static void
+usage()
+{
+    printf("Exif value syntax:\n"
+           "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<ID>:<type>=<value>\n"
+           "\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<name>=<value>\n"
+           "\t\tname must be a tag name known to GPUJPEG\n");
+    printf("\n");
+    printf("If mulitple numeric values required, separate with a comma; rationals are in format num/den.\n");
+    printf("UNDEFINED and ASCII should be raw strings.\n");
+    printf("\n");
+    printf("recognized tag name (type, count):\n");
+    for ( unsigned i = 0; i < ARR_SIZE(exif_tiff_tag_info); ++i ) {
+        printf("\t- %s (%s, %u)\n", exif_tiff_tag_info[i].name, exif_tag_type_info[exif_tiff_tag_info[i].type].name,
+               exif_tiff_tag_info[i].count);
+    }
+}
+
+/**
+ * add user-provided Exif tag
+ */
+bool
+gpujpeg_exif_add_tag(struct gpujpeg_exif_tags** exif_tags, const char* cfg)
+{
+    if (strcmp(cfg, "help") == 0) {
+        usage();
+        return false;
+    }
+
+    char *endptr = (char *) cfg;
+    long tag_id = 0;
+    enum exif_tag_type type = ET_NONE;
+
+    if (isdigit(*endptr)) {
+        if ( !get_numeric_tag_type(&endptr, &tag_id, &type) ) {
+            return false;
+        }
+    } else {
+        for (unsigned i = 0; i < ARR_SIZE(exif_tiff_tag_info); ++i) {
+            size_t len = strlen(exif_tiff_tag_info[i].name);
+            if ( strncasecmp(endptr, exif_tiff_tag_info[i].name, len) == 0 ) {
+                tag_id = exif_tiff_tag_info[i].id;
+                type = exif_tiff_tag_info[i].type;
+                endptr += len;
+            }
+        }
+        if (*endptr != '=') {
+            ERROR_MSG("[Exif] Wrong tag name or missing value!\n");
+            return false;
+        }
+    }
+
+    endptr += 1;
+    void* val_alloc = NULL;
+    size_t val_count = 0;
+    if ( (exif_tag_type_info[type].type_flags & T_BYTE_ARRAY) != 0 ) {
+        char* val_str = strdup(endptr);
+        val_alloc = val_str;
+        val_count = strlen(val_str);
+        endptr += val_count;
+        if (type == ET_ASCII) {
+            val_count += 1; // include '\0'
+        }
+    }
+    else {
+        do {
+            if ( *endptr == ',' ) {
+                endptr += 1;
+            }
+            if ( (exif_tag_type_info[type].type_flags & T_NUMERIC) != 0U ) {
+                unsigned long long val = strtoull(endptr, &endptr, 0);
+                val_count += 1;
+                uint32_t* val_a = realloc(val_alloc, val_count * sizeof *val_a);
+                val_a[val_count - 1] = val;
+                val_alloc = val_a;
+            }
+            else if ( (exif_tag_type_info[type].type_flags & T_RATIONAL) != 0U ) {
+                unsigned long long num = strtoull(endptr, &endptr, 0);
+                if ( *endptr != '/' ) {
+                    ERROR_MSG("[Exif] Malformed rational, expected '/', got '%c'!\n", *endptr);
+                }
+                endptr += 1;
+                unsigned long long den = strtoull(endptr, &endptr, 0);
+                val_count += 1;
+                uint32_t* val_a = realloc(val_alloc, val_count * 2 * sizeof *val_a);
+                val_a[2 * (val_count - 1)] = num;
+                val_a[(2 * (val_count - 1)) + 1] = den;
+                val_alloc = val_a;
+            }
+        } while ( *endptr == ',' );
+    }
+
+    if ( *endptr != '\0' ) {
+        free(val_alloc);
+        ERROR_MSG("Trainling data in Exif value: %s\n", endptr);
+        return false;
+    }
+
+    if (*exif_tags == NULL) {
+        *exif_tags = calloc(1, sizeof **exif_tags);
+    }
+
+    int table_idx =  tag_id < EEXIF_FIRST ? CT_TIFF : CT_EXIF;
+    size_t new_size = (*exif_tags)->tags[table_idx].count += 1;
+    (*exif_tags)->tags[table_idx].vals = realloc((*exif_tags)->tags[table_idx].vals,
+            new_size * sizeof (*exif_tags)->tags[table_idx].vals[0]);
+    (*exif_tags)->tags[table_idx].vals[new_size - 1].tag_id = tag_id;
+    (*exif_tags)->tags[table_idx].vals[new_size - 1].type = type;
+    assert(val_alloc != NULL);
+    (*exif_tags)->tags[table_idx].vals[new_size - 1].value.uvalue = val_alloc;
+    (*exif_tags)->tags[table_idx].vals[new_size - 1].val_count = val_count;
+
+    return true;
+}
+
+void
+gpujpeg_exif_tags_destroy(struct gpujpeg_exif_tags* exif_tags)
+{
+    if ( exif_tags == NULL ) {
+        return;
+    }
+    for ( unsigned i = 0; i < CT_NUM; ++i ) {
+        for (unsigned j = 0; i < exif_tags->tags[i].count; ++i) {
+            free((void *) exif_tags->tags[i].vals[j].value.uvalue);
+        }
+        free(exif_tags->tags[i].vals);
+    }
+    free(exif_tags);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -413,7 +645,7 @@ read_4byte_le(uint8_t** image) {
 static void
 exif_orieintation_to_metadata(unsigned val, struct gpujpeg_image_metadata* parsed)
 {
-    if (val == 0 || val > 8) {
+    if ( val == 0 || val > 8 ) {
         WARN_MSG(MOD_NAME "Flawed orientation value %d! Should be 1-8...\n", val);
         return;
     }

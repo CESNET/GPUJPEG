@@ -94,6 +94,7 @@ gpujpeg_writer_destroy(struct gpujpeg_writer* writer)
 {
     assert(writer != NULL);
     free_buffer(writer);
+    gpujpeg_exif_tags_destroy(writer->exif_tags);
     free(writer);
     return 0;
 }
@@ -477,7 +478,7 @@ gpujpeg_writer_write_header(struct gpujpeg_encoder* encoder)
         break;
     case GPUJPEG_HEADER_EXIF:
         gpujpeg_writer_write_exif(encoder->writer, &encoder->coder.param, &encoder->coder.param_image,
-                                  &encoder->writer->metadata);
+                                  &encoder->writer->metadata, encoder->writer->exif_tags);
         break;
     case GPUJPEG_HEADER_SPIFF:
         gpujpeg_writer_write_spiff(encoder);

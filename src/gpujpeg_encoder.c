@@ -770,6 +770,10 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
     if ( strcmp(opt, GPUJPEG_ENC_OPT_CHANNEL_REMAP) == 0 ) {
         return gpujpeg_opt_set_channel_remap(&encoder->coder, val, GPUJPEG_ENC_OPT_CHANNEL_REMAP);
     }
+    if ( strcmp(opt, GPUJPEG_ENC_OPT_EXIF_TAG) == 0 ) {
+        encoder->header_type = GPUJPEG_HEADER_EXIF;
+        return gpujpeg_exif_add_tag(&encoder->writer->exif_tags, val) ? GPUJPEG_NOERR : GPUJPEG_ERROR;
+    }
     if ( strcmp(opt, GPUJPEG_ENC_OPT_METADATA) == 0 ) {
         return add_metadata(&encoder->writer->metadata, val);
     }
@@ -786,6 +790,7 @@ gpujpeg_encoder_print_options() {
            "] - whether is the input image should be vertically flipped (prior encode)\n");
     printf("\t" GPUJPEG_ENC_OPT_CHANNEL_REMAP "=XYZ[W] - input channel mapping, eg. '210F' for GBRX,\n"
         "\t\t'210' for GBR; special placeholders 'F' and 'Z' to set a channel to all-ones or all-zeros\n");
+    printf("\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<key>=<value>|help - custom EXIF tag (use help for syntax)\n");
     printf("\t" GPUJPEG_ENC_OPT_METADATA "=<key>=<value>|help - set image metadata\n");
 }
 
