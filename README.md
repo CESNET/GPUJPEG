@@ -99,10 +99,15 @@ iteration) with following command:
 
     gpujpegtool -v -e mediadivision_frame_<res>.pnm mediadivision_frame_<res>.jpg -n 100 [-q <Q>]
 
+<!-- 4080 measurement: cmake is configured without additional flags like
+DCMAKE_BUILD_TYPE/DCMAKE_CUDA_ARCHITECTURE, 5 measurements are undertaken,
+mean value is taken -->
+
 ### Encoding
 
 |      GPU \ resolution      | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
 |----------------------------|-------------|-------------|--------------|----------------|
+|          RTX 4080          |   0.48 ms   |   1.65 ms   |    6.33 ms   |    24.92 ms    |
 |          RTX 3080          |   0.54 ms   |   1.71 ms   |    6.20 ms   |    24.48 ms    |
 |          RTX 2080 Ti       |   0.82 ms   |   2.89 ms   |   11.15 ms   |    46.23 ms    |
 |          GTX 1060M         |   1.36 ms   |   4.55 ms   |   17.34 ms   |  _(low mem)_   |
@@ -136,6 +141,7 @@ taking 99 samples excluding the first one. Command used:
 
 |       GPU \ resolution     | HD (2 Mpix) | 4K (8 Mpix) | 8K (33 Mpix) | 16K (132 Mpix) |
 |----------------------------|-------------|-------------|--------------|----------------|
+|          RTX 4080          |   0.55 ms   |   1.46 ms   |    5.78 ms   |    23.05 ms    |
 |          RTX 3080          |   0.75 ms   |   1.94 ms   |    6.76 ms   |    31.50 ms    |
 |          RTX 2080 Ti       |   1.02 ms   |   1.07 ms   |   11.29 ms   |    44.42 ms    |
 |          GTX 1060M         |   1.68 ms   |   4.81 ms   |   17.56 ms   |  _(low mem)_   |
