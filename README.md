@@ -91,7 +91,7 @@ and they are implemented on CPU or/and GPU as follows:
 Performance
 -----------
 
-Source 16K (DCI) image ([8], [9]) was cropped to _15360x8640+0+0_ (1920x1080
+Source 16K (DCI) image ([description][8], [download][9]) was cropped to _15360x8640+0+0_ (1920x1080
 multiplied by 8 in both dimensions) and for lower resolutions downscaled.
 Encoding was done with default values with input in RGB (quality **75**,
 **non-interleaved**, rst 24-36, average from 99 measurements excluding first
