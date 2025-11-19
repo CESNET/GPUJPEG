@@ -450,7 +450,7 @@ gpujpeg_reader_read_spiff_directory(uint8_t** image, struct gpujpeg_reader *read
 {
     if ( length < 8 ) { // ELEN at least 8
         ERROR_MSG("APP8 SPIFF directory too short (%d bytes)\n", length);
-        image += length - 2;
+        *image += length - 2;
         return -1;
     }
     uint32_t tag = gpujpeg_reader_read_4byte(*image);
