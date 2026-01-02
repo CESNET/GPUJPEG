@@ -20,7 +20,8 @@ if(WIN32)
 endif()
 
 if (CMAKE_CUDA_ARCHITECTURES MATCHES OFF)
-    message(NOTICE "You may want to set CUDA architecture, suggested `-DCMAKE_CUDA_ARCHITECTURES=native`")
+    message(NOTICE "To set CUDA architecture explicitly, use "
+        "`-DCMAKE_CUDA_ARCHITECTURES=` (optional).")
 endif()
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
