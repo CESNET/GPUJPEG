@@ -138,6 +138,8 @@ if(NOT BUILD_OPENGL STREQUAL "OFF" AND NOT OPENGL_ERROR)
     endif()
 elseif(BUILD_OPENGL STREQUAL "ON")
     message(FATAL_ERROR "OpenGL not found: ${OPENGL_ERROR}")
+else()
+    message(STATUS "OpenGL disabled")
 endif()
 
 if(HUFFMAN_GPU_CONST_TABLES)
