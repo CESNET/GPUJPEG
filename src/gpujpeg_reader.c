@@ -1508,23 +1508,10 @@ static enum gpujpeg_pixel_format
 get_native_pixel_format(struct gpujpeg_parameters* param)
 {
     if ( param->comp_count == 4 ) {
-        _Bool subsampling_is4444 = 1;
-        for (int i = 1; i < 4; ++i) {
-            if (param->sampling_factor[i].horizontal != param->sampling_factor[0].horizontal
-                    || param->sampling_factor[i].vertical != param->sampling_factor[0].vertical) {
-                subsampling_is4444 = 0;
-                break;
-            }
-        }
-        if (subsampling_is4444) {
-            return GPUJPEG_4444_U8_P0123;
-        }
-        return GPUJPEG_PIXFMT_NONE;
+        return GPUJPEG_4444_U8_P0123;
     }
 
-    if ( param->comp_count != 3 ) {
-        return GPUJPEG_PIXFMT_NONE;
-    }
+    assert(param->comp_count == 3);
 
     // reduce [2, 2; 1, 2; 1, 2] (FFmpeg) to [2, 1; 1, 1; 1, 1]
     int horizontal_gcd = param->sampling_factor[0].horizontal;
@@ -1538,6 +1525,7 @@ get_native_pixel_format(struct gpujpeg_parameters* param)
         param->sampling_factor[i].vertical /= vertical_gcd;
     }
 
+    // handle normal 4:4:4, 4:2:2 or 4:2:0
     if ( param->sampling_factor[1].horizontal == 1 && param->sampling_factor[1].vertical == 1 &&
          param->sampling_factor[2].horizontal == 1 && param->sampling_factor[2].vertical == 1 ) {
         int sum = param->interleaved << 16 | param->sampling_factor[0].horizontal << 8 |
@@ -1555,7 +1543,8 @@ get_native_pixel_format(struct gpujpeg_parameters* param)
         }
     }
 
-    return GPUJPEG_PIXFMT_NONE;
+    // fallback
+    return param->interleaved ? GPUJPEG_444_U8_P012 : GPUJPEG_444_U8_P0P1P2;
 }
 
 static enum gpujpeg_pixel_format
