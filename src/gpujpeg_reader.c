@@ -1660,6 +1660,20 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
     return 0;
 }
 
+static int
+gcd(int a, int b)
+{
+    assert(b != 0);
+    int c = a % b;
+    while (c != 0) {
+        a = b;
+        b = c;
+        c = a % b;
+    }
+
+    return (b);
+}
+
 /* Documented at declaration */
 int
 gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_image_info *info, int verbose, unsigned flags)
@@ -1672,7 +1686,6 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
 
     struct gpujpeg_reader reader = {
         .param.verbose = verbose,
-        .param_image.pixel_format = GPUJPEG_PIXFMT_AUTODETECT,
         .image_end = image + image_size,
         .metadata = &info->metadata,
     };
@@ -1787,9 +1800,56 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
 
     info->param = reader.param;
     info->param_image = reader.param_image;
+    info->param_image.pixel_format = GPUJPEG_PIXFMT_NONE;
     info->segment_count = segments;
     info->header_type = reader.header_type;
     info->comment = reader.comment;
+
+    if ( info->param.comp_count == 1 ) {
+        info->param_image.pixel_format = GPUJPEG_U8;
+    }
+    if ( info->param.comp_count == 3 ) {
+        // reduce [2, 2; 1, 2; 1, 2] (FFmpeg) to [2, 1; 1, 1; 1, 1]
+        int horizontal_gcd = info->param.sampling_factor[0].horizontal;
+        int vertical_gcd = info->param.sampling_factor[0].vertical;
+        for (int i = 1; i < 3; ++i) {
+            horizontal_gcd = gcd(horizontal_gcd, info->param.sampling_factor[i].horizontal);
+            vertical_gcd = gcd(vertical_gcd, info->param.sampling_factor[i].vertical);
+        }
+        for (int i = 0; i < 3; ++i) {
+            info->param.sampling_factor[i].horizontal /= horizontal_gcd;
+            info->param.sampling_factor[i].vertical /= vertical_gcd;
+        }
+
+        if (info->param.sampling_factor[1].horizontal == 1 && info->param.sampling_factor[1].vertical == 1
+                && info->param.sampling_factor[2].horizontal == 1 && info->param.sampling_factor[2].vertical == 1) {
+            int sum = info->param.interleaved << 16 | info->param.sampling_factor[0].horizontal << 8 |
+                      info->param.sampling_factor[0].vertical; // NOLINT
+            switch (sum) {
+                case 1<<16 | 1<<8 | 1: info->param_image.pixel_format = GPUJPEG_444_U8_P012; break;   // NOLINT
+                case 0<<16 | 1<<8 | 1: info->param_image.pixel_format = GPUJPEG_444_U8_P0P1P2; break; // NOLINT
+                case 1<<16 | 2<<8 | 1: info->param_image.pixel_format = GPUJPEG_422_U8_P1020; break;  // NOLINT
+                case 0<<16 | 2<<8 | 1: info->param_image.pixel_format = GPUJPEG_422_U8_P0P1P2; break; // NOLINT
+                case 1<<16 | 2<<8 | 2: // we have only one pixfmt for 420, so use for both          NOLINT
+                case 0<<16 | 2<<8 | 2: info->param_image.pixel_format = GPUJPEG_420_U8_P0P1P2; break; // NOLINT
+                default: break;
+            }
+        }
+    }
+
+    if ( info->param.comp_count == 4 ) {
+        _Bool subsampling_is4444 = 1;
+        for (int i = 1; i < 4; ++i) {
+            if (info->param.sampling_factor[i].horizontal != info->param.sampling_factor[0].horizontal
+                    || info->param.sampling_factor[i].vertical != info->param.sampling_factor[0].vertical) {
+                subsampling_is4444 = 0;
+                break;
+            }
+        }
+        if (subsampling_is4444) {
+            info->param_image.pixel_format = GPUJPEG_4444_U8_P0123;
+        }
+    }
 
     return 0;
 }
