@@ -67,15 +67,18 @@ jobs:
         ${{ matrix.cuda_repo }}/x86_64/cuda-keyring_1.1-1_all.deb
         sudo dpkg -i cuda-keyring_1.1-1_all.deb
         sudo apt-get update
-        sudo apt-get -y install ${{ matrix.cuda_pkg }}
+        cuda_compiler_pkg=$(apt-get -s install ${{ matrix.cuda_pkg }} | grep\
+          cuda-compiler | head -n 1 | sed 's/.*\(cuda-compiler[-0-9]*\).*/\1/')
+        sudo apt-get -y install "$cuda_compiler_pkg"
         echo CUDACXX=/usr/local/cuda/bin/nvcc >> "$GITHUB_ENV"
-    - name: Install GCC 8 for CUDA 10.2
+    - name: Install GCC 8 for CUDA 10.2 + symlink the toolkit
       if: matrix.conf == 'legacy'
       run: |
+        sudo ln -s /usr/local/cuda-10.2 /usr/local/cuda
         echo 'deb http://archive.ubuntu.com/ubuntu/ focal main universe'\
           | sudo tee -a /etc/apt/sources.list
         sudo apt update
-        sudo apt install gcc-8 g++-8
+        sudo apt install cuda-cudart-dev-10-2 gcc-8 g++-8
         sudo ln -sf /usr/bin/gcc-8 /usr/local/cuda/bin/gcc
     - name: Build
       run: |
