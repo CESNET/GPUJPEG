@@ -1,3 +1,8 @@
+2026-01-14 - 0.27.11
+----------
+
+- add GPUJPEG_PIXFMT_NATIVE decoder pseudo-format
+
 2025-10-22 - 0.27.10
 ----------
 
