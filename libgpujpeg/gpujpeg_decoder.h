@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -232,13 +232,12 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder);
  */
 /// decoder default pixfmt - usually @ref GPUJPEG_444_U8_P012;
 /// @ref GPUJPEG_U8 for grayscale and @ref GPUJPEG_444_U8_P0123 if alpha present
-///
 #define GPUJPEG_PIXFMT_AUTODETECT ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NONE - 1))
 /// as @ref GPUJPEG_PIXFMT_AUTODETECT, but alpha stripped if present
-#define GPUJPEG_PIXFMT_NO_ALPHA ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_AUTODETECT - 1))
+#define GPUJPEG_PIXFMT_NO_ALPHA ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NONE - 2))
 /// pixel format that may be stored in a PAM or Y4M file - a planar pixel
 /// format that is either 444, 422 or 420 for YUV, P012(3) otherwise
-#define GPUJPEG_PIXFMT_STD ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NO_ALPHA - 1))
+#define GPUJPEG_PIXFMT_STD ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NONE - 3))
 /// @}
 /// Decode RGB for 3 or 4 channels, GPUJPEG_YCBCR for grayscale.
 /// decoder only, valid only if passed to gpujpeg_decoder_set_output_format()

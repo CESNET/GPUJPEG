@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -1492,6 +1492,7 @@ static _Bool sampling_factor_compare(int count, struct gpujpeg_component_samplin
 
 static enum gpujpeg_pixel_format
 adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image) {
+    assert(param_image->pixel_format == GPUJPEG_PIXFMT_AUTODETECT || param_image->pixel_format == GPUJPEG_PIXFMT_STD);
     if ( param->comp_count == 1 ) {
         return GPUJPEG_U8;
     }
