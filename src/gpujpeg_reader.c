@@ -1507,35 +1507,6 @@ gcd(int a, int b)
 static enum gpujpeg_pixel_format
 get_native_pixel_format(struct gpujpeg_parameters* param)
 {
-    if ( param->comp_count == 3 ) {
-        // reduce [2, 2; 1, 2; 1, 2] (FFmpeg) to [2, 1; 1, 1; 1, 1]
-        int horizontal_gcd = param->sampling_factor[0].horizontal;
-        int vertical_gcd = param->sampling_factor[0].vertical;
-        for (int i = 1; i < 3; ++i) {
-            horizontal_gcd = gcd(horizontal_gcd, param->sampling_factor[i].horizontal);
-            vertical_gcd = gcd(vertical_gcd, param->sampling_factor[i].vertical);
-        }
-        for (int i = 0; i < 3; ++i) {
-            param->sampling_factor[i].horizontal /= horizontal_gcd;
-            param->sampling_factor[i].vertical /= vertical_gcd;
-        }
-
-        if ( param->sampling_factor[1].horizontal == 1 && param->sampling_factor[1].vertical == 1 &&
-             param->sampling_factor[2].horizontal == 1 && param->sampling_factor[2].vertical == 1 ) {
-            int sum = param->interleaved << 16 | param->sampling_factor[0].horizontal << 8 |
-                      param->sampling_factor[0].vertical; // NOLINT
-            switch (sum) {
-                case 1<<16 | 1<<8 | 1: return GPUJPEG_444_U8_P012; break;   // NOLINT
-                case 0<<16 | 1<<8 | 1: return GPUJPEG_444_U8_P0P1P2; break; // NOLINT
-                case 1<<16 | 2<<8 | 1: return GPUJPEG_422_U8_P1020; break;  // NOLINT
-                case 0<<16 | 2<<8 | 1: return GPUJPEG_422_U8_P0P1P2; break; // NOLINT
-                case 1<<16 | 2<<8 | 2: // we have only one pixfmt for 420, so use for both          NOLINT
-                case 0<<16 | 2<<8 | 2: return GPUJPEG_420_U8_P0P1P2; break; // NOLINT
-                default: break;
-            }
-        }
-    }
-
     if ( param->comp_count == 4 ) {
         _Bool subsampling_is4444 = 1;
         for (int i = 1; i < 4; ++i) {
@@ -1548,7 +1519,42 @@ get_native_pixel_format(struct gpujpeg_parameters* param)
         if (subsampling_is4444) {
             return GPUJPEG_4444_U8_P0123;
         }
+        return GPUJPEG_PIXFMT_NONE;
     }
+
+    if ( param->comp_count != 3 ) {
+        return GPUJPEG_PIXFMT_NONE;
+    }
+
+    // reduce [2, 2; 1, 2; 1, 2] (FFmpeg) to [2, 1; 1, 1; 1, 1]
+    int horizontal_gcd = param->sampling_factor[0].horizontal;
+    int vertical_gcd = param->sampling_factor[0].vertical;
+    for ( int i = 1; i < 3; ++i ) {
+        horizontal_gcd = gcd(horizontal_gcd, param->sampling_factor[i].horizontal);
+        vertical_gcd = gcd(vertical_gcd, param->sampling_factor[i].vertical);
+    }
+    for ( int i = 0; i < 3; ++i ) {
+        param->sampling_factor[i].horizontal /= horizontal_gcd;
+        param->sampling_factor[i].vertical /= vertical_gcd;
+    }
+
+    if ( param->sampling_factor[1].horizontal == 1 && param->sampling_factor[1].vertical == 1 &&
+         param->sampling_factor[2].horizontal == 1 && param->sampling_factor[2].vertical == 1 ) {
+        int sum = param->interleaved << 16 | param->sampling_factor[0].horizontal << 8 |
+                  param->sampling_factor[0].vertical; // NOLINT
+        switch ( sum ) {
+            // clang-format off
+            case 1<<16 | 1<<8 | 1: return GPUJPEG_444_U8_P012; break;   // NOLINT
+            case 0<<16 | 1<<8 | 1: return GPUJPEG_444_U8_P0P1P2; break; // NOLINT
+            case 1<<16 | 2<<8 | 1: return GPUJPEG_422_U8_P1020; break;  // NOLINT
+            case 0<<16 | 2<<8 | 1: return GPUJPEG_422_U8_P0P1P2; break; // NOLINT
+            case 1<<16 | 2<<8 | 2: // we have only one pixfmt for 420, so use for both          NOLINT
+            case 0<<16 | 2<<8 | 2: return GPUJPEG_420_U8_P0P1P2; break; // NOLINT
+            default: break;
+            // clang-format on
+        }
+    }
+
     return GPUJPEG_PIXFMT_NONE;
 }
 
