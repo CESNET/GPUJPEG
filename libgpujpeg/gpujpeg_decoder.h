@@ -238,6 +238,8 @@ gpujpeg_decoder_destroy(struct gpujpeg_decoder* decoder);
 /// pixel format that may be stored in a PAM or Y4M file - a planar pixel
 /// format that is either 444, 422 or 420 for YUV, P012(3) otherwise
 #define GPUJPEG_PIXFMT_STD ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NONE - 3))
+/// pixfmt nearest the internal JPEG subsampling
+#define GPUJPEG_PIXFMT_NATIVE ((enum gpujpeg_pixel_format)(GPUJPEG_PIXFMT_NONE - 4))
 /// @}
 /// Decode RGB for 3 or 4 channels, GPUJPEG_YCBCR for grayscale.
 /// decoder only, valid only if passed to gpujpeg_decoder_set_output_format()

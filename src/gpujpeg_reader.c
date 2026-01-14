@@ -1507,9 +1507,6 @@ gcd(int a, int b)
 static enum gpujpeg_pixel_format
 get_native_pixel_format(struct gpujpeg_parameters* param)
 {
-    if ( param->comp_count == 1 ) {
-        return GPUJPEG_U8;
-    }
     if ( param->comp_count == 3 ) {
         // reduce [2, 2; 1, 2; 1, 2] (FFmpeg) to [2, 1; 1, 1; 1, 1]
         int horizontal_gcd = param->sampling_factor[0].horizontal;
@@ -1557,9 +1554,14 @@ get_native_pixel_format(struct gpujpeg_parameters* param)
 
 static enum gpujpeg_pixel_format
 adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image) {
-    assert(param_image->pixel_format == GPUJPEG_PIXFMT_AUTODETECT || param_image->pixel_format == GPUJPEG_PIXFMT_STD);
+    assert(param_image->pixel_format == GPUJPEG_PIXFMT_AUTODETECT || param_image->pixel_format == GPUJPEG_PIXFMT_STD ||
+           param_image->pixel_format == GPUJPEG_PIXFMT_NATIVE);
     if ( param->comp_count == 1 ) {
         return GPUJPEG_U8;
+    }
+
+    if ( param_image->pixel_format == GPUJPEG_PIXFMT_NATIVE ) {
+        return get_native_pixel_format(param);
     }
 
     if (param_image->pixel_format == GPUJPEG_PIXFMT_STD && param_image->color_space != GPUJPEG_RGB) {
@@ -1738,6 +1740,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
 
     struct gpujpeg_reader reader = {
         .param.verbose = verbose,
+        .param_image.pixel_format = GPUJPEG_PIXFMT_NATIVE,
         .image_end = image + image_size,
         .metadata = &info->metadata,
     };
@@ -1855,8 +1858,6 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
     info->segment_count = segments;
     info->header_type = reader.header_type;
     info->comment = reader.comment;
-
-    info->param_image.pixel_format = get_native_pixel_format(&reader.param);
 
     return 0;
 }
