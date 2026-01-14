@@ -1551,6 +1551,8 @@ static enum gpujpeg_pixel_format
 adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image) {
     assert(param_image->pixel_format == GPUJPEG_PIXFMT_AUTODETECT || param_image->pixel_format == GPUJPEG_PIXFMT_STD ||
            param_image->pixel_format == GPUJPEG_PIXFMT_NATIVE);
+    GPUJPEG_ASSERT(param->comp_count != 2);
+
     if ( param->comp_count == 1 ) {
         return GPUJPEG_U8;
     }
@@ -1572,13 +1574,11 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
         return GPUJPEG_444_U8_P0P1P2;
     }
 
-
-    switch (param->comp_count) {
-        case 3: return GPUJPEG_444_U8_P012;
-        case 4:
-            return param_image->pixel_format == GPUJPEG_PIXFMT_NO_ALPHA ? GPUJPEG_444_U8_P012 : GPUJPEG_4444_U8_P0123;
-        default: GPUJPEG_ASSERT(0 && "Unhandled JPEG internal component count detected!");
+    if ( param->comp_count == 3 ) {
+        return GPUJPEG_444_U8_P012;
     }
+    assert(param->comp_count == 4);
+    return param_image->pixel_format == GPUJPEG_PIXFMT_NO_ALPHA ? GPUJPEG_444_U8_P012 : GPUJPEG_4444_U8_P0123;
 }
 
 static void
