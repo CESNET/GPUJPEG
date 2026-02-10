@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025, CESNET
+ * Copyright (c) 2020-2026, CESNET
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,6 +50,7 @@
 #include "../gpujpeg_common_internal.h"
 #include "../../libgpujpeg/gpujpeg_decoder.h" // ddecoder placeholders
 #include "image_delegate.h"
+#include "image_delegate_fpnge.h"
 #include "pam.h"
 #include "y4m.h"
 
@@ -697,9 +698,12 @@ image_probe_delegate_t gpujpeg_get_image_probe_delegate(enum gpujpeg_image_file_
 image_save_delegate_t gpujpeg_get_image_save_delegate(enum gpujpeg_image_file_format format)
 {
     switch (format) {
+    case GPUJPEG_IMAGE_FILE_PNG:
+#ifdef HAVE_FPNGE
+        return fpnge_save_delegate;
+#endif
     case GPUJPEG_IMAGE_FILE_BMP:
     case GPUJPEG_IMAGE_FILE_GIF:
-    case GPUJPEG_IMAGE_FILE_PNG:
     case GPUJPEG_IMAGE_FILE_TGA:
         return stbi_save_delegate;
     case GPUJPEG_IMAGE_FILE_PAM:

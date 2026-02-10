@@ -440,7 +440,8 @@ License
 - This software contains source code provided by NVIDIA Corporation.
 - This software source code is based on SiGenGPU \[[3]\].
 - Thanks [notings/stb](https://github.com/nothings/stb) (BMP+TGA image
-support, public domain).
+support, public domain) and [fpnge](https://github.com/animetosho/fpnge)
+(PNG encoder, Apache license, optional)
 
 References
 ----------
