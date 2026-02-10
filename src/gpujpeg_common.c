@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -419,7 +419,7 @@ gpujpeg_image_get_file_format(const char* filename)
         { "jfif", GPUJPEG_IMAGE_FILE_JPEG},
         { "bmp",  GPUJPEG_IMAGE_FILE_BMP},
         { "gif",  GPUJPEG_IMAGE_FILE_GIF},
-        { "png",  GPUJPEG_IMAGE_FILE_BMP},
+        { "png",  GPUJPEG_IMAGE_FILE_PNG},
         { "tga",  GPUJPEG_IMAGE_FILE_TGA},
         //{ "pbm",  GPUJPEG_IMAGE_FILE_PNM},
         { "pnm",  GPUJPEG_IMAGE_FILE_PNM},
