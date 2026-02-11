@@ -111,7 +111,7 @@ jobs:
       uses: actions/upload-artifact@main
       with:
         name: GPUJPEG CI ${{ matrix.name }}
-        path: GPUJPEG
+        path: ${{ matrix.tar_name }}
 
     - name: Upload Release Build Asset
       if: github.repository == 'CESNET/GPUJPEG' && github.ref == 'refs/heads/master'
