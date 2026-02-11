@@ -82,16 +82,29 @@ jobs:
         sudo ln -sf /usr/bin/gcc-8 /usr/local/cuda/bin/gcc
     - name: Build
       run: |
-        cmake\
-         -DCMAKE_CUDA_ARCHITECTURES=${{ matrix.cuda_arch }}\
+        COMMON_FLAGS="-DCMAKE_CUDA_ARCHITECTURES=${{ matrix.cuda_arch }}\
          -DCMAKE_BUILD_TYPE=Release\
-         -DCMAKE_INSTALL_RPATH='$ORIGIN/../lib' \
-         -DENABLE_FPNGE=ON\
-         -Bbuild .
+         -DCMAKE_INSTALL_RPATH='$ORIGIN/../lib'\
+         -DENABLE_FPNGE=ON"
+        cmake $COMMON_FLAGS -Bbuild .
         cmake --build build --parallel
         ctest -R unittests
         cmake --install build --prefix GPUJPEG
-        tar caf ${{ matrix.tar_name }} GPUJPEG
+        tar_name=${{ matrix.tar_name }}
+        tar_name=${tar_name%.xz}
+        tar cf $tar_name GPUJPEG
+        for v in 3 4; do
+           m=$([ $v -eq 3 ] && echo haswell || echo skylake-avx512)
+           cmake $COMMON_FLAGS\
+           -DCMAKE_C_FLAGS=-march=$m\
+           -DCMAKE_CXX_FLAGS=-march=$m\
+           -DCMAKE_CUDA_FLAGS="-Xcompiler -march=$m"\
+           -Bbuild-v$v .
+          cmake --build build-v$v --parallel
+          cmake --install build-v$v --prefix GPUJPEG-x86-64-v$v
+          tar rf $tar_name GPUJPEG-x86-64-v$v
+        done
+        xz $tar_name
 
     - name: Upload Archive
       if: github.repository != 'CESNET/GPUJPEG' || github.ref != 'refs/heads/master'
