@@ -191,6 +191,9 @@ files are placed) and run `cmake` command:
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=native -Bbuild .
     cmake --build build --config Release
 
+In Linux, you may also consider `-DUSE_NATIVE_CPU_ARCH=ON` for optimized
+CPU code build (`-march=native` added to compiler flags).
+
 In Linux, you can also use **autotools** to create a build recipe for
 the library and the application or a plain old _Makefile.bkp_. However,
 _cmake_ is recommended.
