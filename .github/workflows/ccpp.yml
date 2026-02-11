@@ -82,8 +82,11 @@ jobs:
         sudo ln -sf /usr/bin/gcc-8 /usr/local/cuda/bin/gcc
     - name: Build
       run: |
-        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_RPATH='$ORIGIN/../lib' \
-          -DCMAKE_CUDA_ARCHITECTURES=${{ matrix.cuda_arch }} -Bbuild .
+        cmake\
+         -DCMAKE_CUDA_ARCHITECTURES=${{ matrix.cuda_arch }}\
+         -DCMAKE_BUILD_TYPE=Release\
+         -DCMAKE_INSTALL_RPATH='$ORIGIN/../lib' \
+         -Bbuild .
         cmake --build build --parallel
         ctest -R unittests
         cmake --install build --prefix GPUJPEG
@@ -155,10 +158,16 @@ jobs:
         refreshenv
         $Env:NVCC_PREPEND_FLAGS="-allow-unsupported-compiler -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
         # TODO: figure out if setting CMAKE_SYSTEM_VERSION is needed/best solution
-        cmake.exe -DCMAKE_SYSTEM_VERSION=10.0.18362 -DCMAKE_BUILD_TYPE=Release `
-          -DBUILD_OPENGL=ON -DGLFW_ROOT_DIR='C:\glfw' -DGLFW_USE_STATIC_LIBS=ON `
-          -DGLEW_ROOT='C:\glew' -DGLEW_USE_STATIC_LIBS=ON `
-          -DCMAKE_CUDA_ARCHITECTURES=${{ matrix.cuda_arch }} -Bbuild .
+        cmake.exe `
+         -DBUILD_OPENGL=ON `
+         -DCMAKE_BUILD_TYPE=Release `
+         -DCMAKE_CUDA_ARCHITECTURES=${{ matrix.cuda_arch }} `
+         -DCMAKE_SYSTEM_VERSION=10.0.18362 `
+         -DGLEW_ROOT='C:\glew' `
+         -DGLEW_USE_STATIC_LIBS=ON `
+         -DGLFW_ROOT_DIR='C:\glfw' `
+         -DGLFW_USE_STATIC_LIBS=ON `
+         -Bbuild .
         cmake.exe --build build --config Release --parallel (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
         cmake.exe --install build --prefix GPUJPEG
         cpack.exe --config build/CPackConfig.cmake -GNSIS64
