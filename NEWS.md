@@ -1,3 +1,13 @@
+2026-02-18 - 0.27.12
+----------
+
+- fixed decoding with GPUJPEG_PIXFMT_NO_ALPHA pixfmt (regressions
+in last release)
+- support encoding by [fpnge](https://github.com/animetosho/fpnge)
+for much better PNG encode performance
+- add -DUSE_NATIVE_CPU_ARCH=ON CMake option for -march=native (Linux)
+- [CI] additional Linux builds using x86-64-v3 and x86-64-v4
+
 2026-01-14 - 0.27.11
 ----------
 
