@@ -1549,8 +1549,8 @@ get_native_pixel_format(struct gpujpeg_parameters* param)
 
 static enum gpujpeg_pixel_format
 adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_parameters * param_image) {
-    assert(param_image->pixel_format == GPUJPEG_PIXFMT_AUTODETECT || param_image->pixel_format == GPUJPEG_PIXFMT_STD ||
-           param_image->pixel_format == GPUJPEG_PIXFMT_NATIVE);
+    assert(param_image->pixel_format == GPUJPEG_PIXFMT_AUTODETECT || param_image->pixel_format == GPUJPEG_PIXFMT_NO_ALPHA ||
+           param_image->pixel_format == GPUJPEG_PIXFMT_STD || param_image->pixel_format == GPUJPEG_PIXFMT_NATIVE);
     GPUJPEG_ASSERT(param->comp_count != 2);
 
     if ( param->comp_count == 1 ) {
