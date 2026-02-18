@@ -9,8 +9,8 @@ target_link_libraries(encode gpujpeg)
 add_executable(encode_minimal encode_minimal.c)
 target_link_libraries(encode_minimal gpujpeg)
 
-add_executable(encode_raw encode_raw.c)
-target_link_libraries(encode_raw gpujpeg)
+add_executable(encode_file encode_file.c)
+target_link_libraries(encode_file gpujpeg)
 
 add_executable(decode_minimal decode_minimal.c)
 target_link_libraries(decode_minimal gpujpeg)
