@@ -18,8 +18,8 @@ target_link_libraries(decode_minimal gpujpeg)
 add_executable(decode_to_pnm decode_to_pnm.c)
 target_link_libraries(decode_to_pnm gpujpeg)
 
-add_executable(decode_to_raw_rgb decode_to_raw_rgb.c)
-target_link_libraries(decode_to_raw_rgb gpujpeg)
+add_executable(decode_to_file decode_to_file.c)
+target_link_libraries(decode_to_file gpujpeg)
 
 include(CheckLanguage)
 check_language(CUDA)

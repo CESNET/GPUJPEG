@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -430,7 +430,8 @@ gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* imag
  * @param filaname  Image filename
  * @param image  Image data buffer
  * @param image_size  Image data buffer size
- * @param param_image Image properties (may be NULL)
+ * @param param_image Image properties (may be NULL); must be set if outputting image
+ *                    in a container (PNG, PNM et all.), otherwise just data outputted
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
