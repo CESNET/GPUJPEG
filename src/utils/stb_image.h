@@ -4928,6 +4928,11 @@ static int stbi__compute_transparency(stbi__png *z, stbi_uc tc[3], int out_n)
    return 1;
 }
 
+#if defined __GNUC__ && !defined __clang__
+#pragma GCC diagnostic push
+// won't be used by GPUJPEG anyways
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 static int stbi__compute_transparency16(stbi__png *z, stbi__uint16 tc[3], int out_n)
 {
    stbi__context *s = z->s;
@@ -4952,6 +4957,9 @@ static int stbi__compute_transparency16(stbi__png *z, stbi__uint16 tc[3], int ou
    }
    return 1;
 }
+#if defined __GNUC__ && !defined __clang__
+#pragma GCC diagnostic pop
+#endif
 
 static int stbi__expand_png_palette(stbi__png *a, stbi_uc *palette, int len, int pal_img_n)
 {

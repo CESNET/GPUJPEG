@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2025 CESNET, zájmové sdružení právnických osob
+ * Copyright (c) 2025-2026 CESNET, zájmové sdružení právnických osob
  *
  * All rights reserved.
  *
@@ -295,6 +295,7 @@ gpujpeg_write_ifd(struct gpujpeg_writer* writer, const uint8_t* start, size_t co
             value.uvalue = (uint32_t[]) {end - start};
         }
         const struct exif_tiff_tag_info_t* t = &exif_tiff_tag_info[info->tag];
+        (void) last_tag_id; // suppress unused if assert not used
         assert(t->id >= last_tag_id);
         last_tag_id = t->id;
         write_exif_tag(writer, t->type, t->id, exif_tiff_tag_info[info->tag].count, value, start, &end);
@@ -728,6 +729,7 @@ gpujpeg_exif_parse(uint8_t** image, const uint8_t* image_end, int verbose, struc
     for (int i = 0; i < 5; ++i) {
         exif[i] = read_byte(image);
     }
+    (void) exif; // suppress unused if assert not used
     assert(strncmp((char *) exif, "Exif", sizeof exif) == 0); // otherwise fn shouldn't be called
     read_byte(image); // drop (padding)
 
