@@ -300,6 +300,9 @@ gpujpeg_decoder_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg
 /// @copydoc GPUJPEG_ENC_OPT_CHANNEL_REMAP
 #define GPUJPEG_DEC_OPT_CHANNEL_REMAP "dec_opt_channel_remap"
 
+/// required line padding in bytes
+#define GPUJPEG_DEC_OPT_ALIGNMENT_BYTES_INT "dec_opt_alignment_bytes"
+
 /**
  * sets decoder option
  * @retval GPUJPEG_NOERR  option was sucessfully set

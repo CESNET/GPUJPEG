@@ -1,3 +1,8 @@
+2026-03-19 - 0.27.13
+----------
+
+- add decoder option GPUJPEG_DEC_OPT_ALIGNMENT_BYTES_INT (GH-107)
+
 2026-02-18 - 0.27.12
 ----------
 

@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -502,6 +502,10 @@ gpujpeg_decoder_set_option(struct gpujpeg_decoder* decoder, const char *opt, con
     if ( strcmp(opt, GPUJPEG_DEC_OPT_CHANNEL_REMAP) == 0 ) {
         return gpujpeg_opt_set_channel_remap(&decoder->coder, val, GPUJPEG_DEC_OPT_CHANNEL_REMAP);
     }
+    if ( strcmp(opt, GPUJPEG_DEC_OPT_ALIGNMENT_BYTES_INT) == 0 ) {
+        decoder->req_alignment = atoi(val);
+        return GPUJPEG_NOERR;
+    }
     ERROR_MSG("Invalid decoder option: %s!\n", opt);
     return GPUJPEG_ERROR;
 }
@@ -513,8 +517,10 @@ gpujpeg_decoder_print_options()
            "] - set decoder option (not) to output RLE TGA\n");
     printf("\t" GPUJPEG_DEC_OPT_FLIPPED_BOOL "=[" GPUJPEG_VAL_FALSE "|" GPUJPEG_VAL_TRUE
            "] - vertically flip the output image\n");
-    printf("\t" GPUJPEG_DEC_OPT_CHANNEL_REMAP "=XYZ[W] - input channel mapping, eg. '210F' for GBRX,\n"
+    printf("\t" GPUJPEG_DEC_OPT_CHANNEL_REMAP "=XYZ[W] - ouput channel mapping, eg. '210F' for GBRX,\n"
         "\t\t'210' for GBR; special placeholders 'F' and 'Z' to set a channel to all-ones or all-zeros\n");
+    printf("\t" GPUJPEG_DEC_OPT_ALIGNMENT_BYTES_INT "=<num> - output alignment in bytes,\n"
+        "\t\tshould not be used for gpujpegtool (cannot process)\n");
 }
 
 /* Documented at declaration */

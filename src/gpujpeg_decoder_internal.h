@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -69,6 +69,7 @@ struct gpujpeg_decoder
     enum gpujpeg_color_space req_color_space;
     bool ff_cs_itu601_is_709; ///< if FFmpeg specific COM marker "CS=ITU601" present, interpret the data as
                               ///< limited-range BT.709 not BT.601
+    int req_alignment;        ///< required output alignment in bytes
 
     /// metadata associated with last decoded image
     struct gpujpeg_image_metadata metadata;

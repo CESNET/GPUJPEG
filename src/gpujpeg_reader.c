@@ -1581,9 +1581,15 @@ adjust_pixel_format(struct gpujpeg_parameters * param, struct gpujpeg_image_para
     return param_image->pixel_format == GPUJPEG_PIXFMT_NO_ALPHA ? GPUJPEG_444_U8_P012 : GPUJPEG_4444_U8_P0123;
 }
 
+/**
+ * Adjust the unbound/unset parameters to match JPEG image properties.
+ *
+ * The main reason is to adnust the @ref gpujpeg_parameters and @ref gpujpeg_image_parameters
+ * to be consistend and/or match user requirements.
+ */
 static void
-adjust_format(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image,
-              enum gpujpeg_color_space color_space_internal)
+adjust_params(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters* param_image,
+              enum gpujpeg_color_space color_space_internal, unsigned req_alignment_b)
 {
     static_assert(GPUJPEG_PIXFMT_AUTODETECT < 0, "enum gpujpeg_pixel_format type should be signed");
     if ( param_image->color_space == GPUJPEG_NONE) {
@@ -1601,6 +1607,11 @@ adjust_format(struct gpujpeg_parameters* param, struct gpujpeg_image_parameters*
     }
     if ( param_image->pixel_format <= GPUJPEG_PIXFMT_AUTODETECT ) {
         param_image->pixel_format = adjust_pixel_format(param, param_image);
+    }
+    if (req_alignment_b != 0) {
+        const unsigned linesize_b = gpujpeg_pixel_format_get_unit_size(param_image->pixel_format) * param_image->width;
+        const unsigned aligned_linesize_b = (linesize_b + req_alignment_b - 1) / req_alignment_b * req_alignment_b;
+        param_image->width_padding = (int) (aligned_linesize_b - linesize_b);
     }
 }
 
@@ -1669,7 +1680,8 @@ gpujpeg_reader_read_image(struct gpujpeg_decoder* decoder, uint8_t* image, size_
                                           reader.image_end) != 0 ) {
                 return -1;
             }
-            adjust_format(&reader.param, &reader.param_image, reader.param.color_space_internal);
+            adjust_params(&reader.param, &reader.param_image, reader.param.color_space_internal,
+                          decoder->req_alignment);
             break;
 
         case GPUJPEG_MARKER_DHT:
@@ -1774,7 +1786,7 @@ gpujpeg_reader_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg_
                                           reader.image_end) != 0 ) {
                 return -1;
             }
-            adjust_format(&reader.param, &reader.param_image, reader.param.color_space_internal);
+            adjust_params(&reader.param, &reader.param_image, reader.param.color_space_internal, 0);
             break;
         }
         case GPUJPEG_MARKER_RST0:
