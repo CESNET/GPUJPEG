@@ -946,14 +946,17 @@ gpujpeg_coder_init_image(struct gpujpeg_coder * coder, const struct gpujpeg_para
     // Set data buffer to color components
     uint8_t* d_comp_data = coder->d_data;
     int16_t* d_comp_data_quantized = coder->d_data_quantized;
+    int16_t* comp_data_quantized = coder->data_quantized;
     unsigned int data_quantized_index = 0;
     for ( int comp = 0; comp < coder->param.comp_count; comp++ ) {
         struct gpujpeg_component* component = &coder->component[comp];
         component->d_data = d_comp_data;
         component->d_data_quantized = d_comp_data_quantized;
         component->data_quantized_index = data_quantized_index;
+        component->data_quantized = comp_data_quantized;
         d_comp_data += component->data_width * component->data_height;
         d_comp_data_quantized += component->data_width * component->data_height;
+        comp_data_quantized += component->data_width * component->data_height;
         data_quantized_index += component->data_width * component->data_height;
     }
 
