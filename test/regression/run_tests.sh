@@ -150,6 +150,17 @@ test_random_psnr() {
         done
 }
 
+test_cpu_huffman_reconf_df3788e87_20260320() {
+        test_dir=testdata-test_cpu_huffman_reconf_df3788e87_20260320
+        mkdir $test_dir && cd $test_dir
+        "$GPUJPEG" -r 0 50x50.tst 50.jpg
+        "$GPUJPEG" -r 0 60x60.tst 60.jpg
+        "$GPUJPEG" -d 60.jpg 60.pnm 50.jpg 50.pnm
+        magick_compare 50.jpg 50.pnm
+        cd .. && rm $test_dir/* && rmdir $test_dir
+}
+
+tests="
 test_commit_b620be2
 test_different_sizes
 test_fix_decode_outside_pinned_AND_fix_huff_buf_partially_not_cleared
@@ -159,4 +170,10 @@ test_nonexistent
 test_out_ext_XXX
 test_pam_pnm_y4m
 test_random_psnr
+test_cpu_huffman_reconf_df3788e87_20260320
+"
 
+for n in $tests; do
+        printf "\n\n\nRunning %s...\n" "$n"
+        "$n"
+done

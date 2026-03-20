@@ -14,8 +14,13 @@ magick_compare() {
 
         requested_psnr=${4-$requested_psnr_dfl}
         # shellcheck disable=SC2086 # intentional
-        psnr=$(compare -metric PSNR ${3-} "${1?}" "${2?}" null: 2>&1 |
-                cut -d\  -f1 || true)
+        if output=$(compare -metric PSNR ${3-} "${1?}" "${2?}" null: 2>&1)
+        then :
+        elif [ "$?" -ne 1 ]; then # RC 1 is also ok for IM compare
+                echo "compare ERROR: $output"
+                exit 1
+        fi
+        psnr=$(echo "$output" | cut -d\  -f1)
         echo IM PSNR: "$psnr (required $requested_psnr)"
         # TODO TOREMOVE if not needed (supposing it is IM bug, not feature)
         if expr "$psnr" : '[0-9][0-9.]*$' >/dev/null &&
