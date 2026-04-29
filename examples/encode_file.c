@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+// Copyright (c) 2024-2026 CESNET, zájmové sdružení právnických osob
 /**
  * @file encode_file.c
  *

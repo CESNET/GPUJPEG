@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+// Copyright (c) 2024-2026 CESNET, zájmové sdružení právnických osob
 #include <libgpujpeg/gpujpeg_common.h>
 #include <libgpujpeg/gpujpeg_decoder.h>
 #include <stdbool.h>

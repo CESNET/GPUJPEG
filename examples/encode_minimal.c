@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+// Copyright (c) 2024-2026 CESNET, zájmové sdružení právnických osob
 // Minimal encoding sample.
 #include <assert.h>
 #include <libgpujpeg/gpujpeg_encoder.h>

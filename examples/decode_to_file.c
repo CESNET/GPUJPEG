@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+// Copyright (c) 2024-2026 CESNET, zájmové sdružení právnických osob
 /**
  * @file decode_to_file.c
  *
@@ -64,7 +66,7 @@ decode(const char* input_filename, const char* output_filename, struct decode_da
                 return 1;
         }
 
-        if (output_filename != nullptr) {
+        if (output_filename != NULL) {
                 d->out_filename = strdup(output_filename);
         } else { // create output file name with .rgb extension
             d->out_filename = malloc(strlen(input_filename) + 1);

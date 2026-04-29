@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+// Copyright (c) 2024-2026 CESNET, zájmové sdružení právnických osob
 /**
  * Example demonstrating decoding JPEG to custom CUDA buffer. Decoded image is
  * then copied back to RAM and written to a PNM file.
