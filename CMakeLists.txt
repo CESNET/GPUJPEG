@@ -27,9 +27,16 @@ if (CMAKE_CUDA_ARCHITECTURES MATCHES OFF)
 endif()
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    message(NOTICE "Suggesting setting build type expicitly (eg. "
+    set(MSG
+        "setting build type expicitly (eg. "
         "\"-DCMAKE_BUILD_TYPE=Release\" or \"Debug\") for single-config "
         "generators.")
+    if("$ENV{CI}" STREQUAL "true")
+        message(FATAL_ERROR "In CI, compulsory ${MSG} You can use \"\" for "
+                            "the default.")
+    else()
+        message(NOTICE "Suggesting ${MSG}")
+    endif()
 endif()
 
 cmake_policy(SET CMP0010 NEW) # error on undefined variable
