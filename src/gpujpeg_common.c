@@ -2015,7 +2015,7 @@ gpujpeg_color_space_get_name(enum gpujpeg_color_space color_space)
     case GPUJPEG_YUV:
         return "YUV";
     case GPUJPEG_YCBCR_BT601:
-        return "YCbCr BT.601 (limtted range)";
+        return "YCbCr BT.601 (limitted range)";
     case GPUJPEG_YCBCR_BT601_256LVLS:
         return "YCbCr BT.601 256 Levels (YCbCr JPEG)";
     case GPUJPEG_YCBCR_BT709:
