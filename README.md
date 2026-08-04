@@ -113,6 +113,7 @@ mean value is taken -->
 |          GTX 1060M         |   1.36 ms   |   4.55 ms   |   17.34 ms   |  _(low mem)_   |
 |          GTX 580           |   2.38 ms   |   8.68 ms   |  _(low mem)_ |  _(low mem)_   |
 | AMD Radeon RX 7600 [ZLUDA] |   0.88 ms   |   3.16 ms   |   13.09 ms   |    50.52 ms    |
+<!--|          NVS 4200M         |  14.48 ms   |  56.26 ms   |  _(low mem)_ |  _(low mem)_   |-->
 
 **Note:** First iteration is slower because the initialization takes place and
 lasts about _28.6 ms_ for 8K (_87.1 ms_ for 16K) with RTX 3080 (but the
@@ -147,6 +148,7 @@ taking 99 samples excluding the first one. Command used:
 |          GTX 1060M         |   1.68 ms   |   4.81 ms   |   17.56 ms   |  _(low mem)_   |
 |          GTX 580           |   2.61 ms   |   7.96 ms   | _(low mem)_  |  _(low mem)_   |
 | AMD Radeon RX 7600 [ZLUDA] |   1.00 ms   |   3.02 ms   |   11.25 ms   |    45.06 ms    |
+<!--|          NVS 4200M         |  12.46 ms   |  46.98 ms   | _(low mem)_  |  _(low mem)_   |-->
 
 **Note**: _(low mem)_ above means that the card didn't have sufficient memory to
 encode or decode the picture.
