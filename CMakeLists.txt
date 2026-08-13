@@ -219,7 +219,7 @@ install(TARGETS ${PROJECT_NAME} gpujpeg-bin
         RUNTIME DESTINATION bin)
 
 install(FILES AUTHORS CONTRIBUTING.md COPYING FAQ.md INSTALL NEWS.md README.md
-        DESTINATION doc)
+        DESTINATION share/doc/libgpujpeg)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgpujpeg.pc DESTINATION share/pkgconfig)
 
