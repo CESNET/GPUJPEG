@@ -410,8 +410,10 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
 
         assert(output->data != NULL);
 
+        // subtract width padding if user buffer hasn't allocated padding for the last line (unlikely)
+        size_t data_raw_size = coder->data_raw_size - coder->param_image.width_padding;
         // Copy decompressed image to host memory
-        cudaMemcpy(output->data, coder->d_data_raw, coder->data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+        cudaMemcpy(output->data, coder->d_data_raw, data_raw_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
 
         GPUJPEG_CUSTOM_TIMER_STOP(coder->duration_memory_from, coder->param.perf_stats, coder->stream, return -1);
     }

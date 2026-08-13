@@ -1185,7 +1185,7 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param)
     assert(param->width_padding < 10 * 1000 * 1000); // safety check - 10M chosen arbitrarily
     int bpp = gpujpeg_pixel_format_get_unit_size(param->pixel_format);
     if (bpp != 0) {
-        return ((size_t) param->width + param->width_padding) * param->height * bpp;
+        return (((size_t) param->width * bpp) + param->width_padding) * param->height;
     }
     const int comp_count = gpujpeg_pixel_format_get_comp_count(param->pixel_format);
     switch ( param->pixel_format ) {
