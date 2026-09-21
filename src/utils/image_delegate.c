@@ -349,10 +349,10 @@ tst_usage()
            "\t- c_<CS> - color space\n"
            "\t- p_<PF> - pixel format\n"
            "\tpatterns:\n"
-           "\t- blank[_<val>]   - use blank pattern (or fill with given <val>)\n"
+           "\t- blank[_<val>]   - use blank pattern (or fill with given <val> passed to strtol(.., 0)\n"
            "\t- gradient        - use gradient pattern (default)\n"
            "\t- noise           - use white noise\n"
-           "\t- random[_<seed>] - same as noise, but use deterministic pattern (seed is int)\n"
+           "\t- random[_<seed>] - same as noise, but use deterministic pattern (seed is decimal)\n"
             );
     PRINTF("\nExamples:\n"
            "\t- 1920x1080.tst              - use FullHD image\n"
@@ -390,15 +390,9 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
     assert(ext_dot != NULL && strlen(ext_dot + 1) == 3); // 3 char ext (.tst)
     *ext_dot = '\0';
 
-    char* endptr = "";
-    param_image->width = (int)strtoul(fname, &endptr, 10);
-    if ( *endptr != 'x' ) {
-        tst_usage();
-        return -1;
-    }
-    endptr += 1;
-    param_image->height = (int)strtoul(endptr, &endptr, 10);
-    if (param_image->height == 0) {
+    int bytes = 0;
+    int items = sscanf(fname, "%dx%d%n", &param_image->width, &param_image->height, &bytes);
+    if ( items != 2 || param_image->width <= 0 || param_image->height <= 0 ) {
         tst_usage();
         return -1;
     }
@@ -408,47 +402,53 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
     param_image->pixel_format = GPUJPEG_444_U8_P012;
     tst_params->pattern  = TST_GRADIENT;
 
-    char *item = NULL;
-    char *saveptr = NULL;
-    while ((item = strtok_s(endptr, ".", &saveptr)) != 0) {
-        const char* value = strchr(item, '_') + 1;
-        if ( strstr(item, "c_") == item ) {
+    char* format = fname + bytes;
+    char* item = NULL;
+    char* saveptr = NULL;
+    while ( (item = strtok_s(format, ".", &saveptr)) != 0 ) {
+        format = NULL;
+        const char* key = item;
+        const char* value = "";
+        if ( strchr(item, '_') ) {
+            value = strchr(item, '_') + 1;
+            *strchr(item, '_') = '\0';
+        }
+        if ( !strcmp(key, "c") ) {
             param_image->color_space = gpujpeg_color_space_by_name(value);
             if ( param_image->color_space == GPUJPEG_NONE ) {
                 ERROR_MSG("[tst] Unknown color space: %s\n", value);
                 return -1;
             }
         }
-        else if ( strstr(item, "p_") == item ) {
+        else if ( !strcmp(key, "p") ) {
             param_image->pixel_format = gpujpeg_pixel_format_by_name(value);
             if ( param_image->pixel_format == GPUJPEG_PIXFMT_NONE ) {
                 ERROR_MSG("[tst] Unknown pixel format: %s\n", value);
                 return -1;
             }
         }
-        else if ( strcmp(item, "noise") == 0) {
+        else if ( !strcmp(key, "noise") ) {
             tst_params->pattern = TST_NOISE;
         }
-        else if ( strstr(item, "random") == item ) {
+        else if ( !strcmp(key, "random") ) {
             tst_params->pattern = TST_RANDOM;
-            if ( strstr(item, "random_") == item ) {
-                tst_params->random_seed = atoi(strchr(item, '_') + 1);
+            if ( strlen(value) > 0 ) {
+                tst_params->random_seed = atoi(value);
             }
         }
-        else if ( strstr(item, "blank") == item ) {
+        else if ( !strcmp(key, "blank") ) {
             tst_params->pattern = TST_BLANK;
-            if ( strchr(item, '_') != NULL ) {
-                tst_params->blank_val = strtol(strchr(item, '_') + 1, NULL, 0);
+            if ( strlen(value) > 0 ) {
+                tst_params->blank_val = strtol(value, NULL, 0);
             }
         }
-        else if ( strcmp(item, "gradient") == 0) {
+        else if ( !strcmp(key, "gradient") ) {
             tst_params->pattern = TST_GRADIENT;
         }
         else {
             ERROR_MSG("[tst] unknown test image option: %s!\n", item);
             return -1;
         }
-        endptr = NULL;
     }
 
     return 0;
