@@ -349,10 +349,10 @@ tst_usage()
            "\t- c_<CS> - color space\n"
            "\t- p_<PF> - pixel format\n"
            "\tpatterns:\n"
-           "\t- blank[_<val>]   - use blank pattern (or fill with given <val> passed to strtol(.., 0)\n"
-           "\t- gradient        - use gradient pattern (default)\n"
-           "\t- noise           - use white noise\n"
-           "\t- random[_<seed>] - same as noise, but use deterministic pattern (seed is decimal)\n"
+           "\t- blank[_<val>]       - use blank pattern (or fill with given <val> passed to strtol(.., 0)\n"
+           "\t- gradient[_0xRRGGBB] - use gradient pattern (default)\n"
+           "\t- noise               - use white noise\n"
+           "\t- random[_<seed>]     - same as noise, but use deterministic pattern (seed is decimal)\n"
             );
     PRINTF("\nExamples:\n"
            "\t- 1920x1080.tst              - use FullHD image\n"
@@ -444,6 +444,10 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
         }
         else if ( !strcmp(key, "gradient") ) {
             tst_params->pattern = TST_GRADIENT;
+            tst_params->blank_val = 0xFFFFFF;
+            if ( strlen(value) > 0 ) {
+                tst_params->blank_val = strtol(value, NULL, 0);
+            }
         }
         else {
             ERROR_MSG("[tst] unknown test image option: %s!\n", item);
@@ -598,7 +602,13 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
             param_oneline.height = 1;
             const size_t linesize = gpujpeg_image_calculate_size(&param_oneline);
             for ( int i = 0; i < param_image.height; ++i ) {
-                memset((char*)*image_data + i * linesize, i * 255 / param_image.height, linesize);
+                unsigned char rgb[3];
+                rgb[0] = i * (tst_params.blank_val >> 16) / param_image.height;
+                rgb[1] = i * ((tst_params.blank_val >> 8) & 0xff) / param_image.height;
+                rgb[2] = i * (tst_params.blank_val & 0xff) / param_image.height;
+                for ( size_t j = 0; j < linesize - 2; j += 3 ) {
+                    memcpy((char*)*image_data + (i * linesize) + j, rgb, 3);
+                }
             }
             break;
         }
