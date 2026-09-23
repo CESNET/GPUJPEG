@@ -36,6 +36,7 @@
 #include <windows.h>
 #define PATH_MAX MAX_PATH
 #define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 #else
 #include <limits.h>
 #include <strings.h>           // for strcasecmp
@@ -349,10 +350,10 @@ tst_usage()
            "\t- c_<CS> - color space\n"
            "\t- p_<PF> - pixel format\n"
            "\tpatterns:\n"
-           "\t- blank[_<val>]       - use blank pattern (or fill with given <val> passed to strtol(.., 0)\n"
-           "\t- gradient[_0xRRGGBB] - use gradient pattern (default)\n"
-           "\t- noise               - use white noise\n"
-           "\t- random[_<seed>]     - same as noise, but use deterministic pattern (seed is decimal)\n"
+           "\t- blank[_<val>|_0xBBGGRR]    - use blank pattern (either one or 3 values)\n"
+           "\t- gradient[_<val>|_0xBBGGRR] - use gradient pattern (default)\n"
+           "\t- noise                      - use white noise\n"
+           "\t- random[_<seed>]            - same as noise, but use deterministic pattern (seed is decimal)\n"
             );
     PRINTF("\nExamples:\n"
            "\t- 1920x1080.tst              - use FullHD image\n"
@@ -360,6 +361,8 @@ tst_usage()
            "\t- 1920x1080.p_u8.tst         - FHD grayscale (u8 pixel format)\n"
            "\t- 1920x1080.noise.tst        - FHD RGB noise\n"
            "\t- 1920x1080.c_ycbcr-jpeg.p_422-u8-p1020.tst - YCbCr 4:2:2\n");
+    PRINTF("\n");
+    PRINTF("Note: 3 color values for patterns blank/gradient work just with RGB.\n");
     PRINTF("\n");
 }
 
@@ -375,7 +378,7 @@ struct tst_image_parameters
 {
     enum tst_pattern pattern;
 
-    long blank_val;
+    unsigned color; // 01BBGGRR or 000000gg
     int random_seed;
 };
 
@@ -438,20 +441,21 @@ tst_image_parse_filename(const char* filename, struct gpujpeg_image_parameters* 
         }
         else if ( !strcmp(key, "blank") ) {
             tst_params->pattern = TST_BLANK;
-            if ( strlen(value) > 0 ) {
-                tst_params->blank_val = strtol(value, NULL, 0);
-            }
         }
         else if ( !strcmp(key, "gradient") ) {
             tst_params->pattern = TST_GRADIENT;
-            tst_params->blank_val = 0xFFFFFF;
-            if ( strlen(value) > 0 ) {
-                tst_params->blank_val = strtol(value, NULL, 0);
-            }
+            tst_params->color = 0xFF;
         }
         else {
             ERROR_MSG("[tst] unknown test image option: %s!\n", item);
             return -1;
+        }
+
+        if ( (!strcmp(key, "blank") || !strcmp(key, "gradient")) && strlen(value) > 0 ) {
+            tst_params->color = strtol(value, NULL, 0);
+            if ( strncasecmp(value, "0x", 2) == 0 ) {
+                tst_params->color |= 1 << 24;
+            }
         }
     }
 
@@ -597,17 +601,23 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
 
     // fill some data
     switch (tst_params.pattern) {
+        case TST_BLANK:
         case TST_GRADIENT: {
             struct gpujpeg_image_parameters param_oneline = param_image;
             param_oneline.height = 1;
             const size_t linesize = gpujpeg_image_calculate_size(&param_oneline);
+            int fill_count =
+                tst_params.color > 255 && param_image.pixel_format == GPUJPEG_444_U8_P012 ? 3 : 1;
             for ( int i = 0; i < param_image.height; ++i ) {
-                unsigned char rgb[3];
-                rgb[0] = i * (tst_params.blank_val >> 16) / param_image.height;
-                rgb[1] = i * ((tst_params.blank_val >> 8) & 0xff) / param_image.height;
-                rgb[2] = i * (tst_params.blank_val & 0xff) / param_image.height;
-                for ( size_t j = 0; j < linesize - 2; j += 3 ) {
-                    memcpy((char*)*image_data + (i * linesize) + j, rgb, 3);
+                unsigned char fill[3];
+                for ( int ch = 0; ch < fill_count; ++ch ) {
+                    fill[ch] = (tst_params.color >> (ch * 8) & 0xff);
+                    if (tst_params.pattern == TST_GRADIENT) {
+                        fill[ch] = i * fill[ch] / param_image.height;
+                    }
+                }
+                for ( size_t j = 0; j < linesize; j += fill_count ) {
+                    memcpy((char*)*image_data + (i * linesize) + j, fill, fill_count);
                 }
             }
             break;
@@ -630,11 +640,6 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
         }
         case TST_RANDOM: {
             gen_pseudorandom((unsigned char*)*image_data, *image_size, tst_params.random_seed);
-            break;
-        }
-        case TST_BLANK: {
-            assert(tst_params.blank_val >= 0 && tst_params.blank_val <= 255);
-            memset(*image_data, (int)tst_params.blank_val, *image_size);
             break;
         }
     }
