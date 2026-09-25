@@ -40,11 +40,14 @@ static void subsampling_name_test() {
 static void encode_gpu_mem_as_cpu() {
         printf("testing %s: ", __func__);
 
-        struct gpujpeg_encoder *encoder = gpujpeg_encoder_create(0);
-        if (encoder == NULL) { // do not fail here if we do not have CUDA capable device - just skip this test
+        if (getenv("CI")) {
+                // no CUDA device in CI
                 fprintf(stderr, "--\n");
                 return;
         }
+
+        struct gpujpeg_encoder *encoder = gpujpeg_encoder_create(0);
+        assert(encoder);
 
         struct gpujpeg_parameters param;
         gpujpeg_set_default_parameters(&param);

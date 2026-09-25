@@ -51,7 +51,12 @@ test_gh_95();
 void
 test_gh_95()
 {
-    printf("testing stat struct validity on CPU/GPU interleave: ");
+    fprintf(stderr, "testing stat struct validity on CPU/GPU interleave: ");
+    if (getenv("CI")) {
+            // no CUDA device in CI
+            fprintf(stderr, "--\n");
+            return;
+    }
     struct gpujpeg_encoder *encoder = gpujpeg_encoder_create(0);
     assert(encoder != NULL);
     struct gpujpeg_parameters param = gpujpeg_default_parameters();
