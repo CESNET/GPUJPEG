@@ -39,8 +39,10 @@ static void subsampling_name_test() {
  */
 static void encode_gpu_mem_as_cpu() {
         printf("testing %s: ", __func__);
+
         struct gpujpeg_encoder *encoder = gpujpeg_encoder_create(0);
         if (encoder == NULL) { // do not fail here if we do not have CUDA capable device - just skip this test
+                fprintf(stderr, "--\n");
                 return;
         }
 
