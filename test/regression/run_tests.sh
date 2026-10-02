@@ -66,8 +66,8 @@ test_gray_image() {
         filename=gray-sample.jpg
 
         if [ ! -f "$filename" ]; then
-                url="https://github.com/haraldk/TwelveMonkeys/blob/master/\
-imageio/imageio-jpeg/src/test/resources/jpeg/$filename?raw=true"
+                # https://github.com/haraldk/TwelveMonkeys/blob/master/imageio/imageio-jpeg/src/test/resources/jpeg/gray-sample.jpg
+                url="https://owncloud.cesnet.cz/index.php/s/7cSgPWKhv8tzoU9/download"
                 if ! curl -L "$url" -o "$filename"; then
                         echo "Cannot download the image $filename from $url"
                         return
