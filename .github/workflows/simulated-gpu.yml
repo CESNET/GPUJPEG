@@ -1,0 +1,44 @@
+name: Tests on a simulated GPU
+
+# GitHub's runners have no GPU, so ccpp.yml builds GPUJPEG but cannot run
+# anything that encodes or decodes. PantheonSim simulates an NVIDIA T4 on the
+# runner's CPU, so the unit tests and the regression suite run here, on every
+# push and pull request. It checks results, not speed; a real GPU is still the
+# final word.
+on:
+  push:
+    branches:
+      - devel
+      - master
+  pull_request:
+
+# The simulated-GPU job reads the repository and nothing else. The
+# simulator's action uses no token or secrets, and installs packages only from
+# Ubuntu and NVIDIA.
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@main
+    - name: Simulated GPU (NVIDIA T4) and Ubuntu's CUDA toolkit
+      uses: pantheongpu/setup-pantheonsim@052a0ac31bf6ec72a471d51aae29b7cbd090c6bf # v0.1.1
+      with:
+        gpu: nvidia/t4
+        # Link against the toolkit's own libcudart: libgpujpeg references its
+        # OpenGL interop calls even when OpenGL is off. Only `vgpu run` below
+        # reaches the simulated GPU.
+        library-path: false
+    - name: Tools the regression suite compares images with
+      run: sudo apt-get install -y imagemagick ffmpeg
+    # The simulator stands in for the CUDA runtime at run time, so the library
+    # links the shared one; 75 carries PTX for the simulated T4.
+    - name: Build
+      run: |
+        cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=75 \
+          -DCMAKE_CUDA_RUNTIME_LIBRARY=Shared -DENABLE_FPNGE=ON
+        cmake --build build --parallel
+    - name: Unit and regression tests on the simulated GPU
+      run: vgpu run ctest --test-dir build -R 'unittests|regression' --output-on-failure
