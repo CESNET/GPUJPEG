@@ -1860,11 +1860,11 @@ gpujpeg_opengl_texture_map(struct gpujpeg_opengl_texture* texture, size_t* data_
 void
 gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
 {
+#ifdef GPUJPEG_USE_OPENGL
     // Unmap pbo
     cudaGraphicsUnmapResources(1, &texture->texture_pbo_resource, 0);
     gpujpeg_cuda_check_error("Encoder unmap texture PBO resource", {});
 
-#ifdef GPUJPEG_USE_OPENGL
     if ( texture->texture_type == GPUJPEG_OPENGL_TEXTURE_WRITE ) {
         assert(texture->texture_pbo_type == GL_PIXEL_UNPACK_BUFFER);
 
@@ -1882,6 +1882,7 @@ gpujpeg_opengl_texture_unmap(struct gpujpeg_opengl_texture* texture)
     if ( texture->texture_callback_detach_opengl != NULL )
         texture->texture_callback_detach_opengl(texture->texture_callback_param);
 #else
+    (void) texture;
     GPUJPEG_MISSING_OPENGL(return);
 #endif
 }
