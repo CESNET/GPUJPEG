@@ -10,6 +10,7 @@ on:
     branches:
       - devel
       - master
+      - run_tests
   pull_request:
 
 # The simulated-GPU job reads the repository and nothing else. The
@@ -27,10 +28,6 @@ jobs:
       uses: pantheongpu/setup-pantheonsim@052a0ac31bf6ec72a471d51aae29b7cbd090c6bf # v0.1.1
       with:
         gpu: nvidia/t4
-        # Link against the toolkit's own libcudart: libgpujpeg references its
-        # OpenGL interop calls even when OpenGL is off. Only `vgpu run` below
-        # reaches the simulated GPU.
-        library-path: false
     - name: Tools the regression suite compares images with
       run: sudo apt-get install -y imagemagick ffmpeg
     # The simulator stands in for the CUDA runtime at run time, so the library
@@ -41,4 +38,4 @@ jobs:
           -DCMAKE_CUDA_RUNTIME_LIBRARY=Shared -DENABLE_FPNGE=ON
         cmake --build build --parallel
     - name: Unit and regression tests on the simulated GPU
-      run: vgpu run ctest --test-dir build -R 'unittests|regression' --output-on-failure
+      run: env -u CI ctest --test-dir build --output-on-failure
