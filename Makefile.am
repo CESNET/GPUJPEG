@@ -34,6 +34,7 @@ libgpujpeg_SRC = src/gpujpeg_common.c \
 	     	src/gpujpeg_dct_cpu.c \
 	     	src/gpujpeg_decoder.c \
 	     	src/gpujpeg_encoder.c \
+	     	src/gpujpeg_exif.c \
 	     	src/gpujpeg_huffman_cpu_decoder.c \
 	     	src/gpujpeg_huffman_cpu_encoder.c \
 	     	src/gpujpeg_reader.c \
