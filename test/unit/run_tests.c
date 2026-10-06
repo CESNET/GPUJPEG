@@ -40,8 +40,7 @@ static void subsampling_name_test() {
 static void encode_gpu_mem_as_cpu() {
         printf("testing %s: ", __func__);
 
-        if (getenv("CI")) {
-                // no CUDA device in CI
+        if (getenv("NO_CUDA_DEV")) {
                 fprintf(stderr, "--\n");
                 return;
         }

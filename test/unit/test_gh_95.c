@@ -52,8 +52,7 @@ void
 test_gh_95()
 {
     fprintf(stderr, "testing stat struct validity on CPU/GPU interleave: ");
-    if (getenv("CI")) {
-            // no CUDA device in CI
+    if (getenv("NO_CUDA_DEV")) {
             fprintf(stderr, "--\n");
             return;
     }

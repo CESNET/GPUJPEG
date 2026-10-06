@@ -38,4 +38,4 @@ jobs:
           -DCMAKE_CUDA_RUNTIME_LIBRARY=Shared -DENABLE_FPNGE=ON
         cmake --build build --parallel
     - name: Unit and regression tests on the simulated GPU
-      run: env -u CI ctest --test-dir build --output-on-failure
+      run: ctest --test-dir build --output-on-failure
