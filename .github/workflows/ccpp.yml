@@ -209,9 +209,7 @@ jobs:
       run: |
         fname="${{ matrix.build_filename }}.zip"
         mv GPUJPEG.zip "./$fname"
-        pacman -Sy --noconfirm mingw-w64-x86_64-jq
-        PATH=/mingw64/bin:$PATH
-        echo 'PATH=/mingw64/bin:$PATH' >> ~/.bash_profile # store the path also for next step
+        pacman -Sy --noconfirm curl jq
         .github/scripts/replace-asset.sh continuous "$fname"\
          application/zip "${{ matrix.name_prefix }} build"
       shell: C:\shells\msys2bash.cmd {0}
