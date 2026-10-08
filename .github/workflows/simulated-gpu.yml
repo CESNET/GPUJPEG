@@ -11,6 +11,16 @@ on:
       - devel
       - master
       - run_tests
+    paths:
+      - '.github/workflows/simulated-gpu.yml'
+      - '**.c'
+      - '**.cpp'
+      - '**.cu'
+      - '**.h'
+      - '**.hpp'
+      - '**.m'
+      - '**.mm'
+      - 'CMakeLists.txt'
   pull_request:
 
 # The simulated-GPU job reads the repository and nothing else. The
