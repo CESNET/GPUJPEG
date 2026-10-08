@@ -3,6 +3,7 @@ gpujpeg
 .clang-tidy
 .envrc
 .libs
+.mdlint.toml
 src/*.o
 src/*.lo
 *.rgb
