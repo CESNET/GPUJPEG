@@ -9,7 +9,7 @@ GPUJPEG
 **JPEG** encoder and decoder library and console application for **NVIDIA GPUs**
 for high-performance image encoding and decoding. The software runs also on
 **AMD GPUs** using [ZLUDA](https://github.com/vosen/ZLUDA) (see
-[ZLUDA.md](ZLUDA.md)).
+[doc/ZLUDA.md](doc/ZLUDA.md)).
 
 This documents provides an introduction to the library and how to use it. You
 can also look to [FAQ.md](FAQ.md) for _performance tuning_

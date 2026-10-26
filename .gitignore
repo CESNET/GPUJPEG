@@ -23,7 +23,8 @@ config.sub
 cscope.out
 depcomp
 /examples/build*
-/doc/
+/doc/html
+/doc/latex
 install-sh
 libgpujpeg.pc
 libtool
