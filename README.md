@@ -456,8 +456,8 @@ application** you need:
    - _GLFW_ or _GLX_ (Linux only) for context creation
    - _GLUT_ for OpenGL tests
 
-License
--------
+License and Acknowledgments
+---------------------------
 
 - See file [COPYING](COPYING).
 - This software contains source code provided by NVIDIA Corporation.
@@ -467,6 +467,9 @@ License
 [stb_image_writer](https://github.com/nothings/stb/blob/master/stb_image_write.h)
 (BMP+TGA image support, public domain) and [fpnge](https://github.com/animetosho/fpnge)
 (PNG encoder, Apache license, optional)
+- Thanks [PantheonSim](https://pantheonsim.com/ci/) for the [workflow for
+on-GPU CI testing
+](https://github.com/CESNET/GPUJPEG/actions/workflows/simulated-gpu.yml)
 
 References
 ----------
