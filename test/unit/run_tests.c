@@ -84,6 +84,10 @@ static void encode_gpu_mem_as_cpu() {
 void
 test_gh_95();
 
+// defined in test_chroma_filter.c
+void
+test_chroma_filter();
+
 static char*
 test_format_number_with_delim() {
         struct {
@@ -127,6 +131,7 @@ int main() {
         encode_gpu_mem_as_cpu();
         test_gh_95();
         test_format_number_with_delim();
+        test_chroma_filter();
         printf("PASSED\n");
 }
 
