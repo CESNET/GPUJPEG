@@ -52,6 +52,8 @@ struct gpujpeg_preprocessor_data_component
 {
     uint8_t* d_data;
     int data_width;
+    int width;  ///< component width without MCU padding (set for decoder)
+    int height; ///< component height without MCU padding (set for decoder)
     struct gpujpeg_component_sampling_factor sampling_factor;
 };
 

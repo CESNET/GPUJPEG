@@ -112,6 +112,31 @@ struct gpujpeg_preprocessor_comp_to_raw_load
     }
 };
 
+/**
+ * Interpolate a 2x subsampled component at full-resolution pixel (x, y) like libjpeg "fancy" upsampling (triangle
+ * filter, weights 3:1 per subsampled axis); neighbours are clamped to the component edges.
+ */
+template <int fh, int fv>
+static __device__ uint8_t
+gpujpeg_postprocessor_chroma_interpolate(const struct gpujpeg_preprocessor_data_component& comp, int x, int y)
+{
+    const uint8_t* d = comp.d_data;
+    const int pitch = comp.data_width;
+    const int cx = x / fh;
+    const int cy = y / fv;
+    const int nx = fh == 2 ? ((x & 1) ? min(cx + 1, comp.width - 1) : max(cx - 1, 0)) : cx;
+    const int ny = fv == 2 ? ((y & 1) ? min(cy + 1, comp.height - 1) : max(cy - 1, 0)) : cy;
+    if ( fh == 2 && fv == 2 ) {
+        const int this_col = 3 * d[cy * pitch + cx] + d[ny * pitch + cx];
+        const int next_col = 3 * d[cy * pitch + nx] + d[ny * pitch + nx];
+        return (3 * this_col + next_col + ((x & 1) ? 7 : 8)) >> 4;
+    }
+    if ( fh == 2 ) {
+        return (3 * d[cy * pitch + cx] + d[cy * pitch + nx] + ((x & 1) ? 2 : 1)) >> 2;
+    }
+    return (3 * d[cy * pitch + cx] + d[ny * pitch + cx] + ((y & 1) ? 2 : 1)) >> 2;
+}
+
 /// set alpha that may not be included in input data but may be read by the CS conv
 template <enum gpujpeg_pixel_format pixel_format>
 struct pre_load {
@@ -206,6 +231,20 @@ gpujpeg_preprocessor_comp_to_raw_kernel(struct gpujpeg_preprocessor_data data, u
     pre_load<pixel_format>::perform(r);
     gpujpeg_preprocessor_comp_to_raw_load<s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v, s_comp4_samp_factor_h, s_comp4_samp_factor_v>::perform(r, image_position_x, image_position_y, data);
     post_load<color_space_internal == GPUJPEG_RGB, s_comp2_samp_factor_h>::perform(r, data);
+
+    // Interpolate 2x subsampled chroma (Cb and Cr with equal sampling) for full-resolution output, precompiled
+    // kernels only
+    constexpr bool full_chroma_output = pixel_format == GPUJPEG_444_U8_P012 || pixel_format == GPUJPEG_4444_U8_P0123 ||
+                                        pixel_format == GPUJPEG_444_U8_P0P1P2;
+    constexpr bool interpolate =
+        s_comp2_samp_factor_h <= 2 && s_comp2_samp_factor_v <= 2 && s_comp2_samp_factor_h * s_comp2_samp_factor_v > 1 &&
+        s_comp2_samp_factor_h == s_comp3_samp_factor_h && s_comp2_samp_factor_v == s_comp3_samp_factor_v;
+    if ( full_chroma_output && interpolate && data.chroma_filter ) {
+        constexpr int fh = interpolate ? s_comp2_samp_factor_h : 1;
+        constexpr int fv = interpolate ? s_comp2_samp_factor_v : 1;
+        r.y = gpujpeg_postprocessor_chroma_interpolate<fh, fv>(data.comp[1], image_position_x, image_position_y);
+        r.z = gpujpeg_postprocessor_chroma_interpolate<fh, fv>(data.comp[2], image_position_x, image_position_y);
+    }
 
     // Color transform
     gpujpeg_color_transform<color_space_internal, color_space>::perform(r);
@@ -359,6 +398,8 @@ gpujpeg_postprocessor_decoder_init(struct gpujpeg_coder* coder)
         data->comp[comp].sampling_factor.horizontal = coder->sampling_factor.horizontal / coder->component[comp].sampling_factor.horizontal;
         data->comp[comp].sampling_factor.vertical = coder->sampling_factor.vertical / coder->component[comp].sampling_factor.vertical;
         data->comp[comp].data_width = coder->component[comp].data_width;
+        data->comp[comp].width = coder->component[comp].width;
+        data->comp[comp].height = coder->component[comp].height;
     }
 
     if (!gpujpeg_pixel_format_is_interleaved(coder->param_image.pixel_format) &&
@@ -481,6 +522,7 @@ gpujpeg_postprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream)
     }
 
     // Run kernel
+    coder->preprocessor.data.chroma_filter = coder->preprocessor.chroma_filter;
     kernel<<<grid, threads, 0, stream>>>(
         coder->preprocessor.data,
         coder->d_data_raw,
