@@ -373,7 +373,7 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
  * @ref gpujpeg_parameters members verbose, perf_stats and **quality**
  * ignored by the comparison
  */
-static bool
+bool
 gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpujpeg_parameters *p2)
 {
     if ( p1->comp_count != p2->comp_count ||
