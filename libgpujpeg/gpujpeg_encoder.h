@@ -225,6 +225,9 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
 
 /// input image is vertically flipped (bottom-up): values @ref GPUJPEG_VAL_TRUE or @ref GPUJPEG_VAL_FALSE
 #define GPUJPEG_ENC_OPT_FLIPPED_BOOL "enc_opt_flipped"
+/// average subsampled chroma over its sampling window (centered as JFIF assumes) instead of point sampling; values
+/// @ref GPUJPEG_VAL_TRUE (default) or @ref GPUJPEG_VAL_FALSE
+#define GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL "enc_opt_chroma_filter"
 /// custom exif tag in format <key>:TYPE=<value>
 #define GPUJPEG_ENC_OPT_EXIF_TAG "enc_exif_tag"
 /// set image orientation - syntax "<name>=<deg>[-]" or "help"; only if header supports (Exif, SPIFF)
