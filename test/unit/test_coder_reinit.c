@@ -97,17 +97,14 @@ test_coder_reinit()
         const struct reinit_step* step = &steps[i];
         if ( !step->reuse_jpeg ) {
             struct gpujpeg_encoder* fresh = gpujpeg_encoder_create(0);
-            uint8_t* out = NULL;
-            size_t out_len = 0;
-            reinit_check(reinit_encode(fresh, image, step, &out, &out_len) == 0, i, "encoder (fresh failed)");
-            free(jpeg);
-            jpeg = malloc(out_len);
-            memcpy(jpeg, out, out_len);
-            jpeg_len = out_len;
-            gpujpeg_encoder_destroy(fresh);
-            reinit_check(reinit_encode(encoder, image, step, &out, &out_len) == 0 && out_len == jpeg_len &&
-                             memcmp(out, jpeg, jpeg_len) == 0,
+            uint8_t* fresh_jpeg = NULL;
+            size_t fresh_len = 0;
+            reinit_check(reinit_encode(fresh, image, step, &fresh_jpeg, &fresh_len) == 0, i, "encoder (fresh failed)");
+            // jpeg (owned by the reused encoder) stays valid until its next encode
+            reinit_check(reinit_encode(encoder, image, step, &jpeg, &jpeg_len) == 0 && jpeg_len == fresh_len &&
+                             memcmp(jpeg, fresh_jpeg, jpeg_len) == 0,
                          i, "encoder");
+            gpujpeg_encoder_destroy(fresh);
         }
         struct gpujpeg_decoder* fresh = reinit_decoder_create();
         struct gpujpeg_decoder_output fresh_out;
@@ -118,7 +115,6 @@ test_coder_reinit()
                      i, "decoder");
         gpujpeg_decoder_destroy(fresh);
     }
-    free(jpeg);
     gpujpeg_decoder_destroy(decoder);
     gpujpeg_encoder_destroy(encoder);
     printf("Ok\n");
