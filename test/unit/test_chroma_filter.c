@@ -67,10 +67,9 @@ chroma_ref_up(const uint8_t* p, const struct gpujpeg_component* comp, int x, int
     }
     const int nx = h == 2 ? (x % 2 ? MIN(cx + 1, comp->width - 1) : (cx > 0 ? cx - 1 : 0)) : cx;
     const int ny = v == 2 ? (y % 2 ? MIN(cy + 1, comp->height - 1) : (cy > 0 ? cy - 1 : 0)) : cy;
-    if ( h == 2 && v == 2 ) {
-        int this_col = 3 * p[cy * pitch + cx] + p[ny * pitch + cx];
-        int next_col = 3 * p[cy * pitch + nx] + p[ny * pitch + nx];
-        return (3 * this_col + next_col + (x % 2 ? 7 : 8)) >> 4;
+    if ( h == 2 && v == 2 ) { // weights 9 (nearest), 3, 3 and 1 (diagonal)
+        return (9 * p[cy * pitch + cx] + 3 * p[cy * pitch + nx] + 3 * p[ny * pitch + cx] + p[ny * pitch + nx] +
+                (x % 2 ? 7 : 8)) >> 4;
     }
     if ( h == 2 ) {
         return (3 * p[cy * pitch + cx] + p[cy * pitch + nx] + (x % 2 ? 2 : 1)) >> 2;
@@ -79,13 +78,17 @@ chroma_ref_up(const uint8_t* p, const struct gpujpeg_component* comp, int x, int
 }
 
 /// @param interpolated whether the decoder interpolates this subsampling (precompiled 4:2:0, 4:2:2, 4:4:0 kernels)
+/// @param filter       option value to set, -1 to keep the default (on)
 static void
 chroma_case(struct gpujpeg_encoder* encoder, struct gpujpeg_decoder* decoder, const uint8_t* in,
-            gpujpeg_sampling_factor_t subsampling, bool interpolated, bool filter)
+            gpujpeg_sampling_factor_t subsampling, bool interpolated, int filter)
 {
-    const char* val = filter ? GPUJPEG_VAL_TRUE : GPUJPEG_VAL_FALSE;
-    CHROMA_CHECK(gpujpeg_encoder_set_option(encoder, GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL, val) == GPUJPEG_NOERR);
-    CHROMA_CHECK(gpujpeg_decoder_set_option(decoder, GPUJPEG_DEC_OPT_CHROMA_FILTER_BOOL, val) == GPUJPEG_NOERR);
+    if ( filter >= 0 ) {
+        const char* val = filter ? GPUJPEG_VAL_TRUE : GPUJPEG_VAL_FALSE;
+        CHROMA_CHECK(gpujpeg_encoder_set_option(encoder, GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL, val) == GPUJPEG_NOERR);
+        CHROMA_CHECK(gpujpeg_decoder_set_option(decoder, GPUJPEG_DEC_OPT_CHROMA_FILTER_BOOL, val) == GPUJPEG_NOERR);
+    }
+    filter = filter != 0;
 
     struct gpujpeg_parameters param = gpujpeg_default_parameters();
     param.verbose = GPUJPEG_LL_QUIET;
@@ -170,23 +173,15 @@ test_chroma_filter()
         {GPUJPEG_SUBSAMPLING_411, false}, // dynamic kernels: encoder averages, decoder replicates
     };
     for ( unsigned i = 0; i < sizeof cases / sizeof cases[0]; ++i ) {
-        for ( int filter = 0; filter < 2; ++filter ) {
-            struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(0);
-            struct gpujpeg_decoder* decoder = chroma_decoder_create();
-            assert(encoder != NULL && decoder != NULL);
+        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(0);
+        struct gpujpeg_decoder* decoder = chroma_decoder_create();
+        assert(encoder != NULL && decoder != NULL);
+        // default (on), then the option changed between calls without a reinitialization
+        for ( int filter = -1; filter < 2; ++filter ) {
             chroma_case(encoder, decoder, in, cases[i].subsampling, cases[i].interpolated, filter);
-            gpujpeg_decoder_destroy(decoder);
-            gpujpeg_encoder_destroy(encoder);
         }
+        gpujpeg_decoder_destroy(decoder);
+        gpujpeg_encoder_destroy(encoder);
     }
-    // the option applies to the next call without a reinitialization
-    struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(0);
-    struct gpujpeg_decoder* decoder = chroma_decoder_create();
-    assert(encoder != NULL && decoder != NULL);
-    chroma_case(encoder, decoder, in, GPUJPEG_SUBSAMPLING_420, true, true);
-    chroma_case(encoder, decoder, in, GPUJPEG_SUBSAMPLING_420, true, false);
-    chroma_case(encoder, decoder, in, GPUJPEG_SUBSAMPLING_420, true, true);
-    gpujpeg_decoder_destroy(decoder);
-    gpujpeg_encoder_destroy(encoder);
     printf("Ok\n");
 }
