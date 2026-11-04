@@ -17,6 +17,7 @@ Table of contents
 - [Reporting bugs](#reporting-bugs)
 - [Development](#development)
 - [Compatibility](#compatibility)
+- [GitHub CI](#github-ci)
 - [Contacting us](#contacting-us)
 
 Testing
@@ -113,6 +114,27 @@ The _decoder_ shall be able to decode all following files:
 - baseline Huffman JPEG
 - JFIF up to 1.02, Adobe header (using RGB internally) or SPIFF. Other
   generic JIF files may be also possible to decode.
+
+GitHub CI
+---------
+
+GPUJPEG has 2 sepearate workflows:
+
+- [ccpp.yml](.github/workflows/ccpp.yml) - CI build.
+  Depending if run from the main repo
+  [CESNET/GPUJPEG](https://github.com/CESNET/GPUJPEG/) master branch or not,
+  it creates build assets in
+  [project Releases](https://github.com/CESNET/GPUJPEG/releases) as a
+  continuous build (other releases are generated manually with the build
+  assets produced by CI). Otherwise the generated assets are stored inside
+  the Action Artifacts (uploaded with
+  [actions/upload-artifact](https://github.com/actions/upload-artifact)).
+- [simulated-gpu.yml](.github/workflows/simulated-gpu.yml) - unit and other
+  tests that actually require a CUDA device and therefore an emulated one in
+  CI. Documented in [doc/simulated-gpu-ci.md](doc/simulated-gpu-ci.md).
+
+Both actions are triggered by a push. Few files are excepted (do not
+trigger the action), see the YAML files.
 
 Contacting us
 -------------

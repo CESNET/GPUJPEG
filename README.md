@@ -16,6 +16,9 @@ can also look to [FAQ.md](FAQ.md) for _performance tuning_
 and additional information. To see _latest changes_
 you can display file [NEWS.md](NEWS.md).
 
+For GPUJPEG development documentation please refer to
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 Table of contents
 -----------------
 
@@ -33,7 +36,7 @@ Table of contents
     - [Decoding](#decoding-1)
   - [GPUJPEG console application](#gpujpeg-console-application)
 - [Requirements](#requirements)
-- [License](#license)
+- [License and Acknowledgments](#license-and-acknowledgments)
 - [References](#references)
 
 Authors
