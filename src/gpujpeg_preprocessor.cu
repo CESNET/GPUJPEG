@@ -150,6 +150,38 @@ inline __device__ void raw_to_comp_load<GPUJPEG_422_U8_P1020>(const uint8_t* d_d
 }
 
 /**
+ * Set chroma of the top-left pixel of each subsampling window to the window average, so that the stored sample is
+ * centered as JFIF assumes (instead of point sampling). The window is clamped at the right and bottom image edges.
+ */
+template <enum gpujpeg_color_space color_space_internal, enum gpujpeg_color_space color_space,
+          enum gpujpeg_pixel_format pixel_format>
+static __device__ void
+gpujpeg_preprocessor_chroma_box_filter(uchar4& r, const uint8_t* d_data_raw, int image_width_padding, int image_width,
+                                       int image_height, int x, int y, int fh, int fv)
+{
+    if ( x % fh != 0 || y % fv != 0 ) {
+        return;
+    }
+    int sum_cb = 0;
+    int sum_cr = 0;
+    for ( int dy = 0; dy < fv; ++dy ) {
+        for ( int dx = 0; dx < fh; ++dx ) {
+            int xx = min(x + dx, image_width - 1);
+            int yy = min(y + dy, image_height - 1);
+            int offset = (yy * image_width + xx) * unit_size<pixel_format>() + image_width_padding * yy;
+            uchar4 q;
+            raw_to_comp_load<pixel_format>(d_data_raw, image_width, image_height, offset, xx, yy, q);
+            gpujpeg_color_transform<color_space, color_space_internal>::perform(q);
+            sum_cb += q.y;
+            sum_cr += q.z;
+        }
+    }
+    const int n = fh * fv;
+    r.y = (sum_cb + n / 2) / n;
+    r.z = (sum_cr + n / 2) / n;
+}
+
+/**
  * Kernel - Copy raw image source data into three separated component buffers
  */
 typedef void (*gpujpeg_preprocessor_encode_kernel)(struct gpujpeg_preprocessor_data data, const uint8_t* d_data_raw, int image_width_padding, int image_width, int image_height, uint32_t width_div_mul, uint32_t width_div_shift);
@@ -191,6 +223,25 @@ gpujpeg_preprocessor_raw_to_comp_kernel(struct gpujpeg_preprocessor_data data, c
 
     // Color transform
     gpujpeg_color_transform<color_space, color_space_internal>::perform(r);
+
+    // Average chroma if subsampled from full resolution (Cb and Cr with equal sampling)
+    constexpr bool full_chroma_input = pixel_format == GPUJPEG_444_U8_P012 || pixel_format == GPUJPEG_4444_U8_P0123 ||
+                                       pixel_format == GPUJPEG_444_U8_P0P1P2;
+    if ( full_chroma_input && data.chroma_filter ) {
+        const int fh =
+            s_comp2_samp_factor_h == GPUJPEG_DYNAMIC ? data.comp[1].sampling_factor.horizontal : s_comp2_samp_factor_h;
+        const int fv =
+            s_comp2_samp_factor_v == GPUJPEG_DYNAMIC ? data.comp[1].sampling_factor.vertical : s_comp2_samp_factor_v;
+        const int fh_cr =
+            s_comp3_samp_factor_h == GPUJPEG_DYNAMIC ? data.comp[2].sampling_factor.horizontal : s_comp3_samp_factor_h;
+        const int fv_cr =
+            s_comp3_samp_factor_v == GPUJPEG_DYNAMIC ? data.comp[2].sampling_factor.vertical : s_comp3_samp_factor_v;
+        if ( fh * fv > 1 && fh == fh_cr && fv == fv_cr ) {
+            gpujpeg_preprocessor_chroma_box_filter<color_space_internal, color_space, pixel_format>(
+                r, d_data_raw, image_width_padding, image_width, image_height, image_position_x, image_position_y, fh,
+                fv);
+        }
+    }
 
     // Store
     gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h,
@@ -394,6 +445,7 @@ gpujpeg_preprocessor_encode_interlaced(struct gpujpeg_encoder * encoder)
     gpujpeg_const_div_prepare(image_width, width_div_mul, width_div_shift);
 
     // Run kernel
+    coder->preprocessor.data.chroma_filter = coder->preprocessor.chroma_filter;
     kernel<<<grid, threads, 0, coder->stream>>>(
         coder->preprocessor.data,
         coder->d_data_raw,

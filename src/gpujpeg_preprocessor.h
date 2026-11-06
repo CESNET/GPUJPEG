@@ -52,6 +52,8 @@ struct gpujpeg_preprocessor_data_component
 {
     uint8_t* d_data;
     int data_width;
+    int width;  ///< component width without MCU padding (set for decoder)
+    int height; ///< component height without MCU padding (set for decoder)
     struct gpujpeg_component_sampling_factor sampling_factor;
 };
 
@@ -61,6 +63,7 @@ struct gpujpeg_preprocessor_data_component
 struct gpujpeg_preprocessor_data
 {
     struct gpujpeg_preprocessor_data_component comp[GPUJPEG_MAX_COMPONENT_COUNT];
+    bool chroma_filter; ///< copy of gpujpeg_preprocessor::chroma_filter set before kernel launch
 };
 
 /**
@@ -70,6 +73,7 @@ struct gpujpeg_preprocessor
 {
     void* kernel;       // function poitner
     bool flipped;               ///< flip image before encode or after decode
+    bool chroma_filter;         ///< box-filter subsampled chroma (encode), interpolate it (decode); default true
     unsigned int channel_remap; ///< remap channels if != 0
                                 ///< format: count_8b | 00000000 | idx0_4b | idx1_4b | idx2_4b | idx3_4b
     struct gpujpeg_preprocessor_data data;

@@ -297,6 +297,10 @@ gpujpeg_decoder_get_image_info(uint8_t *image, size_t image_size, struct gpujpeg
 /// output image should be vertically flipped (bottom-up): values @ref GPUJPEG_VAL_TRUE or @ref GPUJPEG_VAL_FALSE
 #define GPUJPEG_DEC_OPT_FLIPPED_BOOL "dec_opt_flipped"
 
+/// interpolate 4:2:0, 4:2:2 and 4:4:0 chroma for full-resolution output (triangle filter as libjpeg "fancy
+/// upsampling") instead of replicating it; values @ref GPUJPEG_VAL_TRUE (default) or @ref GPUJPEG_VAL_FALSE
+#define GPUJPEG_DEC_OPT_CHROMA_FILTER_BOOL "dec_opt_chroma_filter"
+
 /// @copydoc GPUJPEG_ENC_OPT_CHANNEL_REMAP
 #define GPUJPEG_DEC_OPT_CHANNEL_REMAP "dec_opt_channel_remap"
 
