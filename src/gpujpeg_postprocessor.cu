@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -271,31 +271,23 @@ gpujpeg_preprocessor_select_decode_kernel(struct gpujpeg_coder* coder)
         coder->component[2].sampling_factor.horizontal, coder->component[2].sampling_factor.vertical,
         coder->component[3].sampling_factor.horizontal, coder->component[3].sampling_factor.vertical);
 
-#define RETURN_KERNEL_SWITCH(PIXEL_FORMAT, COLOR, P1, P2, P3, P4, P5, P6, P7, P8)                                      \
+#define PF_CASE(PF, COLOR, P1, P2, P3, P4, P5, P6, P7, P8)                                                             \
+    case PF:                                                                                                           \
+        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, PF, P1, P2, P3, P4, P5, P6, P7,   \
+                                                        P8>;
+#define RETURN_KERNEL_SWITCH(PIXEL_FORMAT, ...)                                                                        \
     switch ( PIXEL_FORMAT ) {                                                                                          \
-    case GPUJPEG_U8:                                                                                                   \
-        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_U8, P1, P2, P3, P4, P5,   \
-                                                        P6, P7, P8>;                                                   \
-    case GPUJPEG_444_U8_P012:                                                                                          \
-        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P012, P1, P2, P3,  \
-                                                        P4, P5, P6, P7, P8>;                                           \
-    case GPUJPEG_4444_U8_P0123:                                                                                        \
-        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_4444_U8_P0123, P1, P2,    \
-                                                        P3, P4, P5, P6, P7, P8>;                                       \
-    case GPUJPEG_422_U8_P1020:                                                                                         \
-        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P1020, P1, P2, P3, \
-                                                        P4, P5, P6, P7, P8>;                                           \
-    case GPUJPEG_444_U8_P0P1P2:                                                                                        \
-        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_444_U8_P0P1P2, P1, P2,    \
-                                                        P3, P4, P5, P6, P7, P8>;                                       \
-    case GPUJPEG_422_U8_P0P1P2:                                                                                        \
-        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_422_U8_P0P1P2, P1, P2,    \
-                                                        P3, P4, P5, P6, P7, P8>;                                       \
-    case GPUJPEG_420_U8_P0P1P2:                                                                                        \
-        return &gpujpeg_preprocessor_comp_to_raw_kernel<color_space_internal, COLOR, GPUJPEG_420_U8_P0P1P2, P1, P2,    \
-                                                        P3, P4, P5, P6, P7, P8>;                                       \
+        PF_CASE(GPUJPEG_U8, __VA_ARGS__)                                                                               \
+        PF_CASE(GPUJPEG_444_U8_P012, __VA_ARGS__)                                                                      \
+        PF_CASE(GPUJPEG_4444_U8_P0123, __VA_ARGS__)                                                                    \
+        PF_CASE(GPUJPEG_422_U8_P1020, __VA_ARGS__)                                                                     \
+        PF_CASE(GPUJPEG_444_U8_P0P1P2, __VA_ARGS__)                                                                    \
+        PF_CASE(GPUJPEG_422_U8_P0P1P2, __VA_ARGS__)                                                                    \
+        PF_CASE(GPUJPEG_420_U8_P0P1P2, __VA_ARGS__)                                                                    \
     case GPUJPEG_PIXFMT_NONE:                                                                                          \
         GPUJPEG_ASSERT(0 && "Postprocess to GPUJPEG_PIXFMT_NONE not allowed");                                         \
+    default:                                                                                                           \
+        GPUJPEG_ASSERT(0 && "Invalid pixel format!");                                                                  \
     }
 
 #define RETURN_KERNEL_IF(PIXEL_FORMAT, COLOR, COMP_COUNT, P1, P2, P3, P4, P5, P6, P7, P8) \
