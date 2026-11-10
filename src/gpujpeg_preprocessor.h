@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -73,7 +73,7 @@ struct gpujpeg_preprocessor
 {
     void* kernel;       // function poitner
     bool flipped;               ///< flip image before encode or after decode
-    bool chroma_filter;         ///< box-filter subsampled chroma (encode), interpolate it (decode); default true
+    bool chroma_filter;         ///< box-filter interpolate chrome on decode; default true
     unsigned int channel_remap; ///< remap channels if != 0
                                 ///< format: count_8b | 00000000 | idx0_4b | idx1_4b | idx2_4b | idx3_4b
     struct gpujpeg_preprocessor_data data;

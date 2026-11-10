@@ -7,6 +7,7 @@ set(BUILD_OPENGL OFF CACHE STRING "Build with OpenGL support, options are: AUTO 
 set_property(CACHE BUILD_OPENGL PROPERTY STRINGS AUTO ON OFF)
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 option(CMAKE_CUDA_ARCHITECTURES "CUDA architectures to build for (needs CMake 3.18)" OFF)
+option(FAST_COMPILE "Disable some rarely used features to increase compile speed eg. non-standard subsampling (mostly intended for development)" OFF)
 option(ENABLE_FPNGE "Enable fpnge - requires c++ and sse4" OFF)
 option(USE_NATIVE_CPU_ARCH "Use -march=native for compilation (Linux only)" OFF)
 option(HUFFMAN_GPU_CONST_TABLES "Enable Huffman GPU decoder quick const tables" OFF)
@@ -47,6 +48,10 @@ set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 include(CPack)
 
 include(CTest)
+
+if(FAST_COMPILE)
+    add_definitions(-DFAST_COMPILE)
+endif()
 
 execute_process(COMMAND git rev-parse --short HEAD
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"

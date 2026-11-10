@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -771,8 +771,17 @@ gpujpeg_encoder_set_option(struct gpujpeg_encoder* encoder, const char *opt, con
         return gpujpeg_opt_set_channel_remap(&encoder->coder, val, GPUJPEG_ENC_OPT_CHANNEL_REMAP);
     }
     if ( strcmp(opt, GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL) == 0 ) {
-        return gpujpeg_parse_bool_opt(&encoder->coder.preprocessor.chroma_filter, val,
-                                      GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL);
+        bool enable = false;
+        int rc = gpujpeg_parse_bool_opt(&enable, val, GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL);
+        if ( rc != GPUJPEG_NOERR ) {
+            return rc;
+        }
+        if ( !enable ) {
+            WARN_MSG(GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL " cannot be disabled!\n");
+            return GPUJPEG_ERROR;
+        }
+        WARN_MSG(GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL " deprecated - used always!\n");
+        return GPUJPEG_NOERR;
     }
     if ( strcmp(opt, GPUJPEG_ENC_OPT_EXIF_TAG) == 0 ) {
         encoder->header_type = GPUJPEG_HEADER_EXIF;
@@ -794,8 +803,6 @@ gpujpeg_encoder_print_options() {
            "] - whether is the input image should be vertically flipped (prior encode)\n");
     printf("\t" GPUJPEG_ENC_OPT_CHANNEL_REMAP "=XYZ[W] - input channel mapping, eg. '210F' for GBRX,\n"
         "\t\t'210' for GBR; special placeholders 'F' and 'Z' to set a channel to all-ones or all-zeros\n");
-    printf("\t" GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL "=[" GPUJPEG_VAL_FALSE "|" GPUJPEG_VAL_TRUE
-           "] - average subsampled chroma (default) instead of point sampling\n");
     printf("\t" GPUJPEG_ENC_OPT_EXIF_TAG "=<key>=<value>|help - custom EXIF tag (use help for syntax)\n");
     printf("\t" GPUJPEG_ENC_OPT_METADATA "=<key>=<value>|help - set image metadata\n");
 }

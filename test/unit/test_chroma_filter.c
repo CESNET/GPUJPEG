@@ -85,7 +85,7 @@ chroma_case(struct gpujpeg_encoder* encoder, struct gpujpeg_decoder* decoder, co
 {
     if ( filter >= 0 ) {
         const char* val = filter ? GPUJPEG_VAL_TRUE : GPUJPEG_VAL_FALSE;
-        CHROMA_CHECK(gpujpeg_encoder_set_option(encoder, GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL, val) == GPUJPEG_NOERR);
+        // CHROMA_CHECK(gpujpeg_encoder_set_option(encoder, GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL, val) == GPUJPEG_NOERR);
         CHROMA_CHECK(gpujpeg_decoder_set_option(decoder, GPUJPEG_DEC_OPT_CHROMA_FILTER_BOOL, val) == GPUJPEG_NOERR);
     }
     filter = filter != 0;
@@ -178,6 +178,9 @@ test_chroma_filter()
         assert(encoder != NULL && decoder != NULL);
         // default (on), then the option changed between calls without a reinitialization
         for ( int filter = -1; filter < 2; ++filter ) {
+            if ( filter == 0 ) { // TODO: cannot be tested as encoder no longer supports the mode
+                continue;
+            }
             chroma_case(encoder, decoder, in, cases[i].subsampling, cases[i].interpolated, filter);
         }
         gpujpeg_decoder_destroy(decoder);

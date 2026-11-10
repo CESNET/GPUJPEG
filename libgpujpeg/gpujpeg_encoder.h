@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2025, CESNET z.s.p.o
+ * Copyright (c) 2011-2026, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -225,8 +225,7 @@ gpujpeg_encoder_suggest_restart_interval(const struct gpujpeg_image_parameters* 
 
 /// input image is vertically flipped (bottom-up): values @ref GPUJPEG_VAL_TRUE or @ref GPUJPEG_VAL_FALSE
 #define GPUJPEG_ENC_OPT_FLIPPED_BOOL "enc_opt_flipped"
-/// average subsampled chroma over its sampling window (centered as JFIF assumes) instead of point sampling; values
-/// @ref GPUJPEG_VAL_TRUE (default) or @ref GPUJPEG_VAL_FALSE
+/// @note deprecated - always on, do not use
 #define GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL "enc_opt_chroma_filter"
 /// custom exif tag in format <key>:TYPE=<value>
 #define GPUJPEG_ENC_OPT_EXIF_TAG "enc_exif_tag"
