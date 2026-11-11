@@ -637,7 +637,7 @@ gpujpeg_preprocessor_channel_remap(struct gpujpeg_coder* coder)
     case GPUJPEG_PIXFMT_NONE:
         GPUJPEG_ASSERT(0 && "Preprocess from GPUJPEG_PIXFMT_NONE not allowed");
     }
-#undef SWITDH_KERNEL
+#undef SWITCH_KERNEL
     kernel<<<grid, block, 0, coder->stream>>>(coder->d_data_raw, width, pitch, height, mapping);
     gpujpeg_cuda_check_error("channel_remap_kernel failed", return -1);
     return 0;

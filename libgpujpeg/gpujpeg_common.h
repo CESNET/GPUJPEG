@@ -255,8 +255,9 @@ typedef uint32_t gpujpeg_sampling_factor_t;
  * Set parameters for using specified chroma subsampling
  * @param param       parameters for coder
  * @param subsampling one of GPUJPEG_SUBSAMPLING_{444,422,420}
+ * @returns true if set, false on unsupported subsampling - unsupported is eg 2/2,2/2,2/2
  */
-GPUJPEG_API void
+GPUJPEG_API bool
 gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
                                       gpujpeg_sampling_factor_t subsampling);
 

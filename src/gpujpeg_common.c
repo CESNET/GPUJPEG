@@ -313,7 +313,32 @@ gpujpeg_default_parameters()
     return ret;
 }
 
-void
+/// reject eg. 2/2,2/2,2/2 since encoder doesn't handle correctly
+/// (gpujpeg_parameters_chroma_subsampling supposed to be called
+/// for encoder only, not decoder)
+static bool
+check_subsampling_supported(struct gpujpeg_parameters* param)
+{
+    int horizontal0 = param->sampling_factor[0].horizontal;
+    int vertical0 = param->sampling_factor[0].vertical;
+
+    if ( horizontal0 == 1 && vertical0 == 1 ) { // 1/1,1/1,1/1 is actually 4:4:4
+        return true;
+    }
+
+    for ( int comp = 1; comp < param->comp_count; ++comp ) {
+        if ( param->sampling_factor[comp].horizontal != horizontal0 ) {
+            return true;
+        }
+        if ( param->sampling_factor[comp].vertical != vertical0 ) {
+            return true;
+        }
+    }
+    ERROR_MSG("All-same encoding not supported - given %dx(%d,%d)\n", param->comp_count, horizontal0, vertical0);
+    return false;
+}
+
+bool
 gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
                                       gpujpeg_sampling_factor_t subsampling)
 {
@@ -323,11 +348,13 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
     param->comp_count = 0;
     int comp = 0;
     for ( ; comp < GPUJPEG_MAX_COMPONENT_COUNT; comp++ ) {
-        param->sampling_factor[comp].horizontal = subsampling >> HI_4_BIT_OFF;
+        int horizontal = subsampling >> HI_4_BIT_OFF;
+        param->sampling_factor[comp].horizontal = horizontal;
         subsampling <<= 4U;
-        param->sampling_factor[comp].vertical = subsampling >> HI_4_BIT_OFF;
+        int vertical = subsampling >> HI_4_BIT_OFF;
+        param->sampling_factor[comp].vertical = vertical;
         subsampling <<= 4U;
-        if ( param->sampling_factor[comp].vertical * param->sampling_factor[comp].horizontal == 0 ) {
+        if ( vertical * horizontal == 0 ) {
             break;
         }
         param->comp_count += 1;
@@ -337,6 +364,7 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
         param->sampling_factor[comp].horizontal = 0;
         param->sampling_factor[comp].vertical = 0;
     }
+    return check_subsampling_supported(param);
 }
 
 /**
