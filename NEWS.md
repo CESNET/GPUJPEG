@@ -1,4 +1,4 @@
-unreleased
+2026-11-11 - 0.27.14
 ----------
 
 - the encoder averages subsampled chroma (was point sampling) and the
@@ -6,6 +6,8 @@ decoder interpolates 4:2:0, 4:2:2 and 4:4:0 chroma like libjpeg for
 full-resolution output (was replicated; also for chroma <= 2 samples wide,
 unlike libjpeg) - output changes, the previous decoder behavior can be
 selected by GPUJPEG_DEC_OPT_CHROMA_FILTER_BOOL
+- gpujpeg_parameters_chroma_subsampling() now returns bool signalizing
+unsupported subsampling (eg. 2/2,2/2,2/2)
 
 2026-03-19 - 0.27.13
 ----------
