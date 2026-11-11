@@ -112,6 +112,9 @@ chroma_case(struct gpujpeg_encoder* encoder, struct gpujpeg_decoder* decoder, co
         uint8_t* plane = chroma_plane(comp);
         for ( int cy = 0; cy < comp->height; ++cy ) {
             for ( int cx = 0; cx < comp->width; ++cx ) {
+                if ( filter == 0 ) { // encoder no longer supports that mode
+                    continue;
+                }
                 CHROMA_CHECK(plane[cy * comp->data_width + cx] == chroma_ref_down(in, c, cx, cy, h, v, filter));
             }
         }
@@ -178,9 +181,6 @@ test_chroma_filter()
         assert(encoder != NULL && decoder != NULL);
         // default (on), then the option changed between calls without a reinitialization
         for ( int filter = -1; filter < 2; ++filter ) {
-            if ( filter == 0 ) { // TODO: cannot be tested as encoder no longer supports the mode
-                continue;
-            }
             chroma_case(encoder, decoder, in, cases[i].subsampling, cases[i].interpolated, filter);
         }
         gpujpeg_decoder_destroy(decoder);
