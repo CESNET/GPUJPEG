@@ -48,8 +48,49 @@ test_random_psnr() {
         done
 }
 
+readonly subs_in=hdr.ppm
+readonly subs_out=gj_test_qual_subs.jpg
+test_subsampling_enc() (
+        if [ ! -f $subs_in ]; then
+                # https://imagecompression.info/test_images/
+                url="https://owncloud.cesnet.cz/index.php/s/sFfxE3sRtkYMKhD/download?path=%2F&files=hdr.ppm"
+                if ! curl -Lf "$url" -o $subs_in; then
+                        echo "Cannot download the image $subs_in from $url" 1>&2
+                        if [ "$CI" ]; then
+                                exit 1
+                        fi
+                        return
+                fi
+        fi
+
+        "$GPUJPEG" -e -S420 -q 95 $subs_in $subs_out
+        magick_compare $subs_in $subs_out '' 43.5 # we have PSNR 43.76
+
+        # keeping the $in intentionally as a cache
+        # keeping the $out intentionally for test_subsampling_dec
+)
+# depends on test_subsampling_enc output
+test_subsampling_dec() (
+        in=$subs_out
+        out=gj_test_subs_dec_out.ppm
+
+        if [ ! -f $in ]; then
+                return
+        fi
+
+        "$GPUJPEG" -d $in $out
+        magick_compare $in $out '' 59.7 # we have PSNR 59.91
+        # compare to the original
+        magick_compare $out $subs_in '' 43.5 # we have PSNR 43.76
+
+        rm $in
+        rm $out
+)
+
 tests="
 test_random_psnr
+test_subsampling_enc
+test_subsampling_dec
 "
 
 for n in $tests; do
