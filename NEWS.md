@@ -1,3 +1,12 @@
+unreleased
+----------
+
+- the encoder averages subsampled chroma (was point sampling) and the
+decoder interpolates 4:2:0, 4:2:2 and 4:4:0 chroma like libjpeg for
+full-resolution output (was replicated; also for chroma <= 2 samples wide,
+unlike libjpeg) - output changes, the previous behavior can be selected by
+GPUJPEG_ENC_OPT_CHROMA_FILTER_BOOL and GPUJPEG_DEC_OPT_CHROMA_FILTER_BOOL
+
 2026-03-19 - 0.27.13
 ----------
 

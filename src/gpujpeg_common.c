@@ -582,6 +582,7 @@ gpujpeg_coder_init(struct gpujpeg_coder * coder)
     coder->d_data_compressed = NULL;
     coder->d_temp_huffman = NULL;
     coder->data_compressed_allocated_size = 0;
+    coder->preprocessor.chroma_filter = true;
 
     GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_to, return -1);
     GPUJPEG_CUSTOM_TIMER_CREATE(coder->duration_memory_from, return -1);
