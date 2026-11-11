@@ -52,7 +52,9 @@ chroma_ref_down(const uint8_t* in, int ch, int cx, int cy, int h, int v, bool fi
             sum += in[y * CHROMA_PITCH + x * 3 + ch];
         }
     }
-    return (sum + h * v / 2) / (h * v);
+    int n = h * v;
+    int bias = (n & 1) == 0 && h > 1 ? n / 2 - 1 + (cx & 1) : n / 2;
+    return (sum + bias) / (h * v);
 }
 
 /// decoder reference: libjpeg "fancy" upsampling (or replication) of plane p at pixel (x, y), divisors h, v

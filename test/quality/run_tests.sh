@@ -64,7 +64,7 @@ test_subsampling_enc() (
         fi
 
         "$GPUJPEG" -e -S420 -q 95 $subs_in $subs_out
-        magick_compare $subs_in $subs_out '' 43.5 # we have PSNR 43.76
+        magick_compare $subs_in $subs_out '' 43.6 # we have PSNR 43.81
 
         # keeping the $in intentionally as a cache
         # keeping the $out intentionally for test_subsampling_dec
@@ -79,9 +79,9 @@ test_subsampling_dec() (
         fi
 
         "$GPUJPEG" -d $in $out
-        magick_compare $in $out '' 59.7 # we have PSNR 59.91
+        magick_compare $in $out '' 59.4 # we have PSNR 59.60
         # compare to the original
-        magick_compare $out $subs_in '' 43.5 # we have PSNR 43.76
+        magick_compare $out $subs_in '' 43.6 # we have PSNR 43.81
 
         rm $in
         rm $out

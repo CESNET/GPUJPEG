@@ -264,8 +264,10 @@ gpujpeg_preprocessor_raw_to_comp_kernel(struct gpujpeg_preprocessor_data data, c
 
     // Interpolate chroma for subsampled formats
     const int n = subs_v * subs_h;
-    cb = (cb + n / 2) / n;
-    cr = (cr + n / 2) / n;
+    // apply bias as libjpeg(-turbo) does: odd n - none, 422 - 0/1, 420 - 1/2
+    int bias = (n & 1) == 0 && subs_h > 1 ? n / 2 - 1 + (subs_image_position_x & 1) : n / 2;
+    cb = (cb + bias) / n;
+    cr = (cr + bias) / n;
 
     subs_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v,
           s_comp3_samp_factor_h, s_comp3_samp_factor_v, s_comp4_samp_factor_h, s_comp4_samp_factor_v>(
