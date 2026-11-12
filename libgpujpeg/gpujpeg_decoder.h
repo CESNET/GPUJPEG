@@ -203,15 +203,17 @@ gpujpeg_decoder_decode(struct gpujpeg_decoder* decoder, uint8_t* image, size_t i
 
 /**
  * Returns duration statistics for last decoded image
+ *
+ * gpujpeg_parameters.perf_stats must be set to true before decode to record measurements
+ * (or verbosity >= GPUJPEG_LL_STATUS)
+ *
  * @return 0 if succeeds, otherwise nonzero
  * @note
- * The values are only informative and for debugging only and thus this is
- * not considered as a part of a public API.
- * @deprecated
- * The decoder now prints the statistics to stdout if gpujpeg_parameters.perf_stats is set.
- * May be removed in future versions - please report if using this function.
+ * The values are only informative and for debugging only.
+ * @note
+ * The decoder also prints the statistics to stdout if verbosity >= GPUJPEG_LL_STATUS.
  */
-GPUJPEG_DEPRECATED GPUJPEG_API int
+GPUJPEG_API int
 gpujpeg_decoder_get_stats(struct gpujpeg_decoder *decoder, struct gpujpeg_duration_stats *stats);
 
 /**

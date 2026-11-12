@@ -177,15 +177,17 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
 
 /**
  * Returns duration statistics for last encoded image
+ *
+ * gpujpeg_parameters.perf_stats must be set to true before encode to record measurements
+ * (or verbosity >= GPUJPEG_LL_STATUS)
+ *
  * @return 0 if succeeds, otherwise nonzero
  * @note
- * The values are only informative and for debugging only and thus this is
- * not considered as a part of a public API.
- * @deprecated
- * The encoder now prints the statistics to stdout if gpujpeg_parameters.perf_stats is set.
- * May be removed in future versions - please report if using this function.
+ * The values are only informative and for debugging only.
+ * @note
+ * The encoder also prints the statistics to stdout if verbosity >= GPUJPEG_LL_STATUS.
  */
-GPUJPEG_DEPRECATED GPUJPEG_API int
+GPUJPEG_API int
 gpujpeg_encoder_get_stats(struct gpujpeg_encoder *encoder, struct gpujpeg_duration_stats *stats);
 
 /**
