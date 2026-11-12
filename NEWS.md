@@ -1,3 +1,8 @@
+unreleased
+----------
+
+- added gpujpeg_pixel_format_is_subsampled()
+
 2026-11-11 - 0.27.14
 ----------
 

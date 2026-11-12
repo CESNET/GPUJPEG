@@ -2173,6 +2173,27 @@ int gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format)
     return -1;
 }
 
+int
+gpujpeg_pixel_format_is_subsampled(enum gpujpeg_pixel_format pixel_format)
+{
+    for (size_t i = 0; i < sizeof gpujpeg_pixel_format_desc / sizeof gpujpeg_pixel_format_desc[0]; ++i) {
+        if (gpujpeg_pixel_format_desc[i].pixel_format != pixel_format) {
+            continue;
+        }
+        for ( unsigned j = 0; j < GPUJPEG_MAX_COMPONENT_COUNT; j++ ) {
+            int h = gpujpeg_pixel_format_desc[i].sampling_factor[j].horizontal;
+            int v = gpujpeg_pixel_format_desc[i].sampling_factor[j].vertical;
+            if ( h * v == 0 ) { // no more components
+                return 0;
+            }
+            if ( h > 1 || v > 1 ) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+    return -1;
+}
 /**
  * @retval >=0 on success
  * @retval  <0 on failure

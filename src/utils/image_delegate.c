@@ -351,7 +351,7 @@ tst_usage()
            "\t- p_<PF> - pixel format\n"
            "\tpatterns:\n"
            "\t- blank[_<val>|_0xBBGGRR]    - use blank pattern (either one or 3 values)\n"
-           "\t- gradient[_<val>|_0xBBGGRR] - use gradient pattern (default)\n"
+           "\t- gradient[_<val>|_0xBBGGRR] - use gradient pattern (default, non-subsampled PF only)\n"
            "\t- noise                      - use white noise\n"
            "\t- random[_<seed>]            - same as noise, but use deterministic pattern (seed is decimal)\n"
             );
@@ -603,6 +603,14 @@ tst_image_load_delegate(const char* filename, size_t* image_size, void** image_d
     switch (tst_params.pattern) {
         case TST_BLANK:
         case TST_GRADIENT: {
+            if ( gpujpeg_pixel_format_is_subsampled(param_image.pixel_format) ) {
+                if ( tst_params.pattern == TST_GRADIENT ) {
+                    ERROR_MSG("gradient test pattern unsupported for planar subsampled pixfmts!\n");
+                    return GPUJPEG_ERROR;
+                }
+                memset(*image_data, (int)tst_params.color & 0xff, *image_size);
+                return GPUJPEG_NOERR;
+            }
             struct gpujpeg_image_parameters param_oneline = param_image;
             param_oneline.height = 1;
             const size_t linesize = gpujpeg_image_calculate_size(&param_oneline);

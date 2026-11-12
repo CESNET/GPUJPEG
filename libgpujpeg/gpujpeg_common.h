@@ -684,6 +684,10 @@ gpujpeg_pixel_format_get_name(enum gpujpeg_pixel_format pixel_format);
 GPUJPEG_API int
 gpujpeg_pixel_format_is_planar(enum gpujpeg_pixel_format pixel_format);
 
+/** Returns true if a pixel format is planar subsampled */
+GPUJPEG_API int
+gpujpeg_pixel_format_is_subsampled(enum gpujpeg_pixel_format pixel_format);
+
 // for internal purposes - do not use in client code
 GPUJPEG_API void
 gpujpeg_device_reset(void);
