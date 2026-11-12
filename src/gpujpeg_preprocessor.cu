@@ -192,14 +192,16 @@ template <uint8_t s_comp1_samp_factor_h, uint8_t s_comp1_samp_factor_v, uint8_t 
           uint8_t s_comp4_samp_factor_h, uint8_t s_comp4_samp_factor_v>
 static __device__ inline void
 subs_store(uchar4 r[15][15], int subs_image_position_x, int subs_image_position_y, int subs_h, int subs_v, int cb, int cr,
-      struct gpujpeg_preprocessor_data& data)
+      struct gpujpeg_preprocessor_data& data, bool interpolate)
 {
     for ( int yy = 0; yy < subs_v; yy++ ) {
         for ( int xx = 0; xx < subs_h; xx++ ) {
             int image_position_x = subs_image_position_x * subs_h + xx;
             int image_position_y = subs_image_position_y * subs_v + yy;
-            r[yy][xx].y = cb;
-            r[yy][xx].z = cr;
+            if ( interpolate ) {
+                r[yy][xx].y = cb;
+                r[yy][xx].z = cr;
+            }
             // Store
             gpujpeg_preprocessor_raw_to_comp_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h,
                                                    s_comp2_samp_factor_v, s_comp3_samp_factor_h, s_comp3_samp_factor_v,
@@ -269,9 +271,11 @@ gpujpeg_preprocessor_raw_to_comp_kernel(struct gpujpeg_preprocessor_data data, c
     cb = (cb + bias) / n;
     cr = (cr + bias) / n;
 
+    bool interpolate = subs_h > pf_sampling_factor_h<pixel_format>() || subs_v > pf_sampling_factor_v<pixel_format>();
+
     subs_store<s_comp1_samp_factor_h, s_comp1_samp_factor_v, s_comp2_samp_factor_h, s_comp2_samp_factor_v,
           s_comp3_samp_factor_h, s_comp3_samp_factor_v, s_comp4_samp_factor_h, s_comp4_samp_factor_v>(
-        r, subs_image_position_x, subs_image_position_y, subs_h, subs_v, cb, cr, data);
+        r, subs_image_position_x, subs_image_position_y, subs_h, subs_v, cb, cr, data, interpolate);
 }
 
 /**

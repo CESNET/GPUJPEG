@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -119,6 +119,20 @@ inline __device__ int unit_size<GPUJPEG_4444_U8_P0123>() { return 4; }
 
 template<>
 inline __device__ int unit_size<GPUJPEG_422_U8_P1020>() { return 2; }
+
+template<enum gpujpeg_pixel_format>
+inline __device__ int pf_sampling_factor_h() { return 1; }
+template<enum gpujpeg_pixel_format>
+inline __device__ int pf_sampling_factor_v() { return 1; }
+template<>
+inline __device__ int pf_sampling_factor_h<GPUJPEG_422_U8_P1020>() { return 2; }
+template<>
+inline __device__ int pf_sampling_factor_h<GPUJPEG_422_U8_P0P1P2>() { return 2; }
+template<>
+inline __device__ int pf_sampling_factor_h<GPUJPEG_420_U8_P0P1P2>() { return 2; }
+// GPUJPEG_420_U8_P0P1P2 is the only pixel format that is vertically subsampled
+template<>
+inline __device__ int pf_sampling_factor_v<GPUJPEG_420_U8_P0P1P2>() { return 2; }
 
 template <enum gpujpeg_pixel_format pixel_format>
 inline __device__ void
