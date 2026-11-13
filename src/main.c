@@ -542,17 +542,13 @@ do_decode(const char* in, const char* out, struct gpujpeg_parameters param, stru
     const char* input = tstr_to_mbs(in);
     char* output = tstr_to_mbs(out);
     if ( encode ) {
-        static char buffer_output[255];
+        char buffer_output[255];
         if ( param_image.color_space != GPUJPEG_RGB ) {
-            sprintf(buffer_output, "%s.decoded.yuv", output);
+            snprintf(buffer_output, sizeof buffer_output, "%s.decoded.yuv", output);
         }
         else {
-            if ( param.comp_count == 1 ) {
-                sprintf(buffer_output, "%s.decoded.r", output);
-            }
-            else {
-                sprintf(buffer_output, "%s.decoded.rgb", output);
-            }
+            const char *suffix = param.comp_count == 1 ? "r" : "rgb";
+            snprintf(buffer_output, sizeof buffer_output, "%s.decoded.%s", output, suffix);
         }
         input = output;
         output = buffer_output;
