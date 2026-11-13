@@ -206,6 +206,8 @@ gpujpeg_decoder_init(struct gpujpeg_decoder* decoder, const struct gpujpeg_param
         change |= coder->param.sampling_factor[comp].horizontal != param->sampling_factor[comp].horizontal;
         change |= coder->param.sampling_factor[comp].vertical != param->sampling_factor[comp].vertical;
     }
+    change |= coder->param_image.color_space != param_image->color_space;
+    change |= coder->param_image.pixel_format != param_image->pixel_format;
     if ( change == 0 )
         return 0;
 
