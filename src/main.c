@@ -1,6 +1,6 @@
 /**
  * @file
- * Copyright (c) 2011-2025, CESNET
+ * Copyright (c) 2011-2026, CESNET
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -246,6 +246,9 @@ struct options
     gpujpeg_sampling_factor_t subsampling;
     bool native_file_format;
     bool keep_alpha;
+    bool debug;
+    bool use_opengl;
+    int iterate;
 };
 
 static bool
@@ -427,6 +430,232 @@ gpujpeg_subsampling_from_name_from_tstr(const TCHAR* tsubsampling)
     return ret;
 }
 
+/// @retval -2 help requested - exit after
+/// @retval -1 error but continue
+/// @retval 0 success
+static int
+do_encode(const char* in, const char* out, struct gpujpeg_parameters param,
+       struct gpujpeg_image_parameters param_image, const struct options* opts, struct gpujpeg_encoder* encoder,
+       struct gpujpeg_opengl_texture* texture)
+{
+    // Get and check input and output image
+    const char* input = tstr_to_mbs(in);
+    const char* output = tstr_to_mbs(out);
+    enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
+    enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
+    if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(input_format) ) {
+        fprintf(stderr, "[Warning] Encoder input file [%s] should be raw image (" RAW_EXTS ")!\n", input);
+        gpujpeg_image_get_file_format("rawhelp");
+        if ( input_format & GPUJPEG_IMAGE_FILE_JPEG ) {
+            return -2;
+        }
+    }
+    if ( output_format != GPUJPEG_IMAGE_FILE_JPEG ) {
+        fprintf(stderr, "[%s] Encoder output file [%s] should be JPEG image (*.jpg)!\n",
+                output_format == GPUJPEG_IMAGE_FILE_UNKNOWN ? "Warning" : "Error", output);
+        if ( output_format != GPUJPEG_IMAGE_FILE_UNKNOWN ) {
+            return -1;
+        }
+    }
+
+    if ( !adjust_params(&param, &param_image, input, output, 1, opts) ) {
+        return -1;
+    }
+
+    if ( opts->native_file_format ) {
+        param.color_space_internal = param_image.color_space;
+    }
+
+    // Encode image
+    double duration = gpujpeg_get_time();
+    printf("\nEncoding Image [%s]: ", input);
+    print_gpujpeg_image_parameters(param_image, true, NULL);
+
+    // Load image
+    size_t image_size = gpujpeg_image_calculate_size(&param_image);
+    uint8_t* image = NULL;
+    if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
+        fprintf(stderr, "Failed to load image [%s]!\n", input);
+        return -1;
+    }
+
+    if ( opts->debug ) {
+        debug_dump_infile(input, image, image_size, &param_image);
+    }
+
+    duration = gpujpeg_get_time() - duration;
+    printf("Load Image:          %10.2f ms\n", duration * 1000.0);
+
+    // Prepare encoder input
+    struct gpujpeg_encoder_input encoder_input;
+    if ( opts->use_opengl ) {
+        gpujpeg_opengl_texture_set_data(texture->texture_id, image);
+        gpujpeg_encoder_input_set_texture(&encoder_input, texture);
+    }
+    else {
+        gpujpeg_encoder_input_set_image(&encoder_input, image);
+    }
+
+    // Encode image
+    uint8_t* image_compressed = NULL;
+    size_t image_compressed_size = 0;
+    for ( int iteration = 0; iteration < opts->iterate; iteration++ ) {
+        if ( opts->iterate > 1 ) {
+            printf("\nIteration #%d:\n", iteration + 1);
+        }
+
+        int rc = gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed,
+                                        &image_compressed_size);
+        if ( rc != GPUJPEG_NOERR ) {
+            fprintf(stderr, "Failed to encode image [%s]!\n", input);
+            gpujpeg_image_destroy(image);
+            return -1;
+        }
+    }
+
+    duration = gpujpeg_get_time();
+
+    // Save image
+    if ( image_compressed == NULL ||
+         gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size, &param_image) != 0 ) {
+        fprintf(stderr, "Failed to save image [%s]!\n", output);
+        gpujpeg_image_destroy(image);
+        return -1;
+    }
+    duration = gpujpeg_get_time() - duration;
+    printf("Save Image:          %10.4f ms\n", duration * 1000.0);
+    printf("Image Name:          %10s\n", output);
+
+    // Destroy image
+    gpujpeg_image_destroy(image);
+    return 0;
+}
+
+/// @retval -1 error (continue)
+/// @retval 0 success
+static int
+do_decode(const char* in, const char* out, struct gpujpeg_parameters param, struct gpujpeg_image_parameters param_image,
+          const struct options* opts, struct gpujpeg_decoder* decoder, struct gpujpeg_opengl_texture* texture,
+          bool encode)
+{
+    // Get and check input and output image
+    const char* input = tstr_to_mbs(in);
+    char* output = tstr_to_mbs(out);
+    if ( encode ) {
+        static char buffer_output[255];
+        if ( param_image.color_space != GPUJPEG_RGB ) {
+            sprintf(buffer_output, "%s.decoded.yuv", output);
+        }
+        else {
+            if ( param.comp_count == 1 ) {
+                sprintf(buffer_output, "%s.decoded.r", output);
+            }
+            else {
+                sprintf(buffer_output, "%s.decoded.rgb", output);
+            }
+        }
+        input = output;
+        output = buffer_output;
+    }
+    enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
+    enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
+    if ( input_format != GPUJPEG_IMAGE_FILE_JPEG ) {
+        fprintf(stderr, "[Warning] Decoder input file [%s] should be JPEG image (*.jpg)!\n", input);
+    }
+    if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(output_format) ) {
+        fprintf(stderr, "[Warning] Decoder output file [%s] should be raw image (" RAW_EXTS ")!\n", output);
+        gpujpeg_image_get_file_format("rawhelp");
+        if ( output_format & GPUJPEG_IMAGE_FILE_JPEG ) {
+            return -1;
+        }
+    }
+
+    adjust_params(&param, &param_image, input, output, encode, opts);
+    if ( opts->native_file_format ) {
+        param_image.color_space = GPUJPEG_NONE;
+    }
+
+    gpujpeg_decoder_set_output_format(decoder, param_image.color_space, param_image.pixel_format);
+
+    // Decode image
+    double duration = gpujpeg_get_time();
+
+    printf("\nDecoding Image [%s] to ", input);
+    print_gpujpeg_image_parameters(param_image, true, NULL);
+
+    // Load image
+    size_t image_size = 0;
+    uint8_t* image = NULL;
+    if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
+        fprintf(stderr, "Failed to load image [%s]!\n", input);
+        return -1;
+    }
+
+    duration = gpujpeg_get_time() - duration;
+    printf("Load Image:          %10.2f ms\n", duration * 1000.0);
+
+    // Prepare decoder output buffer
+    struct gpujpeg_decoder_output decoder_output;
+    if ( opts->use_opengl ) {
+        gpujpeg_decoder_output_set_texture(&decoder_output, texture);
+    }
+    else {
+        gpujpeg_decoder_output_set_default(&decoder_output);
+    }
+
+    for ( int iteration = 0; iteration < opts->iterate; iteration++ ) {
+        if ( opts->iterate > 1 ) {
+            printf("\nIteration #%d:\n", iteration + 1);
+        }
+        int rc;
+
+        // Decode image
+        if ( (rc = gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output)) != 0 ) {
+            if ( rc == GPUJPEG_ERR_RESTART_CHANGE && param_image.width != 0 && param_image.height != 0 ) {
+                fprintf(stderr, "Hint: Do not enter image dimensions to avoid preinitialization or correctly specify "
+                                "restart interval.\n");
+            }
+            fprintf(stderr, "Failed to decode image [%s]!\n", input);
+            gpujpeg_image_destroy(image);
+            return -1;
+        }
+    }
+
+    uint8_t* data = NULL;
+    size_t data_size = 0;
+    if ( opts->use_opengl ) {
+        data = malloc(decoder_output.data_size);
+        gpujpeg_opengl_texture_get_data(texture->texture_id, data, &data_size);
+        assert(data != NULL && data_size != 0);
+    }
+    else {
+        data = decoder_output.data;
+        data_size = decoder_output.data_size;
+    }
+
+    duration = gpujpeg_get_time();
+
+    // Save image
+    if ( data == NULL || gpujpeg_image_save_to_file(output, data, data_size, &decoder_output.param_image) != 0 ) {
+        fprintf(stderr, "Failed to save image [%s]!\n", output);
+        gpujpeg_image_destroy(image);
+        return -1;
+    }
+    else {
+        duration = gpujpeg_get_time() - duration;
+        printf("Save Image:          %10.2f ms\n", duration * 1000.0);
+        printf("Image Name:          %10s\n", output);
+    }
+
+    if ( opts->use_opengl ) {
+        free(data);
+    }
+
+    // Destroy image
+    gpujpeg_image_destroy(image);
+    return 0;
+}
+
 #ifndef GIT_REV
 #define GIT_REV "unknown"
 #endif
@@ -464,16 +693,18 @@ main(int argc, char *argv[])
     _Bool decode = 0;
     _Bool convert = 0;
     _Bool component_range = 0;
-    int iterate = 1;
-    _Bool use_opengl = 0;
-    bool debug = false;
     struct coder_opts decoder_options[CODER_OPTS_COUNT + 1] = {0};
     struct coder_opts encoder_options[CODER_OPTS_COUNT + 1] = {0};
 
     // Flags
-    struct options opts = {.subsampling = GPUJPEG_SUBSAMPLING_UNKNOWN,
-                           .native_file_format = false,
-                           .keep_alpha = false};
+    struct options opts = {
+        .subsampling = GPUJPEG_SUBSAMPLING_UNKNOWN,
+        .native_file_format = false,
+        .keep_alpha = false,
+        .debug = false,
+        .use_opengl = false,
+        .iterate = 1,
+    };
 
     int rc;
 
@@ -610,10 +841,10 @@ main(int argc, char *argv[])
             component_range = 1;
             break;
         case 'n':
-            iterate = atoi(optarg);
+            opts.iterate = atoi(optarg);
             break;
         case 'o':
-            use_opengl = 1;
+            opts.use_opengl = true;
             break;
         case 'I':
             return print_image_info(tstr_to_mbs(optarg), param.verbose);
@@ -623,7 +854,7 @@ main(int argc, char *argv[])
         case 'V':
             return 0; // already printed, just exit
         case 'b':
-            debug = true;
+            opts.debug = true;
             break;
         case 'O':
             rc = assign_coder_opt(encoder_options, decoder_options, tstr_to_mbs(optarg));
@@ -661,8 +892,8 @@ main(int argc, char *argv[])
         return 0;
     }
 
-    if (iterate <= 0) {
-        fprintf(stderr, "Number of iterations must be greater than zero, got: %d\n", iterate);
+    if (opts.iterate <= 0) {
+        fprintf(stderr, "Number of iterations must be greater than zero, got: %d\n", opts.iterate);
         return -1;
     }
 
@@ -676,7 +907,7 @@ main(int argc, char *argv[])
     // Init device
     int flags = GPUJPEG_INIT_DEV_VERBOSE;
     struct gpujpeg_opengl_context *gl_context = NULL;
-    if ( use_opengl ) {
+    if ( opts.use_opengl ) {
         flags |= GPUJPEG_OPENGL_INTEROPERABILITY;
         if ( gpujpeg_opengl_init(&gl_context) != 0 ) {
             fprintf(stderr, "Cannot initialize OpenGL context!\n");
@@ -716,13 +947,10 @@ main(int argc, char *argv[])
         return -1;
     }
 
-    struct gpujpeg_parameters param_saved = param;
-    struct gpujpeg_image_parameters param_image_saved = param_image;
-
     if ( encode == 1 ) {
         // Create OpenGL texture
         struct gpujpeg_opengl_texture* texture = NULL;
-        if ( use_opengl ) {
+        if ( opts.use_opengl ) {
             assert(param_image.pixel_format == GPUJPEG_444_U8_P012);
             int texture_id = gpujpeg_opengl_texture_create(param_image.width, param_image.height, NULL);
             assert(texture_id != 0);
@@ -740,99 +968,16 @@ main(int argc, char *argv[])
 
         // Encode images
         for ( int index = 0; index < argc; index += 2 ) {
-            // Get and check input and output image
-            const char* input = tstr_to_mbs(argv[index]);
-            const char* output = tstr_to_mbs(argv[index + 1]);
-            enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
-            enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
-            if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(input_format) ) {
-                fprintf(stderr, "[Warning] Encoder input file [%s] should be raw image (" RAW_EXTS ")!\n", input);
-                gpujpeg_image_get_file_format("rawhelp");
-                if ( input_format & GPUJPEG_IMAGE_FILE_JPEG ) {
-                    return -1;
-                }
+            rc = do_encode(argv[index], argv[index + 1], param, param_image, &opts, encoder, texture);
+            if (rc == -2) {
+                return -1;
             }
-            if ( output_format != GPUJPEG_IMAGE_FILE_JPEG ) {
-                fprintf(stderr, "[%s] Encoder output file [%s] should be JPEG image (*.jpg)!\n",
-                        output_format == GPUJPEG_IMAGE_FILE_UNKNOWN ? "Warning" : "Error", output);
-                if ( output_format != GPUJPEG_IMAGE_FILE_UNKNOWN ) {
-                    ret = EXIT_FAILURE; continue;
-                }
-            }
-
-            param = param_saved;
-            param_image = param_image_saved;
-            if ( !adjust_params(&param, &param_image, input, output, encode, &opts) ) {
-                ret = EXIT_FAILURE; continue;
-            }
-
-            if ( opts.native_file_format ) {
-                param.color_space_internal = param_image.color_space;
-            }
-
-            // Encode image
-            double duration = gpujpeg_get_time();
-            printf("\nEncoding Image [%s]: ", input);
-            print_gpujpeg_image_parameters(param_image, true, NULL);
-
-            // Load image
-            size_t image_size = gpujpeg_image_calculate_size(&param_image);
-            uint8_t* image = NULL;
-            if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
-                fprintf(stderr, "Failed to load image [%s]!\n", input);
-                ret = EXIT_FAILURE; continue;
-            }
-
-            if ( debug ) {
-                debug_dump_infile(input, image, image_size, &param_image);
-            }
-
-            duration = gpujpeg_get_time() - duration;
-            printf("Load Image:          %10.2f ms\n", duration * 1000.0);
-
-            // Prepare encoder input
-            struct gpujpeg_encoder_input encoder_input;
-            if ( use_opengl ) {
-                gpujpeg_opengl_texture_set_data(texture->texture_id, image);
-                gpujpeg_encoder_input_set_texture(&encoder_input, texture);
-            } else {
-                gpujpeg_encoder_input_set_image(&encoder_input, image);
-            }
-
-            // Encode image
-            uint8_t* image_compressed = NULL;
-            size_t image_compressed_size = 0;
-            for ( int iteration = 0; iteration < iterate; iteration++ ) {
-                if ( iterate > 1 ) {
-                    printf("\nIteration #%d:\n", iteration + 1);
-                }
-
-                rc = gpujpeg_encoder_encode(encoder, &param, &param_image, &encoder_input, &image_compressed, &image_compressed_size);
-                if ( rc != GPUJPEG_NOERR ) {
-                    fprintf(stderr, "Failed to encode image [%s]!\n", input);
-                    ret = EXIT_FAILURE; continue;
-                }
-            }
-
-            duration = gpujpeg_get_time();
-
-            // Save image
-            if ( image_compressed == NULL ||
-                 gpujpeg_image_save_to_file(output, image_compressed, image_compressed_size, &param_image) != 0 ) {
-                fprintf(stderr, "Failed to save image [%s]!\n", output);
+            if (rc == -1) {
                 ret = EXIT_FAILURE;
-            } else {
-                duration = gpujpeg_get_time() - duration;
-                printf("Save Image:          %10.4f ms\n", duration * 1000.0);
-                printf("Image Name:          %10s\n", output);
             }
-
-            // Destroy image
-            gpujpeg_image_destroy(image);
         }
-
         // Destroy OpenGL texture
-        if ( use_opengl ) {
+        if ( opts.use_opengl ) {
             int texture_id = texture->texture_id;
             gpujpeg_opengl_texture_unregister(texture);
             gpujpeg_opengl_texture_destroy(texture_id);
@@ -845,7 +990,7 @@ main(int argc, char *argv[])
     if ( decode == 1 ) {
         // Create OpenGL texture
         struct gpujpeg_opengl_texture* texture = NULL;
-        if ( use_opengl ) {
+        if ( opts.use_opengl ) {
             assert(param_image.pixel_format == GPUJPEG_444_U8_P012);
             int texture_id = gpujpeg_opengl_texture_create(param_image.width, param_image.height, NULL);
             assert(texture_id != 0);
@@ -869,121 +1014,14 @@ main(int argc, char *argv[])
 
         // Decode images
         for ( int index = 0; index < argc; index += 2 ) {
-            // Get and check input and output image
-            const char * input = tstr_to_mbs(argv[index]);
-            char* output = tstr_to_mbs(argv[index + 1]);
-            if ( encode == 1 ) {
-                static char buffer_output[255];
-                if ( param_image.color_space != GPUJPEG_RGB ) {
-                    sprintf(buffer_output, "%s.decoded.yuv", output);
-                }
-                else {
-                    if ( param.comp_count == 1 ) {
-                        sprintf(buffer_output, "%s.decoded.r", output);
-                    } else {
-                        sprintf(buffer_output, "%s.decoded.rgb", output);
-                    }
-                }
-                input = output;
-                output = buffer_output;
-            }
-            enum gpujpeg_image_file_format input_format = gpujpeg_image_get_file_format(input);
-            enum gpujpeg_image_file_format output_format = gpujpeg_image_get_file_format(output);
-            if ( input_format != GPUJPEG_IMAGE_FILE_JPEG ) {
-                fprintf(stderr, "[Warning] Decoder input file [%s] should be JPEG image (*.jpg)!\n", input);
-            }
-            if ( !GPUJPEG_IMAGE_FORMAT_IS_RAW(output_format) ) {
-                fprintf(stderr, "[Warning] Decoder output file [%s] should be raw image (" RAW_EXTS ")!\n", output);
-                gpujpeg_image_get_file_format("rawhelp");
-                if ( output_format & GPUJPEG_IMAGE_FILE_JPEG ) {
-                    ret = EXIT_FAILURE; continue;
-                }
-            }
-
-            param = param_saved;
-            param_image = param_image_saved;
-            adjust_params(&param, &param_image, input, output, encode, &opts);
-            if ( opts.native_file_format ) {
-                param_image.color_space = GPUJPEG_NONE;
-            }
-
-            gpujpeg_decoder_set_output_format(decoder, param_image.color_space, param_image.pixel_format);
-
-            // Decode image
-            double duration = gpujpeg_get_time();
-
-            printf("\nDecoding Image [%s] to ", input);
-            print_gpujpeg_image_parameters(param_image, true, NULL);
-
-            // Load image
-            size_t image_size = 0;
-            uint8_t* image = NULL;
-            if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
-                fprintf(stderr, "Failed to load image [%s]!\n", input);
-                ret = EXIT_FAILURE; continue;
-            }
-
-            duration = gpujpeg_get_time() - duration;
-            printf("Load Image:          %10.2f ms\n", duration * 1000.0);
-
-            // Prepare decoder output buffer
-            struct gpujpeg_decoder_output decoder_output;
-            if ( use_opengl ) {
-                gpujpeg_decoder_output_set_texture(&decoder_output, texture);
-            } else {
-                gpujpeg_decoder_output_set_default(&decoder_output);
-            }
-
-            for ( int iteration = 0; iteration < iterate; iteration++ ) {
-                if ( iterate > 1 ) {
-                    printf("\nIteration #%d:\n", iteration + 1);
-                }
-
-                // Decode image
-                if ( (rc = gpujpeg_decoder_decode(decoder, image, image_size, &decoder_output)) != 0 ) {
-                    if (rc == GPUJPEG_ERR_RESTART_CHANGE && param_image.width != 0 && param_image.height != 0) {
-                        fprintf(stderr, "Hint: Do not enter image dimensions to avoid preinitialization or correctly specify restart interval.\n");
-                    }
-                    fprintf(stderr, "Failed to decode image [%s]!\n", input);
-                    ret = EXIT_FAILURE; continue;
-                }
-            }
-
-            uint8_t* data = NULL;
-            size_t data_size = 0;
-            if ( use_opengl ) {
-                data = malloc(decoder_output.data_size);
-                gpujpeg_opengl_texture_get_data(texture->texture_id, data, &data_size);
-                assert(data != NULL && data_size != 0);
-            } else {
-                data = decoder_output.data;
-                data_size = decoder_output.data_size;
-            }
-
-            duration = gpujpeg_get_time();
-
-            // Save image
-            if ( data == NULL ||
-                 gpujpeg_image_save_to_file(output, data, data_size, &decoder_output.param_image) != 0 ) {
-                fprintf(stderr, "Failed to save image [%s]!\n", output);
+            rc = do_decode(argv[index], argv[index + 1], param, param_image, &opts, decoder, texture, encode);
+            if (rc == -1) {
                 ret = EXIT_FAILURE;
             }
-            else {
-                duration = gpujpeg_get_time() - duration;
-                printf("Save Image:          %10.2f ms\n", duration * 1000.0);
-                printf("Image Name:          %10s\n", output);
-            }
-
-            if ( use_opengl ) {
-                free(data);
-            }
-
-            // Destroy image
-            gpujpeg_image_destroy(image);
         }
 
         // Destroy OpenGL texture
-        if ( use_opengl ) {
+        if ( opts.use_opengl ) {
             int texture_id = texture->texture_id;
             gpujpeg_opengl_texture_unregister(texture);
             gpujpeg_opengl_texture_destroy(texture_id);
@@ -993,11 +1031,11 @@ main(int argc, char *argv[])
         gpujpeg_decoder_destroy(decoder);
     }
 
-    if ( use_opengl ) {
+    if ( opts.use_opengl ) {
         gpujpeg_opengl_destroy(gl_context);
     }
 
-    if ( debug ) {
+    if ( opts.debug ) {
         gpujpeg_device_reset(); // to allow "cuda-memcheck --leak-check full"
     }
 
