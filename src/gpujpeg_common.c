@@ -373,7 +373,7 @@ gpujpeg_parameters_chroma_subsampling(struct gpujpeg_parameters* param,
  * @ref gpujpeg_parameters members verbose, perf_stats and **quality**
  * ignored by the comparison
  */
-static bool
+bool
 gpujpeg_parameters_equals(const struct gpujpeg_parameters *p1 , const struct gpujpeg_parameters *p2)
 {
     if ( p1->comp_count != p2->comp_count ||
@@ -641,7 +641,8 @@ reset_timers(struct gpujpeg_coder* coder)
 
 int
 gpujpeg_coder_allocate_cpu_huffman_buf(struct gpujpeg_coder * coder) {
-    cudaMallocHost((void**)&coder->data_quantized, coder->data_size * sizeof(int16_t));
+    // sized like d_data_quantized, gpujpeg_coder_init_image() keeps both while the image fits
+    cudaMallocHost((void**)&coder->data_quantized, coder->data_allocated_size * sizeof(int16_t));
     gpujpeg_cuda_check_error("Coder quantized data host allocation", return -1);
 
     int16_t* comp_data_quantized = coder->data_quantized;

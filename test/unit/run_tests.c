@@ -88,6 +88,10 @@ test_gh_95();
 void
 test_chroma_filter();
 
+// defined in test_coder_reinit.c
+void
+test_coder_reinit();
+
 static char*
 test_format_number_with_delim() {
         struct {
@@ -132,6 +136,7 @@ int main() {
         test_gh_95();
         test_format_number_with_delim();
         test_chroma_filter();
+        test_coder_reinit();
         printf("PASSED\n");
 }
 
