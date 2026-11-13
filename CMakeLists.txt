@@ -277,5 +277,11 @@ add_test(NAME regression COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/regression/run
 add_test(NAME quality
          COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/quality/run_tests.sh
                  ${CMAKE_CURRENT_BINARY_DIR}/${GPUJPEG_BIN_OUTPUT_NAME})
+add_test(
+    NAME performance
+    COMMAND
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/performance/run_tests.sh
+        ${CMAKE_CURRENT_BINARY_DIR}/${GPUJPEG_BIN_OUTPUT_NAME})
+set_tests_properties(performance PROPERTIES SKIP_RETURN_CODE 100)
 
 # vim: sw=4
