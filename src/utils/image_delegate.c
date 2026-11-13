@@ -362,6 +362,8 @@ tst_usage()
            "\t- 1920x1080.noise.tst        - FHD RGB noise\n"
            "\t- 1920x1080.c_ycbcr-jpeg.p_422-u8-p1020.tst - YCbCr 4:2:2\n");
     PRINTF("\n");
+    PRINTF("Use '-p help', '-c help' for list of pixel formats and color spaces.\n");
+    PRINTF("\n");
     PRINTF("Note: 3 color values for patterns blank/gradient work just with RGB.\n");
     PRINTF("\n");
 }

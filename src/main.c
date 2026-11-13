@@ -893,6 +893,12 @@ main(int argc, char *argv[])
         return -1;
     }
 
+    // short circuit - allow ./gpujpegtool help.tst (w/o out fname)
+    if ( argc == 1 && strcmp(argv[0], "help.tst") == 0 ) {
+        argc = 2;
+        argv[1] = "unused_fname.jpg";
+    }
+
     // Source image and target image must be presented
     if ( argc < 2 || argc % 2 != 0 ) {
         fprintf(stderr, "Please supply source and destination image filename(s)!\n");
