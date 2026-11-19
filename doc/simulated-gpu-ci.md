@@ -28,9 +28,9 @@ What it does
    - `CMAKE_CUDA_RUNTIME_LIBRARY=Shared`, so that at run time the simulator's
      `libcudart` can take the place of the real one.
 4. Runs `ctest --test-dir build --output-on-failure`, which covers `unittests`,
-   `test-colors` and `regression`. The action puts the simulator's libraries on
-   `LD_LIBRARY_PATH`, so the tests start the same way they would on a machine
-   with a GPU.
+   `test-colors`, `performance`, `quality` and `regression`. The action puts the
+   simulator's libraries on `LD_LIBRARY_PATH`, so the tests start the same way
+   they would on a machine with a GPU.
 
 What it tells you
 -----------------

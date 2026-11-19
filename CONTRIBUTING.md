@@ -97,6 +97,13 @@ are several fields that may you consider:
 Please note that your changes should not change default behavior or
 remove features to be accepted unless agreed by GPUJPEG developers.
 
+These change should pass CMake tests (`unittests`, `test-colors`,
+`performance`, `quality` and `regression`). Especially _performance_
+tests (but also others) may be negotiable - those are intended to catch
+unintended regression. If the change is inteneded but have side effects
+breaking any of the tests it is advised to consult with us (but if
+reasonable the test can be adjusted directly, eg. as part of a PR).
+
 Feel free to contact us for support or advice.
 
 Compatibility
@@ -132,6 +139,7 @@ GPUJPEG has 2 sepearate workflows:
 - [simulated-gpu.yml](.github/workflows/simulated-gpu.yml) - unit and other
   tests that actually require a CUDA device and therefore an emulated one in
   CI. Documented in [doc/simulated-gpu-ci.md](doc/simulated-gpu-ci.md).
+  Part of them are performance, quality and regression tests.
 
 Both actions are triggered by a push. Few files are excepted (do not
 trigger the action), see the YAML files.
