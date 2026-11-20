@@ -378,6 +378,8 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
         }
         gpujpeg_cuda_check_error("Quantization init", return -1);
     }
+    // preprocessor kernel and component buffers depend also on the JPEG layout (eg. subsampling)
+    const bool layout_changed = !gpujpeg_parameters_equals(&coder->param, &param_adjusted);
     if ( 0 == gpujpeg_coder_init_image(coder, &param_adjusted, param_image, coder->stream) ) {
         fprintf(stderr, "[GPUJPEG] [Error] Failed to init image encoding!\n");
         return -1;
@@ -389,7 +391,7 @@ gpujpeg_encoder_encode(struct gpujpeg_encoder* encoder, const struct gpujpeg_par
         return -1;
     }
 
-    if ( img_changed ) {
+    if ( img_changed || layout_changed ) {
         // (Re)initialize preprocessor
         if ( gpujpeg_preprocessor_encoder_init(&encoder->coder) != 0 ) {
             fprintf(stderr, "[GPUJPEG] [Error] Failed to init preprocessor!\n");

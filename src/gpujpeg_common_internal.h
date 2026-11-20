@@ -516,6 +516,12 @@ bool
 gpujpeg_image_parameters_equals(const struct gpujpeg_image_parameters *p1 , const struct gpujpeg_image_parameters *p2);
 
 /**
+ * @retval true parameters are the same (verbose, perf_stats and quality ignored)
+ */
+bool
+gpujpeg_parameters_equals(const struct gpujpeg_parameters* p1, const struct gpujpeg_parameters* p2);
+
+/**
  * returns difference between specified CUDA events
  *
  * @returns duration in ms, 0.0F in case of error
